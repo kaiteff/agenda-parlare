@@ -15,6 +15,3 @@ Thumbs.db
 # IDEs
 .vscode/
 .idea/
-
-# Configuración sensible (credenciales de Firebase)
-js/firebase.js
