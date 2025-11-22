@@ -112,7 +112,7 @@ function updatePatientsHeader(count) {
                 <span class="text-xs font-bold text-gray-600">
                     ${showOnlyToday ? `HOY (${count})` : `ACTIVOS (${count})`}
                 </span>
-                <button onclick="createNewPatient()" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
+                <button id="btnNewPatient" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     Nuevo
                 </button>
@@ -128,6 +128,11 @@ function updatePatientsHeader(count) {
     if (toggleBtn) {
         toggleBtn.onclick = togglePatientView;
     }
+
+    const newPatientBtn = document.getElementById('btnNewPatient');
+    if (newPatientBtn) {
+        newPatientBtn.onclick = window.createNewPatient;
+    }
 }
 
 // Toggle entre vista Hoy y Todos
@@ -138,6 +143,8 @@ function togglePatientView() {
 
 // Crear nuevo paciente manualmente
 window.createNewPatient = async function () {
+    console.log("createNewPatient called");
+    console.log("patientProfiles:", patientProfiles);
     const name = prompt("Nombre del nuevo paciente:");
     if (!name || !name.trim()) return;
 
