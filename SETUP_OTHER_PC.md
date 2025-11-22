@@ -23,8 +23,16 @@ Como protegimos tus claves, el archivo `firebase.js` no se descargará. Debes cr
 
 1. En la carpeta `js`, verás un archivo llamado `firebase.example.js`.
 2. Haz una copia de ese archivo y llámala `firebase.js`.
-3. Abre `js/firebase.js` y pega tus credenciales reales de Firebase (las mismas que tienes en tu PC principal).
-   *Si no las tienes a mano, puedes verlas en la Consola de Firebase > Configuración del Proyecto.*
+3. Abre `js/firebase.js` con un editor de texto (como el Bloc de Notas o VS Code).
+4. Busca la parte que dice:
+   ```javascript
+   const firebaseConfig = {
+       apiKey: "TU_API_KEY_AQUI",
+       ...
+   };
+   ```
+5. **¡Aquí es donde pegas lo de la imagen!** Borra esas líneas de ejemplo y pega el bloque de código que aparece en tu imagen (el que tiene `apiKey`, `authDomain`, etc.).
+6. Guarda el archivo.
 
 ## 4. Ejecutar el Proyecto
 Si tienes el script de servidor (`server.ps1`), puedes ejecutarlo igual que en tu PC principal:
