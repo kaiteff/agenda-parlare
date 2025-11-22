@@ -40,3 +40,10 @@ Si tienes el script de servidor (`server.ps1`), puedes ejecutarlo igual que en t
 powershell -ExecutionPolicy Bypass -File .\server.ps1
 ```
 O simplemente abre el archivo `index.html` en tu navegador (aunque algunas funciones requieren un servidor local).
+
+## 5. ¿Cómo seguir trabajando con Antigravity (IA)?
+Para que yo (tu asistente) pueda ayudarte en la otra PC:
+1. Abre **VS Code** en esa carpeta.
+2. Asegúrate de tener instalada la extensión de IA que estás usando ahora.
+3. Abre el chat y escribe: "Hola, estoy en la nueva PC. Ya cloné el repo y configuré firebase.js".
+4. ¡Y listo! Yo leeré el código y seguiremos exactamente donde nos quedamos.
