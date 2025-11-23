@@ -39,7 +39,12 @@ function handleAuthState(user) {
     }
 }
 
+let modulesInitialized = false;
+
 function initializeModules() {
+    if (modulesInitialized) return;
+    modulesInitialized = true;
+
     // Inicializar módulos con manejo de errores
     try {
         console.log("🚀 Inicializando Patients...");
@@ -78,8 +83,13 @@ loginForm.addEventListener('submit', async (e) => {
         loginError.classList.remove('hidden');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
+    } else {
+        // Éxito: Forzar actualización de UI si tenemos el usuario
+        if (result.user) {
+            handleAuthState(result.user);
+        }
+        // Si no hay usuario en el result, esperamos al listener
     }
-    // Si es exitoso, el listener de onAuthStateChanged manejará la UI
 });
 
 logoutBtn.addEventListener('click', async () => {

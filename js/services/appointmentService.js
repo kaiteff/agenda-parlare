@@ -20,7 +20,7 @@ export async function createAppointment(appointmentData, existingAppointments) {
             name: appointmentData.name.trim(),
             date: appointmentData.date,
             cost: appointmentData.cost || 0,
-            paid: false,
+            isPaid: false,
             confirmed: false,
             isCancelled: false,
             createdAt: serverTimestamp()
@@ -107,7 +107,7 @@ export async function togglePaymentStatus(id, currentStatus) {
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
-        await updateDoc(docRef, { paid: newStatus });
+        await updateDoc(docRef, { isPaid: newStatus });
         return { success: true, newState: newStatus };
     } catch (error) {
         console.error("Error cambiando estado de pago:", error);

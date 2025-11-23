@@ -90,12 +90,46 @@ function getPendingPayments(patientName) {
 
 // Marcar pago pendiente como pagado rápidamente
 window.quickMarkAsPaid = async function (appointmentId) {
+    // Obtener el botón que disparó el evento
+    const button = event?.target;
+
+    // Feedback visual inmediato
+    if (button) {
+        const originalText = button.textContent;
+        button.textContent = '⏳ Guardando...';
+        button.disabled = true;
+    }
+
     try {
         await updateDoc(doc(db, collectionPath, appointmentId), {
             isPaid: true
         });
+
+        // Feedback de éxito
+        if (button) {
+            button.textContent = '✓ Pagado!';
+            button.classList.remove('bg-green-600', 'hover:bg-green-700');
+            button.classList.add('bg-green-700', 'cursor-default');
+        }
+
+        // Esperar un momento para que Firebase actualice los listeners
+        setTimeout(() => {
+            // Si el modal de historial está abierto, actualizarlo
+            if (selectedPatient && !patientHistoryModal.classList.contains('hidden')) {
+                openPatientHistoryModal(selectedPatient);
+            }
+            // La lista de pacientes se actualizará automáticamente por el listener de Firebase
+        }, 300);
+
     } catch (e) {
+        console.error("Error al marcar como pagado:", e);
         alert("Error al marcar como pagado: " + e.message);
+
+        // Restaurar botón en caso de error
+        if (button) {
+            button.textContent = '✓ Pagado';
+            button.disabled = false;
+        }
     }
 };
 

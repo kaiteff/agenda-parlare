@@ -1,6 +1,7 @@
 // notifications.js - Sistema de notificaciones persistentes
 
-import { db, notificationsPath, userId, collection, onSnapshot, query, updateDoc, doc, deleteDoc, getDocs } from './firebase.js';
+import { db, notificationsPath, userId, collection, onSnapshot, query, updateDoc, doc, deleteDoc } from './firebase.js';
+import { getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Referencias DOM
 let notificationBell, notificationBadge, notificationPanel, notificationList;

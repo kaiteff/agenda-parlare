@@ -9,6 +9,17 @@
 export function getStartOfWeek(date) {
     const d = new Date(date);
     const day = d.getDay();
+    const hour = d.getHours();
+
+    // Si es sábado (6) después de las 4pm (16:00), saltar a la siguiente semana
+    if (day === 6 && hour >= 16) {
+        // Avanzar al lunes siguiente
+        const diff = d.getDate() + 2; // Sábado + 2 días = Lunes
+        d.setDate(diff);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     d.setDate(diff);
     d.setHours(0, 0, 0, 0);
