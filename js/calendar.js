@@ -7,8 +7,6 @@ import { isSlotFree, checkSlotConflict, validateAppointment } from './utils/vali
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from './services/appointmentService.js';
 import { findPatientByName, createPatientProfile, reactivatePatient } from './services/patientService.js';
 import { MiniCalendar } from './components/MiniCalendar.js';
-import { initMainCalendar } from './components/calendar/MainCalendar.js';
-import { initMiniCalendar } from './components/calendar/MiniCalendar.js';
 
 // Estado del calendario
 let currentWeekStart = getStartOfWeek(new Date());
@@ -69,9 +67,7 @@ export function initCalendar() {
         console.log("setupEventListeners done");
         setupListener();
         console.log("setupListener done");
-        // Initialize componentized calendars
-        initMainCalendar();
-        initMiniCalendar();
+
     } catch (e) {
         console.error("Error in initCalendar:", e);
         if (statusMsg) statusMsg.textContent = "Error Init: " + e.message;
@@ -364,6 +360,12 @@ async function saveEvent() {
     const cost = costInput.value;
 
     if (!name || !date) return alert("Faltan datos");
+
+    // Validar que el costo sea obligatorio y mayor a 0
+    if (!cost || parseFloat(cost) <= 0) {
+        costInput.focus();
+        return alert("⚠️ El costo es obligatorio y debe ser mayor a 0");
+    }
 
     const conflict = checkSlotConflict(date, patientsData, selectedEventId);
     if (conflict) {

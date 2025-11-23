@@ -20,7 +20,19 @@ export function getStartOfWeek(date) {
         return d;
     }
 
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    // Si es domingo (0), ya estamos en la "siguiente semana" lógica
+    // Avanzamos al lunes (mañana)
+    if (day === 0) {
+        const diff = d.getDate() + 1; // Domingo + 1 día = Lunes
+        d.setDate(diff);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+
+    // Lunes a Viernes (y Sábado antes de las 4pm)
+    // day=1 (Lunes) -> diff = d - 1 + 1 = d
+    // day=6 (Sábado) -> diff = d - 6 + 1 = d - 5
+    const diff = d.getDate() - day + 1;
     d.setDate(diff);
     d.setHours(0, 0, 0, 0);
     return d;

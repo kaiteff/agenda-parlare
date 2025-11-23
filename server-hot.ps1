@@ -1,7 +1,7 @@
 # server-hot.ps1 - HTTP Server with Hot Reload
 # Uso: .\server-hot.ps1
 
-$port = 9000
+$port = 8086
 Write-Host "Starting server with HOT RELOAD on http://localhost:$port" -ForegroundColor Green
 
 # Script de auto-reload que se inyecta en el HTML

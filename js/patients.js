@@ -4,6 +4,7 @@ import { db, patientProfilesPath, patientsData, patientProfiles, collection, add
 import { renderCalendar } from './calendar.js';
 import { isSlotFree } from './utils/validators.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile as deletePatientProfileService } from './services/patientService.js';
+import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from './services/appointmentService.js';
 
 // Referencias DOM
 let patientsList, patientsHeader, patientHistoryModal, inactivePatientsModal;
@@ -483,24 +484,61 @@ function renderPatientAppointments(appointments) {
 }
 
 // Dar de baja paciente
-// Dar de baja paciente
 async function deactivatePatient(profileId, patientName) {
-    if (!confirm(`¿Está seguro de dar de baja a ${patientName}?\n\nEl historial se preservará pero el paciente no aparecerá en la lista activa.`)) {
-        return;
+    // 1. Análisis de Citas
+    const now = new Date();
+    const patientAppointments = patientsData.filter(apt => apt.name === patientName && !apt.isCancelled);
+
+    const pendingDebts = patientAppointments.filter(apt => {
+        const d = new Date(apt.date);
+        return d < now && !apt.isPaid;
+    });
+
+    const futureAppointments = patientAppointments.filter(apt => {
+        const d = new Date(apt.date);
+        return d > now;
+    });
+
+    // 2. Confirmación Inicial
+    let message = `¿Está seguro de dar de baja a ${patientName}?\n\n`;
+    if (futureAppointments.length > 0) {
+        message += `⚠️ Se CANCELARÁN ${futureAppointments.length} citas futuras programadas.\n`;
     }
+    if (pendingDebts.length > 0) {
+        const totalDebt = pendingDebts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
+        message += `⚠️ Tiene ${pendingDebts.length} citas pasadas sin pagar (Total: $${totalDebt}).\n`;
+    }
+    message += `\nEl historial se preservará pero el paciente no aparecerá en la lista activa.`;
+
+    if (!confirm(message)) return;
 
     try {
-        // Obtener última cita
-        const patientAppointments = patientsData.filter(apt => apt.name === patientName);
+        // 3. Manejo de Adeudos
+        if (pendingDebts.length > 0) {
+            const payDebts = confirm(`El paciente tiene adeudos pendientes.\n¿Desea marcar estas ${pendingDebts.length} citas como PAGADAS antes de dar de baja?`);
+            if (payDebts) {
+                for (const apt of pendingDebts) {
+                    await togglePaymentStatus(apt.id, false); // false = current status (pending), so it toggles to true (paid)
+                }
+            }
+        }
+
+        // 4. Cancelación de Citas Futuras
+        if (futureAppointments.length > 0) {
+            for (const apt of futureAppointments) {
+                await cancelAppointment(apt.id);
+            }
+        }
+
+        // 5. Desactivación del Perfil
         const sortedApts = patientAppointments.sort((a, b) => new Date(b.date) - new Date(a.date));
         const lastSession = sortedApts.length > 0 ? sortedApts[0].date : null;
 
-        // Usar servicio
         const result = await deactivatePatientService(profileId, lastSession ? new Date(lastSession) : null);
 
         if (result.success) {
             closePatientHistoryModal();
-            alert(`${patientName} ha sido dado de baja exitosamente.`);
+            alert(`${patientName} ha sido dado de baja exitosamente.\nSe cancelaron ${futureAppointments.length} citas futuras.`);
         } else {
             throw new Error(result.error);
         }
