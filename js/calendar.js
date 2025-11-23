@@ -7,6 +7,8 @@ import { isSlotFree, checkSlotConflict, validateAppointment } from './utils/vali
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from './services/appointmentService.js';
 import { findPatientByName, createPatientProfile, reactivatePatient } from './services/patientService.js';
 import { MiniCalendar } from './components/MiniCalendar.js';
+import { initMainCalendar } from './components/calendar/MainCalendar.js';
+import { initMiniCalendar } from './components/calendar/MiniCalendar.js';
 
 // Estado del calendario
 let currentWeekStart = getStartOfWeek(new Date());
@@ -67,6 +69,9 @@ export function initCalendar() {
         console.log("setupEventListeners done");
         setupListener();
         console.log("setupListener done");
+        // Initialize componentized calendars
+        initMainCalendar();
+        initMiniCalendar();
     } catch (e) {
         console.error("Error in initCalendar:", e);
         if (statusMsg) statusMsg.textContent = "Error Init: " + e.message;
