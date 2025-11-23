@@ -319,9 +319,11 @@ function openEditModal(ev) {
 
     const isPastDay = eventDay < today;
 
-    patientSearchInput.disabled = isPastDay;
-    patientFirstNameInput.disabled = isPastDay;
-    patientLastNameInput.disabled = isPastDay;
+    // Siempre deshabilitar campos de nombre en modo edición para evitar duplicados
+    patientSearchInput.disabled = true;
+    patientFirstNameInput.disabled = true;
+    patientLastNameInput.disabled = true;
+
     appointmentDateInput.disabled = isPastDay;
     costInput.disabled = isPastDay;
 
