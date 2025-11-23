@@ -15,10 +15,12 @@ export function findPatientByName(name, profiles) {
 
 /**
  * Crea un nuevo perfil de paciente
- * @param {string} name - Nombre del paciente
+ * @param {string} name - Nombre completo del paciente
+ * @param {string} firstName - Nombre(s)
+ * @param {string} lastName - Apellidos
  * @returns {Promise<Object>} - Resultado { success, id, data, error }
  */
-export async function createPatientProfile(name) {
+export async function createPatientProfile(name, firstName = '', lastName = '') {
     try {
         const validation = validatePatientName(name);
         if (!validation.valid) {
@@ -27,6 +29,8 @@ export async function createPatientProfile(name) {
 
         const profileData = {
             name: name.trim(),
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
             isActive: true,
             dateAdded: serverTimestamp(),
             dateInactivated: null,

@@ -18,7 +18,7 @@ let miniCalendar;
 // Referencias DOM
 let calendarGrid, currentMonthLabel, prevWeekBtn, nextWeekBtn, todayBtn;
 let miniCalendarGrid, miniMonthLabel, miniPrevBtn, miniNextBtn;
-let eventModal, modalTitle, patientNameInput, appointmentDateInput, costInput;
+let eventModal, modalTitle, patientSearchInput, patientFirstNameInput, patientLastNameInput, appointmentDateInput, costInput;
 let saveBtn, deleteBtn, payBtn, cancelBtn, rescheduleSection, rescheduleOptions;
 let busySlotsContainer, busySlotsList, statusMsg;
 let patientSuggestions, isRecurringCheckbox, recurringSection, recurringOptions, recurringDatesList;
@@ -41,7 +41,9 @@ export function initCalendar() {
 
         eventModal = document.getElementById('eventModal');
         modalTitle = document.getElementById('modalTitle');
-        patientNameInput = document.getElementById('patientName');
+        patientSearchInput = document.getElementById('patientSearch');
+        patientFirstNameInput = document.getElementById('patientFirstName');
+        patientLastNameInput = document.getElementById('patientLastName');
         appointmentDateInput = document.getElementById('appointmentDate');
         costInput = document.getElementById('cost');
         saveBtn = document.getElementById('saveBtn');
@@ -168,7 +170,7 @@ function analyzeAndSuggest(patientName) {
         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
 
         // Crear elemento de sugerencia
-        const container = document.getElementById('patientName').parentNode;
+        const container = document.getElementById('patientSearch').parentNode;
         const div = document.createElement('div');
         div.id = 'schedulingSuggestion';
         div.className = "mt-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between animate-fade-in";
@@ -266,10 +268,14 @@ function openCreateModal(dateStr, hour) {
 
     const hStr = hour.toString().padStart(2, '0');
     appointmentDateInput.value = `${dateStr}T${hStr}:00`;
-    patientNameInput.value = '';
+    patientSearchInput.value = '';
+    patientFirstNameInput.value = '';
+    patientLastNameInput.value = '';
     costInput.value = '';
 
-    patientNameInput.disabled = false;
+    patientSearchInput.disabled = false;
+    patientFirstNameInput.disabled = false;
+    patientLastNameInput.disabled = false;
     appointmentDateInput.disabled = false;
     costInput.disabled = false;
     saveBtn.classList.remove('hidden');
@@ -294,7 +300,14 @@ function openEditModal(ev) {
     originalEventDate = ev.date;
     modalTitle.textContent = "Detalles de Cita";
 
-    patientNameInput.value = ev.name;
+    // Split name for inputs
+    const parts = ev.name.split(' ');
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+
+    patientSearchInput.value = ev.name;
+    patientFirstNameInput.value = firstName;
+    patientLastNameInput.value = lastName;
     appointmentDateInput.value = ev.date;
     costInput.value = ev.cost;
 
@@ -306,7 +319,9 @@ function openEditModal(ev) {
 
     const isPastDay = eventDay < today;
 
-    patientNameInput.disabled = isPastDay;
+    patientSearchInput.disabled = isPastDay;
+    patientFirstNameInput.disabled = isPastDay;
+    patientLastNameInput.disabled = isPastDay;
     appointmentDateInput.disabled = isPastDay;
     costInput.disabled = isPastDay;
 
@@ -355,11 +370,13 @@ function openEditModal(ev) {
 
 // CRUD Operations
 async function saveEvent() {
-    const name = patientNameInput.value.trim();
+    const firstName = patientFirstNameInput.value.trim();
+    const lastName = patientLastNameInput.value.trim();
+    const name = `${firstName} ${lastName}`.trim();
     const date = appointmentDateInput.value;
     const cost = costInput.value;
 
-    if (!name || !date) return alert("Faltan datos");
+    if (!firstName || !lastName || !date) return alert("Faltan datos (Nombre, Apellidos o Fecha)");
 
     // Validar que el costo sea obligatorio y mayor a 0
     if (!cost || parseFloat(cost) <= 0) {
@@ -374,7 +391,7 @@ async function saveEvent() {
     }
 
     try {
-        await ensurePatientProfile(name);
+        await ensurePatientProfile(name, firstName, lastName);
 
         if (selectedEventId) {
             // Edición
@@ -570,8 +587,18 @@ function setupEventListeners() {
     deleteBtn.onclick = deleteEvent;
     cancelBtn.onclick = closeModal;
 
-    patientNameInput.addEventListener('input', (e) => {
-        analyzeAndSuggest(e.target.value);
+    patientSearchInput.addEventListener('input', (e) => {
+        const val = e.target.value;
+        analyzeAndSuggest(val);
+
+        // Auto-fill inputs if name matches existing
+        if (val) {
+            const parts = val.split(' ');
+            if (parts.length > 0) {
+                patientFirstNameInput.value = parts[0];
+                patientLastNameInput.value = parts.slice(1).join(' ');
+            }
+        }
     });
 
     appointmentDateInput.addEventListener('change', () => {

@@ -8,6 +8,7 @@ import { createAppointment, updateAppointment, deleteAppointment, togglePaymentS
 
 // Referencias DOM
 let patientsList, patientsHeader, patientHistoryModal, inactivePatientsModal;
+let newPatientModal, newPatientFirstName, newPatientLastName, saveNewPatientBtn, closeNewPatientModalBtn;
 let selectedPatient = null;
 let showOnlyToday = true; // Filtro: mostrar solo pacientes de hoy por defecto
 
@@ -18,6 +19,21 @@ export function initPatients() {
     patientsHeader = document.getElementById('patientsHeader');
     patientHistoryModal = document.getElementById('patientHistoryModal');
     inactivePatientsModal = document.getElementById('inactivePatientsModal');
+
+    // Nuevo Modal
+    newPatientModal = document.getElementById('newPatientModal');
+    newPatientFirstName = document.getElementById('newPatientFirstName');
+    newPatientLastName = document.getElementById('newPatientLastName');
+    saveNewPatientBtn = document.getElementById('saveNewPatientBtn');
+    closeNewPatientModalBtn = document.getElementById('closeNewPatientModalBtn');
+
+    if (closeNewPatientModalBtn) {
+        closeNewPatientModalBtn.onclick = () => newPatientModal.classList.add('hidden');
+    }
+
+    if (saveNewPatientBtn) {
+        saveNewPatientBtn.onclick = handleSaveNewPatient;
+    }
 
     setupEventListeners();
     setupPatientProfilesListener();
@@ -177,34 +193,54 @@ function togglePatientView() {
 }
 
 // Crear nuevo paciente manualmente
-window.createNewPatient = async function () {
-    console.log("createNewPatient called");
-    console.log("patientProfiles:", patientProfiles);
-    const name = prompt("Nombre del nuevo paciente:");
-    if (!name || !name.trim()) return;
+// Crear nuevo paciente manualmente (Abrir Modal)
+window.createNewPatient = function () {
+    if (!newPatientModal) return;
+    newPatientFirstName.value = '';
+    newPatientLastName.value = '';
+    newPatientModal.classList.remove('hidden');
+    newPatientFirstName.focus();
+};
 
-    const cleanName = name.trim();
-    const existing = patientProfiles.find(p => p.name.toLowerCase() === cleanName.toLowerCase());
+// Manejar guardado del nuevo paciente
+async function handleSaveNewPatient() {
+    const firstName = newPatientFirstName.value.trim();
+    const lastName = newPatientLastName.value.trim();
+
+    if (!firstName || !lastName) {
+        alert("Por favor ingrese nombre y apellidos.");
+        return;
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim();
+    const existing = patientProfiles.find(p => p.name.toLowerCase() === fullName.toLowerCase());
 
     if (existing) {
         if (existing.isActive !== false) {
             alert(`El paciente "${existing.name}" ya existe en la lista de activos.`);
-            if (showOnlyToday) togglePatientView(); // Cambiar vista para mostrarlo
+            if (showOnlyToday) togglePatientView();
+            newPatientModal.classList.add('hidden');
             return;
         } else {
             if (confirm(`El paciente "${existing.name}" está en la lista de bajas. ¿Desea reactivarlo?`)) {
                 await reactivatePatient(existing.id, existing.name);
+                newPatientModal.classList.add('hidden');
                 return;
             }
         }
     }
 
     try {
-        const result = await createPatientProfile(cleanName);
+        saveNewPatientBtn.disabled = true;
+        saveNewPatientBtn.textContent = "Guardando...";
+
+        const result = await createPatientProfile(fullName, firstName, lastName);
+
         if (result.success) {
-            alert(`Paciente "${cleanName}" creado exitosamente.`);
+            alert(`Paciente "${fullName}" creado exitosamente.`);
+            newPatientModal.classList.add('hidden');
             if (showOnlyToday) {
-                togglePatientView(); // Cambiar a "Ver Todos" para que el usuario vea al nuevo paciente
+                togglePatientView();
             }
         } else {
             alert("Error al crear paciente: " + result.error);
@@ -212,8 +248,11 @@ window.createNewPatient = async function () {
     } catch (e) {
         console.error(e);
         alert("Error: " + e.message);
+    } finally {
+        saveNewPatientBtn.disabled = false;
+        saveNewPatientBtn.textContent = "Crear Paciente";
     }
-};
+}
 
 // Renderizar lista de pacientes activos
 function renderPatientsList() {
@@ -651,7 +690,8 @@ window.reactivatePatient = async function (profileId, patientName) {
 
 // Crear o asegurar perfil de paciente
 // Crear o asegurar perfil de paciente
-export async function ensurePatientProfile(patientName) {
+// Crear o asegurar perfil de paciente
+export async function ensurePatientProfile(patientName, firstName = '', lastName = '') {
     const existing = patientProfiles.find(p => p.name === patientName);
 
     if (existing) {
@@ -672,7 +712,7 @@ export async function ensurePatientProfile(patientName) {
     }
 
     // Crear nuevo perfil usando servicio
-    const result = await createPatientProfile(patientName);
+    const result = await createPatientProfile(patientName, firstName, lastName);
     if (!result.success) throw new Error(result.error);
     return { id: result.id, ...result.data };
 }
