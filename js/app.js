@@ -40,6 +40,9 @@ async function handleAuthState(user) {
         loginContainer.classList.add('hidden');
         appContent.classList.remove('hidden');
 
+        // Actualizar UI de usuario (nombre, rol, selector)
+        updateUserUI();
+
         // Inicializar módulos si es necesario (idempotente)
         initializeModules();
     } else {
@@ -53,6 +56,52 @@ async function handleAuthState(user) {
         // Limpiar formulario
         loginForm.reset();
         loginError.classList.add('hidden');
+    }
+}
+
+function updateUserUI() {
+    // 1. Mostrar información del usuario
+    const userInfoEl = document.getElementById('userInfo');
+    if (userInfoEl) {
+        userInfoEl.innerHTML = `
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                    ${AuthManager.getDisplayName().charAt(0)}
+                </div>
+                <div>
+                    <div class="font-bold text-gray-800">${AuthManager.getDisplayName()}</div>
+                    <div class="text-xs text-gray-500 capitalize">${AuthManager.getRole()}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 2. Manejar selector de terapeuta
+    const selectorContainer = document.getElementById('therapistSelectorContainer');
+    const selector = document.getElementById('therapistFilter');
+
+    if (selectorContainer && selector) {
+        if (AuthManager.can('switch_therapist_view')) {
+            selectorContainer.classList.remove('hidden');
+            selector.value = AuthManager.getSelectedTherapist();
+
+            // Asignar evento de cambio
+            selector.onchange = (e) => {
+                const newTherapist = e.target.value;
+                AuthManager.setSelectedTherapist(newTherapist);
+
+                // Recargar lista de pacientes si existe la función
+                if (typeof window.renderPatientsList === 'function') {
+                    console.log("🔄 Recargando lista de pacientes...");
+                    window.renderPatientsList();
+                }
+
+                // Aquí también deberíamos recargar el calendario cuando esté integrado
+                // if (typeof window.renderCalendar === 'function') window.renderCalendar();
+            };
+        } else {
+            selectorContainer.classList.add('hidden');
+        }
     }
 }
 

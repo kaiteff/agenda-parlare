@@ -1,7 +1,8 @@
 // AuthManager.js - Sistema de autenticación y permisos
 // Gestiona usuarios, roles y permisos del sistema
 
-import { db, collection, doc, getDoc, getDocs, query, where } from '../firebase.js';
+import { db } from '../firebase.js';
+import { collection, doc, getDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 /**
  * Definición de roles del sistema
@@ -72,6 +73,15 @@ export const ROLES = {
  * NOTA: En producción, esto debería estar en Firebase
  */
 const USER_CONFIG = {
+    // Usuario actual (temporal para pruebas)
+    'rodriguezd.danielrob@gmail.com': {
+        role: 'admin',
+        therapist: 'diana',
+        name: 'Diana',
+        displayName: 'Diana (Jefa) - TEMP'
+    },
+
+    // Usuarios de producción (crear en Firebase cuando tengas los emails)
     'diana@parlare.com': {
         role: 'admin',
         therapist: 'diana',

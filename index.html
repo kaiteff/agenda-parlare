@@ -44,6 +44,17 @@
     <div id="appContent" class="flex w-full h-full hidden">
         <aside class="w-1/3 bg-gray-50 border-r border-gray-200 flex flex-col p-6 overflow-y-auto">
             <h1 class="text-3xl font-bold text-slate-800 mb-8">Agenda Parlare</h1>
+    <!-- User info and role -->
+    <div id="userInfo" class="mb-4 text-sm text-gray-600"></div>
+    <!-- Therapist selector (visible for admin/receptionist) -->
+    <div id="therapistSelectorContainer" class="mb-4 hidden">
+        <label class="block text-xs font-medium text-gray-500 mb-1" for="therapistFilter">Ver pacientes de:</label>
+        <select id="therapistFilter" class="w-full px-2 py-1 border rounded">
+            <option value="all">Todos</option>
+            <option value="diana">Diana</option>
+            <option value="sam">Sam</option>
+        </select>
+    </div>
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 id="miniMonthLabel" class="font-bold text-gray-800 capitalize">Noviembre 2023</h3>
