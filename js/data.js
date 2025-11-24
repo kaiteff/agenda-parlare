@@ -1,6 +1,6 @@
 // data.js - manejo de datos y listeners
 import { db, patientProfilesPath, patientsData, patientProfiles, collection, onSnapshot, query, collectionPath, subscribeToPatientsData } from './firebase.js';
-import { updatePatientProfiles } from './utils.js'; // assuming utils will export this helper
+// import { updatePatientProfiles } from './utils.js'; // removed - not needed
 
 // Exportar variables para que otros módulos las usen
 export let patientsDataLocal = patientsData; // alias
@@ -18,7 +18,7 @@ export function initPatientProfilesListener() {
         });
         // actualizar variable exportada
         patientProfilesLocal = profiles;
-        updatePatientProfiles(profiles);
+        // updatePatientProfiles(profiles); // removed - not needed
     }, (error) => {
         console.error('Error Patient Profiles: ' + error.message);
     });

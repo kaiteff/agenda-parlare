@@ -72,7 +72,7 @@ function getTodayPatients() {
 
     const todayAppointments = patientsData.filter(apt => {
         const aptDate = new Date(apt.date);
-        return aptDate >= today && aptDate < tomorrow;
+        return aptDate >= today && aptDate < tomorrow && !apt.isCancelled;
     });
 
     const patientsToday = new Map();
@@ -134,7 +134,8 @@ function getPendingPayments(patientName) {
         const aptDate = new Date(apt.date);
         return apt.name === patientName &&
             aptDate < today &&
-            !apt.isPaid;
+            !apt.isPaid &&
+            !apt.isCancelled;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
@@ -180,6 +181,45 @@ window.quickMarkAsPaid = async function (appointmentId) {
             button.textContent = '✓ Pagado';
             button.disabled = false;
         }
+    }
+};
+
+
+// Toggle confirmación desde lista de pacientes
+window.toggleConfirmationFromList = async function (patientName) {
+    try {
+        // Obtener la próxima cita de mañana para este paciente
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dayAfter = new Date(tomorrow);
+        dayAfter.setDate(dayAfter.getDate() + 1);
+
+        const tomorrowAppointments = patientsData.filter(apt => {
+            const aptDate = new Date(apt.date);
+            return apt.name === patientName &&
+                aptDate >= tomorrow &&
+                aptDate < dayAfter &&
+                !apt.isCancelled;
+        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (tomorrowAppointments.length === 0) {
+            alert('No se encontró cita para mañana');
+            return;
+        }
+
+        const appointment = tomorrowAppointments[0];
+        const newStatus = !appointment.confirmed;
+
+        await updateDoc(doc(db, collectionPath, appointment.id), {
+            confirmed: newStatus
+        });
+
+        console.log(`Cita ${newStatus ? 'confirmada' : 'desconfirmada'} para ${patientName}`);
+    } catch (error) {
+        console.error('Error al cambiar confirmación:', error);
+        alert('Error al cambiar confirmación: ' + error.message);
     }
 };
 
@@ -304,8 +344,17 @@ function renderPatientsList() {
                 .filter(p => todayPatients.some(tp => tp.name === p.name))
                 .map(p => {
                     const todayData = todayPatients.find(tp => tp.name === p.name);
-                    return { ...p, nextAppointment: todayData.appointmentTime };
+                    return { ...p, nextAppointment: todayData.appointmentTime, confirmed: todayData.confirmed };
                 });
+        } else if (viewMode === 'tomorrow') {
+            const tomorrowPatients = getTomorrowPatients();
+            patientsToShow = activePatients
+                .filter(p => tomorrowPatients.some(tp => tp.name === p.name))
+                .map(p => {
+                    const tomorrowData = tomorrowPatients.find(tp => tp.name === p.name);
+                    return { ...p, nextAppointment: tomorrowData.appointmentTime, confirmed: tomorrowData.confirmed };
+                })
+                .sort((a, b) => a.nextAppointment - b.nextAppointment);
         } else {
             patientsToShow = activePatients;
         }
@@ -335,6 +384,13 @@ function renderPatientsList() {
 
         // Ordenar: por hora si es "Hoy", alfabético si es "Todos"
         if (viewMode === 'today') {
+            patientsWithTotals.sort((a, b) => {
+                if (a.nextAppointment && b.nextAppointment) {
+                    return a.nextAppointment - b.nextAppointment;
+                }
+                return 0;
+            });
+        } else if (viewMode === 'tomorrow') {
             patientsWithTotals.sort((a, b) => {
                 if (a.nextAppointment && b.nextAppointment) {
                     return a.nextAppointment - b.nextAppointment;
@@ -372,11 +428,18 @@ function renderPatientsList() {
                     hour: '2-digit',
                     minute: '2-digit'
                 });
-                
+
                 if (viewMode === 'tomorrow') {
-                    confirmBadge = patient.confirmed 
-                        ? '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">✓ OK</span>'
-                        : '<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">⏳ Pendiente</span>';
+                    const confirmText = patient.confirmed ? '✓ OK' : '⏳ Pendiente';
+                    const confirmClass = patient.confirmed
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-orange-100 text-orange-700';
+
+                    confirmBadge = `<button 
+                        onclick="event.stopPropagation(); toggleConfirmationFromList('${patient.name}')" 
+                        class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
+                        title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
+                    >${confirmText}</button>`;
                 }
             }
 
