@@ -10,7 +10,7 @@ import { createAppointment, updateAppointment, deleteAppointment, togglePaymentS
 let patientsList, patientsHeader, patientHistoryModal, inactivePatientsModal;
 let newPatientModal, newPatientFirstName, newPatientLastName, saveNewPatientBtn, closeNewPatientModalBtn;
 let selectedPatient = null;
-let showOnlyToday = true; // Filtro: mostrar solo pacientes de hoy por defecto
+let viewMode = 'today'; // 'today', 'tomorrow', 'all'
 
 // Inicializar sistema de pacientes
 // Inicializar sistema de pacientes
@@ -92,6 +92,39 @@ function getTodayPatients() {
         .sort((a, b) => a.appointmentTime - b.appointmentTime);
 }
 
+
+// Obtener pacientes con citas mañana
+function getTomorrowPatients() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+
+    const tomorrowAppointments = patientsData.filter(apt => {
+        const aptDate = new Date(apt.date);
+        return aptDate >= tomorrow && aptDate < dayAfter && !apt.isCancelled;
+    });
+
+    const patientsTomorrow = new Map();
+    tomorrowAppointments.forEach(apt => {
+        const existing = patientsTomorrow.get(apt.name);
+        const aptTime = new Date(apt.date);
+
+        if (!existing || aptTime < existing.appointmentTime) {
+            patientsTomorrow.set(apt.name, {
+                name: apt.name,
+                appointmentTime: aptTime,
+                confirmed: apt.confirmed || false
+            });
+        }
+    });
+
+    return Array.from(patientsTomorrow.values())
+        .sort((a, b) => a.appointmentTime - b.appointmentTime);
+}
+
 // Obtener pagos pendientes de un paciente
 function getPendingPayments(patientName) {
     const today = new Date();
@@ -156,40 +189,41 @@ function updatePatientsHeader(count) {
 
     const totalActive = patientProfiles.filter(p => p.isActive !== false).length;
     const todayCount = getTodayPatients().length;
+    const tomorrowCount = getTomorrowPatients().length;
 
     patientsHeader.innerHTML = `
         <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-gray-600">
-                    ${showOnlyToday ? `HOY (${count})` : `ACTIVOS (${count})`}
+                    ${viewMode === 'today' ? `HOY (${count})` : viewMode === 'tomorrow' ? `MAÑANA (${count})` : `ACTIVOS (${count})`}
                 </span>
                 <button id="btnNewPatient" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     Nuevo
                 </button>
             </div>
-            <button id="toggleViewBtn" 
-                    class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
-                ${showOnlyToday ? `Ver Todos (${totalActive})` : `Solo Hoy (${todayCount})`}
-            </button>
+            <div class="flex gap-1">
+                <button id="btnViewToday" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'today' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}">
+                    Hoy (${todayCount})
+                </button>
+                <button id="btnViewTomorrow" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'tomorrow' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}">
+                    Mañana (${tomorrowCount})
+                </button>
+                <button id="btnViewAll" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'all' ? 'bg-gray-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}">
+                    Todos (${totalActive})
+                </button>
+            </div>
         </div>
     `;
 
-    const toggleBtn = document.getElementById('toggleViewBtn');
-    if (toggleBtn) {
-        toggleBtn.onclick = togglePatientView;
-    }
+    document.getElementById('btnViewToday')?.addEventListener('click', () => { viewMode = 'today'; renderPatientsList(); });
+    document.getElementById('btnViewTomorrow')?.addEventListener('click', () => { viewMode = 'tomorrow'; renderPatientsList(); });
+    document.getElementById('btnViewAll')?.addEventListener('click', () => { viewMode = 'all'; renderPatientsList(); });
 
     const newPatientBtn = document.getElementById('btnNewPatient');
     if (newPatientBtn) {
         newPatientBtn.onclick = window.createNewPatient;
     }
-}
-
-// Toggle entre vista Hoy y Todos
-function togglePatientView() {
-    showOnlyToday = !showOnlyToday;
-    renderPatientsList();
 }
 
 // Crear nuevo paciente manualmente
@@ -218,7 +252,7 @@ async function handleSaveNewPatient() {
     if (existing) {
         if (existing.isActive !== false) {
             alert(`El paciente "${existing.name}" ya existe en la lista de activos.`);
-            if (showOnlyToday) togglePatientView();
+            if (viewMode !== 'all') { viewMode = 'all'; renderPatientsList(); }
             newPatientModal.classList.add('hidden');
             return;
         } else {
@@ -239,8 +273,9 @@ async function handleSaveNewPatient() {
         if (result.success) {
             alert(`Paciente "${fullName}" creado exitosamente.`);
             newPatientModal.classList.add('hidden');
-            if (showOnlyToday) {
-                togglePatientView();
+            if (viewMode !== 'all') {
+                viewMode = 'all';
+                renderPatientsList();
             }
         } else {
             alert("Error al crear paciente: " + result.error);
@@ -263,7 +298,7 @@ function renderPatientsList() {
 
         // Aplicar filtro según modo
         let patientsToShow;
-        if (showOnlyToday) {
+        if (viewMode === 'today') {
             const todayPatients = getTodayPatients();
             patientsToShow = activePatients
                 .filter(p => todayPatients.some(tp => tp.name === p.name))
@@ -299,7 +334,7 @@ function renderPatientsList() {
         });
 
         // Ordenar: por hora si es "Hoy", alfabético si es "Todos"
-        if (showOnlyToday) {
+        if (viewMode === 'today') {
             patientsWithTotals.sort((a, b) => {
                 if (a.nextAppointment && b.nextAppointment) {
                     return a.nextAppointment - b.nextAppointment;
@@ -314,7 +349,7 @@ function renderPatientsList() {
         updatePatientsHeader(patientsWithTotals.length);
 
         if (patientsWithTotals.length === 0) {
-            patientsList.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">${showOnlyToday ? 'No hay citas para hoy' : 'No hay pacientes activos'}</p>`;
+            patientsList.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">${viewMode === 'today' ? 'No hay citas para hoy' : viewMode === 'tomorrow' ? 'No hay citas para mañana' : 'No hay pacientes activos'}</p>`;
             return;
         }
 
@@ -331,16 +366,26 @@ function renderPatientsList() {
             const pendingPayments = getPendingPayments(patient.name);
 
             let timeStr = '';
-            if (showOnlyToday && patient.nextAppointment) {
+            let confirmBadge = '';
+            if ((viewMode === 'today' || viewMode === 'tomorrow') && patient.nextAppointment) {
                 timeStr = patient.nextAppointment.toLocaleTimeString('es-ES', {
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+                
+                if (viewMode === 'tomorrow') {
+                    confirmBadge = patient.confirmed 
+                        ? '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">✓ OK</span>'
+                        : '<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">⏳ Pendiente</span>';
+                }
             }
 
             patientEl.innerHTML = `
                 <div class="flex items-center justify-between mb-1">
-                    <div class="font-bold text-gray-800">${patient.name}</div>
+                    <div class="flex items-center gap-2">
+                        <div class="font-bold text-gray-800">${patient.name}</div>
+                        ${confirmBadge}
+                    </div>
                     ${timeStr ? `<div class="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">🕒 ${timeStr}</div>` : ''}
                 </div>
                 
