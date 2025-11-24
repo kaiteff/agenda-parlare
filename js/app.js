@@ -4,6 +4,7 @@ import { initializeFirebase, loginUser, logoutUser } from './firebase.js';
 import { initCalendar } from './calendar.js';
 import { initNotifications } from './notifications.js';
 import { initPatients } from './patients.js';
+import { AuthManager } from './managers/AuthManager.js';
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
@@ -18,10 +19,24 @@ const logoutBtn = document.getElementById('logoutBtn');
 console.log("🚀 Iniciando Agenda Parlare...");
 
 // Manejar estado de autenticación
-function handleAuthState(user) {
+async function handleAuthState(user) {
     if (user) {
-        // Usuario logueado
-        console.log("✅ Usuario autenticado:", user.email);
+        // Inicializar usuario con AuthManager
+        const userData = await AuthManager.initUser(user);
+
+        if (!userData) {
+            console.error("❌ Usuario no autorizado");
+            loginError.textContent = "Usuario no autorizado para acceder al sistema.";
+            loginError.classList.remove('hidden');
+            await logoutUser();
+            return;
+        }
+
+        // Usuario logueado y autorizado
+        console.log(`✅ Usuario autenticado: ${userData.displayName}`);
+        console.log(`🔑 Rol: ${userData.role}`);
+        console.log(`👤 Terapeuta: ${userData.therapist || 'N/A'}`);
+
         loginContainer.classList.add('hidden');
         appContent.classList.remove('hidden');
 
@@ -30,6 +45,8 @@ function handleAuthState(user) {
     } else {
         // Usuario no logueado
         console.log("🔒 Usuario no autenticado");
+        AuthManager.clear();
+
         loginContainer.classList.remove('hidden');
         appContent.classList.add('hidden');
 
