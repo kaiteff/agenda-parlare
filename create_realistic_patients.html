@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Pacientes Realistas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-2xl font-bold mb-4 text-gray-800">👥 Crear 50 Pacientes con Citas Recurrentes</h1>
+
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+            <p class="text-sm text-blue-700">
+                <strong>ℹ️ Información:</strong> Este script creará:
+            </p>
+            <ul class="list-disc list-inside text-sm text-blue-700 mt-2 space-y-1">
+                <li>25 pacientes para Diana</li>
+                <li>25 pacientes para Sam</li>
+                <li>Cada paciente tendrá entre 4 y 10 citas recurrentes semanales</li>
+                <li>Horarios aleatorios (9am - 8pm, Lunes - Sábado)</li>
+                <li>Costos aleatorios entre $600 y $900</li>
+                <li>30% de citas pagadas, 50% confirmadas</li>
+            </ul>
+        </div>
+
+        <div class="space-y-4">
+            <button id="createPatientsBtn"
+                class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                🚀 Crear Pacientes
+            </button>
+
+            <div id="output" class="bg-gray-50 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto hidden"></div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/create_realistic_patients.js"></script>
+    <script>
+        // Redirigir console.log al output
+        const output = document.getElementById('output');
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function (...args) {
+            output.classList.remove('hidden');
+            const text = args.join(' ');
+            const color = text.includes('✅') ? 'text-green-600' :
+                text.includes('❌') ? 'text-red-600' :
+                    text.includes('📅') ? 'text-blue-600' :
+                        text.includes('🎉') ? 'text-purple-600 font-bold' :
+                            'text-gray-700';
+            output.innerHTML += '<div class="' + color + '">' + text + '</div>';
+            output.scrollTop = output.scrollHeight;
+            originalLog.apply(console, args);
+        };
+
+        console.error = function (...args) {
+            output.classList.remove('hidden');
+            output.innerHTML += '<div class="text-red-600 font-bold">' + args.join(' ') + '</div>';
+            output.scrollTop = output.scrollHeight;
+            originalError.apply(console, args);
+        };
+    </script>
+</body>
+
+</html>

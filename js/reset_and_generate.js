@@ -1,61 +1,39 @@
-// reset_and_generate.js - Borrar todo y generar datos limpios
+// reset_and_generate.js - Borrar todo y generar 50 pacientes con citas aleatorias
 import { db } from './firebase.js';
 import { collection, getDocs, deleteDoc, doc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-const THERAPISTS = {
-    diana: {
-        id: 'diana',
-        name: 'Diana',
-        patients: [
-            { firstName: 'María', lastName: 'González', dayOfWeek: 1, hour: 9 },
-            { firstName: 'Juan', lastName: 'Pérez', dayOfWeek: 1, hour: 10 },
-            { firstName: 'Ana', lastName: 'Martínez', dayOfWeek: 1, hour: 11 },
-            { firstName: 'Carlos', lastName: 'López', dayOfWeek: 1, hour: 14 },
-            { firstName: 'Laura', lastName: 'Rodríguez', dayOfWeek: 1, hour: 15 },
-            { firstName: 'Pedro', lastName: 'Sánchez', dayOfWeek: 2, hour: 9 },
-            { firstName: 'Sofia', lastName: 'Ramírez', dayOfWeek: 2, hour: 10 },
-            { firstName: 'Diego', lastName: 'Torres', dayOfWeek: 2, hour: 11 },
-            { firstName: 'Valentina', lastName: 'Flores', dayOfWeek: 2, hour: 14 },
-            { firstName: 'Mateo', lastName: 'Rivera', dayOfWeek: 2, hour: 15 },
-            { firstName: 'Isabella', lastName: 'Gómez', dayOfWeek: 3, hour: 9 },
-            { firstName: 'Santiago', lastName: 'Díaz', dayOfWeek: 3, hour: 10 },
-            { firstName: 'Camila', lastName: 'Vargas', dayOfWeek: 3, hour: 11 },
-            { firstName: 'Sebastián', lastName: 'Castro', dayOfWeek: 3, hour: 14 },
-            { firstName: 'Lucía', lastName: 'Ortiz', dayOfWeek: 3, hour: 15 },
-            { firstName: 'Nicolás', lastName: 'Ruiz', dayOfWeek: 4, hour: 9 },
-            { firstName: 'Emma', lastName: 'Morales', dayOfWeek: 4, hour: 10 },
-            { firstName: 'Matías', lastName: 'Jiménez', dayOfWeek: 4, hour: 11 },
-            { firstName: 'Mía', lastName: 'Herrera', dayOfWeek: 4, hour: 14 },
-            { firstName: 'Lucas', lastName: 'Medina', dayOfWeek: 4, hour: 15 }
-        ]
-    },
-    sam: {
-        id: 'sam',
-        name: 'Sam',
-        patients: [
-            { firstName: 'Alejandro', lastName: 'Navarro', dayOfWeek: 1, hour: 9 },
-            { firstName: 'Daniela', lastName: 'Reyes', dayOfWeek: 1, hour: 10 },
-            { firstName: 'Gabriel', lastName: 'Romero', dayOfWeek: 1, hour: 11 },
-            { firstName: 'Victoria', lastName: 'Silva', dayOfWeek: 1, hour: 14 },
-            { firstName: 'Andrés', lastName: 'Mendoza', dayOfWeek: 1, hour: 15 },
-            { firstName: 'Martina', lastName: 'Gutiérrez', dayOfWeek: 2, hour: 9 },
-            { firstName: 'Felipe', lastName: 'Aguilar', dayOfWeek: 2, hour: 10 },
-            { firstName: 'Renata', lastName: 'Vega', dayOfWeek: 2, hour: 11 },
-            { firstName: 'Emiliano', lastName: 'Cortés', dayOfWeek: 2, hour: 14 },
-            { firstName: 'Paula', lastName: 'Ramos', dayOfWeek: 2, hour: 15 },
-            { firstName: 'Joaquín', lastName: 'Paredes', dayOfWeek: 3, hour: 9 },
-            { firstName: 'Valeria', lastName: 'Luna', dayOfWeek: 3, hour: 10 },
-            { firstName: 'Tomás', lastName: 'Campos', dayOfWeek: 3, hour: 11 },
-            { firstName: 'Antonella', lastName: 'Peña', dayOfWeek: 3, hour: 14 },
-            { firstName: 'Benjamín', lastName: 'Ríos', dayOfWeek: 3, hour: 15 },
-            { firstName: 'Catalina', lastName: 'Molina', dayOfWeek: 4, hour: 9 },
-            { firstName: 'Maximiliano', lastName: 'Cabrera', dayOfWeek: 4, hour: 10 },
-            { firstName: 'Julieta', lastName: 'Carrillo', dayOfWeek: 4, hour: 11 },
-            { firstName: 'Agustín', lastName: 'Fuentes', dayOfWeek: 4, hour: 14 },
-            { firstName: 'Florencia', lastName: 'Núñez', dayOfWeek: 4, hour: 15 }
-        ]
-    }
-};
+// 25 nombres para Diana
+const dianaNames = [
+    ['Roberto', 'Sánchez'], ['Patricia', 'Ramírez'], ['Fernando', 'Torres'],
+    ['Claudia', 'Morales'], ['Ricardo', 'Jiménez'], ['Mónica', 'Vargas'],
+    ['Alberto', 'Castro'], ['Silvia', 'Ortiz'], ['Jorge', 'Ruiz'],
+    ['Elena', 'Flores'], ['Miguel', 'Herrera'], ['Rosa', 'Medina'],
+    ['Daniel', 'Guzmán'], ['Teresa', 'Reyes'], ['Sergio', 'Cortés'],
+    ['Lorena', 'Navarro'], ['Pablo', 'Domínguez'], ['Verónica', 'Gil'],
+    ['Gustavo', 'Márquez'], ['Isabel', 'Ramos'], ['Andrés', 'Cabrera'],
+    ['Carmen', 'Molina'], ['Luis', 'Santana'], ['Alicia', 'Vázquez'],
+    ['Enrique', 'Pacheco']
+];
+
+// 25 nombres para Sam
+const samNames = [
+    ['Valeria', 'Núñez'], ['Rodrigo', 'Vega'], ['Beatriz', 'Campos'],
+    ['Héctor', 'Luna'], ['Adriana', 'Ríos'], ['Ernesto', 'Aguilar'],
+    ['Lucía', 'Salazar'], ['Raúl', 'Méndez'], ['Gabriela', 'Paredes'],
+    ['Arturo', 'Delgado'], ['Mariana', 'Rojas'], ['Francisco', 'Ibarra'],
+    ['Natalia', 'Fuentes'], ['Javier', 'Peña'], ['Carolina', 'Soto'],
+    ['Óscar', 'Benítez'], ['Diana', 'Cárdenas'], ['Mauricio', 'Estrada'],
+    ['Sofía', 'Guerrero'], ['Tomás', 'Lara'], ['Paola', 'Montes'],
+    ['Ignacio', 'Ochoa'], ['Cecilia', 'Ponce'], ['Ramón', 'Quiroz'],
+    ['Daniela', 'Silva']
+];
+
+const hours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+const weekDays = [1, 2, 3, 4, 5, 6]; // Lunes a Sábado
+
+function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 function getNextDate(dayOfWeek, hour, weekOffset = 0) {
     const today = new Date();
@@ -109,7 +87,7 @@ export async function resetAndGenerate() {
     }
     console.log(`   ✅ ${deletedAppointments} citas borradas`);
 
-    console.log('\n🎲 PASO 2: Generando datos nuevos...');
+    console.log('\n🎲 PASO 2: Generando 50 pacientes con citas aleatorias...');
 
     const newProfilesRef = collection(db, 'patientProfiles');
     const newAppointmentsRef = collection(db, 'appointments');
@@ -117,50 +95,101 @@ export async function resetAndGenerate() {
     let totalPatients = 0;
     let totalAppointments = 0;
 
-    for (const [therapistKey, therapistData] of Object.entries(THERAPISTS)) {
-        console.log(`\n👤 Creando pacientes para ${therapistData.name}...`);
+    // Crear pacientes de Diana
+    console.log('\n👤 Creando 25 pacientes para Diana...');
+    for (const [firstName, lastName] of dianaNames) {
+        const fullName = `${firstName} ${lastName}`;
 
-        for (const patientData of therapistData.patients) {
-            const fullName = `${patientData.firstName} ${patientData.lastName}`;
+        // Crear perfil
+        await addDoc(newProfilesRef, {
+            name: fullName,
+            firstName,
+            lastName,
+            therapist: 'diana',
+            isActive: true,
+            dateAdded: serverTimestamp(),
+            dateInactivated: null,
+            lastSessionDate: null
+        });
 
-            // Crear perfil
-            await addDoc(newProfilesRef, {
+        totalPatients++;
+
+        // Horario aleatorio
+        const day = weekDays[rand(0, weekDays.length - 1)];
+        const hour = hours[rand(0, hours.length - 1)];
+        const numWeeks = rand(4, 10);
+        const cost = rand(600, 900);
+
+        // Crear citas recurrentes
+        for (let week = 0; week < numWeeks; week++) {
+            const appointmentDate = getNextDate(day, hour, week);
+
+            await addDoc(newAppointmentsRef, {
                 name: fullName,
-                firstName: patientData.firstName,
-                lastName: patientData.lastName,
-                therapist: therapistData.id,
-                isActive: true,
-                dateAdded: serverTimestamp(),
-                dateInactivated: null,
-                lastSessionDate: null
+                date: appointmentDate.toISOString().slice(0, 16),
+                cost: cost.toString(),
+                therapist: 'diana',
+                isPaid: Math.random() > 0.7,
+                confirmed: Math.random() > 0.5,
+                isCancelled: false,
+                createdAt: serverTimestamp()
             });
 
-            totalPatients++;
-            console.log(`  ✅ ${fullName} (${therapistData.id})`);
-
-            // Crear 8 citas
-            for (let week = 0; week < 8; week++) {
-                const appointmentDate = getNextDate(patientData.dayOfWeek, patientData.hour, week);
-
-                await addDoc(newAppointmentsRef, {
-                    name: fullName,
-                    date: appointmentDate.toISOString(),
-                    cost: 500,
-                    therapist: therapistData.id,
-                    isPaid: week < 2,
-                    confirmed: week === 0,
-                    isCancelled: false,
-                    createdAt: serverTimestamp()
-                });
-
-                totalAppointments++;
-            }
+            totalAppointments++;
         }
+
+        console.log(`  ✅ ${fullName} - ${numWeeks} citas`);
+    }
+
+    // Crear pacientes de Sam
+    console.log('\n👤 Creando 25 pacientes para Sam...');
+    for (const [firstName, lastName] of samNames) {
+        const fullName = `${firstName} ${lastName}`;
+
+        // Crear perfil
+        await addDoc(newProfilesRef, {
+            name: fullName,
+            firstName,
+            lastName,
+            therapist: 'sam',
+            isActive: true,
+            dateAdded: serverTimestamp(),
+            dateInactivated: null,
+            lastSessionDate: null
+        });
+
+        totalPatients++;
+
+        // Horario aleatorio
+        const day = weekDays[rand(0, weekDays.length - 1)];
+        const hour = hours[rand(0, hours.length - 1)];
+        const numWeeks = rand(4, 10);
+        const cost = rand(600, 900);
+
+        // Crear citas recurrentes
+        for (let week = 0; week < numWeeks; week++) {
+            const appointmentDate = getNextDate(day, hour, week);
+
+            await addDoc(newAppointmentsRef, {
+                name: fullName,
+                date: appointmentDate.toISOString().slice(0, 16),
+                cost: cost.toString(),
+                therapist: 'sam',
+                isPaid: Math.random() > 0.7,
+                confirmed: Math.random() > 0.5,
+                isCancelled: false,
+                createdAt: serverTimestamp()
+            });
+
+            totalAppointments++;
+        }
+
+        console.log(`  ✅ ${fullName} - ${numWeeks} citas`);
     }
 
     console.log(`\n✅ ¡COMPLETADO!`);
     console.log(`   📊 Total pacientes: ${totalPatients}`);
     console.log(`   📅 Total citas: ${totalAppointments}`);
-    console.log(`   👥 Diana: 20 pacientes, 160 citas`);
-    console.log(`   👥 Sam: 20 pacientes, 160 citas`);
+    console.log(`   👥 Diana: 25 pacientes`);
+    console.log(`   👥 Sam: 25 pacientes`);
 }

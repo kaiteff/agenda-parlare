@@ -85,6 +85,11 @@ function populatePatientSuggestions() {
     if (!patientSuggestions) return;
     patientSuggestions.innerHTML = '';
 
+    console.log("🔍 populatePatientSuggestions - Perfiles disponibles:", patientProfiles.length);
+    if (patientProfiles.length > 0) {
+        console.log("🔍 Nombres en perfiles:", patientProfiles.map(p => p.name));
+    }
+
     const now = new Date();
 
     // Obtener todos los nombres únicos de perfiles y citas

@@ -301,8 +301,11 @@ window.createNewPatient = function () {
 
 // Manejar guardado del nuevo paciente
 async function handleSaveNewPatient() {
+    console.log("🚀 handleSaveNewPatient iniciado");
     const firstName = newPatientFirstName.value.trim();
     const lastName = newPatientLastName.value.trim();
+
+    console.log("📝 Datos:", { firstName, lastName });
 
     if (!firstName || !lastName) {
         alert("Por favor ingrese nombre y apellidos.");
@@ -313,6 +316,7 @@ async function handleSaveNewPatient() {
     const existing = patientProfiles.find(p => p.name.toLowerCase() === fullName.toLowerCase());
 
     if (existing) {
+        console.warn("⚠️ Paciente existente:", existing);
         if (existing.isActive !== false) {
             alert(`El paciente "${existing.name}" ya existe en la lista de activos.`);
             if (viewMode !== 'all') { viewMode = 'all'; renderPatientsList(); }
@@ -335,20 +339,40 @@ async function handleSaveNewPatient() {
         const therapistSelector = document.getElementById('newPatientTherapist');
         const therapist = therapistSelector ? therapistSelector.value : (AuthManager.currentUser?.therapist || AuthManager.getSelectedTherapist() || 'diana');
 
+        console.log("👨‍⚕️ Terapeuta asignado:", therapist);
+
         const result = await createPatientProfile(fullName, firstName, lastName, therapist);
+        console.log("✅ Resultado createPatientProfile:", result);
 
         if (result.success) {
+            // Agregar el paciente localmente de inmediato (sin esperar al listener)
+            const newProfile = {
+                id: result.id,
+                name: fullName,
+                firstName: firstName,
+                lastName: lastName,
+                therapist: therapist,
+                isActive: true,
+                dateAdded: new Date(),
+                dateInactivated: null,
+                lastSessionDate: null
+            };
+
+            patientProfiles.push(newProfile);
+            console.log("✅ Paciente agregado localmente:", newProfile);
+
+            // Cambiar a vista "Todos" y re-renderizar
+            viewMode = 'all';
+            renderPatientsList();
+
             alert(`Paciente "${fullName}" creado exitosamente.`);
             newPatientModal.classList.add('hidden');
-            if (viewMode !== 'all') {
-                viewMode = 'all';
-                renderPatientsList();
-            }
         } else {
+            console.error("❌ Error en result:", result.error);
             alert("Error al crear paciente: " + result.error);
         }
     } catch (e) {
-        console.error(e);
+        console.error("❌ Excepción en handleSaveNewPatient:", e);
         alert("Error: " + e.message);
     } finally {
         saveNewPatientBtn.disabled = false;
@@ -409,6 +433,8 @@ function renderPatientsList() {
         } else {
             patientsToShow = activePatients;
         }
+
+        console.log("📋 Renderizando lista con:", patientsToShow.map(p => p.name));
 
         const patientsWithTotals = patientsToShow.map(profile => {
             const appointments = patientsData.filter(apt => apt.name === profile.name);

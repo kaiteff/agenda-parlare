@@ -19,9 +19,9 @@ const firebaseConfig = {
 export const appId = "taconotaco-d94fc";
 
 // Rutas de colecciones
-export const collectionPath = `/artifacts/${appId}/public/data/appointments`;
+export const collectionPath = 'appointments';
 export const notificationsPath = `/artifacts/${appId}/public/data/notifications`;
-export const patientProfilesPath = `/artifacts/${appId}/public/data/patientProfiles`;
+export const patientProfilesPath = 'patientProfiles';
 
 // Estado global de datos
 export let patientsData = [];

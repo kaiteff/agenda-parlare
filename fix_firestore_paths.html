@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corregir Rutas de Firestore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-2xl font-bold mb-4 text-gray-800">🔧 Corrección de Rutas de Firestore</h1>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <p class="text-sm text-yellow-700">
+                <strong>⚠️ Advertencia:</strong> Este script moverá todos los perfiles de pacientes de la ruta
+                incorrecta
+                <code class="bg-yellow-100 px-1 rounded">/artifacts/taconotaco-d94fc/public/data/patientProfiles</code>
+                a la ruta correcta <code class="bg-yellow-100 px-1 rounded">patientProfiles</code>.
+            </p>
+        </div>
+
+        <div class="space-y-4">
+            <button id="fixPathsBtn"
+                class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                Ejecutar Corrección
+            </button>
+
+            <div id="output" class="bg-gray-50 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto hidden"></div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/fix_firestore_paths.js"></script>
+    <script>
+        // Redirigir console.log al output
+        const output = document.getElementById('output');
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function (...args) {
+            output.classList.remove('hidden');
+            output.innerHTML += '<div class="text-blue-600">' + args.join(' ') + '</div>';
+            output.scrollTop = output.scrollHeight;
+            originalLog.apply(console, args);
+        };
+
+        console.error = function (...args) {
+            output.classList.remove('hidden');
+            output.innerHTML += '<div class="text-red-600">' + args.join(' ') + '</div>';
+            output.scrollTop = output.scrollHeight;
+            originalError.apply(console, args);
+        };
+    </script>
+</body>
+
+</html>

@@ -14,13 +14,27 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
-// Lazy-load auth to ensure db is initialized first
+// Lazy-load auth and db to ensure they are initialized
 let _auth = null;
+let _db = null;
+
 function getAuthInstance() {
     if (!_auth && db?.app) {
         _auth = getAuth(db.app);
     }
     return _auth;
+}
+
+function getDbInstance() {
+    if (!_db) {
+        if (db) {
+            _db = db;
+        } else {
+            console.warn("⚠️ AuthManager: db no está definido al importar, intentando recuperar de firebase.js...");
+            // En caso de emergencia, podríamos intentar re-importar o esperar
+        }
+    }
+    return _db || db;
 }
 
 export const ROLES = {
@@ -154,13 +168,21 @@ export const AuthManager = {
 
     async getUserData(uid) {
         try {
-            const userDoc = await getDoc(doc(db, "users", uid));
+            const database = getDbInstance();
+            if (!database) {
+                console.error("🔥 AuthManager: db is undefined in getUserData (after lazy load)!");
+                throw new Error("Firestore not initialized");
+            }
+            const userDoc = await getDoc(doc(database, "users", uid));
             if (userDoc.exists()) {
                 return userDoc.data();
             }
             return null;
         } catch (error) {
             console.error("Error getting user data:", error);
+            if (error.code === 'failed-precondition') {
+                console.error("🔥 Posible error de inicialización de Firestore");
+            }
             return null;
         }
     },

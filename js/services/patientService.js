@@ -39,7 +39,12 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             lastSessionDate: null
         };
 
+        console.log("🔍 createPatientProfile - db:", db);
+        console.log("🔍 createPatientProfile - patientProfilesPath:", patientProfilesPath);
+        console.log("🔍 createPatientProfile - profileData:", profileData);
+
         const docRef = await addDoc(collection(db, patientProfilesPath), profileData);
+        console.log("✅ Documento creado con ID:", docRef.id);
         return { success: true, id: docRef.id, data: profileData };
     } catch (error) {
         console.error("Error creando perfil:", error);
