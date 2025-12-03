@@ -170,7 +170,6 @@ export const AuthManager = {
         try {
             const database = getDbInstance();
             if (!database) {
-                console.error("🔥 AuthManager: db is undefined in getUserData (after lazy load)!");
                 throw new Error("Firestore not initialized");
             }
             const userDoc = await getDoc(doc(database, "users", uid));
@@ -180,9 +179,6 @@ export const AuthManager = {
             return null;
         } catch (error) {
             console.error("Error getting user data:", error);
-            if (error.code === 'failed-precondition') {
-                console.error("🔥 Posible error de inicialización de Firestore");
-            }
             return null;
         }
     },

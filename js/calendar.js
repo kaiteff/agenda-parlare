@@ -609,7 +609,6 @@ function setupEventListeners() {
 
     // Suscribirse a cambios en los datos para actualizar el calendario
     subscribeToPatientsData(() => {
-        console.log("📅 calendar.js: Recibida actualización de datos, re-renderizando...");
         renderCalendar();
     });
 

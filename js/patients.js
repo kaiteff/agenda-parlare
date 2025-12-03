@@ -94,7 +94,6 @@ function getTodayPatients() {
             });
         }
     });
-
     return Array.from(patientsToday.values())
         .sort((a, b) => a.appointmentTime - b.appointmentTime);
 }
@@ -109,9 +108,19 @@ function getTomorrowPatients() {
     const dayAfter = new Date(tomorrow);
     dayAfter.setDate(dayAfter.getDate() + 1);
 
+    const selectedTherapist = AuthManager.getSelectedTherapist();
+
     const tomorrowAppointments = patientsData.filter(apt => {
         const aptDate = new Date(apt.date);
-        const matchesTherapist = AuthManager.canEditItem(apt);
+
+        // Verificar filtro de terapeuta seleccionado
+        let matchesTherapist = true;
+        if (selectedTherapist && selectedTherapist !== 'all') {
+            matchesTherapist = (apt.therapist === selectedTherapist);
+        } else {
+            matchesTherapist = AuthManager.canEditItem(apt);
+        }
+
         return aptDate >= tomorrow && aptDate < dayAfter && !apt.isCancelled && matchesTherapist;
     });
 
@@ -138,65 +147,13 @@ function getPendingPayments(patientName) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return patientsData.filter(apt => {
-        const aptDate = new Date(apt.date);
-        const matchesTherapist = AuthManager.canEditItem(apt);
-        return apt.name === patientName &&
-            aptDate < today &&
-            !apt.isPaid &&
-            !apt.isCancelled &&
-            matchesTherapist;
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    return patientsData
+        .filter(apt => apt.name === patientName && !apt.isPaid && !apt.isCancelled && new Date(apt.date) < today)
+        .reduce((total, apt) => total + (parseFloat(apt.cost) || 0), 0);
 }
 
-// Marcar pago pendiente como pagado rápidamente
-window.quickMarkAsPaid = async function (appointmentId) {
-    // Obtener el botón que disparó el evento
-    const button = event?.target;
-
-    // Feedback visual inmediato
-    if (button) {
-        const originalText = button.textContent;
-        button.textContent = '⏳ Guardando...';
-        button.disabled = true;
-    }
-
-    try {
-        await updateDoc(doc(db, collectionPath, appointmentId), {
-            isPaid: true
-        });
-
-        // Feedback de éxito
-        if (button) {
-            button.textContent = '✓ Pagado!';
-            button.classList.remove('bg-green-600', 'hover:bg-green-700');
-            button.classList.add('bg-green-700', 'cursor-default');
-        }
-
-        // Esperar un momento para que Firebase actualice los listeners
-        setTimeout(() => {
-            // Si el modal de historial está abierto, actualizarlo
-            if (selectedPatient && !patientHistoryModal.classList.contains('hidden')) {
-                openPatientHistoryModal(selectedPatient);
-            }
-            // La lista de pacientes se actualizará automáticamente por el listener de Firebase
-        }, 300);
-
-    } catch (e) {
-        console.error("Error al marcar como pagado:", e);
-        alert("Error al marcar como pagado: " + e.message);
-
-        // Restaurar botón en caso de error
-        if (button) {
-            button.textContent = '✓ Pagado';
-            button.disabled = false;
-        }
-    }
-};
-
-
-// Toggle confirmación desde lista de pacientes
-window.toggleConfirmationFromList = async function (patientName) {
+// Marcar cita como confirmada/no confirmada
+window.toggleConfirmation = async function (patientName) {
     try {
         // Obtener la próxima cita de mañana para este paciente
         const today = new Date();
@@ -237,7 +194,22 @@ window.toggleConfirmationFromList = async function (patientName) {
 function updatePatientsHeader(count) {
     if (!patientsHeader) return;
 
-    const totalActive = patientProfiles.filter(p => p.isActive !== false).length;
+    const selectedTherapist = AuthManager.getSelectedTherapist();
+
+    const totalActive = patientProfiles.filter(p => {
+        if (p.isActive === false) return false;
+
+        if (selectedTherapist && selectedTherapist !== 'all') {
+            return p.therapist === selectedTherapist;
+        }
+
+        if (AuthManager.isTherapist() && !AuthManager.isAdmin()) {
+            return p.therapist === AuthManager.currentUser.therapist;
+        }
+
+        return true;
+    }).length;
+
     const todayCount = getTodayPatients().length;
     const tomorrowCount = getTomorrowPatients().length;
 
@@ -312,7 +284,7 @@ async function handleSaveNewPatient() {
         return;
     }
 
-    const fullName = `${firstName} ${lastName}`.trim();
+    const fullName = `${firstName} ${lastName} `.trim();
     const existing = patientProfiles.find(p => p.name.toLowerCase() === fullName.toLowerCase());
 
     if (existing) {
@@ -323,7 +295,7 @@ async function handleSaveNewPatient() {
             newPatientModal.classList.add('hidden');
             return;
         } else {
-            if (confirm(`El paciente "${existing.name}" está en la lista de bajas. ¿Desea reactivarlo?`)) {
+            if (confirm(`El paciente "${existing.name}" está en la lista de bajas. ¿Desea reactivarlo ? `)) {
                 await reactivatePatient(existing.id, existing.name);
                 newPatientModal.classList.add('hidden');
                 return;
@@ -386,19 +358,13 @@ function renderPatientsList() {
         if (!patientsList) return;
 
         const selectedTherapist = AuthManager.getSelectedTherapist();
-        console.log("🔍 Filtro de terapeuta seleccionado:", selectedTherapist);
-        console.log("🔍 Total perfiles antes de filtrar:", patientProfiles.length);
 
         const activePatients = patientProfiles.filter(p => {
             if (p.isActive === false) return false;
 
             // Filtro por terapeuta
             if (selectedTherapist && selectedTherapist !== 'all') {
-                const matches = p.therapist === selectedTherapist;
-                if (!matches) {
-                    console.log(`  ❌ ${p.name} (therapist: ${p.therapist}) no coincide con ${selectedTherapist}`);
-                }
-                return matches;
+                return p.therapist === selectedTherapist;
             }
 
             // Si es terapeuta normal (no admin), solo ve los suyos
@@ -408,8 +374,6 @@ function renderPatientsList() {
 
             return true;
         });
-
-        console.log("🔍 Total perfiles después de filtrar:", activePatients.length);
 
         // Aplicar filtro según modo
         let patientsToShow;
@@ -433,8 +397,6 @@ function renderPatientsList() {
         } else {
             patientsToShow = activePatients;
         }
-
-        console.log("📋 Renderizando lista con:", patientsToShow.map(p => p.name));
 
         const patientsWithTotals = patientsToShow.map(profile => {
             const appointments = patientsData.filter(apt => apt.name === profile.name);
@@ -512,31 +474,31 @@ function renderPatientsList() {
                         ? 'bg-green-100 text-green-700'
                         : 'bg-orange-100 text-orange-700';
 
-                    confirmBadge = `<button 
-                        onclick="event.stopPropagation(); toggleConfirmationFromList('${patient.name}')" 
-                        class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
-                        title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
-                    >${confirmText}</button>`;
+                    confirmBadge = `<button
+    onclick="event.stopPropagation(); toggleConfirmationFromList('${patient.name}')"
+    class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
+    title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
+        >${confirmText}</button>`;
                 }
             }
 
             patientEl.innerHTML = `
-                <div class="flex items-center justify-between mb-1">
-                    <div class="flex items-center gap-2">
-                        <div class="font-bold text-gray-800">${patient.name}</div>
-                        ${confirmBadge}
-                    </div>
+            <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                    <div class="font-bold text-gray-800">${patient.name}</div>
+                    ${confirmBadge}
+                </div>
                     ${timeStr ? `<div class="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">🕒 ${timeStr}</div>` : ''}
                 </div>
-                
-                <div class="flex items-center justify-between text-xs mt-2">
-                    <div class="text-gray-500">
-                        <span class="font-medium text-gray-700">${patient.totalPaid}</span> pagadas
-                    </div>
-                    <div class="${pendingColor}">
-                        <span class="font-bold">${patient.totalPending}</span> pendientes
-                    </div>
-                </div>
+
+        <div class="flex items-center justify-between text-xs mt-2">
+            <div class="text-gray-500">
+                <span class="font-medium text-gray-700">${patient.totalPaid}</span> pagadas
+            </div>
+            <div class="${pendingColor}">
+                <span class="font-bold">${patient.totalPending}</span> pendientes
+            </div>
+        </div>
 
                 ${pendingPayments.length > 0 ? `
                     <div class="mt-3 pt-2 border-t border-gray-100">
@@ -559,8 +521,9 @@ function renderPatientsList() {
                         `<div class="text-xs text-orange-600 text-center mt-1">+${pendingPayments.length - 2} más (click para ver)</div>`
                         : ''}
                     </div>
-                ` : ''}
-            `;
+                ` : ''
+                }
+    `;
 
             patientEl.onclick = () => openPatientHistoryModal(patient);
             patientsList.appendChild(patientEl);
@@ -596,15 +559,15 @@ function openPatientHistoryModal(patient) {
 
     // Actualizar título
     document.getElementById('patientHistoryTitle').innerHTML = `
-        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        < svg class="w-6 h-6 text-blue-600" fill = "none" stroke = "currentColor" viewBox = "0 0 24 24" >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
+        </svg >
         Historial de ${patient.name}
     `;
 
     // Actualizar totales
-    document.getElementById('patientTotalPaid').textContent = `$${totalPaid}`;
-    document.getElementById('patientTotalPending').textContent = `$${totalPending}`;
+    document.getElementById('patientTotalPaid').textContent = `$${totalPaid} `;
+    document.getElementById('patientTotalPending').textContent = `$${totalPending} `;
 
     // Actualizar estadísticas
     document.getElementById('patientTotalAppointments').textContent = appointments.length;
@@ -739,10 +702,10 @@ function renderPatientAppointments(appointments) {
         const isCancelled = apt.isCancelled;
 
         const aptEl = document.createElement('div');
-        aptEl.className = `p-3 rounded-lg border ${isCancelled ? 'bg-gray-100 border-gray-300' : isPaid ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`;
+        aptEl.className = `p - 3 rounded - lg border ${isCancelled ? 'bg-gray-100 border-gray-300' : isPaid ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'} `;
 
         aptEl.innerHTML = `
-            <div class="flex items-start justify-between">
+        < div class="flex items-start justify-between" >
                 <div class="flex-1">
                     <div class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                         ${isCancelled ? '❌' : isPast ? '✅' : '📅'} ${dateStr}
@@ -758,7 +721,7 @@ function renderPatientAppointments(appointments) {
                     ${!isPaid && !isCancelled ? `<button onclick="event.stopPropagation(); quickMarkAsPaid('${apt.id}')" class="ml-2 px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-700 text-xs">✓ Pagado</button>` : ''}
                     ${isCancelled ? `<button onclick="event.stopPropagation(); rescheduleAppointment('${apt.id}')" class="ml-2 px-2 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs">📅 Reagendar</button>` : ''}
                 </div>
-            </div>
+            </div >
         `;
 
         appointmentsList.appendChild(aptEl);
@@ -788,7 +751,7 @@ async function deactivatePatient(profileId, patientName) {
     }
     if (pendingDebts.length > 0) {
         const totalDebt = pendingDebts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
-        message += `⚠️ Tiene ${pendingDebts.length} citas pasadas sin pagar (Total: $${totalDebt}).\n`;
+        message += `⚠️ Tiene ${pendingDebts.length} citas pasadas sin pagar(Total: $${totalDebt}).\n`;
     }
     message += `\nEl historial se preservará pero el paciente no aparecerá en la lista activa.`;
 
@@ -797,7 +760,7 @@ async function deactivatePatient(profileId, patientName) {
     try {
         // 3. Manejo de Adeudos
         if (pendingDebts.length > 0) {
-            const payDebts = confirm(`El paciente tiene adeudos pendientes.\n¿Desea marcar estas ${pendingDebts.length} citas como PAGADAS antes de dar de baja?`);
+            const payDebts = confirm(`El paciente tiene adeudos pendientes.\n¿Desea marcar estas ${pendingDebts.length} citas como PAGADAS antes de dar de baja ? `);
             if (payDebts) {
                 for (const apt of pendingDebts) {
                     await togglePaymentStatus(apt.id, false); // false = current status (pending), so it toggles to true (paid)
@@ -841,7 +804,7 @@ window.rescheduleAppointment = async function (appointmentId) {
     const appointment = patientsData.find(a => a.id === appointmentId);
     if (!appointment) return;
 
-    const newDateStr = prompt(`Reagendar cita de ${appointment.name}\n\nIngrese la nueva fecha y hora (formato: YYYY-MM-DD HH:MM):`);
+    const newDateStr = prompt(`Reagendar cita de ${appointment.name} \n\nIngrese la nueva fecha y hora(formato: YYYY - MM - DD HH: MM): `);
     if (!newDateStr) return;
 
     try {
@@ -857,7 +820,7 @@ window.rescheduleAppointment = async function (appointmentId) {
             cancelledAt: null
         });
 
-        alert(`Cita reagendada para ${newDate.toLocaleString('es-ES')}`);
+        alert(`Cita reagendada para ${newDate.toLocaleString('es-ES')} `);
     } catch (e) {
         console.error('Error al reagendar:', e);
         alert('Error al reagendar: ' + e.message);
@@ -884,7 +847,7 @@ function openInactivePatientsModal() {
             patientEl.className = 'p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors';
 
             patientEl.innerHTML = `
-                <div class="flex items-start justify-between">
+        < div class="flex items-start justify-between" >
                     <div class="flex-1">
                         <div class="font-semibold text-gray-800 mb-2">${patient.name}</div>
                         <div class="text-xs text-gray-600 space-y-1">
@@ -897,8 +860,8 @@ function openInactivePatientsModal() {
                         class="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors ml-4">
                         Reactivar
                     </button>
-                </div>
-            `;
+                </div >
+        `;
 
             inactiveList.appendChild(patientEl);
         });
@@ -943,7 +906,7 @@ export async function ensurePatientProfile(patientName, firstName = '', lastName
             const inactivatedDate = existing.dateInactivated?.toDate?.() || new Date(existing.dateInactivated);
             const dateStr = inactivatedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
-            if (confirm(`⚠️ ${patientName} está dado/a de baja desde el ${dateStr}.\n\n¿Desea reactivar y agendar?`)) {
+            if (confirm(`⚠️ ${patientName} está dado / a de baja desde el ${dateStr}.\n\n¿Desea reactivar y agendar ? `)) {
                 const result = await reactivatePatientService(existing.id);
                 if (!result.success) throw new Error(result.error);
                 return existing;
@@ -968,7 +931,7 @@ window.rescheduleAppointment = function (appointmentId) {
     const appointment = patientsData.find(a => a.id === appointmentId);
     if (!appointment) return;
 
-    document.getElementById('rescheduleModalTitle').textContent = `Reagendar cita de ${appointment.name}`;
+    document.getElementById('rescheduleModalTitle').textContent = `Reagendar cita de ${appointment.name} `;
     document.getElementById('rescheduleModal').classList.remove('hidden');
     document.getElementById('rescheduleOptions').classList.remove('hidden');
     document.getElementById('rescheduleSlots').classList.add('hidden');
@@ -1056,7 +1019,7 @@ function renderRescheduleSlots(slots, title) {
         const timeStr = slot.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
         btn.innerHTML = `
-            <div class="flex items-center justify-between">
+        < div class="flex items-center justify-between" >
                 <div>
                     <div class="font-semibold text-gray-800 capitalize">${dateStr}</div>
                     <div class="text-sm text-gray-600">${timeStr}</div>
@@ -1064,7 +1027,7 @@ function renderRescheduleSlots(slots, title) {
                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
-            </div>
+            </div >
         `;
 
         btn.onclick = async () => {
@@ -1093,7 +1056,7 @@ function renderRescheduleSlots(slots, title) {
                 });
 
                 closeRescheduleModal();
-                alert(`Cita reagendada para ${dateStr} a las ${timeStr}${newCost && newCost !== currentApt.cost ? `\n(Costo actualizado a $${newCost})` : ''}`);
+                alert(`Cita reagendada para ${dateStr} a las ${timeStr}${newCost && newCost !== currentApt.cost ? `\n(Costo actualizado a $${newCost})` : ''} `);
             } catch (e) {
                 console.error('Error al reagendar:', e);
                 alert('Error al reagendar: ' + e.message);
