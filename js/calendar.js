@@ -27,6 +27,9 @@ let patientSuggestions, isRecurringCheckbox, recurringSection, recurringOptions,
 // Inicializar referencias DOM
 export function initCalendar() {
     console.log("initCalendar started");
+    // Exponer renderCalendar globalmente
+    window.renderCalendar = renderCalendar;
+
     try {
         calendarGrid = document.getElementById('calendarGrid');
         currentMonthLabel = document.getElementById('currentMonthLabel');
@@ -751,7 +754,10 @@ export function renderCalendar() {
                     return pDateStr === dateStr && pDate.getHours() === hour && !p.isCancelled;
                 });
 
+
+
                 const selectedTherapist = AuthManager.getSelectedTherapist();
+                // console.log("Renderizando celda con filtro:", selectedTherapist); // Debug opcional
                 const isViewAll = !selectedTherapist || selectedTherapist === 'all';
 
                 // --- LÓGICA DE RENDERIZADO ---
@@ -785,39 +791,44 @@ export function renderCalendar() {
 
                 } else {
                     // === VISTA INDIVIDUAL (Detalle Completo) ===
-                    // Filtrar evento específico para el terapeuta seleccionado
-                    const existingEvent = slotEvents.find(p => {
+                    // Filtrar eventos específicos para el terapeuta seleccionado
+                    const matchingEvents = slotEvents.filter(p => {
                         const apptTherapist = p.therapist || 'diana';
-
-                        // DEBUG TEMPORAL
-                        if (p.name === 'Daniela Reyes') {
-                            console.log(`🔍 Revisando Daniela: Therapist=${apptTherapist}, Selected=${selectedTherapist}, Match=${apptTherapist === selectedTherapist}`);
-                        }
-
                         return apptTherapist === selectedTherapist;
                     });
 
-                    if (existingEvent) {
-                        const eventCard = document.createElement('div');
-                        const isPaid = existingEvent.isPaid;
-                        const isConfirmed = existingEvent.confirmed;
+                    if (matchingEvents.length > 0) {
+                        // Contenedor para múltiples citas (stack vertical)
+                        const container = document.createElement('div');
+                        container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5 overflow-hidden";
 
-                        eventCard.className = `absolute inset-0 m-0.5 p-1.5 rounded-md shadow-sm text-xs font-medium cursor-pointer transition-all hover:shadow-md ${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'}`;
+                        matchingEvents.forEach(evt => {
+                            const eventCard = document.createElement('div');
+                            const isPaid = evt.isPaid;
+                            const isConfirmed = evt.confirmed;
 
-                        eventCard.innerHTML = `
-                        <div class="flex items-start justify-between gap-1">
-                            <div class="truncate flex-1 font-semibold">${existingEvent.name}</div>
-                            ${isConfirmed ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded px-1 py-0.5 text-[10px] font-bold flex items-center gap-0.5"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>OK</div>` : ''}
-                        </div>
-                        <div class="text-xs opacity-90 mt-0.5">$${existingEvent.cost || '0'}</div>
-                    `;
+                            // Ajustar altura si hay múltiples
+                            const heightClass = matchingEvents.length > 1 ? 'flex-1 min-h-0' : 'h-full';
 
-                        eventCard.onclick = (e) => {
-                            e.stopPropagation();
-                            openEditModal(existingEvent);
-                        };
+                            eventCard.className = `${heightClass} rounded-md shadow-sm text-xs font-medium cursor-pointer transition-all hover:shadow-md px-1.5 py-0.5 flex flex-col justify-center ${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'}`;
 
-                        cell.appendChild(eventCard);
+                            eventCard.innerHTML = `
+                                <div class="flex items-center justify-between gap-1 w-full">
+                                    <div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>
+                                    ${isConfirmed ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</div>` : ''}
+                                </div>
+                                ${matchingEvents.length === 1 ? `<div class="text-[10px] opacity-90 leading-tight">$${evt.cost || '0'}</div>` : ''}
+                            `;
+
+                            eventCard.onclick = (e) => {
+                                e.stopPropagation();
+                                openEditModal(evt);
+                            };
+
+                            container.appendChild(eventCard);
+                        });
+
+                        cell.appendChild(container);
                     } else {
                         // Slot vacío en vista Individual
                         renderEmptySlot(cell, dateStr, hour);
