@@ -702,10 +702,10 @@ function renderPatientAppointments(appointments) {
         const isCancelled = apt.isCancelled;
 
         const aptEl = document.createElement('div');
-        aptEl.className = `p - 3 rounded - lg border ${isCancelled ? 'bg-gray-100 border-gray-300' : isPaid ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'} `;
+        aptEl.className = `p-3 rounded-lg border ${isCancelled ? 'bg-gray-100 border-gray-300' : isPaid ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'} `;
 
         aptEl.innerHTML = `
-        < div class="flex items-start justify-between" >
+        <div class="flex items-start justify-between">
                 <div class="flex-1">
                     <div class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                         ${isCancelled ? '❌' : isPast ? '✅' : '📅'} ${dateStr}
@@ -847,7 +847,7 @@ function openInactivePatientsModal() {
             patientEl.className = 'p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors';
 
             patientEl.innerHTML = `
-        < div class="flex items-start justify-between" >
+        <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <div class="font-semibold text-gray-800 mb-2">${patient.name}</div>
                         <div class="text-xs text-gray-600 space-y-1">
