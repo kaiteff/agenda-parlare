@@ -426,6 +426,43 @@ async function saveEvent() {
     const currentFilter = AuthManager.getSelectedTherapist();
     const therapist = (currentFilter && currentFilter !== 'all') ? currentFilter : (AuthManager.currentUser?.therapist || 'diana');
 
+    // Verificar si el paciente ya tiene cita esta semana (solo para citas nuevas)
+    if (!selectedEventId) {
+        const selectedDate = new Date(date);
+        const startOfWeek = new Date(selectedDate);
+        startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+        const existingAppointmentsThisWeek = patientsData.filter(apt => {
+            if (apt.name !== name || apt.isCancelled) return false;
+            const aptDate = new Date(apt.date);
+            return aptDate >= startOfWeek && aptDate < endOfWeek;
+        });
+
+        if (existingAppointmentsThisWeek.length > 0) {
+            const existingApt = existingAppointmentsThisWeek[0];
+            const existingDate = new Date(existingApt.date);
+            const dayName = existingDate.toLocaleDateString('es-ES', { weekday: 'long' });
+            const dateStr = existingDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+            const timeStr = existingDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+            const confirmed = confirm(
+                `⚠️ ADVERTENCIA: CITA DUPLICADA\n\n` +
+                `El paciente "${name}" ya tiene una cita esta semana:\n\n` +
+                `📅 ${dayName}, ${dateStr}\n` +
+                `🕒 ${timeStr}\n\n` +
+                `¿Deseas agendar otra cita de todas formas?`
+            );
+
+            if (!confirmed) {
+                return; // Cancelar la creación de la cita
+            }
+        }
+    }
+
     const conflict = checkSlotConflict(date, patientsData, selectedEventId, therapist);
     if (conflict) {
         const conflictTime = new Date(date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
