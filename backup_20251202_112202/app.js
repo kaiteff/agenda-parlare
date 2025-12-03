@@ -1,19 +1,26 @@
 // app.js - Punto de entrada principal de la aplicación
+
 import { initializeFirebase, loginUser, logoutUser } from './firebase.js';
 import { initCalendar } from './calendar.js';
 import { initNotifications } from './notifications.js';
 import { initPatients } from './patients.js';
 import { AuthManager } from './managers/AuthManager.js';
-// import { runMigration } from './migrate_data.js';
+import { runMigration } from './migrate_data.js';
 
-// Inicialización
-// document.addEventListener('DOMContentLoaded', async () => {
-// Ejecutar migración de datos (solo una vez)
-// runMigration().catch(console.error);
-// });
+// Auto-ejecutar migración (solo para esta sesión)
+window.addEventListener('load', () => {
+    console.log("🔄 Auto-ejecutando migración...");
+    setTimeout(runMigration, 2000); // Esperar a que Firebase inicialice
+});
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
+const appContent = document.getElementById('appContent');
+const loginForm = document.getElementById('loginForm');
+const emailInput = document.getElementById('emailInput');
+const passwordInput = document.getElementById('passwordInput');
+const loginError = document.getElementById('loginError');
+const logoutBtn = document.getElementById('logoutBtn');
 
 // Inicializar aplicación
 console.log("🚀 Iniciando Agenda Parlare...");
@@ -96,11 +103,8 @@ function updateUserUI() {
                     window.renderPatientsList();
                 }
 
-                // Recargar calendario
-                if (typeof renderCalendar === 'function') {
-                    console.log("🔄 Recargando calendario...");
-                    renderCalendar();
-                }
+                // Aquí también deberíamos recargar el calendario cuando esté integrado
+                // if (typeof window.renderCalendar === 'function') window.renderCalendar();
             };
         } else {
             selectorContainer.classList.add('hidden');

@@ -1,6 +1,6 @@
 // calendar.js - Lógica del calendario y gestión de citas
 
-import { db, userId, collectionPath, notificationsPath, patientsData, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, updatePatientsData, patientProfiles, subscribeToPatientsData } from './firebase.js';
+import { db, userId, collectionPath, notificationsPath, patientsData, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, updatePatientsData, patientProfiles } from './firebase.js';
 import { ensurePatientProfile } from './patients.js';
 import { getStartOfWeek, addDays, formatDateLocal, getWeekNumber } from './utils/dateUtils.js';
 import { isSlotFree, checkSlotConflict, validateAppointment } from './utils/validators.js';
@@ -387,12 +387,7 @@ async function saveEvent() {
         return alert("⚠️ El costo es obligatorio y debe ser mayor a 0");
     }
 
-    // Determinar el terapeuta para esta cita
-    // Si hay un filtro seleccionado (y no es 'all'), usar ese. Si no, usar el del usuario actual.
-    const currentFilter = AuthManager.getSelectedTherapist();
-    const therapist = (currentFilter && currentFilter !== 'all') ? currentFilter : (AuthManager.currentUser?.therapist || 'diana');
-
-    const conflict = checkSlotConflict(date, patientsData, selectedEventId, therapist);
+    const conflict = checkSlotConflict(date, patientsData, selectedEventId);
     if (conflict) {
         const conflictTime = new Date(date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         return alert(`⚠️ HORARIO OCUPADO\n\nLa hora ${conflictTime} ya está agendada para:\n"${conflict.name}"\n\nPor favor selecciona otro horario disponible.`);
@@ -427,13 +422,13 @@ async function saveEvent() {
                         name,
                         date: cb.value,
                         cost,
-                        therapist: therapist
+                        therapist: AuthManager.currentUser?.therapist || 'diana'
                     });
                 });
             }
 
             // Add therapist to the main appointment too
-            appointmentsToCreate[0].therapist = therapist;
+            appointmentsToCreate[0].therapist = AuthManager.currentUser?.therapist || 'diana';
 
             const results = await Promise.all(appointmentsToCreate.map(appt => createAppointment(appt, patientsData)));
 
@@ -599,12 +594,6 @@ function setupEventListeners() {
     miniPrevBtn.onclick = () => miniCalendar.prevMonth();
     miniNextBtn.onclick = () => miniCalendar.nextMonth();
 
-    // Suscribirse a cambios en los datos para actualizar el calendario
-    subscribeToPatientsData(() => {
-        console.log("📅 calendar.js: Recibida actualización de datos, re-renderizando...");
-        renderCalendar();
-    });
-
     saveBtn.onclick = saveEvent;
     deleteBtn.onclick = deleteEvent;
     cancelBtn.onclick = closeModal;
@@ -743,85 +732,57 @@ export function renderCalendar() {
                     dateStr = "";
                 }
 
-                // Buscar TODAS las citas en este horario (para soportar colisiones en vista 'Todos')
-                const slotEvents = patientsData.filter(p => {
+                const existingEvent = patientsData.find(p => {
                     const pDate = new Date(p.date);
                     let pDateStr;
                     try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
-                    return pDateStr === dateStr && pDate.getHours() === hour && !p.isCancelled;
+
+                    // Verificar fecha, hora, cancelación Y PERMISOS
+                    const matchesTime = pDateStr === dateStr && pDate.getHours() === hour && !p.isCancelled;
+                    const matchesTherapist = AuthManager.canEditItem(p);
+
+                    return matchesTime && matchesTherapist;
                 });
 
-                const selectedTherapist = AuthManager.getSelectedTherapist();
-                const isViewAll = !selectedTherapist || selectedTherapist === 'all';
+                if (existingEvent) {
+                    const eventCard = document.createElement('div');
+                    const isPaid = existingEvent.isPaid;
+                    const isConfirmed = existingEvent.confirmed;
 
-                // --- LÓGICA DE RENDERIZADO ---
+                    eventCard.className = `absolute inset-0 m-0.5 p-1.5 rounded-md shadow-sm text-xs font-medium cursor-pointer transition-all hover:shadow-md ${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'}`;
 
-                if (isViewAll) {
-                    // === VISTA "TODOS" (Resumen Visual) ===
-                    if (slotEvents.length > 0) {
-                        const container = document.createElement('div');
-                        container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5"; // Stack vertical
+                    eventCard.innerHTML = `
+                    <div class="flex items-start justify-between gap-1">
+                        <div class="truncate flex-1 font-semibold">${existingEvent.name}</div>
+                        ${isConfirmed ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded px-1 py-0.5 text-[10px] font-bold flex items-center gap-0.5"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>OK</div>` : ''}
+                    </div>
+                    <div class="text-xs opacity-90 mt-0.5">$${existingEvent.cost || '0'}</div>
+                `;
 
-                        slotEvents.forEach(evt => {
-                            const therapistName = (evt.therapist || 'diana') === 'diana' ? 'Diana' : 'Sam';
-                            const bgColor = (evt.therapist || 'diana') === 'diana' ? 'bg-pink-100 text-pink-800 border-pink-200' : 'bg-blue-100 text-blue-800 border-blue-200';
+                    eventCard.onclick = (e) => {
+                        e.stopPropagation();
+                        openEditModal(existingEvent);
+                    };
 
-                            const chip = document.createElement('div');
-                            chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} cursor-pointer hover:brightness-95 truncate`;
-                            chip.textContent = `${therapistName} Ocupada`;
-                            chip.title = `${therapistName}: ${evt.name}`; // Tooltip con el nombre real
-
-                            chip.onclick = (e) => {
-                                e.stopPropagation();
-                                openEditModal(evt);
-                            };
-                            container.appendChild(chip);
-                        });
-                        cell.appendChild(container);
-                    } else {
-                        // Slot vacío en vista Todos
-                        renderEmptySlot(cell, dateStr, hour);
-                    }
-
+                    cell.appendChild(eventCard);
                 } else {
-                    // === VISTA INDIVIDUAL (Detalle Completo) ===
-                    // Filtrar evento específico para el terapeuta seleccionado
-                    const existingEvent = slotEvents.find(p => {
-                        const apptTherapist = p.therapist || 'diana';
+                    const now = new Date();
+                    const slotDateTime = new Date(dayDate);
+                    slotDateTime.setHours(hour, 0, 0, 0);
+                    const isPast = slotDateTime < now;
 
-                        // DEBUG TEMPORAL
-                        if (p.name === 'Daniela Reyes') {
-                            console.log(`🔍 Revisando Daniela: Therapist=${apptTherapist}, Selected=${selectedTherapist}, Match=${apptTherapist === selectedTherapist}`);
-                        }
-
-                        return apptTherapist === selectedTherapist;
-                    });
-
-                    if (existingEvent) {
-                        const eventCard = document.createElement('div');
-                        const isPaid = existingEvent.isPaid;
-                        const isConfirmed = existingEvent.confirmed;
-
-                        eventCard.className = `absolute inset-0 m-0.5 p-1.5 rounded-md shadow-sm text-xs font-medium cursor-pointer transition-all hover:shadow-md ${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'}`;
-
-                        eventCard.innerHTML = `
-                        <div class="flex items-start justify-between gap-1">
-                            <div class="truncate flex-1 font-semibold">${existingEvent.name}</div>
-                            ${isConfirmed ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded px-1 py-0.5 text-[10px] font-bold flex items-center gap-0.5"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>OK</div>` : ''}
-                        </div>
-                        <div class="text-xs opacity-90 mt-0.5">$${existingEvent.cost || '0'}</div>
-                    `;
-
-                        eventCard.onclick = (e) => {
-                            e.stopPropagation();
-                            openEditModal(existingEvent);
-                        };
-
-                        cell.appendChild(eventCard);
-                    } else {
-                        // Slot vacío en vista Individual
-                        renderEmptySlot(cell, dateStr, hour);
+                    if (!isPast) {
+                        const hoverText = document.createElement('div');
+                        hoverText.className = "absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none";
+                        hoverText.innerHTML = `<span class="text-xs font-medium text-gray-400">Disponible</span>`;
+                        cell.appendChild(hoverText);
                     }
+
+                    cell.onclick = () => {
+                        if (!isPast) {
+                            openCreateModal(dateStr, hour);
+                        }
+                    };
                 }
 
                 row.appendChild(cell);
@@ -833,23 +794,6 @@ export function renderCalendar() {
         console.error("Error Render:", e);
         updateStatus("Error Render: " + e.message);
     }
-}
-
-// Helper para renderizar slot vacío
-function renderEmptySlot(cell, dateStr, hour) {
-    const now = new Date();
-    // Reconstruir fecha del slot para comparar
-    // Nota: dateStr viene formateado, necesitamos el objeto fecha base del día
-    // Como optimización, podríamos pasar el objeto dayDate, pero aquí usaremos lógica simple visual
-
-    const hoverText = document.createElement('div');
-    hoverText.className = "absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none";
-    hoverText.innerHTML = `<span class="text-xs font-medium text-gray-400">Disponible</span>`;
-    cell.appendChild(hoverText);
-
-    cell.onclick = () => {
-        openCreateModal(dateStr, hour);
-    };
 }
 
 // Helper functions for modals
@@ -896,11 +840,7 @@ function generateRescheduleOptions(currentDateStr) {
 
         if (futureDate.getDay() === 0) continue; // Skip Sundays
 
-        // Obtener el terapeuta de la cita original para buscar slots libres en SU calendario
-        const appointment = patientsData.find(p => p.id === selectedEventId);
-        const therapist = appointment ? appointment.therapist : (AuthManager.currentUser?.therapist || 'diana');
-
-        if (isSlotFree(futureDate, patientsData, selectedEventId, therapist)) {
+        if (isSlotFree(futureDate, patientsData)) {
             const label = futureDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
             createRescheduleChip(label, futureDate);
         }

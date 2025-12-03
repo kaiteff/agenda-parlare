@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Generar Datos de Prueba</title>
+</head>
+
+<body>
+    <h1>Generar Datos de Prueba</h1>
+    <p>Esto creará:</p>
+    <ul>
+        <li><strong>20 pacientes para Diana</strong> con 8 citas semanales cada uno (160 citas)</li>
+        <li><strong>20 pacientes para Sam</strong> con 8 citas semanales cada uno (160 citas)</li>
+        <li>Total: <strong>40 pacientes y 320 citas</strong></li>
+    </ul>
+
+    <button id="generateBtn"
+        style="padding: 20px; font-size: 18px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;">
+        Generar Datos de Prueba
+    </button>
+
+    <div id="output"
+        style="margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 500px; overflow-y: auto;">
+    </div>
+
+    <script type="module">
+        import { generateTestData } from './js/generate_test_data.js';
+
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const output = document.getElementById('output');
+            const btn = document.getElementById('generateBtn');
+
+            if (!confirm('¿Estás seguro? Esto creará 40 pacientes y 320 citas en la base de datos.')) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Generando...';
+            output.textContent = 'Iniciando generación de datos...\n';
+
+            // Capturar console.log
+            const originalLog = console.log;
+            console.log = (...args) => {
+                output.textContent += args.join(' ') + '\n';
+                output.scrollTop = output.scrollHeight;
+                originalLog(...args);
+            };
+
+            try {
+                await generateTestData();
+                output.textContent += '\n✅ ¡Datos de prueba generados exitosamente!';
+                output.textContent += '\n\nPuedes cerrar esta página y volver a la aplicación principal.';
+            } catch (error) {
+                output.textContent += '\n❌ Error: ' + error.message;
+                console.error(error);
+            } finally {
+                console.log = originalLog;
+                btn.disabled = false;
+                btn.textContent = 'Generar Datos de Prueba';
+            }
+        });
+    </script>
+</body>
+
+</html>

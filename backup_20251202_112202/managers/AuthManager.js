@@ -108,14 +108,10 @@ export const AuthManager = {
             }
 
             // Inicializar filtro de terapeuta
-            // Si el usuario tiene un terapeuta asignado, usar ese por defecto (incluso si es admin)
-            // Si no tiene terapeuta asignado y puede cambiar vista, usar 'all'
-            if (this.currentUser.therapist) {
-                this.selectedTherapist = this.currentUser.therapist;
-            } else if (this.can('switch_therapist_view')) {
+            if (this.can('switch_therapist_view')) {
                 this.selectedTherapist = 'all';
             } else {
-                this.selectedTherapist = 'diana'; // Fallback seguro
+                this.selectedTherapist = this.currentUser.therapist;
             }
 
             return this.currentUser;
@@ -234,13 +230,8 @@ export const AuthManager = {
     },
 
     setSelectedTherapist(therapist) {
-        console.log("🔧 setSelectedTherapist llamado con:", therapist);
-        console.log("🔧 can('switch_therapist_view'):", this.can('switch_therapist_view'));
         if (this.can('switch_therapist_view')) {
             this.selectedTherapist = therapist;
-            console.log("✅ selectedTherapist actualizado a:", this.selectedTherapist);
-        } else {
-            console.log("❌ No tiene permiso para cambiar vista de terapeuta");
         }
     }
 };

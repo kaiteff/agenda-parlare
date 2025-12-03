@@ -8,27 +8,11 @@
  * @param {string} excludeId - ID de cita a excluir (opcional, para edición)
  * @returns {boolean} - true si el slot está libre
  */
-/**
- * Verifica si un slot de tiempo está libre
- * @param {Date} dateObj - Fecha y hora a verificar
- * @param {Array} appointments - Lista de citas
- * @param {string} excludeId - ID de cita a excluir (opcional, para edición)
- * @param {string} therapist - ID del terapeuta (opcional)
- * @returns {boolean} - true si el slot está libre
- */
-export function isSlotFree(dateObj, appointments, excludeId = null, therapist = null) {
+export function isSlotFree(dateObj, appointments, excludeId = null) {
     const time = dateObj.getTime();
     return !appointments.some(p => {
         if (excludeId && p.id === excludeId) return false;
         if (p.isCancelled) return false;
-
-        // Si se especifica terapeuta, solo considerar citas de ese terapeuta
-        // Si la cita no tiene terapeuta, se asume 'diana' (compatibilidad hacia atrás)
-        const apptTherapist = p.therapist || 'diana';
-        const targetTherapist = therapist || 'diana';
-
-        if (apptTherapist !== targetTherapist) return false;
-
         const pDate = new Date(p.date);
         const pTime = pDate.getTime();
         // Considera ocupado si hay una cita dentro de 1 hora
@@ -41,20 +25,13 @@ export function isSlotFree(dateObj, appointments, excludeId = null, therapist = 
  * @param {string} dateTimeStr - Fecha y hora en formato ISO
  * @param {Array} appointments - Lista de citas
  * @param {string} excludeId - ID de cita a excluir (opcional)
- * @param {string} therapist - ID del terapeuta (opcional)
  * @returns {Object|null} - Cita en conflicto o null si no hay conflicto
  */
-export function checkSlotConflict(dateTimeStr, appointments, excludeId = null, therapist = null) {
+export function checkSlotConflict(dateTimeStr, appointments, excludeId = null) {
     const selectedTime = new Date(dateTimeStr).getTime();
     return appointments.find(p => {
         if (excludeId && p.id === excludeId) return false;
         if (p.isCancelled) return false;
-
-        const apptTherapist = p.therapist || 'diana';
-        const targetTherapist = therapist || 'diana';
-
-        if (apptTherapist !== targetTherapist) return false;
-
         const pTime = new Date(p.date).getTime();
         return Math.abs(pTime - selectedTime) < 3600000;
     });
@@ -157,10 +134,9 @@ export function isNotSunday(date) {
  * Validación completa de una cita
  * @param {Object} appointmentData - Datos de la cita
  * @param {Array} existingAppointments - Citas existentes
- * @param {string} therapist - ID del terapeuta (opcional)
  * @returns {Object} - { valid: boolean, errors: Array }
  */
-export function validateAppointment(appointmentData, existingAppointments, therapist = null) {
+export function validateAppointment(appointmentData, existingAppointments) {
     const { name, date, cost, id } = appointmentData;
     const errors = [];
 
@@ -184,7 +160,7 @@ export function validateAppointment(appointmentData, existingAppointments, thera
         }
 
         // Validar conflictos
-        const conflict = checkSlotConflict(date, existingAppointments, id, therapist);
+        const conflict = checkSlotConflict(date, existingAppointments, id);
         if (conflict) {
             const conflictTime = new Date(date).toLocaleTimeString('es-ES', {
                 hour: '2-digit',

@@ -5,16 +5,12 @@ import { renderCalendar } from './calendar.js';
 import { isSlotFree } from './utils/validators.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile as deletePatientProfileService } from './services/patientService.js';
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from './services/appointmentService.js';
-import { AuthManager } from './managers/AuthManager.js';
 
 // Referencias DOM
 let patientsList, patientsHeader, patientHistoryModal, inactivePatientsModal;
 let newPatientModal, newPatientFirstName, newPatientLastName, saveNewPatientBtn, closeNewPatientModalBtn;
 let selectedPatient = null;
 let viewMode = 'today'; // 'today', 'tomorrow', 'all'
-
-// Exponer renderPatientsList globalmente para que AuthManager pueda llamarlo
-window.renderPatientsList = renderPatientsList;
 
 // Inicializar sistema de pacientes
 // Inicializar sistema de pacientes
@@ -52,8 +48,7 @@ export function initPatients() {
 // Listener de perfiles
 function setupPatientProfilesListener() {
     console.log("🏥 patients.js: Iniciando listener de perfiles");
-    // Usar directamente 'patientProfiles' en lugar de patientProfilesPath
-    const profilesColRef = collection(db, 'patientProfiles');
+    const profilesColRef = collection(db, patientProfilesPath);
     const profilesQuery = query(profilesColRef);
 
     onSnapshot(profilesQuery, (snapshot) => {
@@ -61,7 +56,6 @@ function setupPatientProfilesListener() {
         snapshot.forEach((doc) => {
             profiles.push({ id: doc.id, ...doc.data() });
         });
-        console.log(`🔄 Listener: ${profiles.length} perfiles cargados desde Firestore`);
         updatePatientProfiles(profiles);
         renderPatientsList();
     }, (error) => {
@@ -78,8 +72,7 @@ function getTodayPatients() {
 
     const todayAppointments = patientsData.filter(apt => {
         const aptDate = new Date(apt.date);
-        const matchesTherapist = AuthManager.canEditItem(apt);
-        return aptDate >= today && aptDate < tomorrow && !apt.isCancelled && matchesTherapist;
+        return aptDate >= today && aptDate < tomorrow;
     });
 
     const patientsToday = new Map();
@@ -111,8 +104,7 @@ function getTomorrowPatients() {
 
     const tomorrowAppointments = patientsData.filter(apt => {
         const aptDate = new Date(apt.date);
-        const matchesTherapist = AuthManager.canEditItem(apt);
-        return aptDate >= tomorrow && aptDate < dayAfter && !apt.isCancelled && matchesTherapist;
+        return aptDate >= tomorrow && aptDate < dayAfter && !apt.isCancelled;
     });
 
     const patientsTomorrow = new Map();
@@ -140,12 +132,9 @@ function getPendingPayments(patientName) {
 
     return patientsData.filter(apt => {
         const aptDate = new Date(apt.date);
-        const matchesTherapist = AuthManager.canEditItem(apt);
         return apt.name === patientName &&
             aptDate < today &&
-            !apt.isPaid &&
-            !apt.isCancelled &&
-            matchesTherapist;
+            !apt.isPaid;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
@@ -282,19 +271,6 @@ window.createNewPatient = function () {
     if (!newPatientModal) return;
     newPatientFirstName.value = '';
     newPatientLastName.value = '';
-
-    // Pre-seleccionar terapeuta basado en el filtro actual
-    const therapistSelector = document.getElementById('newPatientTherapist');
-    if (therapistSelector) {
-        const selectedTherapist = AuthManager.getSelectedTherapist();
-        if (selectedTherapist && selectedTherapist !== 'all') {
-            therapistSelector.value = selectedTherapist;
-        } else {
-            // Si es "all" o no hay selección, usar el terapeuta del usuario actual o 'diana'
-            therapistSelector.value = AuthManager.currentUser?.therapist || 'diana';
-        }
-    }
-
     newPatientModal.classList.remove('hidden');
     newPatientFirstName.focus();
 };
@@ -331,11 +307,7 @@ async function handleSaveNewPatient() {
         saveNewPatientBtn.disabled = true;
         saveNewPatientBtn.textContent = "Guardando...";
 
-        // Obtener terapeuta del selector (si existe) o usar el del usuario actual
-        const therapistSelector = document.getElementById('newPatientTherapist');
-        const therapist = therapistSelector ? therapistSelector.value : (AuthManager.currentUser?.therapist || AuthManager.getSelectedTherapist() || 'diana');
-
-        const result = await createPatientProfile(fullName, firstName, lastName, therapist);
+        const result = await createPatientProfile(fullName, firstName, lastName);
 
         if (result.success) {
             alert(`Paciente "${fullName}" creado exitosamente.`);
@@ -361,31 +333,7 @@ function renderPatientsList() {
     try {
         if (!patientsList) return;
 
-        const selectedTherapist = AuthManager.getSelectedTherapist();
-        console.log("🔍 Filtro de terapeuta seleccionado:", selectedTherapist);
-        console.log("🔍 Total perfiles antes de filtrar:", patientProfiles.length);
-
-        const activePatients = patientProfiles.filter(p => {
-            if (p.isActive === false) return false;
-
-            // Filtro por terapeuta
-            if (selectedTherapist && selectedTherapist !== 'all') {
-                const matches = p.therapist === selectedTherapist;
-                if (!matches) {
-                    console.log(`  ❌ ${p.name} (therapist: ${p.therapist}) no coincide con ${selectedTherapist}`);
-                }
-                return matches;
-            }
-
-            // Si es terapeuta normal (no admin), solo ve los suyos
-            if (AuthManager.isTherapist() && !AuthManager.isAdmin()) {
-                return p.therapist === AuthManager.currentUser.therapist;
-            }
-
-            return true;
-        });
-
-        console.log("🔍 Total perfiles después de filtrar:", activePatients.length);
+        const activePatients = patientProfiles.filter(p => p.isActive !== false);
 
         // Aplicar filtro según modo
         let patientsToShow;
@@ -592,72 +540,14 @@ function openPatientHistoryModal(patient) {
     const deactivateBtn = document.getElementById('deactivatePatientBtn');
     const deleteBtn = document.getElementById('deletePatientBtn');
     const editBtn = document.getElementById('editPatientBtn');
-    const editSection = document.getElementById('patientEditSection');
-    const editTherapistSelect = document.getElementById('editPatientTherapist');
-    const saveEditBtn = document.getElementById('savePatientEditBtn');
-
-    // Initialize select
-    if (editTherapistSelect) {
-        editTherapistSelect.value = patient.therapist || 'diana';
-    }
-
     // Ocultar inicialmente los botones de baja y eliminar
     deactivateBtn.classList.add('hidden');
     deleteBtn.classList.add('hidden');
-    if (editSection) editSection.classList.add('hidden');
-
     // Al hacer clic en Editar, mostrar opciones
     editBtn.onclick = () => {
         deactivateBtn.classList.toggle('hidden');
         deleteBtn.classList.toggle('hidden');
-
-        // Solo mostrar sección de editar (cambio de terapeuta) si es admin
-        if (AuthManager.isAdmin()) {
-            if (editSection) editSection.classList.toggle('hidden');
-        }
     };
-
-    // Guardar cambios de edición
-    if (saveEditBtn) {
-        saveEditBtn.onclick = async () => {
-            const newTherapist = editTherapistSelect.value;
-            if (newTherapist === (patient.therapist || 'diana')) {
-                alert("No hay cambios para guardar.");
-                return;
-            }
-
-            if (!confirm(`¿Cambiar terapeuta de ${patient.name} a ${newTherapist}? Esto actualizará también sus citas.`)) return;
-
-            try {
-                saveEditBtn.textContent = "Guardando...";
-                saveEditBtn.disabled = true;
-
-                // Actualizar Perfil
-                await updateDoc(doc(db, 'patientProfiles', patient.id), {
-                    therapist: newTherapist
-                });
-
-                // Actualizar Citas (Todas)
-                const patientApts = patientsData.filter(a => a.name === patient.name);
-                let count = 0;
-                for (const apt of patientApts) {
-                    if (apt.therapist !== newTherapist) {
-                        await updateDoc(doc(db, collectionPath, apt.id), { therapist: newTherapist });
-                        count++;
-                    }
-                }
-
-                alert(`Paciente actualizado exitosamente.\n${count} citas fueron reasignadas a ${newTherapist}.`);
-                closePatientHistoryModal();
-            } catch (e) {
-                console.error("Error updating therapist:", e);
-                alert("Error al actualizar: " + e.message);
-            } finally {
-                saveEditBtn.textContent = "Guardar Cambios";
-                saveEditBtn.disabled = false;
-            }
-        };
-    }
     // Acción de dar de baja
     deactivateBtn.onclick = () => deactivatePatient(patient.id, patient.name);
     // Acción de eliminar paciente (elimina perfil y citas)
@@ -962,15 +852,12 @@ window.showTodaySlots = function () {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const appointment = patientsData.find(a => a.id === currentRescheduleAppointmentId);
-    const therapist = appointment ? appointment.therapist : (AuthManager.currentUser?.therapist || 'diana');
-
     const slots = [];
     for (let hour = 9; hour <= 20; hour++) {
         const slotTime = new Date(today);
         slotTime.setHours(hour, 0, 0, 0);
 
-        if (isSlotFree(slotTime, patientsData, currentRescheduleAppointmentId, therapist) && slotTime > new Date()) {
+        if (isSlotFree(slotTime, patientsData) && slotTime > new Date()) {
             slots.push(slotTime);
         }
     }
@@ -981,9 +868,6 @@ window.showTodaySlots = function () {
 window.showWeekSlots = function () {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    const appointment = patientsData.find(a => a.id === currentRescheduleAppointmentId);
-    const therapist = appointment ? appointment.therapist : (AuthManager.currentUser?.therapist || 'diana');
 
     const slots = [];
     for (let day = 0; day < 7; day++) {
@@ -996,7 +880,7 @@ window.showWeekSlots = function () {
             const slotTime = new Date(date);
             slotTime.setHours(hour, 0, 0, 0);
 
-            if (isSlotFree(slotTime, patientsData, currentRescheduleAppointmentId, therapist) && slotTime > new Date()) {
+            if (isSlotFree(slotTime, patientsData) && slotTime > new Date()) {
                 slots.push(slotTime);
             }
         }
