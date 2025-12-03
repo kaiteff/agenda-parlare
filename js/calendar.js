@@ -92,15 +92,37 @@ function populatePatientSuggestions() {
 
     const now = new Date();
 
-    // Obtener todos los nombres únicos de perfiles y citas
-    const profileNames = new Set(patientProfiles.map(p => p.name));
-    const appointmentNames = new Set(patientsData.map(p => p.name));
+    // Obtener terapeuta seleccionado
+    const selectedTherapist = AuthManager.getSelectedTherapist();
+
+    // Filtrar perfiles por terapeuta
+    const filteredProfiles = patientProfiles.filter(p => {
+        if (selectedTherapist && selectedTherapist !== 'all') {
+            return p.therapist === selectedTherapist;
+        }
+        if (AuthManager.isTherapist() && !AuthManager.isAdmin()) {
+            return p.therapist === AuthManager.currentUser.therapist;
+        }
+        return true;
+    });
+
+    // Filtrar citas por terapeuta
+    const filteredAppointments = patientsData.filter(apt => {
+        if (selectedTherapist && selectedTherapist !== 'all') {
+            return apt.therapist === selectedTherapist;
+        }
+        return true; // Si es 'all' o admin, consideramos todas las citas para sugerencias
+    });
+
+    // Obtener nombres únicos filtrados
+    const profileNames = new Set(filteredProfiles.map(p => p.name));
+    const appointmentNames = new Set(filteredAppointments.map(p => p.name));
     const allNames = new Set([...profileNames, ...appointmentNames]);
 
     const patientsList = Array.from(allNames);
 
     const patientsWithFutureAppointments = new Set(
-        patientsData
+        filteredAppointments
             .filter(p => new Date(p.date) > now && !p.isCancelled)
             .map(p => p.name)
     );
@@ -224,11 +246,15 @@ function generateRecurringDates() {
     const startDate = new Date(startDateStr);
     const dates = [];
 
+    // Determinar terapeuta
+    const currentFilter = AuthManager.getSelectedTherapist();
+    const therapist = (currentFilter && currentFilter !== 'all') ? currentFilter : (AuthManager.currentUser?.therapist || 'diana');
+
     for (let i = 1; i <= 4; i++) {
         const nextDate = new Date(startDate);
         nextDate.setDate(startDate.getDate() + (i * 7));
 
-        const isBusy = checkSlotConflict(nextDate.toISOString(), patientsData);
+        const isBusy = checkSlotConflict(nextDate.toISOString(), patientsData, null, therapist);
 
         dates.push({
             date: nextDate,
@@ -869,7 +895,15 @@ function renderEmptySlot(cell, dateStr, hour) {
 
 // Helper functions for modals
 function renderBusySlots(dateStr) {
+    // Determinar terapeuta
+    const currentFilter = AuthManager.getSelectedTherapist();
+    const therapist = (currentFilter && currentFilter !== 'all') ? currentFilter : (AuthManager.currentUser?.therapist || 'diana');
+
     const busySlots = patientsData.filter(p => {
+        // Filtrar por terapeuta
+        const apptTherapist = p.therapist || 'diana';
+        if (apptTherapist !== therapist) return false;
+
         const pDate = new Date(p.date);
         let pDateStr;
         try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }

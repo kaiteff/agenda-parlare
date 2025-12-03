@@ -11,7 +11,7 @@ import { validateAppointment } from '../utils/validators.js';
 export async function createAppointment(appointmentData, existingAppointments) {
     try {
         // Validar datos
-        const validation = validateAppointment(appointmentData, existingAppointments);
+        const validation = validateAppointment(appointmentData, existingAppointments, appointmentData.therapist);
         if (!validation.valid) {
             return { success: false, error: validation.errors.join('\n') };
         }
@@ -45,7 +45,7 @@ export async function updateAppointment(id, updateData, existingAppointments) {
     try {
         // Si se actualiza fecha o nombre, validar
         if (updateData.date || updateData.name) {
-            const validation = validateAppointment({ ...updateData, id }, existingAppointments);
+            const validation = validateAppointment({ ...updateData, id }, existingAppointments, updateData.therapist);
             if (!validation.valid) {
                 return { success: false, error: validation.errors.join('\n') };
             }
