@@ -277,18 +277,25 @@ export const PatientModals = {
             dom.editPatientTherapist.value = patient.therapist || 'diana';
         }
 
-        // Botón de guardar cambios de terapeuta
+        // Input de costo
+        if (dom.editPatientCost) {
+            dom.editPatientCost.value = patient.defaultCost || 0;
+        }
+
+        // Botón de guardar cambios
         if (dom.savePatientEditBtn) {
             dom.savePatientEditBtn.onclick = async () => {
                 const newTherapist = dom.editPatientTherapist.value;
-                const success = await PatientActions.updatePatientTherapist(
+                const newCost = dom.editPatientCost ? parseFloat(dom.editPatientCost.value) : 0;
+
+                const success = await PatientActions.updatePatientProfile(
                     patient.id,
-                    newTherapist,
+                    { therapist: newTherapist, defaultCost: newCost },
                     patient.name
                 );
 
                 if (success) {
-                    alert('Terapeuta actualizado correctamente');
+                    alert('Perfil actualizado correctamente');
                     this.closeHistory();
                 }
             };

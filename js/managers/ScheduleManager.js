@@ -295,12 +295,41 @@ export const ScheduleManager = {
     async _confirmSchedule() {
         if (!this.state.selectedSlot || !this.state.patientName) return;
 
-        // Validar costo
-        const cost = this.dom.costInput ? parseFloat(this.dom.costInput.value) || 0 : 0;
+        // 1. Validar costo con feedback visual
+        const costInput = this.dom.costInput;
+        const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
+
         if (cost <= 0) {
             alert("⚠️ Por favor, ingrese un costo por sesión válido (mayor a 0) antes de agendar.");
-            if (this.dom.costInput) this.dom.costInput.focus();
+            if (costInput) {
+                costInput.focus();
+                costInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                // Remover clase al escribir
+                costInput.oninput = () => {
+                    costInput.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+                };
+            }
             return;
+        }
+
+        let baseDate = new Date(this.state.selectedSlot);
+        const now = new Date();
+
+        // 2. Validar fecha pasada
+        if (baseDate < now) {
+            const nextWeekDate = new Date(baseDate);
+            nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+
+            const dateStr = baseDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+            const nextDateStr = nextWeekDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+            const msg = `⚠️ La fecha seleccionada (${dateStr}) ya pasó.\n\n¿Desea agendar a partir de la próxima semana (${nextDateStr})?`;
+
+            if (confirm(msg)) {
+                baseDate = nextWeekDate;
+            } else {
+                return; // Cancelar si el usuario no quiere cambiar
+            }
         }
 
         try {
@@ -308,7 +337,7 @@ export const ScheduleManager = {
             this.dom.confirmBtn.textContent = 'Agendando...';
 
             const appointmentsToCreate = [];
-            const baseDate = this.state.selectedSlot;
+            // baseDate ya está definido arriba
             const count = this.state.recurrenceType === 'none' ? 1 : this.state.sessionsCount;
 
             // Generar fechas

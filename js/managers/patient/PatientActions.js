@@ -372,22 +372,64 @@ export const PatientActions = {
      * @param {string} patientName - Nombre del paciente
      * @returns {Promise<boolean>} true si se actualizó correctamente
      */
-    async updatePatientTherapist(profileId, newTherapist, patientName) {
+    /**
+     * Actualiza el perfil del paciente (terapeuta, costo, etc.)
+     * 
+     * @param {string} profileId - ID del perfil del paciente
+     * @param {Object} updates - Objeto con los campos a actualizar { therapist, defaultCost }
+     * @param {string} patientName - Nombre del paciente
+     * @returns {Promise<boolean>} true si se actualizó correctamente
+     */
+    async updatePatientProfile(profileId, updates, patientName) {
         try {
-            const { updateDoc, doc } = await import('../../firebase.js');
+            const { updateDoc, doc, collection, query, where, getDocs, writeBatch } = await import('../../firebase.js');
 
-            await updateDoc(doc(db, 'patientProfiles', profileId), {
-                therapist: newTherapist,
+            // 1. Update Profile
+            const profileUpdates = {
                 updatedBy: AuthManager.currentUser?.email || 'unknown',
                 updatedAt: new Date()
-            });
+            };
+            if (updates.therapist) profileUpdates.therapist = updates.therapist;
+            if (updates.defaultCost !== undefined) profileUpdates.defaultCost = updates.defaultCost;
 
-            console.log(`✅ PatientActions: Terapeuta actualizado para ${patientName}: ${newTherapist}`);
+            await updateDoc(doc(db, 'patientProfiles', profileId), profileUpdates);
+
+            // 2. Update Future Appointments with 0 Cost (if cost changed)
+            if (updates.defaultCost && updates.defaultCost > 0) {
+                const now = new Date().toISOString();
+
+                // Query future appointments for this patient
+                const q = query(
+                    collection(db, 'appointments'),
+                    where('name', '==', patientName),
+                    where('date', '>=', now)
+                );
+
+                const snapshot = await getDocs(q);
+                const batch = writeBatch(db);
+                let updateCount = 0;
+
+                snapshot.docs.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // Update only if cost is missing or 0
+                    if (!data.cost || data.cost === 0) {
+                        batch.update(docSnap.ref, { cost: updates.defaultCost });
+                        updateCount++;
+                    }
+                });
+
+                if (updateCount > 0) {
+                    await batch.commit();
+                    console.log(`✅ Updated ${updateCount} future appointments with 0 cost to ${updates.defaultCost}`);
+                }
+            }
+
+            console.log(`✅ PatientActions: Perfil actualizado para ${patientName}`);
             return true;
 
         } catch (error) {
-            console.error('❌ PatientActions: Error al actualizar terapeuta:', error);
-            alert('Error al actualizar terapeuta: ' + error.message);
+            console.error('❌ PatientActions: Error al actualizar perfil:', error);
+            alert('Error al actualizar perfil: ' + error.message);
             return false;
         }
     }
