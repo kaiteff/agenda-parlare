@@ -214,6 +214,14 @@ export const PatientActions = {
             const dayLabel = isToday ? 'hoy' : 'mañana';
 
             console.log(`✅ PatientActions: Cita de ${dayLabel} ${newStatus ? 'confirmada' : 'desconfirmada'} para ${patientName}`);
+
+            // Forzar re-render de la lista para actualizar UI inmediatamente
+            // El listener de Firestore también lo hará, pero esto asegura actualización inmediata
+            const { PatientUI } = await import('./PatientUI.js');
+            setTimeout(() => {
+                PatientUI.renderList();
+            }, 100);
+
             return true;
 
         } catch (error) {
