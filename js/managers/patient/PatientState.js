@@ -87,6 +87,7 @@ export const PatientState = {
         editPatientBtn: null,
         patientEditSection: null,
         editPatientTherapist: null,
+        editPatientCost: null,
         savePatientEditBtn: null,
 
         // Modal de inactivos
@@ -135,6 +136,7 @@ export const PatientState = {
         this.dom.editPatientBtn = document.getElementById('editPatientBtn');
         this.dom.patientEditSection = document.getElementById('patientEditSection');
         this.dom.editPatientTherapist = document.getElementById('editPatientTherapist');
+        this.dom.editPatientCost = document.getElementById('editPatientCost');
         this.dom.savePatientEditBtn = document.getElementById('savePatientEditBtn');
 
         // Modal de inactivos

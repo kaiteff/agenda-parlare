@@ -28,27 +28,36 @@ export const ScheduleManager = {
     },
 
     // Referencias DOM
-    dom: {
-        modal: document.getElementById('scheduleNewPatientModal'),
-        patientName: document.getElementById('schedulePatientName'),
-        weekLabel: document.getElementById('currentScheduleWeekLabel'),
-        slotsGrid: document.getElementById('slotsGrid'),
-        prevBtn: document.getElementById('prevWeekScheduleBtn'),
-        nextBtn: document.getElementById('nextWeekScheduleBtn'),
-        confirmBtn: document.getElementById('confirmScheduleBtn'),
-        costInput: document.getElementById('scheduleCostInput'),
-        recurrenceInputs: document.getElementsByName('recurrenceType'),
-        sessionsCountContainer: document.getElementById('sessionsCountContainer'),
-        sessionsCountInput: document.getElementById('sessionsCount')
-    },
+    // Referencias DOM
+    dom: {},
 
     /**
      * Inicializa el manager
      */
     init() {
+        this._initDOM();
         this._setupListeners();
         // Exponer globalmente para onclicks en HTML
         window.ScheduleManager = this;
+    },
+
+    /**
+     * Inicializa referencias DOM
+     */
+    _initDOM() {
+        this.dom = {
+            modal: document.getElementById('scheduleNewPatientModal'),
+            patientName: document.getElementById('schedulePatientName'),
+            weekLabel: document.getElementById('currentScheduleWeekLabel'),
+            slotsGrid: document.getElementById('slotsGrid'),
+            prevBtn: document.getElementById('prevWeekScheduleBtn'),
+            nextBtn: document.getElementById('nextWeekScheduleBtn'),
+            confirmBtn: document.getElementById('confirmScheduleBtn'),
+            costInput: document.getElementById('scheduleCostInput'),
+            recurrenceInputs: document.getElementsByName('recurrenceType'),
+            sessionsCountContainer: document.getElementById('sessionsCountContainer'),
+            sessionsCountInput: document.getElementById('sessionsCount')
+        };
     },
 
     /**
