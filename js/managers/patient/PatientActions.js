@@ -22,6 +22,7 @@ import { db, updateDoc, doc, collectionPath } from '../../firebase.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
 import { AuthManager } from '../AuthManager.js';
+import { ScheduleManager } from '../ScheduleManager.js';
 
 /**
  * Acciones del usuario sobre pacientes
@@ -64,9 +65,7 @@ export const PatientActions = {
             const result = await createPatientProfile(fullName, firstName, lastName, therapist);
 
             if (result.success) {
-                alert(`Paciente "${fullName}" creado exitosamente.`);
-
-                // Cerrar modal
+                // Cerrar modal de nuevo paciente
                 if (dom.newPatientModal) {
                     dom.newPatientModal.classList.add('hidden');
                 }
@@ -80,8 +79,13 @@ export const PatientActions = {
                     PatientState.setViewMode('all');
                 }
 
-                // Re-renderizar lista (será manejado por el listener de Firestore)
                 console.log('✅ PatientActions: Paciente creado:', fullName);
+
+                // Abrir modal de agendar primera cita
+                setTimeout(() => {
+                    ScheduleManager.openModal(result.id, fullName, therapist);
+                }, 300);
+
                 return true;
             } else {
                 alert('Error al crear paciente: ' + result.error);

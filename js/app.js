@@ -5,6 +5,7 @@ import { initNotifications } from './notifications.js';
 // import { initPatients } from './patients.js'; // OLD - Replaced by PatientManager
 import { PatientManager } from './managers/PatientManager.js';
 import { AuthManager } from './managers/AuthManager.js';
+import { ScheduleManager } from './managers/ScheduleManager.js';
 // import { runMigration } from './migrate_data.js';
 
 // Inicialización
@@ -139,6 +140,11 @@ async function initializeModules() {
         console.log("🚀 Inicializando Notifications...");
         initNotifications();
     } catch (e) { console.error("❌ Error initNotifications:", e); }
+
+    try {
+        console.log("🚀 Inicializando ScheduleManager...");
+        ScheduleManager.init();
+    } catch (e) { console.error("❌ Error ScheduleManager:", e); }
 
     console.log("✅ Todos los módulos inicializados");
 }

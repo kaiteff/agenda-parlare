@@ -439,6 +439,118 @@
         </div>
     </div>
 
+    <!-- Modal Agendar Primera Cita -->
+    <div id="scheduleNewPatientModal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Agendar Primera Cita</h3>
+                    <p id="schedulePatientName" class="text-sm text-blue-600 font-medium">Paciente: ...</p>
+                </div>
+                <button onclick="window.ScheduleManager?.closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto p-6">
+
+                <!-- Week Navigation -->
+                <div
+                    class="flex items-center justify-between mb-6 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
+                    <button id="prevWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="text-center">
+                        <span class="text-xs text-gray-500 uppercase font-bold block">Semana del</span>
+                        <span id="currentScheduleWeekLabel" class="text-lg font-bold text-gray-800">...</span>
+                    </div>
+                    <button id="nextWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Slots Grid -->
+                <div id="slotsGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                    <!-- Slots will be injected here -->
+                    <div class="text-center py-8 col-span-full text-gray-400">Cargando horarios disponibles...</div>
+                </div>
+
+                <!-- Recurrence Options -->
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
+                        Opciones de Recurrencia
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <label
+                            class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                            <input type="radio" name="recurrenceType" value="none" checked
+                                class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Solo esta cita</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                            <input type="radio" name="recurrenceType" value="weekly"
+                                class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Semanal</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                            <input type="radio" name="recurrenceType" value="biweekly"
+                                class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Quincenal</span>
+                        </label>
+                    </div>
+
+                    <!-- Sessions Count (Hidden by default) -->
+                    <div id="sessionsCountContainer" class="mt-4 hidden">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Número de sesiones a
+                            agendar</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="sessionsCount" value="4" min="2" max="12"
+                                class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            <span class="text-sm text-gray-500">sesiones futuras</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                <button onclick="window.ScheduleManager?.closeModal()"
+                    class="text-gray-500 hover:text-gray-700 font-medium px-4 py-2">
+                    Omitir por ahora
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="text-right mr-2">
+                        <div class="text-xs text-gray-500">Costo por sesión</div>
+                        <div class="font-bold text-gray-800">$<span id="scheduleCostDisplay">0.00</span></div>
+                    </div>
+                    <button id="confirmScheduleBtn" disabled
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        Agendar Cita
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
