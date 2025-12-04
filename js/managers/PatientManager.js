@@ -181,6 +181,11 @@ export const PatientManager = {
 
             PatientState.updateAppointments(appointments);
 
+            // Exponer globalmente para compatibilidad con funciones que lo necesitan
+            if (typeof window !== 'undefined') {
+                window.patientsData = appointments;
+            }
+
             // Re-renderizar lista cuando cambien las citas
             PatientUI.renderList();
 
