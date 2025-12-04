@@ -324,269 +324,272 @@
         </div>
         <div id="inactivePatientsModal"
             class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <div id="rescheduleModal"
-                        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-                        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                            <div
-                                class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50">
-                                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                        </path>
-                                    </svg>
-                                    <span id="rescheduleModalTitle">Reagendar Cita</span>
-                                </h3>
-                                <button onclick="closeRescheduleModal()" class="text-gray-400 hover:text-gray-600">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12">
-                                        </path>
-                                    </svg>
-                                </button>
+                    <h3 class="text-lg font-bold text-gray-800">Pacientes Inactivos</h3>
+                    <button id="closeInactivePatientsBtn" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-4 overflow-y-auto flex-1">
+                    <div id="inactivePatientsList" class="space-y-2"></div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                    <button id="closeInactivePatientsFooterBtn"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="rescheduleModal"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                <div
+                    class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        <span id="rescheduleModalTitle">Reagendar Cita</span>
+                    </h3>
+                    <button onclick="closeRescheduleModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div id="rescheduleOptions" class="space-y-3">
+                        <button onclick="showTodaySlots()"
+                            class="w-full p-4 bg-blue-50 border-2 border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-left">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <div class="font-bold text-gray-800">Reagendar Hoy</div>
+                                    <div class="text-xs text-gray-600">Ver horarios disponibles hoy</div>
+                                </div>
                             </div>
-                            <div class="p-6">
-                                <div id="rescheduleOptions" class="space-y-3">
-                                    <button onclick="showTodaySlots()"
-                                        class="w-full p-4 bg-blue-50 border-2 border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-left">
-                                        <div class="flex items-center gap-3">
-                                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <div>
-                                                <div class="font-bold text-gray-800">Reagendar Hoy</div>
-                                                <div class="text-xs text-gray-600">Ver horarios disponibles hoy</div>
-                                            </div>
-                                        </div>
-                                    </button>
-                                    <button onclick="showWeekSlots()"
-                                        class="w-full p-4 bg-indigo-50 border-2 border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-left">
-                                        <div class="flex items-center gap-3">
-                                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                                </path>
-                                            </svg>
-                                            <div>
-                                                <div class="font-bold text-gray-800">Reagendar Otro Día</div>
-                                                <div class="text-xs text-gray-600">Ver horarios de la semana</div>
-                                            </div>
-                                        </div>
-                                    </button>
+                        </button>
+                        <button onclick="showWeekSlots()"
+                            class="w-full p-4 bg-indigo-50 border-2 border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-left">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                <div>
+                                    <div class="font-bold text-gray-800">Reagendar Otro Día</div>
+                                    <div class="text-xs text-gray-600">Ver horarios de la semana</div>
                                 </div>
-                                <div id="rescheduleSlots" class="hidden mt-4">
-                                    <button onclick="backToRescheduleOptions()"
-                                        class="text-sm text-blue-600 hover:text-blue-700 mb-3 flex items-center gap-1">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15 19l-7-7 7-7">
-                                            </path>
-                                        </svg>
-                                        Volver
-                                    </button>
-                                    <div id="rescheduleSlotsList" class="space-y-2 max-h-96 overflow-y-auto"></div>
-                                </div>
+                            </div>
+                        </button>
+                    </div>
+                    <div id="rescheduleSlots" class="hidden mt-4">
+                        <button onclick="backToRescheduleOptions()"
+                            class="text-sm text-blue-600 hover:text-blue-700 mb-3 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7">
+                                </path>
+                            </svg>
+                            Volver
+                        </button>
+                        <div id="rescheduleSlotsList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Nuevo Paciente -->
+        <div id="newPatientModal"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+            <div
+                class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="text-lg font-bold text-gray-800">Nuevo Paciente</h3>
+                    <button id="closeNewPatientModalBtn" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre(s)</label>
+                        <input type="text" id="newPatientFirstName"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Apellidos</label>
+                        <input type="text" id="newPatientLastName"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div id="newPatientTherapistContainer">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
+                        <select id="newPatientTherapist"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="diana">Diana</option>
+                            <option value="sam">Sam</option>
+                        </select>
+                    </div>
+                    <button id="saveNewPatientBtn"
+                        class="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
+                        Crear Paciente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Agendar Primera Cita -->
+        <div id="scheduleNewPatientModal"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                <!-- Header -->
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">Agendar Primera Cita</h3>
+                        <p id="schedulePatientName" class="text-sm text-blue-600 font-medium">Paciente: ...
+                        </p>
+                    </div>
+                    <button onclick="window.ScheduleManager?.closeModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="flex-1 overflow-y-auto p-6">
+
+                    <!-- Week Navigation -->
+                    <div
+                        class="flex items-center justify-between mb-6 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
+                        <button id="prevWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7">
+                                </path>
+                            </svg>
+                        </button>
+                        <div class="text-center">
+                            <span class="text-xs text-gray-500 uppercase font-bold block">Semana del</span>
+                            <span id="currentScheduleWeekLabel" class="text-lg font-bold text-gray-800">...</span>
+                        </div>
+                        <button id="nextWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Slots Grid -->
+                    <div id="slotsGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                        <!-- Slots will be injected here -->
+                        <div class="text-center py-8 col-span-full text-gray-400">Cargando horarios
+                            disponibles...</div>
+                    </div>
+
+                    <!-- Recurrence Options -->
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                            Opciones de Recurrencia
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <label
+                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                                <input type="radio" name="recurrenceType" value="none" checked
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Solo esta cita</span>
+                            </label>
+                            <label
+                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                                <input type="radio" name="recurrenceType" value="weekly"
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Semanal</span>
+                            </label>
+                            <label
+                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                                <input type="radio" name="recurrenceType" value="biweekly"
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Quincenal</span>
+                            </label>
+                        </div>
+
+                        <!-- Sessions Count (Hidden by default) -->
+                        <div id="sessionsCountContainer" class="mt-4 hidden">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Número de
+                                sesiones a
+                                agendar</label>
+                            <div class="flex items-center gap-3">
+                                <input type="number" id="sessionsCount" value="4" min="2" max="12"
+                                    class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                <span class="text-sm text-gray-500">sesiones futuras</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Modal Nuevo Paciente -->
-                    <div id="newPatientModal"
-                        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-                        <div
-                            class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100">
-                            <div
-                                class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                                <h3 class="text-lg font-bold text-gray-800">Nuevo Paciente</h3>
-                                <button id="closeNewPatientModalBtn" class="text-gray-400 hover:text-gray-600">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12">
-                                        </path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="p-6 space-y-4">
-                                <div>
-                                    <label
-                                        class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre(s)</label>
-                                    <input type="text" id="newPatientFirstName"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                </div>
-                                <div>
-                                    <label
-                                        class="block text-xs font-bold text-gray-500 uppercase mb-1">Apellidos</label>
-                                    <input type="text" id="newPatientLastName"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                </div>
-                                <div id="newPatientTherapistContainer">
-                                    <label
-                                        class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
-                                    <select id="newPatientTherapist"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                                        <option value="diana">Diana</option>
-                                        <option value="sam">Sam</option>
-                                    </select>
-                                </div>
-                                <button id="saveNewPatientBtn"
-                                    class="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                                    Crear Paciente
-                                </button>
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                    <button onclick="window.ScheduleManager?.closeModal()"
+                        class="text-gray-500 hover:text-gray-700 font-medium px-4 py-2">
+                        Omitir por ahora
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-2 mr-2">
+                            <button type="button" onclick="document.getElementById('scheduleCostInput').value = 600"
+                                class="px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors">
+                                $600
+                            </button>
+                            <button type="button" onclick="document.getElementById('scheduleCostInput').value = 800"
+                                class="px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors">
+                                $800
+                            </button>
+                        </div>
+                        <div class="text-right mr-2 flex flex-col items-end">
+                            <label for="scheduleCostInput" class="text-xs text-gray-500 mb-1">Costo por
+                                sesión</label>
+                            <div class="relative w-24">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                <input type="number" id="scheduleCostInput" value="0" min="0" step="50"
+                                    class="w-full pl-6 pr-2 py-1 border border-gray-300 rounded text-right font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                         </div>
+                        <button id="confirmScheduleBtn" disabled
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            Agendar Cita
+                        </button>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Modal Agendar Primera Cita -->
-                    <div id="scheduleNewPatientModal"
-                        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-                        <div
-                            class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-                            <!-- Header -->
-                            <div
-                                class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-blue-50">
-                                <div>
-                                    <h3 class="text-lg font-bold text-gray-800">Agendar Primera Cita</h3>
-                                    <p id="schedulePatientName" class="text-sm text-blue-600 font-medium">Paciente: ...
-                                    </p>
-                                </div>
-                                <button onclick="window.ScheduleManager?.closeModal()"
-                                    class="text-gray-400 hover:text-gray-600">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12">
-                                        </path>
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <!-- Body -->
-                            <div class="flex-1 overflow-y-auto p-6">
-
-                                <!-- Week Navigation -->
-                                <div
-                                    class="flex items-center justify-between mb-6 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
-                                    <button id="prevWeekScheduleBtn"
-                                        class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15 19l-7-7 7-7">
-                                            </path>
-                                        </svg>
-                                    </button>
-                                    <div class="text-center">
-                                        <span class="text-xs text-gray-500 uppercase font-bold block">Semana del</span>
-                                        <span id="currentScheduleWeekLabel"
-                                            class="text-lg font-bold text-gray-800">...</span>
-                                    </div>
-                                    <button id="nextWeekScheduleBtn"
-                                        class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 5l7 7-7 7">
-                                            </path>
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                <!-- Slots Grid -->
-                                <div id="slotsGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                                    <!-- Slots will be injected here -->
-                                    <div class="text-center py-8 col-span-full text-gray-400">Cargando horarios
-                                        disponibles...</div>
-                                </div>
-
-                                <!-- Recurrence Options -->
-                                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                    <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                                            </path>
-                                        </svg>
-                                        Opciones de Recurrencia
-                                    </h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <label
-                                            class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                                            <input type="radio" name="recurrenceType" value="none" checked
-                                                class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                            <span class="ml-2 text-sm font-medium text-gray-700">Solo esta cita</span>
-                                        </label>
-                                        <label
-                                            class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                                            <input type="radio" name="recurrenceType" value="weekly"
-                                                class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                            <span class="ml-2 text-sm font-medium text-gray-700">Semanal</span>
-                                        </label>
-                                        <label
-                                            class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                                            <input type="radio" name="recurrenceType" value="biweekly"
-                                                class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                            <span class="ml-2 text-sm font-medium text-gray-700">Quincenal</span>
-                                        </label>
-                                    </div>
-
-                                    <!-- Sessions Count (Hidden by default) -->
-                                    <div id="sessionsCountContainer" class="mt-4 hidden">
-                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Número de
-                                            sesiones a
-                                            agendar</label>
-                                        <div class="flex items-center gap-3">
-                                            <input type="number" id="sessionsCount" value="4" min="2" max="12"
-                                                class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                            <span class="text-sm text-gray-500">sesiones futuras</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Footer -->
-                            <div
-                                class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-                                <button onclick="window.ScheduleManager?.closeModal()"
-                                    class="text-gray-500 hover:text-gray-700 font-medium px-4 py-2">
-                                    Omitir por ahora
-                                </button>
-                                <div class="flex items-center gap-3">
-                                    <div class="flex gap-2 mr-2">
-                                        <button type="button"
-                                            onclick="document.getElementById('scheduleCostInput').value = 600"
-                                            class="px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors">
-                                            $600
-                                        </button>
-                                        <button type="button"
-                                            onclick="document.getElementById('scheduleCostInput').value = 800"
-                                            class="px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors">
-                                            $800
-                                        </button>
-                                    </div>
-                                    <div class="text-right mr-2 flex flex-col items-end">
-                                        <label for="scheduleCostInput" class="text-xs text-gray-500 mb-1">Costo por
-                                            sesión</label>
-                                        <div class="relative w-24">
-                                            <span
-                                                class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                                            <input type="number" id="scheduleCostInput" value="0" min="0" step="50"
-                                                class="w-full pl-6 pr-2 py-1 border border-gray-300 rounded text-right font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none">
-                                        </div>
-                                    </div>
-                                    <button id="confirmScheduleBtn" disabled
-                                        class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                        Agendar Cita
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <script type="module" src="js/app.js"></script>
+        <script type="module" src="js/app.js"></script>
 </body>
 
 </html>
