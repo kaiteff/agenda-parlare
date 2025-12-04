@@ -176,8 +176,6 @@ export const ScheduleManager = {
 
         // Generar columnas por día (Lunes a Sábado)
         const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        // Ajustar fechas (Lunes es index 1 en getDay(), pero nuestro loop empieza en 0 para Lunes)
-        // getStartOfWeek retorna Lunes
 
         for (let i = 0; i < 6; i++) {
             const currentDayDate = new Date(startOfWeek);
@@ -204,20 +202,31 @@ export const ScheduleManager = {
                 noSlots.textContent = 'Sin disponibilidad';
                 dayColumn.appendChild(noSlots);
             } else {
-                slots.forEach(slotTime => {
+                slots.forEach(slot => {
                     const slotBtn = document.createElement('button');
                     const isSelected = this.state.selectedSlot &&
-                        this.state.selectedSlot.getTime() === slotTime.getTime();
+                        this.state.selectedSlot.getTime() === slot.date.getTime();
 
-                    slotBtn.className = `
-                        w-full py-2 px-1 rounded text-sm font-medium transition-all
-                        ${isSelected
-                            ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                            : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50'}
-                    `;
-                    slotBtn.textContent = slotTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
-                    slotBtn.onclick = () => this._selectSlot(slotTime);
+                    if (!slot.isFree) {
+                        // Estilo para slot ocupado
+                        slotBtn.className = `
+                            w-full py-2 px-1 rounded text-sm font-medium
+                            bg-gray-100 text-gray-400 border border-gray-100 cursor-not-allowed
+                        `;
+                        slotBtn.textContent = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        slotBtn.disabled = true;
+                        slotBtn.title = "Horario ocupado";
+                    } else {
+                        // Estilo para slot libre
+                        slotBtn.className = `
+                            w-full py-2 px-1 rounded text-sm font-medium transition-all
+                            ${isSelected
+                                ? 'bg-blue-600 text-white shadow-md transform scale-105'
+                                : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50'}
+                        `;
+                        slotBtn.textContent = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        slotBtn.onclick = () => this._selectSlot(slot.date);
+                    }
 
                     dayColumn.appendChild(slotBtn);
                 });
@@ -228,9 +237,9 @@ export const ScheduleManager = {
     },
 
     /**
-     * Obtiene slots disponibles para un día específico
+     * Obtiene slots para un día específico con su estado
      * @param {Date} date - Fecha a consultar
-     * @returns {Array<Date>} Lista de fechas (con hora) disponibles
+     * @returns {Array<{date: Date, isFree: boolean}>} Lista de slots con estado
      */
     _getDailySlots(date) {
         const slots = [];
@@ -253,13 +262,13 @@ export const ScheduleManager = {
             slotDate.setHours(hour, 0, 0, 0);
 
             // Verificar disponibilidad
-            // Usamos isSlotFree de validators.js
-            // Necesitamos pasar las citas existentes
             const appointments = PatientState.appointments || [];
+            const isFree = isSlotFree(slotDate, appointments, null, this.state.therapist);
 
-            if (isSlotFree(slotDate, appointments, null, this.state.therapist)) {
-                slots.push(slotDate);
-            }
+            slots.push({
+                date: slotDate,
+                isFree: isFree
+            });
         }
 
         return slots;
