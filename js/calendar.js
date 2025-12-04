@@ -1,11 +1,10 @@
 // calendar.js - Lógica del calendario y gestión de citas
 
 import { db, userId, collectionPath, notificationsPath, patientsData, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, updatePatientsData, patientProfiles, subscribeToPatientsData } from './firebase.js';
-import { ensurePatientProfile } from './patients.js';
+import { ensurePatientProfile, findPatientByName, createPatientProfile, reactivatePatient } from './services/patientService.js';
 import { getStartOfWeek, addDays, formatDateLocal, getWeekNumber } from './utils/dateUtils.js';
 import { isSlotFree, checkSlotConflict, validateAppointment } from './utils/validators.js';
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from './services/appointmentService.js';
-import { findPatientByName, createPatientProfile, reactivatePatient } from './services/patientService.js';
 import { MiniCalendar } from './components/MiniCalendar.js';
 import { AuthManager } from './managers/AuthManager.js';
 

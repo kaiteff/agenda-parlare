@@ -104,3 +104,39 @@ export async function deletePatientProfile(id) {
         return { success: false, error: error.message };
     }
 }
+
+/**
+ * Asegura que existe un perfil de paciente, creándolo si es necesario
+ * Si el paciente está inactivo, pregunta si reactivar
+ * @param {string} patientName - Nombre completo del paciente
+ * @param {string} firstName - Nombre(s)
+ * @param {string} lastName - Apellidos
+ * @param {Array} patientProfiles - Lista de perfiles de pacientes
+ * @returns {Promise<Object>} - Perfil del paciente
+ */
+export async function ensurePatientProfile(patientName, firstName = '', lastName = '', patientProfiles = []) {
+    const existing = patientProfiles.find(p => p.name === patientName);
+
+    if (existing) {
+        // Si está inactivo, preguntar si reactivar
+        if (existing.isActive === false) {
+            const inactivatedDate = existing.dateInactivated?.toDate?.() || new Date(existing.dateInactivated);
+            const dateStr = inactivatedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            if (confirm(`⚠️ ${patientName} está dado/a de baja desde el ${dateStr}.\n\n¿Desea reactivar y agendar?`)) {
+                const result = await reactivatePatient(existing.id);
+                if (!result.success) throw new Error(result.error);
+                return existing;
+            } else {
+                throw new Error("Paciente inactivo - operación cancelada");
+            }
+        }
+        return existing;
+    }
+
+    // Crear nuevo perfil usando servicio
+    const result = await createPatientProfile(patientName, firstName, lastName);
+    if (!result.success) throw new Error(result.error);
+    return { id: result.id, ...result.data };
+}
+
