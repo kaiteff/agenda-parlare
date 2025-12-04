@@ -59,13 +59,18 @@ export const PatientUI = {
             // 3. Agregar totales de pagos
             const patientsWithTotals = PatientFilters.addPaymentTotals(patientsToShow);
 
-            // 4. Ordenar según el modo
+            // 4. Para vista "all", agregar info de próximas citas confirmadas
+            if (viewMode === 'all') {
+                this._addUpcomingAppointmentInfo(patientsWithTotals);
+            }
+
+            // 5. Ordenar según el modo
             this._sortPatients(patientsWithTotals, viewMode);
 
-            // 5. Actualizar header con contadores
+            // 6. Actualizar header con contadores
             this._updateHeader(patientsWithTotals.length);
 
-            // 6. Renderizar lista de pacientes
+            // 7. Renderizar lista de pacientes
             this._renderPatientItems(patientsWithTotals);
 
         } catch (error) {
@@ -208,17 +213,17 @@ export const PatientUI = {
         // Obtener pagos pendientes
         const pendingPayments = PatientFilters.getPendingPayments(patient.name);
 
-        // Generar badge de confirmación y hora (solo para hoy/mañana)
+        // Generar badge de confirmación y hora
         let timeStr = '';
         let confirmBadge = '';
 
+        // Para hoy/mañana: mostrar hora y confirmación
         if ((viewMode === 'today' || viewMode === 'tomorrow') && patient.nextAppointment) {
             timeStr = patient.nextAppointment.toLocaleTimeString('es-ES', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
 
-            // Mostrar badge de confirmación para HOY y MAÑANA
             const confirmText = patient.confirmed ? '✓ OK' : '⏳ Pendiente';
             const confirmClass = patient.confirmed
                 ? 'bg-green-100 text-green-700'
@@ -229,6 +234,39 @@ export const PatientUI = {
                 class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
                 title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
             >${confirmText}</button>`;
+        }
+        // Para "todos": mostrar solo si tiene cita próxima
+        else if (viewMode === 'all' && patient.nextAppointment) {
+            const aptDate = patient.nextAppointment;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayAfterTomorrow = new Date(tomorrow);
+            dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+
+            // Determinar si es hoy o mañana
+            let dayLabel = '';
+            if (aptDate >= today && aptDate < tomorrow) {
+                dayLabel = 'Hoy';
+            } else if (aptDate >= tomorrow && aptDate < dayAfterTomorrow) {
+                dayLabel = 'Mañana';
+            }
+
+            if (dayLabel) {
+                timeStr = aptDate.toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Mostrar badge con estado de confirmación
+                if (patient.confirmed) {
+                    confirmBadge = `<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">✓ ${dayLabel}</span>`;
+                } else {
+                    // Mostrar en naranja si NO está confirmada (alerta para recepcionista)
+                    confirmBadge = `<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">⏳ ${dayLabel}</span>`;
+                }
+            }
         }
 
         patientEl.innerHTML = `
@@ -322,6 +360,33 @@ export const PatientUI = {
                 };
             })
             .sort((a, b) => a.nextAppointment - b.nextAppointment);
+    },
+
+    /**
+     * Agrega información de próximas citas a los pacientes (para vista "all")
+     * @private
+     * @param {Array<Object>} patients - Lista de pacientes a enriquecer (se modifica in-place)
+     */
+    _addUpcomingAppointmentInfo(patients) {
+        const now = new Date();
+        const appointments = PatientState.appointments || [];
+
+        patients.forEach(patient => {
+            // Buscar próximas citas del paciente (no canceladas, futuras)
+            const upcomingAppointments = appointments
+                .filter(apt =>
+                    apt.name === patient.name &&
+                    new Date(apt.date) >= now &&
+                    !apt.isCancelled
+                )
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (upcomingAppointments.length > 0) {
+                const nextApt = upcomingAppointments[0];
+                patient.nextAppointment = new Date(nextApt.date);
+                patient.confirmed = nextApt.confirmed || false;
+            }
+        });
     },
 
     /**
