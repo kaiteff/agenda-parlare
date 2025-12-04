@@ -94,9 +94,9 @@ export const PatientManager = {
             console.log('  🔄 Configurando listeners de datos...');
             await this._setupDataListeners();
 
-            // 4. Renderizado inicial
-            console.log('  🎨 Renderizado inicial...');
-            PatientUI.renderList();
+            // 4. El renderizado inicial lo hará el listener de Firestore cuando lleguen los datos
+            // No renderizamos aquí porque los datos aún no están disponibles
+            // PatientUI.renderList();
 
             console.log('✅ PatientManager inicializado correctamente');
 
