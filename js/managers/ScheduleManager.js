@@ -331,7 +331,7 @@ export const ScheduleManager = {
                     isCancelled: false
                 };
 
-                const result = await createAppointment(appointmentData);
+                const result = await createAppointment(appointmentData, PatientState.appointments || []);
                 if (result.success) createdCount++;
             }
 
