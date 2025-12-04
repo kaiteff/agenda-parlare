@@ -15,6 +15,12 @@ import { AuthManager } from './managers/AuthManager.js';
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
+const appContent = document.getElementById('appContent');
+const loginForm = document.getElementById('loginForm');
+const emailInput = document.getElementById('emailInput');
+const passwordInput = document.getElementById('passwordInput');
+const loginError = document.getElementById('loginError');
+const logoutBtn = document.getElementById('logoutBtn');
 
 // Inicializar aplicación
 console.log("🚀 Iniciando Agenda Parlare...");
