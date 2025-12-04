@@ -382,7 +382,8 @@ export const PatientActions = {
      */
     async updatePatientProfile(profileId, updates, patientName) {
         try {
-            const { updateDoc, doc, collection, query, where, getDocs, writeBatch } = await import('../../firebase.js');
+            const { updateDoc, doc } = await import('../../firebase.js');
+            const { collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
             // 1. Update Profile
             const profileUpdates = {
