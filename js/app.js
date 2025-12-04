@@ -1,24 +1,3 @@
-// app.js - Punto de entrada principal de la aplicación
-import { initializeFirebase, loginUser, logoutUser } from './firebase.js';
-import { initCalendar } from './calendar.js';
-import { initNotifications } from './notifications.js';
-// import { initPatients } from './patients.js'; // OLD - Replaced by PatientManager
-import { PatientManager } from './managers/PatientManager.js';
-import { AuthManager } from './managers/AuthManager.js';
-import { ScheduleManager } from './managers/ScheduleManager.js';
-// import { runMigration } from './migrate_data.js';
-
-// Inicialización
-// document.addEventListener('DOMContentLoaded', async () => {
-// Ejecutar migración de datos (solo una vez)
-// runMigration().catch(console.error);
-// });
-
-// Referencias DOM
-const loginContainer = document.getElementById('loginContainer');
-const appContent = document.getElementById('appContent');
-const loginForm = document.getElementById('loginForm');
-const emailInput = document.getElementById('emailInput');
 const passwordInput = document.getElementById('passwordInput');
 const loginError = document.getElementById('loginError');
 const logoutBtn = document.getElementById('logoutBtn');
