@@ -313,9 +313,15 @@ export const CalendarModal = {
             return;
         }
 
-        const validation = validateAppointment(dateStr);
-        if (!validation.valid) {
-            alert(validation.error);
+        const dateObj = new Date(dateStr);
+
+        if (!isWithinWorkingHours(dateObj)) {
+            alert("La cita debe estar entre las 9:00 y las 20:00");
+            return;
+        }
+
+        if (!isNotSunday(dateObj)) {
+            alert("No se pueden agendar citas los domingos");
             return;
         }
 

@@ -130,7 +130,7 @@ export const PatientManager = {
         const viewInactiveBtn = document.getElementById('viewInactivePatientsBtn');
         if (viewInactiveBtn) {
             viewInactiveBtn.onclick = () => {
-                PatientModals.openInactive();
+                PatientModals.openInactivePatients();
             };
         }
 
