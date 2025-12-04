@@ -295,6 +295,14 @@ export const ScheduleManager = {
     async _confirmSchedule() {
         if (!this.state.selectedSlot || !this.state.patientName) return;
 
+        // Validar costo
+        const cost = this.dom.costInput ? parseFloat(this.dom.costInput.value) || 0 : 0;
+        if (cost <= 0) {
+            alert("⚠️ Por favor, ingrese un costo por sesión válido (mayor a 0) antes de agendar.");
+            if (this.dom.costInput) this.dom.costInput.focus();
+            return;
+        }
+
         try {
             this.dom.confirmBtn.disabled = true;
             this.dom.confirmBtn.textContent = 'Agendando...';
