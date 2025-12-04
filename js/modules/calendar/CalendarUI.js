@@ -15,8 +15,13 @@ export const CalendarUI = {
      */
     renderCalendar(onEventClick, onEmptySlotClick) {
         try {
-            const { grid, monthLabel } = CalendarState.dom;
-            if (!grid) return;
+            // FIX: Use correct keys from CalendarState.dom
+            const { calendarGrid: grid, currentMonthLabel: monthLabel } = CalendarState.dom;
+
+            if (!grid) {
+                console.error("CalendarUI: calendarGrid element not found in DOM state");
+                return;
+            }
 
             grid.innerHTML = '';
 
