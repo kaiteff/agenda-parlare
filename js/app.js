@@ -1,3 +1,16 @@
+// app.js - Punto de entrada principal de la aplicación
+import { initializeFirebase, loginUser, logoutUser } from './firebase.js';
+import { CalendarManager } from './modules/calendar/CalendarManager.js';
+import { initNotifications } from './notifications.js';
+import { PatientManager } from './managers/PatientManager.js';
+import { AuthManager } from './managers/AuthManager.js';
+import { ScheduleManager } from './managers/ScheduleManager.js';
+
+// Referencias DOM
+const loginContainer = document.getElementById('loginContainer');
+const appContent = document.getElementById('appContent');
+const loginForm = document.getElementById('loginForm');
+const emailInput = document.getElementById('emailInput');
 const passwordInput = document.getElementById('passwordInput');
 const loginError = document.getElementById('loginError');
 const logoutBtn = document.getElementById('logoutBtn');
@@ -112,7 +125,7 @@ async function initializeModules() {
 
     try {
         console.log("🚀 Inicializando Calendar...");
-        initCalendar();
+        CalendarManager.initCalendar();
     } catch (e) { console.error("❌ Error initCalendar:", e); }
 
     try {
