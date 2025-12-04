@@ -93,6 +93,7 @@ export const PatientState = {
         // Modal de inactivos
         inactivePatientsList: null,
         closeInactivePatientsBtn: null,
+        closeInactivePatientsFooterBtn: null,
 
         // Otros
         viewInactivePatientsBtn: null
@@ -142,6 +143,7 @@ export const PatientState = {
         // Modal de inactivos
         this.dom.inactivePatientsList = document.getElementById('inactivePatientsList');
         this.dom.closeInactivePatientsBtn = document.getElementById('closeInactivePatientsBtn');
+        this.dom.closeInactivePatientsFooterBtn = document.getElementById('closeInactivePatientsFooterBtn');
 
         // Otros
         this.dom.viewInactivePatientsBtn = document.getElementById('viewInactivePatientsBtn');

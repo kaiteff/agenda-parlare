@@ -349,7 +349,7 @@ export const PatientModals = {
     /**
      * Cierra el modal de pacientes inactivos
      */
-    closeInactive() {
+    closeInactivePatients() {
         const { dom } = PatientState;
 
         if (dom.inactivePatientsModal) {
@@ -417,7 +417,7 @@ export const PatientModals = {
     closeAll() {
         this.closeNewPatient();
         this.closeHistory();
-        this.closeInactive();
+        this.closeInactivePatients();
         console.log('✅ PatientModals: Todos los modales cerrados');
     }
 };

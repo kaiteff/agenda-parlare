@@ -137,7 +137,12 @@ export const PatientManager = {
         // Modal de inactivos
         if (dom.closeInactivePatientsBtn) {
             dom.closeInactivePatientsBtn.onclick = () => {
-                PatientModals.closeInactive();
+                PatientModals.closeInactivePatients();
+            };
+        }
+        if (dom.closeInactivePatientsFooterBtn) {
+            dom.closeInactivePatientsFooterBtn.onclick = () => {
+                PatientModals.closeInactivePatients();
             };
         }
 

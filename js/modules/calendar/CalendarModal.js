@@ -9,7 +9,7 @@ import { CalendarUI } from './CalendarUI.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
-import { validateAppointment, checkSlotConflict } from '../../utils/validators.js';
+import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday } from '../../utils/validators.js';
 import { addDays } from '../../utils/dateUtils.js';
 
 export const CalendarModal = {
