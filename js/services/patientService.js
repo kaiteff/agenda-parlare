@@ -112,20 +112,25 @@ export async function deletePatientProfile(id, patientName) {
             // Obtener fecha actual en formato ISO para comparar
             const now = new Date().toISOString();
 
-            // Consultar solo citas futuras de este paciente
+            // Consultar TODAS las citas del paciente (sin filtro de fecha para evitar error de índice)
             const q = query(
                 collection(db, collectionPath),
-                where("name", "==", patientName),
-                where("date", ">=", now)
+                where("name", "==", patientName)
             );
 
             const querySnapshot = await getDocs(q);
+            let deletedCount = 0;
 
-            querySnapshot.forEach((doc) => {
-                batch.delete(doc.ref);
+            querySnapshot.forEach((docSnapshot) => {
+                const appointment = docSnapshot.data();
+                // Filtrar localmente: solo eliminar si la fecha es futura
+                if (appointment.date >= now) {
+                    batch.delete(docSnapshot.ref);
+                    deletedCount++;
+                }
             });
 
-            console.log(`🗑️ Preparando eliminación de ${querySnapshot.size} citas futuras para ${patientName}`);
+            console.log(`🗑️ Preparando eliminación de ${deletedCount} citas futuras para ${patientName}`);
         }
 
         // Ejecutar batch
