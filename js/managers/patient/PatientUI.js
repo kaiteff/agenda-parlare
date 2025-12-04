@@ -18,7 +18,6 @@
 
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
-import { patientProfiles } from '../../firebase.js';
 
 /**
  * Gestión de UI y renderizado
@@ -42,7 +41,7 @@ export const PatientUI = {
 
         try {
             // 1. Obtener pacientes activos filtrados por terapeuta
-            const activePatients = PatientFilters.filterBySelectedTherapist(patientProfiles);
+            const activePatients = PatientFilters.filterBySelectedTherapist(PatientState.patients);
 
             // 2. Aplicar filtro según modo de vista
             let patientsToShow;
@@ -88,7 +87,7 @@ export const PatientUI = {
         const { dom, viewMode } = PatientState;
         if (!dom.patientsHeader) return;
 
-        const totalActive = PatientFilters.filterBySelectedTherapist(patientProfiles).length;
+        const totalActive = PatientFilters.filterBySelectedTherapist(PatientState.patients).length;
         const todayCount = PatientFilters.getToday().length;
         const tomorrowCount = PatientFilters.getTomorrow().length;
 
