@@ -168,37 +168,40 @@ export const PatientActions = {
 
     /**
      * Alterna el estado de confirmación de una cita
+     * Busca la próxima cita del paciente (hoy o mañana)
      * 
      * @param {string} patientName - Nombre del paciente
      * @returns {Promise<boolean>} true si se cambió correctamente
      */
     async toggleConfirmation(patientName) {
         try {
-            // Obtener la próxima cita de mañana para este paciente
-            const today = new Date();
+            // Obtener la próxima cita (hoy o mañana) para este paciente
+            const now = new Date();
+            const today = new Date(now);
             today.setHours(0, 0, 0, 0);
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
-            const dayAfter = new Date(tomorrow);
-            dayAfter.setDate(dayAfter.getDate() + 1);
+            const dayAfterTomorrow = new Date(tomorrow);
+            dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
             // Buscar en patientsData global (será inyectado)
             const patientsData = window.patientsData || [];
 
-            const tomorrowAppointments = patientsData.filter(apt => {
+            // Buscar citas de hoy o mañana
+            const upcomingAppointments = patientsData.filter(apt => {
                 const aptDate = new Date(apt.date);
                 return apt.name === patientName &&
-                    aptDate >= tomorrow &&
-                    aptDate < dayAfter &&
+                    aptDate >= today &&
+                    aptDate < dayAfterTomorrow &&
                     !apt.isCancelled;
             }).sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            if (tomorrowAppointments.length === 0) {
-                alert('No se encontró cita para mañana');
+            if (upcomingAppointments.length === 0) {
+                alert('No se encontró cita para hoy o mañana');
                 return false;
             }
 
-            const appointment = tomorrowAppointments[0];
+            const appointment = upcomingAppointments[0];
             const newStatus = !appointment.confirmed;
 
             // Actualizar en Firestore
@@ -206,7 +209,11 @@ export const PatientActions = {
                 confirmed: newStatus
             });
 
-            console.log(`✅ PatientActions: Cita ${newStatus ? 'confirmada' : 'desconfirmada'} para ${patientName}`);
+            const aptDate = new Date(appointment.date);
+            const isToday = aptDate >= today && aptDate < tomorrow;
+            const dayLabel = isToday ? 'hoy' : 'mañana';
+
+            console.log(`✅ PatientActions: Cita de ${dayLabel} ${newStatus ? 'confirmada' : 'desconfirmada'} para ${patientName}`);
             return true;
 
         } catch (error) {

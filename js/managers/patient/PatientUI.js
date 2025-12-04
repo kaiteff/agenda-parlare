@@ -218,18 +218,17 @@ export const PatientUI = {
                 minute: '2-digit'
             });
 
-            if (viewMode === 'tomorrow') {
-                const confirmText = patient.confirmed ? '✓ OK' : '⏳ Pendiente';
-                const confirmClass = patient.confirmed
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-orange-100 text-orange-700';
+            // Mostrar badge de confirmación para HOY y MAÑANA
+            const confirmText = patient.confirmed ? '✓ OK' : '⏳ Pendiente';
+            const confirmClass = patient.confirmed
+                ? 'bg-green-100 text-green-700'
+                : 'bg-orange-100 text-orange-700';
 
-                confirmBadge = `<button
-                    onclick="event.stopPropagation(); toggleConfirmationFromList('${patient.name}')"
-                    class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
-                    title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
-                >${confirmText}</button>`;
-            }
+            confirmBadge = `<button
+                onclick="event.stopPropagation(); toggleConfirmationFromList('${patient.name}')"
+                class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
+                title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
+            >${confirmText}</button>`;
         }
 
         patientEl.innerHTML = `
