@@ -17,7 +17,7 @@
  * @module PatientFilters
  */
 
-import { patientsData, patientProfiles } from '../../firebase.js';
+import { PatientState } from './PatientState.js';
 import { AuthManager } from '../AuthManager.js';
 
 /**
@@ -46,7 +46,7 @@ export const PatientFilters = {
 
         const selectedTherapist = AuthManager.getSelectedTherapist();
 
-        const todayAppointments = patientsData.filter(apt => {
+        const todayAppointments = (PatientState.appointments || []).filter(apt => {
             const aptDate = new Date(apt.date);
 
             // Verificar filtro de terapeuta seleccionado
@@ -82,7 +82,7 @@ export const PatientFilters = {
 
         const selectedTherapist = AuthManager.getSelectedTherapist();
 
-        const tomorrowAppointments = patientsData.filter(apt => {
+        const tomorrowAppointments = (PatientState.appointments || []).filter(apt => {
             const aptDate = new Date(apt.date);
 
             // Verificar filtro de terapeuta seleccionado
@@ -147,7 +147,7 @@ export const PatientFilters = {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        return patientsData
+        return (PatientState.appointments || [])
             .filter(apt => {
                 const aptDate = new Date(apt.date);
                 const matchesTherapist = AuthManager.canEditItem(apt);
@@ -193,7 +193,7 @@ export const PatientFilters = {
      */
     addPaymentTotals(patients) {
         return patients.map(profile => {
-            const appointments = patientsData.filter(apt => apt.name === profile.name);
+            const appointments = (PatientState.appointments || []).filter(apt => apt.name === profile.name);
             const { totalPaid, totalPending } = this.calculatePaymentTotals(appointments);
 
             return {
