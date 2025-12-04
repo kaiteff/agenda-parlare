@@ -7,6 +7,7 @@ import { isSlotFree, checkSlotConflict, validateAppointment } from './utils/vali
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from './services/appointmentService.js';
 import { MiniCalendar } from './components/MiniCalendar.js';
 import { AuthManager } from './managers/AuthManager.js';
+import { PatientState } from './managers/patient/PatientState.js';
 
 // Estado del calendario
 let currentWeekStart = getStartOfWeek(new Date());
@@ -84,9 +85,9 @@ function populatePatientSuggestions() {
     if (!patientSuggestions) return;
     patientSuggestions.innerHTML = '';
 
-    console.log("🔍 populatePatientSuggestions - Perfiles disponibles:", patientProfiles.length);
-    if (patientProfiles.length > 0) {
-        console.log("🔍 Nombres en perfiles:", patientProfiles.map(p => p.name));
+    console.log("🔍 populatePatientSuggestions - Perfiles disponibles:", (PatientState?.patients || patientProfiles).length);
+    if ((PatientState?.patients || patientProfiles).length > 0) {
+        console.log("🔍 Nombres en perfiles:", (PatientState?.patients || patientProfiles).map(p => p.name));
     }
 
     const now = new Date();
@@ -94,8 +95,9 @@ function populatePatientSuggestions() {
     // Obtener terapeuta seleccionado
     const selectedTherapist = AuthManager.getSelectedTherapist();
 
-    // Filtrar perfiles por terapeuta
-    const filteredProfiles = patientProfiles.filter(p => {
+    // Filtrar perfiles por terapeuta (usar PatientState si está disponible)
+    const profiles = PatientState?.patients || patientProfiles;
+    const filteredProfiles = profiles.filter(p => {
         if (selectedTherapist && selectedTherapist !== 'all') {
             return p.therapist === selectedTherapist;
         }
@@ -105,8 +107,9 @@ function populatePatientSuggestions() {
         return true;
     });
 
-    // Filtrar citas por terapeuta
-    const filteredAppointments = patientsData.filter(apt => {
+    // Filtrar citas por terapeuta (usar PatientState si está disponible)
+    const appointments = PatientState?.appointments || patientsData;
+    const filteredAppointments = appointments.filter(apt => {
         if (selectedTherapist && selectedTherapist !== 'all') {
             return apt.therapist === selectedTherapist;
         }
