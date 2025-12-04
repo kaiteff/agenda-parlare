@@ -323,8 +323,11 @@ export const PatientModals = {
     /**
      * Abre el modal de pacientes inactivos
      */
-    openInactive() {
-        const { dom } = PatientState;
+    /**
+     * Abre el modal de pacientes inactivos
+     */
+    openInactivePatients() {
+        const { dom, patients } = PatientState;
 
         if (!dom.inactivePatientsModal) {
             console.warn('⚠️ PatientModals: Modal de inactivos no encontrado');
@@ -332,7 +335,7 @@ export const PatientModals = {
         }
 
         // Obtener pacientes inactivos
-        const inactivePatients = patientProfiles.filter(p => p.isActive === false);
+        const inactivePatients = patients.filter(p => p.isActive === false);
 
         // Renderizar lista
         this._renderInactivePatients(inactivePatients);
