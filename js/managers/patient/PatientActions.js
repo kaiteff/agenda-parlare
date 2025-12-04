@@ -337,7 +337,7 @@ export const PatientActions = {
         }
 
         try {
-            const result = await deletePatientProfile(profileId);
+            const result = await deletePatientProfile(profileId, patientName);
 
             if (result.success) {
                 alert(`Paciente "${patientName}" eliminado permanentemente.`);
