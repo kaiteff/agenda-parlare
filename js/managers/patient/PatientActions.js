@@ -400,10 +400,10 @@ export const PatientActions = {
                 const now = new Date().toISOString();
 
                 // Query future appointments for this patient
+                // NOTE: We query only by name to avoid "Index Required" error
                 const q = query(
                     collection(db, 'appointments'),
-                    where('name', '==', patientName),
-                    where('date', '>=', now)
+                    where('name', '==', patientName)
                 );
 
                 const snapshot = await getDocs(q);
@@ -412,8 +412,9 @@ export const PatientActions = {
 
                 snapshot.docs.forEach(docSnap => {
                     const data = docSnap.data();
-                    // Update only if cost is missing or 0
-                    if (!data.cost || data.cost === 0) {
+
+                    // Filter in memory: Future dates AND (cost missing or 0)
+                    if (data.date >= now && (!data.cost || data.cost === 0)) {
                         batch.update(docSnap.ref, { cost: updates.defaultCost });
                         updateCount++;
                     }

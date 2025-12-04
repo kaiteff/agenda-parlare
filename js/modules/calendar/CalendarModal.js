@@ -384,7 +384,33 @@ export const CalendarModal = {
 
     async handleCancel() {
         if (!CalendarState.selectedEventId) return;
+
+        if (!confirm("¿Estás seguro de que deseas cancelar esta cita?")) return;
+
         await CalendarData.cancelEvent(CalendarState.selectedEventId);
-        this.closeModal();
+
+        if (confirm("Cita cancelada. ¿Deseas agendar una nueva cita para este paciente ahora?")) {
+            // Switch to create mode with same patient
+            CalendarState.selectedEventId = null;
+            const dom = CalendarState.dom;
+
+            dom.modalTitle.textContent = 'Nueva Cita';
+            dom.saveBtn.classList.remove('hidden');
+            dom.deleteBtn.classList.add('hidden');
+            dom.payBtn.classList.add('hidden');
+            dom.cancelBtn.classList.add('hidden');
+
+            // Suggest next week same time
+            if (dom.appointmentDateInput.value) {
+                const current = new Date(dom.appointmentDateInput.value);
+                const nextWeek = new Date(current);
+                nextWeek.setDate(nextWeek.getDate() + 7);
+                const offset = nextWeek.getTimezoneOffset() * 60000;
+                const iso = (new Date(nextWeek - offset)).toISOString().slice(0, 16);
+                dom.appointmentDateInput.value = iso;
+            }
+        } else {
+            this.closeModal();
+        }
     }
 };
