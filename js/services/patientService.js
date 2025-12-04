@@ -1,11 +1,100 @@
 // patientService.js - Servicio para gestión de perfiles de pacientes
-import { db, patientProfilesPath, collectionPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, getDocs, writeBatch } from '../firebase.js';
+import { db, patientProfilesPath, collectionPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
+import { query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { validatePatientName } from '../utils/validators.js';
 
-// ... (rest of the file)
+/**
+ * Busca un perfil de paciente por nombre
+ * @param {string} name - Nombre del paciente
+ * @param {Array} profiles - Lista de perfiles
+ * @returns {Object|null} - Perfil encontrado o null
+ */
+export function findPatientByName(name, profiles) {
+    if (!name) return null;
+    return profiles.find(p => p.name.toLowerCase() === name.toLowerCase().trim());
+}
 
 /**
- * Elimina permanentemente un perfil de paciente y sus citas asociadas
+ * Crea un nuevo perfil de paciente
+ * @param {string} name - Nombre completo del paciente
+ * @param {string} firstName - Nombre(s)
+ * @param {string} lastName - Apellidos
+ * @param {string} therapist - ID del terapeuta asignado (opcional, default: 'diana')
+ * @returns {Promise<Object>} - Resultado { success, id, data, error }
+ */
+export async function createPatientProfile(name, firstName = '', lastName = '', therapist = 'diana') {
+    try {
+        const validation = validatePatientName(name);
+        if (!validation.valid) {
+            return { success: false, error: validation.error };
+        }
+
+        const profileData = {
+            name: name.trim(),
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            therapist: therapist,
+            isActive: true,
+            dateAdded: serverTimestamp(),
+            dateInactivated: null,
+            lastSessionDate: null
+        };
+
+        const docRef = await addDoc(collection(db, patientProfilesPath), profileData);
+        return { success: true, id: docRef.id, data: profileData };
+    } catch (error) {
+        console.error("Error creando perfil:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Da de baja a un paciente (Soft Delete)
+ * @param {string} id - ID del perfil
+ * @param {Date} lastSessionDate - Fecha de última sesión (opcional)
+ * @returns {Promise<Object>} - Resultado { success, error }
+ */
+export async function deactivatePatient(id, lastSessionDate = null) {
+    try {
+        const updateData = {
+            isActive: false,
+            dateInactivated: serverTimestamp()
+        };
+
+        if (lastSessionDate) {
+            updateData.lastSessionDate = lastSessionDate;
+        }
+
+        await updateDoc(doc(db, patientProfilesPath, id), updateData);
+        return { success: true };
+    } catch (error) {
+        console.error("Error dando de baja:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Reactiva un paciente dado de baja
+ * @param {string} id - ID del perfil
+ * @returns {Promise<Object>} - Resultado { success, error }
+ */
+export async function reactivatePatient(id) {
+    try {
+        await updateDoc(doc(db, patientProfilesPath, id), {
+            isActive: true,
+            dateInactivated: null
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error reactivando paciente:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Elimina permanentemente un perfil de paciente y sus citas FUTURAS asociadas
+ * Las citas pasadas se conservan para registro histórico/financiero
+ * 
  * @param {string} id - ID del perfil
  * @param {string} patientName - Nombre del paciente (para buscar y eliminar citas)
  * @returns {Promise<Object>} - Resultado { success, error }
@@ -18,23 +107,32 @@ export async function deletePatientProfile(id, patientName) {
         const profileRef = doc(db, patientProfilesPath, id);
         batch.delete(profileRef);
 
-        // 2. Eliminar citas asociadas (si se proporciona nombre)
+        // 2. Eliminar citas FUTURAS asociadas (si se proporciona nombre)
         if (patientName) {
-            const q = query(collection(db, collectionPath), where("name", "==", patientName));
+            // Obtener fecha actual en formato ISO para comparar
+            const now = new Date().toISOString();
+
+            // Consultar solo citas futuras de este paciente
+            const q = query(
+                collection(db, collectionPath),
+                where("name", "==", patientName),
+                where("date", ">=", now)
+            );
+
             const querySnapshot = await getDocs(q);
 
             querySnapshot.forEach((doc) => {
                 batch.delete(doc.ref);
             });
 
-            console.log(`🗑️ Preparando eliminación de ${querySnapshot.size} citas para ${patientName}`);
+            console.log(`🗑️ Preparando eliminación de ${querySnapshot.size} citas futuras para ${patientName}`);
         }
 
         // Ejecutar batch
         await batch.commit();
         return { success: true };
     } catch (error) {
-        console.error("Error eliminando perfil y citas:", error);
+        console.error("Error eliminando perfil y citas futuras:", error);
         return { success: false, error: error.message };
     }
 }
@@ -45,7 +143,7 @@ export async function deletePatientProfile(id, patientName) {
  * @param {string} patientName - Nombre completo del paciente
  * @param {string} firstName - Nombre(s)
  * @param {string} lastName - Apellidos
- * @param {Array} patientProfiles - Lista de perfiles de pacientes
+ * @param {string} patientProfiles - Lista de perfiles de pacientes
  * @returns {Promise<Object>} - Perfil del paciente
  */
 export async function ensurePatientProfile(patientName, firstName = '', lastName = '', patientProfiles = []) {
@@ -73,4 +171,3 @@ export async function ensurePatientProfile(patientName, firstName = '', lastName
     if (!result.success) throw new Error(result.error);
     return { id: result.id, ...result.data };
 }
-
