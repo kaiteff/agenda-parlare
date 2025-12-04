@@ -345,7 +345,12 @@ function openEditModal(ev) {
     patientSearchInput.value = ev.name;
     patientFirstNameInput.value = firstName;
     patientLastNameInput.value = lastName;
-    appointmentDateInput.value = ev.date;
+
+    // Formatear fecha para input datetime-local (YYYY-MM-DDTHH:mm)
+    const dateObj = new Date(ev.date);
+    const offset = dateObj.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(dateObj - offset)).toISOString().slice(0, 16);
+    appointmentDateInput.value = localISOTime;
     costInput.value = ev.cost;
 
     const evDate = new Date(ev.date);

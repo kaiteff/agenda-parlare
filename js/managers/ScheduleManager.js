@@ -36,7 +36,7 @@ export const ScheduleManager = {
         prevBtn: document.getElementById('prevWeekScheduleBtn'),
         nextBtn: document.getElementById('nextWeekScheduleBtn'),
         confirmBtn: document.getElementById('confirmScheduleBtn'),
-        costDisplay: document.getElementById('scheduleCostDisplay'),
+        costInput: document.getElementById('scheduleCostInput'),
         recurrenceInputs: document.getElementsByName('recurrenceType'),
         sessionsCountContainer: document.getElementById('sessionsCountContainer'),
         sessionsCountInput: document.getElementById('sessionsCount')
@@ -99,6 +99,7 @@ export const ScheduleManager = {
         // Reset UI
         if (this.dom.patientName) this.dom.patientName.textContent = `Paciente: ${patientName}`;
         if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = true;
+        if (this.dom.costInput) this.dom.costInput.value = 0;
 
         // Reset radio buttons
         if (this.dom.recurrenceInputs) {
@@ -329,11 +330,13 @@ export const ScheduleManager = {
 
             // Crear citas
             let createdCount = 0;
+            const cost = this.dom.costInput ? parseFloat(this.dom.costInput.value) || 0 : 0;
+
             for (const date of appointmentsToCreate) {
                 const appointmentData = {
                     name: this.state.patientName,
                     date: date.toISOString(),
-                    cost: 0, // Costo por defecto, se puede editar después
+                    cost: cost,
                     therapist: this.state.therapist,
                     confirmed: false,
                     isPaid: false,
