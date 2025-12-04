@@ -2,7 +2,8 @@
 import { initializeFirebase, loginUser, logoutUser } from './firebase.js';
 import { initCalendar } from './calendar.js';
 import { initNotifications } from './notifications.js';
-import { initPatients } from './patients.js';
+// import { initPatients } from './patients.js'; // OLD - Replaced by PatientManager
+import { PatientManager } from './managers/PatientManager.js';
 import { AuthManager } from './managers/AuthManager.js';
 // import { runMigration } from './migrate_data.js';
 
@@ -92,8 +93,11 @@ function updateUserUI() {
 
                 // Recargar lista de pacientes si existe la función
                 if (typeof window.renderPatientsList === 'function') {
-                    console.log("🔄 Recargando lista de pacientes...");
+                    console.log("🔄 Recargando lista de pacientes (OLD)...");
                     window.renderPatientsList();
+                } else if (window.PatientManager) {
+                    console.log("🔄 Recargando lista de pacientes (NEW)...");
+                    window.PatientManager.api.refreshList();
                 }
 
                 // Recargar calendario
@@ -110,15 +114,15 @@ function updateUserUI() {
 
 let modulesInitialized = false;
 
-function initializeModules() {
+async function initializeModules() {
     if (modulesInitialized) return;
     modulesInitialized = true;
 
     // Inicializar módulos con manejo de errores
     try {
-        console.log("🚀 Inicializando Patients...");
-        initPatients();
-    } catch (e) { console.error("❌ Error initPatients:", e); }
+        console.log("🚀 Inicializando PatientManager...");
+        await PatientManager.init();
+    } catch (e) { console.error("❌ Error PatientManager.init():", e); }
 
     try {
         console.log("🚀 Inicializando Calendar...");
