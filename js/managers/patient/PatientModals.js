@@ -36,24 +36,19 @@ export const PatientModals = {
      * Abre el modal para crear un nuevo paciente
      */
     openNewPatient() {
-        // Forzar búsqueda fresca del elemento para evitar referencias obsoletas
-        const modal = document.getElementById('newPatientModal');
+        let modal = document.getElementById('newPatientModal');
 
         if (!modal) {
-            console.error('❌ PatientModals: CRITICAL - Modal de nuevo paciente no encontrado en el DOM');
-            alert('Error: No se puede abrir el formulario de nuevo paciente. Por favor recargue la página.');
+            console.error('❌ PatientModals: CRITICAL - Modal de nuevo paciente no encontrado');
             return;
         }
 
         const { dom } = PatientState;
 
-        // Actualizar referencia en estado si es necesario
-        if (dom.newPatientModal !== modal) {
-            console.warn('⚠️ PatientModals: Actualizando referencia DOM obsoleta');
-            dom.newPatientModal = modal;
-        }
+        // Actualizar referencia
+        dom.newPatientModal = modal;
 
-        // Limpiar inputs (buscando referencias frescas si es necesario)
+        // Limpiar inputs
         const firstNameInput = document.getElementById('newPatientFirstName');
         const lastNameInput = document.getElementById('newPatientLastName');
         const therapistInput = document.getElementById('newPatientTherapist');
@@ -61,7 +56,7 @@ export const PatientModals = {
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
 
-        // Establecer terapeuta por defecto
+        // Configurar terapeuta
         if (therapistInput) {
             const selectedTherapist = AuthManager.getSelectedTherapist();
             if (selectedTherapist && selectedTherapist !== 'all') {
@@ -73,49 +68,23 @@ export const PatientModals = {
             }
         }
 
-        // IMPORTANTE: Usar requestAnimationFrame para asegurar renderizado
-        // IMPORTANTE: Usar requestAnimationFrame para asegurar renderizado
+        // Mover al body para evitar problemas de stacking context
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+
+        // Forzar visualización usando clases y estilos estándar
         requestAnimationFrame(() => {
-            // 1. RADICAL: Limpiar TODAS las clases
-            modal.className = '';
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            modal.style.zIndex = '9999';
 
-            // 2. Reset styles
-            const styles = {
-                'display': 'flex',
-                'position': 'fixed',
-                'top': '0',
-                'left': '0',
-                'width': '100%',
-                'height': '100%',
-                'background-color': 'rgba(0, 0, 0, 0.5)',
-                'z-index': '2147483647',
-                'visibility': 'visible',
-                'opacity': '1',
-                'align-items': 'center',
-                'justify-content': 'center',
-                'pointer-events': 'auto',
-                'backdrop-filter': 'blur(4px)'
-            };
-
-            Object.entries(styles).forEach(([prop, val]) => {
-                modal.style.setProperty(prop, val, 'important');
-            });
-
-            // 3. Child content styles
-            if (modal.firstElementChild) {
-                modal.firstElementChild.style.setProperty('pointer-events', 'auto', 'important');
-                modal.firstElementChild.style.setProperty('z-index', '2147483647', 'important');
-            }
-
-            // 4. Reflow
-            void modal.offsetHeight;
-
-            // 5. Focus
+            // Asegurar que el input tenga foco
             if (firstNameInput) {
-                requestAnimationFrame(() => firstNameInput.focus());
+                setTimeout(() => firstNameInput.focus(), 50);
             }
 
-            console.log('✅ PatientModals: Modal de nuevo paciente abierto (PURE CSS MODE)');
+            console.log('✅ PatientModals: Modal de nuevo paciente abierto (Standard Mode)');
         });
     },
 
@@ -123,22 +92,12 @@ export const PatientModals = {
      * Cierra el modal de nuevo paciente
      */
     closeNewPatient() {
-        // Buscar el elemento fresh del DOM
         const modal = document.getElementById('newPatientModal');
-
         if (modal) {
             modal.classList.add('hidden');
-            modal.style.setProperty('display', 'none', 'important');
-        } else {
-            // Fallback al estado
-            const { dom } = PatientState;
-            if (dom.newPatientModal) {
-                dom.newPatientModal.classList.add('hidden');
-                dom.newPatientModal.style.display = 'none';
-            }
+            modal.style.display = 'none';
         }
-
-        console.log('✅ PatientModals: Modal de nuevo paciente cerrado (Forced)');
+        console.log('✅ PatientModals: Modal de nuevo paciente cerrado');
     },
 
     // ==========================================
@@ -152,6 +111,19 @@ export const PatientModals = {
      */
     openHistory(patient) {
         const { dom } = PatientState;
+
+        // PREVENCIÓN DE CONFLICTOS:
+        // Si el modal de Agendar Cita está abierto (ej: justo después de crear paciente),
+        // no permitir que el historial se abra encima (lo cual cerraría el anterior).
+        // Esto evita condiciones de carrera donde la UI se actualiza y podría disparar clicks fantasma o lógica automática.
+        const scheduleModal = document.getElementById('scheduleNewPatientModal');
+        if (scheduleModal) {
+            const style = window.getComputedStyle(scheduleModal);
+            if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && !scheduleModal.classList.contains('hidden')) {
+                console.warn("🚫 PatientModals: Bloqueando apertura de historial porque Schedule Modal está abierto.");
+                return;
+            }
+        }
 
         if (!dom.patientHistoryModal) {
             console.warn('⚠️ PatientModals: Modal de historial no encontrado');

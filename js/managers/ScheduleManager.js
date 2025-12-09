@@ -127,81 +127,24 @@ export const ScheduleManager = {
         this._updateRecurrenceUI();
 
         // Mostrar modal
-        // Forzar búsqueda del DOM para asegurar referencia fresca
         const modal = document.getElementById('scheduleNewPatientModal');
         if (modal) {
-            this.dom.modal = modal; // Actualizar referencia
+            this.dom.modal = modal;
+
+            // Mover al body para evitar problemas de stacking context
+            if (modal.parentNode !== document.body) {
+                document.body.appendChild(modal);
+            }
 
             requestAnimationFrame(() => {
-                // 1. Renderizar slots primero
                 this._renderSlots();
 
-                // 2. RADICAL: Limpiar TODAS las clases
-                modal.className = '';
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                modal.style.zIndex = '9999';
 
-                // 3. Establecer estilos puros con !important
-                const styles = {
-                    'display': 'flex',
-                    'position': 'fixed',
-                    'top': '0',
-                    'left': '0',
-                    'width': '100%',
-                    'height': '100%',
-                    'background-color': 'rgba(0, 0, 0, 0.5)',
-                    'z-index': '2147483647',
-                    'visibility': 'visible',
-                    'opacity': '1',
-                    'align-items': 'center',
-                    'justify-content': 'center',
-                    'pointer-events': 'auto',
-                    'backdrop-filter': 'blur(4px)'
-                };
-
-                Object.entries(styles).forEach(([prop, val]) => {
-                    modal.style.setProperty(prop, val, 'important');
-                });
-
-                // 4. Asegurar que el contenido hijo tenga pointer-events
-                if (modal.firstElementChild) {
-                    modal.firstElementChild.style.setProperty('pointer-events', 'auto', 'important');
-                    modal.firstElementChild.style.setProperty('z-index', '2147483647', 'important');
-                    modal.firstElementChild.style.setProperty('position', 'relative', 'important');
-                }
-
-                // 5. Forzar reflow
-                void modal.offsetHeight;
-
-                console.log("🔍 DEBUG: Schedule Modal Abierto (PURE CSS MODE)");
+                console.log("✅ ScheduleManager: Modal abierto para", patientName);
             });
-
-
-
-            // DEBUG: Verificar estado del modal después de abrirlo
-            setTimeout(() => {
-                console.log("🔍 DEBUG: Estado del modal después de abrir:");
-                console.log("   - Modal existe en DOM?", !!modal);
-                console.log("   - Display:", window.getComputedStyle(modal).display);
-                console.log("   - Visibility:", window.getComputedStyle(modal).visibility);
-                console.log("   - Opacity:", window.getComputedStyle(modal).opacity);
-                console.log("   - Z-Index:", window.getComputedStyle(modal).zIndex);
-                console.log("   - Classes:", modal.className);
-                console.log("   - Tiene clase 'hidden'?", modal.classList.contains('hidden'));
-                console.log("   - Position:", window.getComputedStyle(modal).position);
-                console.log("   - Top:", window.getComputedStyle(modal).top);
-                console.log("   - Left:", window.getComputedStyle(modal).left);
-
-                // Verificar si hay otros modales encima
-                const allModals = document.querySelectorAll('[id$="Modal"]');
-                console.log("   - Total modales en DOM:", allModals.length);
-                allModals.forEach(m => {
-                    const computed = window.getComputedStyle(m);
-                    if (computed.display !== 'none' && !m.classList.contains('hidden')) {
-                        console.log(`   - Modal visible: ${m.id}, z-index: ${computed.zIndex}`);
-                    }
-                });
-            }, 200);
-
-            console.log("✅ ScheduleManager: Modal abierto para", patientName);
         } else {
             console.error("❌ ScheduleManager: No se encontró el modal 'scheduleNewPatientModal'");
         }
@@ -212,11 +155,10 @@ export const ScheduleManager = {
      */
     closeModal() {
         console.log('🚪 ScheduleManager.closeModal() llamado');
-        console.trace('Stack trace:');
         const modal = document.getElementById('scheduleNewPatientModal');
         if (modal) {
             modal.classList.add('hidden');
-            modal.style.setProperty('display', 'none', 'important');
+            modal.style.display = 'none';
         }
     },
 

@@ -21,6 +21,7 @@
 import { db, updateDoc, doc, collectionPath } from '../../firebase.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
+import { PatientModals } from './PatientModals.js';
 import { AuthManager } from '../AuthManager.js';
 import { ScheduleManager } from '../ScheduleManager.js';
 
@@ -66,9 +67,7 @@ export const PatientActions = {
 
             if (result.success) {
                 // Cerrar modal de nuevo paciente
-                if (dom.newPatientModal) {
-                    dom.newPatientModal.classList.add('hidden');
-                }
+                PatientModals.closeNewPatient();
 
                 // Limpiar inputs
                 if (dom.newPatientFirstName) dom.newPatientFirstName.value = '';
