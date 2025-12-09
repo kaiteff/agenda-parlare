@@ -22,6 +22,7 @@ import { PatientFilters } from './PatientFilters.js';
 import { PatientActions } from './PatientActions.js';
 import { patientsData, patientProfiles } from '../../firebase.js';
 import { AuthManager } from '../AuthManager.js';
+import { ModalService } from '../../utils/ModalService.js';
 
 /**
  * Gestión de modales
@@ -113,9 +114,6 @@ export const PatientModals = {
         const { dom } = PatientState;
 
         // PREVENCIÓN DE CONFLICTOS:
-        // Si el modal de Agendar Cita está abierto (ej: justo después de crear paciente),
-        // no permitir que el historial se abra encima (lo cual cerraría el anterior).
-        // Esto evita condiciones de carrera donde la UI se actualiza y podría disparar clicks fantasma o lógica automática.
         const scheduleModal = document.getElementById('scheduleNewPatientModal');
         if (scheduleModal) {
             const style = window.getComputedStyle(scheduleModal);
@@ -132,6 +130,19 @@ export const PatientModals = {
 
         // Guardar paciente seleccionado
         PatientState.setSelectedPatient(patient);
+
+        // DETERMINAR PERMISOS FINANCIEROS
+        const canViewFinancials = AuthManager.isAdmin() || (patient.therapist === AuthManager.currentUser.therapist);
+
+        // Ocultar/Mostrar tarjeta de finanzas
+        const financeCard = document.getElementById('patientFinanceCard');
+        if (financeCard) {
+            if (canViewFinancials) {
+                financeCard.classList.remove('hidden');
+            } else {
+                financeCard.classList.add('hidden');
+            }
+        }
 
         // Obtener todas las citas del paciente usando el estado actualizado
         const appointments = (PatientState.appointments || []).filter(apt => apt.name === patient.name);
@@ -167,7 +178,7 @@ export const PatientModals = {
         if (dom.patientUpcomingAppointments) dom.patientUpcomingAppointments.textContent = upcoming.length;
 
         // Renderizar lista de citas
-        this._renderPatientAppointments(appointments);
+        this._renderPatientAppointments(appointments, canViewFinancials);
 
         // Configurar botones de acción
         this._setupHistoryActions(patient);
@@ -203,11 +214,12 @@ export const PatientModals = {
     },
 
     /**
-     * Renderiza la lista de citas en el modal de historial
+     * Renderiza la lista de citas en el modal de historial con agrupamiento inteligente
      * @private
      * @param {Array<Object>} appointments - Lista de citas
+     * @param {boolean} canViewFinancials - Si el usuario puede ver costos
      */
-    _renderPatientAppointments(appointments) {
+    _renderPatientAppointments(appointments, canViewFinancials = true) {
         const { dom } = PatientState;
 
         if (!dom.patientHistoryList) return;
@@ -221,63 +233,179 @@ export const PatientModals = {
             return;
         }
 
-        // Ordenar por fecha (más reciente primero)
-        const sortedAppointments = [...appointments].sort((a, b) =>
-            new Date(b.date) - new Date(a.date)
-        );
+        const now = new Date();
 
+        // 1. Clasificar citas
+        const pendingPay = [];
+        const upcoming = [];
+        const history = [];
+
+        appointments.forEach(apt => {
+            const aptDate = new Date(apt.date);
+
+            if (apt.isCancelled) {
+                // Canceladas van al historial siempre
+                history.push(apt);
+            } else if (aptDate >= now) {
+                // Futuras van a próximas
+                upcoming.push(apt);
+            } else if (!apt.isPaid) {
+                // Pasadas y NO pagadas van a Pendientes de Pago
+                pendingPay.push(apt);
+            } else {
+                // Pasadas y Pagadas van a Historial
+                history.push(apt);
+            }
+        });
+
+        // 2. Ordenar grupos
+        // Pendientes de pago: Más recientes primero
+        pendingPay.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Próximas: La MÁS CERCANA arriba (ascendente)
+        upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Historial: Más recientes primero (descendente)
+        history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // 3. Renderizar
         dom.patientHistoryList.innerHTML = '';
 
-        sortedAppointments.forEach(apt => {
-            const aptDate = new Date(apt.date);
-            const dateStr = aptDate.toLocaleDateString('es-ES', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-            });
-            const timeStr = aptDate.toLocaleTimeString('es-ES', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+        const renderSection = (title, items, iconClass, titleColor) => {
+            if (items.length === 0) return;
 
-            const isPast = aptDate < new Date();
-            const statusClass = apt.isCancelled ? 'bg-red-50 border-red-200' :
-                apt.isPaid ? 'bg-green-50 border-green-200' :
-                    isPast ? 'bg-orange-50 border-orange-200' :
-                        'bg-blue-50 border-blue-200';
+            const sectionHeader = document.createElement('div');
+            sectionHeader.className = `flex items-center gap-2 mt-4 mb-2 pb-1 border-b border-gray-100 ${titleColor}`;
+            sectionHeader.innerHTML = `
+                <div class="${iconClass}"></div>
+                <h5 class="text-xs font-bold uppercase tracking-wide">${title} (${items.length})</h5>
+            `;
+            dom.patientHistoryList.appendChild(sectionHeader);
 
-            const statusText = apt.isCancelled ? '❌ Cancelada' :
-                apt.isPaid ? '✓ Pagada' :
-                    isPast ? '⏳ Pendiente' :
-                        '📅 Próxima';
+            items.forEach(apt => this._createAppointmentCard(apt, canViewFinancials));
+        };
 
-            const aptEl = document.createElement('div');
-            aptEl.className = `p-3 rounded-lg border ${statusClass} mb-2`;
-            aptEl.innerHTML = `
-                <div class="flex items-center justify-between mb-2">
-                    <div class="text-sm font-semibold text-gray-800">
-                        ${dateStr} - ${timeStr}
+        // Orden de visualización:
+        // 1. Pendientes de pago (Urgente)
+        if (pendingPay.length > 0) {
+            renderSection('⚠️ Pendientes de Pago', pendingPay, 'w-2 h-2 rounded-full bg-red-500', 'text-red-600');
+        }
+
+        // 2. Próximas Citas (Relevante)
+        if (upcoming.length > 0) {
+            renderSection('📅 Próximas Citas', upcoming, 'w-2 h-2 rounded-full bg-blue-500', 'text-blue-600');
+        }
+
+        // 3. Historial (Referencia)
+        if (history.length > 0) {
+            renderSection('🗄️ Historial / Pagadas', history, 'w-2 h-2 rounded-full bg-gray-400', 'text-gray-500');
+        }
+    },
+
+    /**
+     * Crea el elemento DOM para una tarjeta de cita
+     * @private
+     */
+    _createAppointmentCard(apt, canViewFinancials) {
+        const { dom } = PatientState;
+        const aptDate = new Date(apt.date);
+        const dateStr = aptDate.toLocaleDateString('es-ES', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+        const timeStr = aptDate.toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const isPast = aptDate < new Date();
+
+        let statusClass = 'bg-white border-gray-200'; // Default
+        let statusText = '';
+        let statusTextColor = '';
+
+        if (apt.isCancelled) {
+            statusClass = 'bg-red-50 border-red-200 opacity-75';
+            statusText = '❌ Cancelada';
+            statusTextColor = 'text-red-600';
+        } else if (apt.isPaid) {
+            statusClass = 'bg-green-50 border-green-200';
+            statusText = '✓ Pagada';
+            statusTextColor = 'text-green-600';
+        } else if (isPast) { // Pendiente de pago
+            statusClass = 'bg-orange-50 border-l-4 border-l-orange-400 border-y border-r border-orange-200 shadow-sm';
+            statusText = '⚠️ Pendiente Pago';
+            statusTextColor = 'text-orange-600';
+        } else { // Futura
+            statusClass = 'bg-blue-50 border-blue-200';
+            statusText = '📅 Próxima';
+            statusTextColor = 'text-blue-600';
+        }
+
+        // Si está confirmada, añadir distintivo extra visual
+        if (!isPast && !apt.isCancelled && apt.confirmed) {
+            statusText += ' (Confirmada)';
+        }
+
+        const aptEl = document.createElement('div');
+        aptEl.className = `p-3 rounded-lg border mb-2 transition-all hover:shadow-md cursor-pointer ${statusClass}`;
+
+        // Al hacer click, abrir edición
+        aptEl.onclick = () => {
+            // Abrir modal de edición si es posible
+            if (window.calendarManagerRef) {
+                // Acceso difícil a CalendarModal.openEditModal sin importar
+                // Dejar que el usuario use los botones de acción por ahora
+            }
+        };
+
+        const showPayBtn = canViewFinancials && !apt.isPaid && !apt.isCancelled && isPast;
+        const showConfirmBtn = !apt.isCancelled && !isPast;
+
+        // Costo solo si canViewFinancials
+        const costHtml = canViewFinancials ?
+            `<div class="text-gray-600 font-medium">Costo: <span class="text-gray-800">$${apt.cost}</span></div>`
+            : '<div></div>'; // Spacer
+
+        let footerHtml = '';
+        if (canViewFinancials || showConfirmBtn) {
+            footerHtml = `
+                <div class="flex items-center justify-between text-xs mt-2 border-t pt-2 border-gray-400 border-opacity-10">
+                    ${costHtml}
+                    <div class="flex gap-2">
+                         ${showConfirmBtn ? `
+                            <button onclick="event.stopPropagation(); quickToggleConfirm('${apt.id}', ${apt.confirmed})" 
+                                    class="px-2 py-1 ${apt.confirmed ? 'bg-gray-100 text-gray-600 border border-gray-300' : 'bg-blue-600 text-white'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1 transition-colors" title="${apt.confirmed ? 'Quitar confirmación' : 'Confirmar asistencia'}">
+                                ${apt.confirmed ? '<span class="text-[10px]">❌</span>' : '<span class="text-[10px]">✓</span> Confirmar'}
+                            </button>
+                        ` : ''}
+                        
+                        ${showPayBtn ? `
+                            <button onclick="event.stopPropagation(); quickMarkAsPaid('${apt.id}')" 
+                                    class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-bold shadow-sm transition-transform active:scale-95 flex items-center gap-1">
+                                <span>$</span> Pagar
+                            </button>
+                        ` : ''}
                     </div>
-                    <div class="text-xs font-bold ${apt.isCancelled ? 'text-red-600' : apt.isPaid ? 'text-green-600' : 'text-orange-600'}">
-                        ${statusText}
-                    </div>
-                </div>
-                <div class="flex items-center justify-between text-xs">
-                    <div class="text-gray-600">
-                        Costo: <span class="font-semibold">$${apt.cost}</span>
-                    </div>
-                    ${!apt.isPaid && !apt.isCancelled && isPast ? `
-                        <button onclick="quickMarkAsPaid('${apt.id}')" 
-                                class="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs">
-                            ✓ Marcar como pagado
-                        </button>
-                    ` : ''}
                 </div>
             `;
+        }
 
-            dom.patientHistoryList.appendChild(aptEl);
-        });
+        aptEl.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+                <div class="text-sm font-bold text-gray-800 tracking-tight">
+                    ${dateStr} <span class="font-normal text-gray-500 mx-1">|</span> ${timeStr}
+                </div>
+                <div class="text-[10px] uppercase font-bold tracking-wider ${statusTextColor}">
+                    ${statusText}
+                </div>
+            </div>
+            ${footerHtml}
+        `;
+
+        dom.patientHistoryList.appendChild(aptEl);
     },
 
     /**
@@ -325,7 +453,7 @@ export const PatientModals = {
                 );
 
                 if (success) {
-                    alert('Perfil actualizado correctamente');
+                    await ModalService.alert("Éxito", 'Perfil actualizado correctamente', "success");
                     this.closeHistory();
                 }
             };
@@ -350,9 +478,6 @@ export const PatientModals = {
     // MODAL DE PACIENTES INACTIVOS
     // ==========================================
 
-    /**
-     * Abre el modal de pacientes inactivos
-     */
     /**
      * Abre el modal de pacientes inactivos
      */

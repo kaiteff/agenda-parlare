@@ -9,17 +9,39 @@ $reloadScript = @"
 <script>
 (function() {
     let lastCheck = Date.now();
-    setInterval(async () => {
+    let failures = 0;
+    
+    // Polling function
+    const checkReload = async () => {
         try {
-            const response = await fetch('/check-reload?t=' + lastCheck);
+            const response = await fetch('/check-reload?t=' + lastCheck, {
+                cache: 'no-store',
+                keepalive: true
+            });
+            if (!response.ok) throw new Error('Network response was not ok');
+            
             const data = await response.text();
+            failures = 0; // Reset failures on success
+            
             if (data === 'reload') {
                 console.log('🔄 Hot reload: cambios detectados');
                 location.reload();
             }
             lastCheck = Date.now();
-        } catch(e) {}
-    }, 1000);
+        } catch(e) {
+            failures++;
+            // Exponential backoff for errors up to 10s
+            if (failures > 10) console.warn("Hot reload connection lost, retrying...");
+        }
+        
+        // Schedule next check
+        // If failing, back off (min 1s, max 10s)
+        const nextDelay = failures > 0 ? Math.min(10000, 1000 * Math.pow(1.5, failures)) : 1000;
+        setTimeout(checkReload, nextDelay);
+    };
+
+    // Start polling
+    checkReload();
 })();
 </script>
 "@

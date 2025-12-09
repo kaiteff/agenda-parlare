@@ -2,6 +2,7 @@
 import { db, patientProfilesPath, collectionPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
 import { query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { validatePatientName } from '../utils/validators.js';
+import { ModalService } from '../utils/ModalService.js';
 
 /**
  * Busca un perfil de paciente por nombre
@@ -160,7 +161,12 @@ export async function ensurePatientProfile(patientName, firstName = '', lastName
             const inactivatedDate = existing.dateInactivated?.toDate?.() || new Date(existing.dateInactivated);
             const dateStr = inactivatedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
-            if (confirm(`⚠️ ${patientName} está dado/a de baja desde el ${dateStr}.\n\n¿Desea reactivar y agendar?`)) {
+            if (await ModalService.confirm(
+                "Paciente Inactivo",
+                `⚠️ ${patientName} está dado/a de baja desde el ${dateStr}.<br><br>¿Desea reactivar y agendar?`,
+                "Reactivar",
+                "Cancelar"
+            )) {
                 const result = await reactivatePatient(existing.id);
                 if (!result.success) throw new Error(result.error);
                 return existing;

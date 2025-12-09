@@ -34,9 +34,6 @@ export const PatientFilters = {
      * Respeta el filtro de terapeuta seleccionado
      * 
      * @returns {Array<Object>} Lista de pacientes con cita hoy, ordenados por hora
-     * @example
-     * const todayPatients = PatientFilters.getToday();
-     * // [{ name: "Juan", appointmentTime: Date, confirmed: false }, ...]
      */
     getToday() {
         const today = new Date();
@@ -54,11 +51,12 @@ export const PatientFilters = {
             if (selectedTherapist && selectedTherapist !== 'all') {
                 matchesTherapist = (apt.therapist === selectedTherapist);
             } else {
-                // Si no hay filtro específico, aplicar reglas de rol
-                if (AuthManager.can('view_all_appointments')) {
+                // Modo "Todos":
+                // Si tienes permiso 'view_all_patients', ves todo.
+                // Si no, solo ves lo tuyo.
+                if (AuthManager.can('view_all_patients')) {
                     matchesTherapist = true;
                 } else {
-                    // Si no puede ver todas, debe coincidir con su terapeuta asignado
                     matchesTherapist = (apt.therapist === AuthManager.currentUser?.therapist);
                 }
             }
@@ -96,11 +94,9 @@ export const PatientFilters = {
             if (selectedTherapist && selectedTherapist !== 'all') {
                 matchesTherapist = (apt.therapist === selectedTherapist);
             } else {
-                // Si no hay filtro específico, aplicar reglas de rol
-                if (AuthManager.can('view_all_appointments')) {
+                if (AuthManager.can('view_all_patients')) {
                     matchesTherapist = true;
                 } else {
-                    // Si no puede ver todas, debe coincidir con su terapeuta asignado
                     matchesTherapist = (apt.therapist === AuthManager.currentUser?.therapist);
                 }
             }
@@ -130,12 +126,19 @@ export const PatientFilters = {
         return patients.filter(p => {
             if (p.isActive === false) return false;
 
-            // Filtro por terapeuta
+            // 1. Si hay un terapeuta específico seleccionado (ej: "Diana" o "Sam")
             if (selectedTherapist && selectedTherapist !== 'all') {
                 return p.therapist === selectedTherapist;
             }
 
-            // Si es terapeuta normal (no admin), solo ve los suyos
+            // 2. Si está seleccionado "Todos" (selectedTherapist === 'all' o null)
+
+            // Si tiene permiso de ver todos, mostrar todos
+            if (AuthManager.can('view_all_patients')) {
+                return true;
+            }
+
+            // Si es terapeuta normal SIN permiso de ver todos, restringir a los suyos
             if (AuthManager.isTherapist() && !AuthManager.isAdmin()) {
                 return p.therapist === AuthManager.currentUser.therapist;
             }
@@ -150,10 +153,8 @@ export const PatientFilters = {
 
     /**
      * Obtiene citas con pago pendiente de un paciente
-     * Solo incluye citas pasadas, no canceladas y no pagadas
-     * 
      * @param {string} patientName - Nombre del paciente
-     * @returns {Array<Object>} Lista de citas con pago pendiente, ordenadas por fecha (más reciente primero)
+     * @returns {Array<Object>} Lista de citas con pago pendiente
      */
     getPendingPayments(patientName) {
         const today = new Date();
@@ -162,7 +163,8 @@ export const PatientFilters = {
         return (PatientState.appointments || [])
             .filter(apt => {
                 const aptDate = new Date(apt.date);
-                const matchesTherapist = AuthManager.canEditItem(apt);
+                // Usar canViewDetails es suficiente aquí
+                const matchesTherapist = AuthManager.canViewDetails(apt);
 
                 return apt.name === patientName &&
                     aptDate < today &&
@@ -175,7 +177,6 @@ export const PatientFilters = {
 
     /**
      * Calcula totales de pagos para una lista de citas
-     * 
      * @param {Array<Object>} appointments - Lista de citas
      * @returns {Object} { totalPaid: number, totalPending: number }
      */
@@ -197,48 +198,42 @@ export const PatientFilters = {
         return { totalPaid, totalPending };
     },
 
-    /**
-     * Agrega totales de pagos a una lista de pacientes
-     * 
-     * @param {Array<Object>} patients - Lista de pacientes
-     * @returns {Array<Object>} Pacientes con campos totalPaid y totalPending agregados
-     */
-    addPaymentTotals(patients) {
-        return patients.map(profile => {
-            const appointments = (PatientState.appointments || []).filter(apt => apt.name === profile.name);
-            const { totalPaid, totalPending } = this.calculatePaymentTotals(appointments);
-
-            return {
-                ...profile,
-                totalPaid,
-                totalPending,
-                appointmentCount: appointments.length
-            };
-        });
-    },
-
     // ==========================================
     // MÉTODOS PRIVADOS (HELPERS)
     // ==========================================
 
     /**
      * Agrupa citas por paciente, tomando solo la primera cita del día
+     * Y asegura enlazar con el ID correcto del perfil del paciente
      * @private
-     * @param {Array<Object>} appointments - Lista de citas
-     * @returns {Array<Object>} Pacientes únicos con su primera cita
      */
     _groupByPatient(appointments) {
         const patientsMap = new Map();
+        // Obtener lista completa de perfiles para cruzar IDs
+        const allPatients = PatientState.patients || [];
 
         appointments.forEach(apt => {
             const existing = patientsMap.get(apt.name);
             const aptTime = new Date(apt.date);
 
             if (!existing || aptTime < existing.appointmentTime) {
+                // Buscar el perfil real del paciente para obtener su ID correcto
+                // Esto es crucial para que el click en "Hoy/Mañana" funcione y abra el historial
+                const patientProfile = allPatients.find(p => p.name === apt.name);
+                const realPatientId = patientProfile ? patientProfile.id : (apt.patientId || null);
+
+                if (!realPatientId) {
+                    // Si no encontramos ID, no podremos abrir historial, pero al menos mostramos la tarjeta
+                    // console.warn(`⚠️ PatientFilters: No se encontró perfil para ${apt.name}`);
+                }
+
                 patientsMap.set(apt.name, {
                     name: apt.name,
                     appointmentTime: aptTime,
-                    confirmed: apt.confirmed || false
+                    confirmed: apt.confirmed || false,
+                    therapist: apt.therapist, // Importante conservar terapeuta
+                    id: realPatientId, // USAR ID DEL PERFIL PARA QUE EL CLICK FUNCIONE
+                    hasProfile: !!patientProfile
                 });
             }
         });

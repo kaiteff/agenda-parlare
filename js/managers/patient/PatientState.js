@@ -26,6 +26,9 @@ export const PatientState = {
      */
     patients: [],
 
+    activeCount: 0,
+    inactiveCount: 0,
+
     /**
      * Lista de citas
      * Sincronizada con Firestore vía listener
@@ -45,7 +48,7 @@ export const PatientState = {
 
     /**
      * Modo de vista actual
-     * @type {'today'|'tomorrow'|'all'}
+     * @type {'today'|'tomorrow'|'all'|'inactive'}
      */
     viewMode: 'today',
 
@@ -61,6 +64,7 @@ export const PatientState = {
         // Lista principal
         patientsList: null,
         patientsHeader: null,
+        searchInput: null, // Agregado para búsqueda
 
         // Modales
         patientHistoryModal: null,
@@ -111,6 +115,7 @@ export const PatientState = {
         // Lista principal
         this.dom.patientsList = document.getElementById('patientsList');
         this.dom.patientsHeader = document.getElementById('patientsHeader');
+        this.dom.searchInput = document.getElementById('searchInput');
 
         // Modales
         this.dom.patientHistoryModal = document.getElementById('patientHistoryModal');
@@ -161,7 +166,11 @@ export const PatientState = {
      */
     updatePatients(newPatients) {
         this.patients = newPatients;
-        console.log(`📊 PatientState: ${newPatients.length} pacientes cargados`);
+        // Calcular contadores
+        this.activeCount = newPatients.filter(p => p.isActive !== false).length;
+        this.inactiveCount = newPatients.length - this.activeCount;
+
+        console.log(`📊 PatientState: ${newPatients.length} pacientes cargados (${this.activeCount} activos)`);
     },
 
     /**
@@ -174,16 +183,11 @@ export const PatientState = {
     },
 
     /**
-     * Cambia el modo de vista
-     * @param {'today'|'tomorrow'|'all'} mode - Nuevo modo de vista
+     * Cambia el modo de vista A UI (solo estado)
+     * @param {'today'|'tomorrow'|'all'|'inactive'} mode - Nuevo modo de vista
      * @returns {boolean} - true si el cambio fue exitoso
      */
     setViewMode(mode) {
-        const validModes = ['today', 'tomorrow', 'all'];
-        if (!validModes.includes(mode)) {
-            console.error(`❌ PatientState: Modo inválido: ${mode}`);
-            return false;
-        }
         this.viewMode = mode;
         console.log(`🔄 PatientState: Modo cambiado a: ${mode}`);
         return true;
@@ -216,7 +220,7 @@ export const PatientState = {
 
     /**
      * Obtiene el modo de vista actual
-     * @returns {'today'|'tomorrow'|'all'}
+     * @returns {string}
      */
     getViewMode() {
         return this.viewMode;

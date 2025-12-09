@@ -14,6 +14,7 @@ import { AuthManager } from './AuthManager.js';
 import { isSlotFree } from '../utils/validators.js';
 import { createAppointment } from '../services/appointmentService.js';
 import { getStartOfWeek, addDays, formatDateLocal } from '../utils/dateUtils.js';
+import { ModalService } from '../utils/ModalService.js';
 
 export const ScheduleManager = {
     // Estado interno
@@ -344,7 +345,7 @@ export const ScheduleManager = {
         const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
 
         if (cost <= 0) {
-            alert("⚠️ Por favor, ingrese un costo por sesión válido (mayor a 0) antes de agendar.");
+            await ModalService.alert("Costo Inválido", "Por favor, ingrese un costo por sesión válido (mayor a 0) antes de agendar.", "warning");
             if (costInput) {
                 costInput.focus();
                 costInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
@@ -367,9 +368,16 @@ export const ScheduleManager = {
             const dateStr = baseDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
             const nextDateStr = nextWeekDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
-            const msg = `⚠️ La fecha seleccionada (${dateStr}) ya pasó.\n\n¿Desea agendar a partir de la próxima semana (${nextDateStr})?`;
+            const msg = `La fecha seleccionada (<strong>${dateStr}</strong>) ya pasó.<br><br>¿Desea agendar a partir de la próxima semana (<strong>${nextDateStr}</strong>)?`;
 
-            if (confirm(msg)) {
+            const confirmed = await ModalService.confirm(
+                "Fecha Pasada",
+                msg,
+                "Usar Próxima Semana",
+                "Cancelar"
+            );
+
+            if (confirmed) {
                 baseDate = nextWeekDate;
             } else {
                 return; // Cancelar si el usuario no quiere cambiar
@@ -398,7 +406,14 @@ export const ScheduleManager = {
                 const appointments = PatientState.appointments || [];
                 if (!isSlotFree(aptDate, appointments, null, this.state.therapist)) {
                     const dateStr = aptDate.toLocaleDateString('es-ES');
-                    if (!confirm(`El horario del ${dateStr} está ocupado. ¿Desea continuar agendando las demás citas?`)) {
+                    const continueBooking = await ModalService.confirm(
+                        "Horario Ocupado",
+                        `El horario del <strong>${dateStr}</strong> está ocupado.<br>¿Desea continuar agendando las demás citas?`,
+                        "Continuar",
+                        "Cancelar"
+                    );
+
+                    if (!continueBooking) {
                         this.dom.confirmBtn.disabled = false;
                         this.dom.confirmBtn.textContent = 'Agendar Cita';
                         return;
@@ -428,12 +443,12 @@ export const ScheduleManager = {
                 if (result.success) createdCount++;
             }
 
-            alert(`Se agendaron ${createdCount} citas exitosamente.`);
+            await ModalService.alert("Éxito", `Se agendaron ${createdCount} citas exitosamente.`, "success");
             this.closeModal();
 
         } catch (error) {
             console.error('Error al agendar citas:', error);
-            alert('Error al agendar citas: ' + error.message);
+            await ModalService.alert("Error", 'Error al agendar citas: ' + error.message, "error");
             this.dom.confirmBtn.disabled = false;
             this.dom.confirmBtn.textContent = 'Agendar Cita';
         }

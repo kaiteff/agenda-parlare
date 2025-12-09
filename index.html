@@ -6,327 +6,608 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agenda Parlare</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module" src="./js/app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Animaciones para modales */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-backdrop {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-panel {
+            animation: scaleIn 0.3s ease-out;
+        }
+    </style>
 </head>
 
-<body class="bg-white h-screen flex overflow-hidden font-sans text-slate-800">
-    <!-- Login Container -->
-    <div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md transform transition-all">
             <div class="text-center mb-8">
-                <img src="logo.png" alt="Parlare Logo" class="w-32 h-auto mx-auto mb-4">
-                <h1 class="text-2xl font-bold text-gray-800">Bienvenido</h1>
-                <p class="text-gray-500 text-sm">Ingresa tus credenciales para continuar</p>
+                <!-- Logo -->
+                <div class="flex justify-center mb-4">
+                    <h1
+                        class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                        Parláre</h1>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Bienvenido</h2>
+                <p class="text-gray-500 text-sm mt-1">Ingresa tus credenciales para continuar</p>
             </div>
-            <form id="loginForm" class="space-y-4">
+
+            <form id="loginForm" class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Correo Electrónico</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Correo Electrónico</label>
                     <input type="email" id="emailInput" required
-                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
-                        placeholder="ejemplo@correo.com">
+                        class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800 placeholder-gray-400"
+                        placeholder="nombre@ejemplo.com">
                 </div>
+
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Contraseña</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Contraseña</label>
                     <input type="password" id="passwordInput" required
-                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
-                        placeholder="••••••••">
+                        class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800 placeholder-gray-400"
+                        placeholder="••••••••••">
                 </div>
-                <div id="loginError" class="text-red-500 text-sm text-center hidden"></div>
+
+                <div id="loginError"
+                    class="hidden text-sm text-red-600 bg-red-50 p-3 rounded border border-red-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Error de autenticación</span>
+                </div>
+
                 <button type="submit"
-                    class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02]">
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all transform active:scale-95 shadow-lg shadow-blue-500/30">
                     Iniciar Sesión
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- App Content (Hidden by default) -->
-    <div id="appContent" class="flex w-full h-full hidden">
-        <aside class="w-1/3 bg-gray-50 border-r border-gray-200 flex flex-col p-6 overflow-y-auto">
-            <h1 class="text-3xl font-bold text-slate-800 mb-8">Agenda Parlare</h1>
-            <!-- User info and role -->
-            <div id="userInfo" class="mb-4 text-sm text-gray-600"></div>
-            <!-- Therapist selector (visible for admin/receptionist) -->
-            <div id="therapistSelectorContainer" class="mb-4 hidden">
-                <label class="block text-xs font-medium text-gray-500 mb-1" for="therapistFilter">Ver pacientes
-                    de:</label>
-                <select id="therapistFilter" class="w-full px-2 py-1 border rounded">
-                    <option value="all">Todos</option>
-                    <option value="diana">Diana</option>
-                    <option value="sam">Sam</option>
-                </select>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 id="miniMonthLabel" class="font-bold text-gray-800 capitalize">Noviembre 2023</h3>
-                    <div class="flex gap-1">
-                        <button id="miniPrevBtn" class="p-1 hover:bg-gray-100 rounded text-gray-600"><svg
-                                class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 19l-7-7 7-7">
-                                </path>
-                            </svg></button>
-                        <button id="miniNextBtn" class="p-1 hover:bg-gray-100 rounded text-gray-600"><svg
-                                class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
-                                </path>
-                            </svg></button>
-                    </div>
+    <!-- APP CONTENT (Inicialmente oculto) -->
+    <div id="appContent" class="hidden flex-1 flex flex-col h-full relative">
+
+        <!-- HEADER -->
+        <header class="bg-white border-b border-gray-200 h-16 flex-shrink-0 z-30 shadow-sm relative">
+            <div class="h-full px-4 flex items-center justify-between">
+                <!-- Left: User Info -->
+                <div id="userInfo" class="flex items-center gap-3">
+                    <!-- Injected by JS -->
                 </div>
-                <div id="miniCalendarGrid" class="grid grid-cols-7 gap-1"></div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 max-h-80 flex flex-col">
-                <div id="patientsHeader" class="mb-3"></div>
-                <div class="flex items-center justify-end mb-3">
-                    <button id="viewInactivePatientsBtn"
-                        class="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 hover:bg-blue-50 rounded transition-colors">Ver
-                        Bajas</button>
+
+                <!-- Center: Filename/Title (Optional) -->
+                <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
+                    <span class="text-lg font-bold text-gray-800 tracking-tight">Agenda Parlare</span>
                 </div>
-                <div id="patientsList" class="overflow-y-auto flex-1">
-                    <p class="text-xs text-gray-400 text-center py-2">Cargando...</p>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-center"><img src="logo.png" alt="Parlare Logo" class="w-40 h-auto opacity-90">
-            </div>
-            <div class="mt-auto pt-4">
-                <div id="statusMsg" class="text-xs text-gray-400 text-center">Cargando...</div>
-            </div>
-        </aside>
-        <main class="w-2/3 flex flex-col h-full">
-            <header
-                class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white z-30 shadow-sm">
-                <div class="flex items-center gap-4">
-                    <button id="logoutBtn"
-                        class="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-colors"
-                        title="Cerrar Sesión">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                            </path>
-                        </svg>
-                    </button>
+
+                <!-- Right: Actions -->
+                <div class="flex items-center gap-3">
+                    <!-- Notification Bell -->
                     <div class="relative">
                         <button id="notificationBell"
-                            class="p-2 hover:bg-gray-100 rounded-full transition-colors relative"><svg
-                                class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
                                 </path>
                             </svg>
-                            <div id="notificationBadge"
-                                class="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full hidden">
-                                0</div>
+                            <!-- Badge -->
+                            <span id="notificationBadge"
+                                class="hidden absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                                0
+                            </span>
                         </button>
+
+                        <!-- Notification Dropdown -->
                         <div id="notificationList"
-                            class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 hidden z-[9999] overflow-hidden">
-                            <div class="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                                <h3 class="text-xs font-bold text-gray-500 uppercase">Notificaciones</h3><button
-                                    id="markAllReadBtn" class="text-xs text-blue-600 hover:text-blue-800">Marcar
-                                    leídas</button>
+                            class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 transform origin-top-right transition-all">
+                            <div
+                                class="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                                <h3 class="text-sm font-bold text-gray-700">Notificaciones</h3>
+                                <button id="markAllReadBtn"
+                                    class="text-xs text-blue-600 hover:text-blue-800 font-medium">Marcar todo
+                                    leído</button>
                             </div>
-                            <div id="notificationItems" class="max-h-80 overflow-y-auto"></div>
+                            <div id="notificationItems" class="max-h-64 overflow-y-auto">
+                                <!-- Items injected by JS -->
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="flex bg-gray-100 rounded-lg p-1 gap-1">
-                    <button id="prevWeekBtn" class="p-1 hover:bg-white rounded shadow-sm transition-all"><svg
-                            class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+
+                    <!-- Therapist Filter (Admin Only) -->
+                    <div id="therapistSelectorContainer"
+                        class="hidden flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+                        <span class="text-xs font-semibold text-gray-500 px-2 uppercase tracking-wide">Viendo:</span>
+                        <select id="therapistFilter"
+                            class="bg-transparent text-sm font-medium text-gray-700 outline-none border-none py-1 pr-8 cursor-pointer hover:text-blue-600">
+                            <option value="diana">Diana</option>
+                            <option value="sam">Sam</option>
+                            <option value="all">Todas</option>
+                        </select>
+                    </div>
+
+                    <div class="h-6 w-px bg-gray-300 mx-1"></div>
+
+                    <!-- Logout -->
+                    <button id="logoutBtn"
+                        class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        title="Cerrar Sesión">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
                             </path>
-                        </svg></button>
-                    <button id="todayBtn"
-                        class="px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-white rounded shadow-sm transition-all">Hoy</button>
-                    <button id="nextWeekBtn" class="p-1 hover:bg-white rounded shadow-sm transition-all"><svg
-                            class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                        </svg>
+                        <span>Salir</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <div class="flex-1 flex overflow-hidden">
+
+            <!-- LEFT SIDEBAR: PATIENTS LIST -->
+            <aside
+                class="w-96 bg-white border-r border-gray-200 flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+                <!-- Header & Search -->
+                <div class="p-4 border-b border-gray-100 bg-white sticky top-0 z-10">
+                    <div id="patientsHeader"></div>
+                    <!-- Search Bar -->
+                    <div class="relative mt-3 group">
+                        <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="Buscar paciente..."
+                            class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none">
+                    </div>
+                </div>
+
+                <!-- Patient List Content -->
+                <div id="patientsList" class="flex-1 overflow-y-auto p-2 space-y-2 scroller">
+                    <!-- Injected by JS -->
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="p-3 border-t border-gray-200 bg-gray-50 flex justify-center">
+                    <button id="viewInactivePatientsBtn"
+                        class="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
                             </path>
-                        </svg></button>
+                        </svg>
+                        Ver Papelera / Inactivos
+                    </button>
                 </div>
-                <h2 id="currentMonthLabel" class="text-lg font-medium text-gray-600 min-w-[150px]">Noviembre
-                    2023</h2>
-            </header>
-            <div class="flex-1 overflow-auto relative">
-                <div id="calendarGrid" class="min-w-full"></div>
-            </div>
-        </main>
-    </div>
-    <div id="eventModal"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-        <div
-            class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden transform transition-all scale-100 flex flex-col">
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
-                <h3 id="modalTitle" class="text-lg font-bold text-gray-800">Nueva Cita</h3><button id="cancelBtn"
-                    class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg></button>
-            </div>
-            <div class="p-6 space-y-4 overflow-y-auto flex-1">
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar Paciente
-                            (Opcional)</label>
-                        <input type="text" id="patientSearch" list="patientSuggestions"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-gray-50"
-                            placeholder="Buscar existente...">
-                        <datalist id="patientSuggestions"></datalist>
+            </aside>
+
+            <!-- CENTER/RIGHT: CALENDAR -->
+            <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+                <!-- Calendar Toolbar -->
+                <div class="bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm z-10">
+                    <div class="flex items-center gap-4">
+                        <button id="prevWeekBtn"
+                            class="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <h2 id="currentMonthLabel"
+                            class="text-xl font-bold text-gray-800 capitalize min-w-[140px] text-center"></h2>
+                        <button id="nextWeekBtn"
+                            class="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
+                        </button>
+                        <button id="todayBtn"
+                            class="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors ml-2">
+                            Hoy
+                        </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre(s)</label>
-                            <input type="text" id="patientFirstName" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+
+                    <div id="statusMsg" class="text-sm font-medium text-gray-500 animate-pulse"></div>
+                </div>
+
+                <!-- Calendar Content -->
+                <div class="flex-1 overflow-y-auto p-4 flex gap-6 scroller">
+                    <!-- Main Calendar Grid -->
+                    <div id="calendarGrid"
+                        class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px]">
+                        <!-- Injected by JS -->
+                    </div>
+
+                    <!-- Right Sidebar: Mini Calendar -->
+                    <div class="w-64 flex flex-col gap-6 hidden xl:flex">
+
+                        <!-- Mini Calendar -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between mb-4">
+                                <button id="miniPrevBtn" class="text-gray-400 hover:text-gray-600"><svg class="w-4 h-4"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 19l-7-7 7-7"></path>
+                                    </svg></button>
+                                <span id="miniMonthLabel" class="text-sm font-bold text-gray-800 capitalize"></span>
+                                <button id="miniNextBtn" class="text-gray-400 hover:text-gray-600"><svg class="w-4 h-4"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7"></path>
+                                    </svg></button>
+                            </div>
+                            <div id="miniCalendarGrid" class="grid grid-cols-7 gap-1"></div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Apellidos</label>
-                            <input type="text" id="patientLastName" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ================= MODALES ================= -->
+
+        <!-- 1. GENERIC ALERT MODAL -->
+        <div id="genericModal" class="hidden fixed inset-0 z-[10000] overflow-y-auto" aria-labelledby="modal-title"
+            role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop"
+                    aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div
+                    class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full modal-panel">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div id="genericModalIcon"
+                                class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <!-- Icon injected -->
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="genericModalTitle">Titulo
+                                </h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-500" id="genericModalMessage">Mensaje...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y
-                        Hora</label><input type="datetime-local" id="appointmentDate"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                </div>
-                <div id="recurringSection" class="hidden bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <label class="flex items-center gap-2 cursor-pointer mb-2"><input type="checkbox" id="isRecurring"
-                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"><span
-                            class="text-sm font-semibold text-blue-800">Repetir cita (Semanalmente)</span></label>
-                    <div id="recurringOptions" class="hidden mt-2 pl-6 space-y-2">
-                        <p class="text-xs text-blue-600 mb-2">Selecciona las fechas adicionales:</p>
-                        <div id="recurringDatesList" class="space-y-1 max-h-32 overflow-y-auto"></div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+                        <button id="genericModalConfirmBtn" type="button"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Confirmar
+                        </button>
+                        <button id="genericModalCancelBtn" type="button"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancelar
+                        </button>
                     </div>
                 </div>
-                <div id="busySlotsContainer" class="hidden"><label
-                        class="block text-xs font-bold text-gray-500 uppercase mb-2">Horarios
-                        Ocupados</label>
-                    <div id="busySlotsList" class="space-y-1 max-h-32 overflow-y-auto bg-gray-50 p-2 rounded-lg"></div>
-                </div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Costo
-                        ($)</label><input type="number" id="cost" required min="0.01" step="0.01"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        placeholder="0.00"></div>
-                <div id="rescheduleSection" class="hidden"><label
-                        class="block text-xs font-bold text-gray-500 uppercase mb-2">Sugerencias para
-                        Reagendar</label>
-                    <div id="rescheduleOptions" class="flex flex-wrap gap-2"></div>
-                </div>
-            </div>
-            <div class="px-6 py-4 flex gap-3 border-t border-gray-100 bg-gray-50 flex-shrink-0"><button id="deleteBtn"
-                    class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors hidden">Eliminar</button>
-                <div class="flex-1"></div><button id="payBtn" class="hidden"></button><button id="saveBtn"
-                    class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">Guardar</button>
             </div>
         </div>
-    </div>
-    <div id="patientHistoryModal"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-        <div
-            class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden transform transition-all">
-            <div
-                class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50">
-                <h3 id="patientHistoryTitle" class="text-lg font-bold text-gray-800 flex items-center gap-2"><svg
-                        class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                    </svg>Historial de Paciente</h3><button onclick="closePatientHistoryModal()"
-                    class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg></button>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div class="text-xs font-semibold text-green-600 uppercase mb-1">Total Pagado</div>
-                        <div id="patientTotalPaid" class="text-2xl font-bold text-green-700">$0</div>
-                    </div>
-                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <div class="text-xs font-semibold text-orange-600 uppercase mb-1">Pendiente</div>
-                        <div id="patientTotalPending" class="text-2xl font-bold text-orange-700">$0</div>
-                    </div>
+
+        <!-- 2. NEW PATIENT MODAL -->
+        <div id="newPatientModal"
+            class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all modal-panel">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-gray-800">Nuevo Paciente</h3>
+                    <button id="closeNewPatientModalBtn" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                    <div class="grid grid-cols-3 gap-4 text-center">
+
+                <form id="newPatientForm" onsubmit="event.preventDefault();" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <div class="text-2xl font-bold text-blue-600" id="patientTotalAppointments">0
-                            </div>
-                            <div class="text-xs text-gray-500 mt-1">Total Citas</div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre(s)</label>
+                            <input type="text" id="newPatientFirstName" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                         </div>
                         <div>
-                            <div class="text-2xl font-bold text-gray-600" id="patientCompletedAppointments">
-                                0</div>
-                            <div class="text-xs text-gray-500 mt-1">Completadas</div>
-                        </div>
-                        <div>
-                            <div class="text-2xl font-bold text-indigo-600" id="patientUpcomingAppointments">0</div>
-                            <div class="text-xs text-gray-500 mt-1">Futuras</div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Apellidos</label>
+                            <input type="text" id="newPatientLastName" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                         </div>
                     </div>
 
                     <div>
-                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><svg
-                                class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                </path>
-                            </svg>Historial de Citas</h4>
-                        <div id="patientAppointmentsList" class="space-y-2"></div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Terapeuta Asignado</label>
+                        <select id="newPatientTherapist"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="diana">Diana</option>
+                            <option value="sam">Sam</option>
+                        </select>
                     </div>
-                </div>
 
-                <!-- Edit Section -->
-                <div id="patientEditSection"
-                    class="hidden mb-6 mx-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <h4 class="font-bold text-yellow-800 mb-3">Editar Paciente</h4>
-                    <div class="space-y-3">
+                    <div class="pt-4 flex gap-3">
+                        <button type="button"
+                            onclick="document.getElementById('newPatientModal').classList.add('hidden')"
+                            class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
+                        <button type="submit" id="saveNewPatientBtn"
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30">Crear
+                            Paciente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. APPOINTMENT / EVENT MODAL -->
+        <div id="eventModal"
+            class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 modal-panel relative">
+
+                <!-- Close X -->
+                <button onclick="document.getElementById('eventModal').classList.add('hidden')"
+                    class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-6">Detalles de Cita</h3>
+
+                <div class="space-y-5">
+                    <!-- Patient Search / Name -->
+                    <div class="relative">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente</label>
+                        <input type="text" id="patientSearch" placeholder="Buscar o escribir nombre..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+
+                        <!-- Suggestions Dropdown -->
+                        <div id="patientSuggestions"
+                            class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 mt-1">
+                        </div>
+
+                        <!-- Auto-fill Name Fields (Hidden/Disabled usually) -->
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <input type="text" id="patientFirstName" placeholder="Nombre"
+                                class="text-sm border rounded px-2 py-1 bg-gray-50" disabled>
+                            <input type="text" id="patientLastName" placeholder="Apellidos"
+                                class="text-sm border rounded px-2 py-1 bg-gray-50" disabled>
+                        </div>
+                    </div>
+
+                    <!-- Date & Time -->
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta
-                                Asignado</label>
-                            <select id="editPatientTherapist"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white">
-                                <option value="diana">Diana</option>
-                                <option value="sam">Sam</option>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora</label>
+                            <input type="datetime-local" id="appointmentDate"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Costo ($)</label>
+                            <input type="number" id="cost"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Recurrence Option (Only for new) -->
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="isRecurring"
+                            class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                        <label for="isRecurring" class="text-sm text-gray-700 select-none">Agendar sesiones
+                            recurrentes</label>
+                    </div>
+
+                    <div id="recurringSection" class="hidden bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <div class="flex items-center gap-4 mb-2">
+                            <label class="text-sm font-semibold text-blue-800">Frecuencia:</label>
+                            <select id="recurringOptions"
+                                class="bg-white border border-blue-200 text-sm rounded px-2 py-1 focus:outline-none">
+                                <option value="weekly">Semanal (x4)</option>
+                                <option value="biweekly">Quincenal (x4)</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Costo por Sesión</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                                <input type="number" id="editPatientCost"
-                                    class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white"
-                                    placeholder="0">
-                            </div>
+                        <ul id="recurringDatesList" class="space-y-1 max-h-32 overflow-y-auto"></ul>
+                    </div>
+
+                    <!-- Reschedule Suggestions (Only for Edit) -->
+                    <div id="rescheduleSection" class="hidden">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sugerencias para
+                            Reagendar</label>
+                        <div id="rescheduleOptions" class="flex flex-wrap gap-2">
+                            <!-- Chips injected here -->
                         </div>
-                        <button id="savePatientEditBtn"
-                            class="w-full py-2 bg-yellow-600 text-white rounded-lg font-bold hover:bg-yellow-700 transition-colors shadow-sm">
-                            Guardar Cambios
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+
+                        <button id="confirmBtn"
+                            class="hidden col-span-2 bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1">
+                            ✓ Confirmar Asistencia
+                        </button>
+
+                        <button id="saveBtn"
+                            class="col-span-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-md transition-all">Guardar
+                            Cita</button>
+
+                        <button id="payBtn"
+                            class="hidden flex-1 bg-green-100 text-green-700 py-2 rounded-lg hover:bg-green-200 font-semibold transition-colors">Marcar
+                            Pagado</button>
+                        <button id="cancelBtn"
+                            class="hidden flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 font-semibold transition-colors">Cancelar</button>
+                        <button id="deleteBtn"
+                            class="hidden col-span-2 text-red-500 text-sm hover:underline mt-2">Eliminar
+                            permanentemente</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. PATIENT HISTORY MODAL -->
+        <div id="patientHistoryModal"
+            class="hidden fixed inset-0 z-[9500] flex items-center justify-center bg-black bg-opacity-50">
+            <div
+                class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col modal-panel overflow-hidden">
+                <!-- Header -->
+                <div class="p-5 border-b border-gray-200 flex justify-between items-start bg-gray-50 flex-shrink-0">
+                    <div class="flex items-center gap-4" id="patientHistoryTitle">
+                        <!-- Injected -->
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="editPatientBtn"
+                            class="text-gray-500 hover:text-blue-600 p-2 rounded hover:bg-blue-50 transition-colors"
+                            title="Editar Perfil">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                </path>
+                            </svg>
+                        </button>
+                        <button onclick="document.getElementById('patientHistoryModal').classList.add('hidden')"
+                            class="text-gray-400 hover:text-gray-600 p-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
                         </button>
                     </div>
                 </div>
 
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                    <button id="editPatientBtn"
-                        class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium">Editar</button>
-                    <button id="deactivatePatientBtn"
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium hidden">Dar
-                        de Baja</button>
-                    <button id="deletePatientBtn"
-                        class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium hidden">Eliminar
-                        Paciente</button>
-                    <button onclick="closePatientHistoryModal()"
-                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">Cerrar</button>
+                <!-- Scrollable Content -->
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <!-- Finance -->
+                        <div id="patientFinanceCard" class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <div class="text-xs font-bold text-gray-400 uppercase mb-2">Balance Financiero</div>
+                            <div class="flex justify-between items-end">
+                                <div>
+                                    <div class="text-2xl font-bold text-gray-800" id="patientTotalPaid">$0</div>
+                                    <div class="text-xs text-green-600 font-medium">Pagado</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-red-500" id="patientTotalPending">$0</div>
+                                    <div class="text-xs text-red-600 font-medium">Pendiente</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Attendance -->
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <div class="text-xs font-bold text-gray-400 uppercase mb-2">Asistencia</div>
+                            <div class="flex justify-between items-end">
+                                <div>
+                                    <div class="text-2xl font-bold text-gray-800" id="patientCompletedAppointments">0
+                                    </div>
+                                    <div class="text-xs text-gray-500">Completadas</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-blue-600" id="patientTotalAppointments">0</div>
+                                    <div class="text-xs text-blue-600 font-medium">Total Citas</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Next -->
+                        <div
+                            class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center items-center text-center">
+                            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Próximas</div>
+                            <div class="text-3xl font-bold text-indigo-600" id="patientUpcomingAppointments">0</div>
+                            <div class="text-xs text-indigo-600 font-medium">Agendadas</div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Section (Hidden by default) -->
+                    <div id="patientEditSection"
+                        class="hidden bg-white p-4 rounded-xl border border-blue-100 shadow-sm mb-6 animate-fade-in ring-2 ring-blue-50">
+                        <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                </path>
+                            </svg>
+                            Editar Perfil
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Terapeuta
+                                    Responsable</label>
+                                <select id="editPatientTherapist" class="w-full border rounded px-3 py-2 text-sm">
+                                    <option value="diana">Diana</option>
+                                    <option value="sam">Sam</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Costo
+                                    Default</label>
+                                <input type="number" id="editPatientCost"
+                                    class="w-full border rounded px-3 py-2 text-sm" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end gap-2">
+                            <button id="deactivatePatientBtn"
+                                class="hidden px-3 py-1.5 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Dar
+                                de Baja (Archivar)</button>
+                            <button id="deletePatientBtn"
+                                class="hidden px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">Eliminar
+                                Definitivamente</button>
+                            <button id="savePatientEditBtn"
+                                class="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm">Guardar
+                                Cambios</button>
+                        </div>
+                    </div>
+
+                    <!-- History List -->
+                    <h4 class="text-sm font-bold text-gray-700 mb-3 ml-1">Historial de Citas</h4>
+                    <div id="patientAppointmentsList" class="space-y-3">
+                        <!-- Items injected -->
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- 5. INACTIVE PATIENTS MODAL -->
         <div id="inactivePatientsModal"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-lg font-bold text-gray-800">Pacientes Inactivos</h3>
+            class="hidden fixed inset-0 z-[9800] flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 modal-panel flex flex-col max-h-[80vh]">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                            </path>
+                        </svg>
+                        Pacientes Inactivos (Papelera)
+                    </h3>
                     <button id="closeInactivePatientsBtn" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -334,256 +615,88 @@
                         </svg>
                     </button>
                 </div>
-                <div class="p-4 overflow-y-auto flex-1">
-                    <div id="inactivePatientsList" class="space-y-2"></div>
+                <div class="flex-1 overflow-y-auto p-1">
+                    <div id="inactivePatientsList" class="space-y-2">
+                        <!-- List injected -->
+                    </div>
                 </div>
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                <div class="mt-4 pt-3 border-t flex justify-end">
                     <button id="closeInactivePatientsFooterBtn"
-                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
-                        Cerrar
-                    </button>
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium">Cerrar</button>
                 </div>
             </div>
         </div>
 
-        <div id="rescheduleModal"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                <div
-                    class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50">
-                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                            </path>
-                        </svg>
-                        <span id="rescheduleModalTitle">Reagendar Cita</span>
-                    </h3>
-                    <button onclick="closeRescheduleModal()" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="p-6">
-                    <div id="rescheduleOptions" class="space-y-3">
-                        <button onclick="showTodaySlots()"
-                            class="w-full p-4 bg-blue-50 border-2 border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-left">
-                            <div class="flex items-center gap-3">
-                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <div>
-                                    <div class="font-bold text-gray-800">Reagendar Hoy</div>
-                                    <div class="text-xs text-gray-600">Ver horarios disponibles hoy</div>
-                                </div>
-                            </div>
-                        </button>
-                        <button onclick="showWeekSlots()"
-                            class="w-full p-4 bg-indigo-50 border-2 border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-left">
-                            <div class="flex items-center gap-3">
-                                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                    </path>
-                                </svg>
-                                <div>
-                                    <div class="font-bold text-gray-800">Reagendar Otro Día</div>
-                                    <div class="text-xs text-gray-600">Ver horarios de la semana</div>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
-                    <div id="rescheduleSlots" class="hidden mt-4">
-                        <button onclick="backToRescheduleOptions()"
-                            class="text-sm text-blue-600 hover:text-blue-700 mb-3 flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 19l-7-7 7-7">
-                                </path>
-                            </svg>
-                            Volver
-                        </button>
-                        <div id="rescheduleSlotsList" class="space-y-2 max-h-96 overflow-y-auto"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Nuevo Paciente -->
-        <div id="newPatientModal"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-            style="display: none;">
-            <div
-                class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100">
-                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-lg font-bold text-gray-800">Nuevo Paciente</h3>
-                    <button id="closeNewPatientModalBtn" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre(s)</label>
-                        <input type="text" id="newPatientFirstName"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Apellidos</label>
-                        <input type="text" id="newPatientLastName"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div id="newPatientTherapistContainer">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
-                        <select id="newPatientTherapist"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                            <option value="diana">Diana</option>
-                            <option value="sam">Sam</option>
-                        </select>
-                    </div>
-                    <button id="saveNewPatientBtn"
-                        class="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                        Crear Paciente
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Agendar Primera Cita -->
+        <!-- 6. SCHEDULE NEW PATIENT MODAL (Simplified) -->
         <div id="scheduleNewPatientModal"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-            style="display: none;">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-                <!-- Header -->
-                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+            class="hidden fixed inset-0 z-[9600] flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col modal-panel">
+                <div class="p-4 border-b flex justify-between items-center bg-blue-50">
                     <div>
-                        <h3 class="text-lg font-bold text-gray-800">Agendar Primera Cita</h3>
-                        <p id="schedulePatientName" class="text-sm text-blue-600 font-medium">Paciente: ...
-                        </p>
+                        <h3 class="text-lg font-bold text-blue-900">Agendar Primera Cita</h3>
+                        <p id="schedulePatientName" class="text-sm text-blue-700 font-medium"></p>
                     </div>
-                    <button onclick="window.ScheduleManager?.closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <button id="closeScheduleNewPatientModalBtn" class="text-blue-400 hover:text-blue-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12">
-                            </path>
+                                d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
 
-                <!-- Body -->
-                <div class="flex-1 overflow-y-auto p-6">
-
-                    <!-- Week Navigation -->
-                    <div
-                        class="flex items-center justify-between mb-6 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
-                        <button id="prevWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex-1 overflow-y-auto p-4">
+                    <!-- Controls -->
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="prevWeekScheduleBtn" class="p-1 hover:bg-gray-100 rounded"><svg
+                                class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 19l-7-7 7-7">
-                                </path>
-                            </svg>
-                        </button>
-                        <div class="text-center">
-                            <span class="text-xs text-gray-500 uppercase font-bold block">Semana del</span>
-                            <span id="currentScheduleWeekLabel" class="text-lg font-bold text-gray-800">...</span>
-                        </div>
-                        <button id="nextWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg></button>
+                        <span id="currentScheduleWeekLabel" class="font-bold text-gray-700"></span>
+                        <button id="nextWeekScheduleBtn" class="p-1 hover:bg-gray-100 rounded"><svg
+                                class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
                                 </path>
-                            </svg>
-                        </button>
+                            </svg></button>
                     </div>
 
                     <!-- Slots Grid -->
-                    <div id="slotsGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                        <!-- Slots will be injected here -->
-                        <div class="text-center py-8 col-span-full text-gray-400">Cargando horarios
-                            disponibles...</div>
+                    <div id="slotsGrid" class="grid grid-cols-6 gap-3 mb-6">
+                        <!-- Injected -->
                     </div>
 
-                    <!-- Recurrence Options -->
-                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                                </path>
-                            </svg>
-                            Opciones de Recurrencia
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <label
-                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                                <input type="radio" name="recurrenceType" value="none" checked
-                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Solo esta cita</span>
+                    <!-- Recurrence options for initial schedule -->
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">Opciones de Agendamiento</h4>
+                        <div class="flex gap-4 mb-2">
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="radio" name="recurrenceType" value="none" checked class="text-blue-600">
+                                <span>Solo esta cita</span>
                             </label>
-                            <label
-                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                                <input type="radio" name="recurrenceType" value="weekly"
-                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Semanal</span>
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="radio" name="recurrenceType" value="weekly" class="text-blue-600">
+                                <span>Semanal (mismos días)</span>
                             </label>
-                            <label
-                                class="flex items-center p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                                <input type="radio" name="recurrenceType" value="biweekly"
-                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Quincenal</span>
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="radio" name="recurrenceType" value="biweekly" class="text-blue-600">
+                                <span>Quincenal</span>
                             </label>
                         </div>
-
-                        <!-- Sessions Count (Hidden by default) -->
-                        <div id="sessionsCountContainer" class="mt-4 hidden">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Número de
-                                sesiones a
-                                agendar</label>
-                            <div class="flex items-center gap-3">
-                                <input type="number" id="sessionsCount" value="4" min="2" max="12"
-                                    class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                                <span class="text-sm text-gray-500">sesiones futuras</span>
-                            </div>
+                        <div id="sessionsCountContainer" class="hidden flex items-center gap-2 mt-2">
+                            <span class="text-sm text-gray-600">Cantidad de sesiones:</span>
+                            <input type="number" id="sessionsCount" value="4" min="2" max="10"
+                                class="border rounded px-2 py-1 w-16 text-sm">
                         </div>
                     </div>
-                </div>
 
-                <!-- Footer -->
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-                    <button onclick="window.ScheduleManager?.closeModal()"
-                        class="text-gray-500 hover:text-gray-700 font-medium px-4 py-2">
-                        Omitir por ahora
-                    </button>
-                    <div class="flex items-center gap-3">
-                        <div class="flex gap-2 mr-2">
-                            <button type="button" onclick="document.getElementById('scheduleCostInput').value = 600"
-                                class="px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors">
-                                $600
-                            </button>
-                            <button type="button" onclick="document.getElementById('scheduleCostInput').value = 800"
-                                class="px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors">
-                                $800
-                            </button>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Costo por sesión</label>
+                            <input type="number" id="scheduleCostInput" class="w-full border rounded px-3 py-2"
+                                placeholder="0.00">
                         </div>
-                        <div class="text-right mr-2 flex flex-col items-end">
-                            <label for="scheduleCostInput" class="text-xs text-gray-500 mb-1">Costo por
-                                sesión</label>
-                            <div class="relative w-24">
-                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                                <input type="number" id="scheduleCostInput" value="0" min="0" step="50"
-                                    class="w-full pl-6 pr-2 py-1 border border-gray-300 rounded text-right font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
-                        </div>
-                        <button id="confirmScheduleBtn" disabled
-                            class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button id="confirmScheduleBtn"
+                            class="flex-[2] bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                             Agendar Cita
                         </button>
                     </div>
@@ -591,7 +704,44 @@
             </div>
         </div>
 
-        <script type="module" src="js/app.js"></script>
+    </div>
+
+    <!-- Global Error Handler & Script Loading Check -->
+    <script>
+        window.addEventListener('error', function (e) {
+            // Detectar errores de carga de scripts (Network Error / 404)
+            if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+                console.error('❌ Error de carga de recurso:', e.target.src || e.target.href);
+                const statusDiv = document.getElementById('loginError');
+                if (statusDiv) {
+                    statusDiv.innerHTML = `
+                        <div class="flex items-start gap-2">
+                            <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div>
+                                <strong>Error de Conexión:</strong><br>
+                                No se pudo cargar un componente del sistema.<br>
+                                <span class="text-xs opacity-75">Verifica tu conexión a internet. Recurso fallido: ${e.target.src ? e.target.src.split('/').pop() : 'desconocido'}</span>
+                            </div>
+                        </div>
+                    `;
+                    statusDiv.classList.remove('hidden');
+                    // Asegurar visibilidad
+                    statusDiv.style.display = 'block';
+                }
+
+                // Deshabilitar botón para evitar "refresh" inútil
+                const btn = document.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Sistema no disponible (Revisar conexión)";
+                    btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                }
+            }
+        }, true); // Captura en fase de captura para eventos de carga
+    </script>
+
+    <script type="module" src="js/app.js"></script>
 </body>
 
 </html>

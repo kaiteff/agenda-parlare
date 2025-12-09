@@ -2,6 +2,7 @@
 
 import { db, notificationsPath, userId, collection, onSnapshot, query, updateDoc, doc, deleteDoc } from './firebase.js';
 import { getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { ModalService } from './utils/ModalService.js';
 
 // Referencias DOM
 let notificationBell, notificationBadge, notificationPanel, notificationList;
@@ -117,7 +118,7 @@ function updateNotificationBadge(count) {
 
 // Limpiar todas
 async function clearAllNotifications() {
-    if (confirm('¿Limpiar todas las notificaciones?')) {
+    if (await ModalService.confirm("Limpiar Notificaciones", "¿Estás seguro de eliminar todas las notificaciones?", "Limpiar", "Cancelar")) {
         try {
             const notifColRef = collection(db, notificationsPath);
             const snapshot = await getDocs(query(notifColRef));
@@ -128,7 +129,7 @@ async function clearAllNotifications() {
             await Promise.all(deletePromises);
         } catch (e) {
             console.error("Error clearing notifications:", e);
-            alert("Error al limpiar notificaciones: " + e.message);
+            await ModalService.alert("Error", "Error al limpiar notificaciones: " + e.message, "error");
         }
     }
 }

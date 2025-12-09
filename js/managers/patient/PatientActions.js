@@ -24,6 +24,7 @@ import { PatientState } from './PatientState.js';
 import { PatientModals } from './PatientModals.js';
 import { AuthManager } from '../AuthManager.js';
 import { ScheduleManager } from '../ScheduleManager.js';
+import { ModalService } from '../../utils/ModalService.js';
 
 /**
  * Acciones del usuario sobre pacientes
@@ -49,7 +50,7 @@ export const PatientActions = {
 
         // Validación
         if (!firstName || !lastName) {
-            alert('Por favor ingrese nombre y apellidos.');
+            await ModalService.alert("Campos requeridos", "Por favor ingrese nombre y apellidos.", "warning");
             return false;
         }
 
@@ -87,12 +88,12 @@ export const PatientActions = {
 
                 return true;
             } else {
-                alert('Error al crear paciente: ' + result.error);
+                await ModalService.alert("Error", 'Error al crear paciente: ' + result.error, "error");
                 return false;
             }
         } catch (error) {
             console.error('❌ PatientActions: Error al guardar paciente:', error);
-            alert('Error: ' + error.message);
+            await ModalService.alert("Error", 'Error: ' + error.message, "error");
             return false;
         } finally {
             // Rehabilitar botón
@@ -153,7 +154,7 @@ export const PatientActions = {
 
         } catch (error) {
             console.error('❌ PatientActions: Error al marcar pago:', error);
-            alert('Error al marcar como pagado: ' + error.message);
+            await ModalService.alert("Error", 'Error al marcar como pagado: ' + error.message, "error");
 
             // Restaurar botón
             if (button) {
@@ -200,7 +201,7 @@ export const PatientActions = {
             }).sort((a, b) => new Date(a.date) - new Date(b.date));
 
             if (upcomingAppointments.length === 0) {
-                alert('No se encontró cita para hoy o mañana');
+                await ModalService.alert("Sin Cita", "No se encontró cita para hoy o mañana", "info");
                 return false;
             }
 
@@ -229,7 +230,7 @@ export const PatientActions = {
 
         } catch (error) {
             console.error('❌ PatientActions: Error al cambiar confirmación:', error);
-            alert('Error al cambiar confirmación: ' + error.message);
+            await ModalService.alert("Error", 'Error al cambiar confirmación: ' + error.message, "error");
             return false;
         }
     },
@@ -246,7 +247,12 @@ export const PatientActions = {
      * @returns {Promise<boolean>} true si se desactivó correctamente
      */
     async deactivatePatient(profileId, patientName) {
-        if (!confirm(`¿Estás seguro de dar de baja a "${patientName}"?\n\nEl paciente quedará inactivo pero sus datos se conservarán.`)) {
+        if (!await ModalService.confirm(
+            "Dar de baja",
+            `¿Estás seguro de dar de baja a "<strong>${patientName}</strong>"?<br><br>El paciente quedará inactivo pero sus datos se conservarán.`,
+            "Dar de baja",
+            "Cancelar"
+        )) {
             return false;
         }
 
@@ -254,7 +260,7 @@ export const PatientActions = {
             const result = await deactivatePatientService(profileId);
 
             if (result.success) {
-                alert(`Paciente "${patientName}" dado de baja exitosamente.`);
+                await ModalService.alert("Éxito", `Paciente "${patientName}" dado de baja exitosamente.`, "success");
 
                 // Cerrar modal de historial
                 if (PatientState.dom.patientHistoryModal) {
@@ -264,12 +270,12 @@ export const PatientActions = {
                 console.log('✅ PatientActions: Paciente desactivado:', patientName);
                 return true;
             } else {
-                alert('Error al dar de baja: ' + result.error);
+                await ModalService.alert("Error", 'Error al dar de baja: ' + result.error, "error");
                 return false;
             }
         } catch (error) {
             console.error('❌ PatientActions: Error al desactivar:', error);
-            alert('Error: ' + error.message);
+            await ModalService.alert("Error", 'Error: ' + error.message, "error");
             return false;
         }
     },
@@ -282,7 +288,7 @@ export const PatientActions = {
      * @returns {Promise<boolean>} true si se reactivó correctamente
      */
     async reactivatePatient(profileId, patientName) {
-        if (!confirm(`¿Reactivar a "${patientName}"?`)) {
+        if (!await ModalService.confirm("Reactivar Paciente", `¿Desea reactivar a "<strong>${patientName}</strong>"?`)) {
             return false;
         }
 
@@ -290,16 +296,16 @@ export const PatientActions = {
             const result = await reactivatePatientService(profileId);
 
             if (result.success) {
-                alert(`Paciente "${patientName}" reactivado exitosamente.`);
+                await ModalService.alert("Éxito", `Paciente "${patientName}" reactivado exitosamente.`, "success");
                 console.log('✅ PatientActions: Paciente reactivado:', patientName);
                 return true;
             } else {
-                alert('Error al reactivar: ' + result.error);
+                await ModalService.alert("Error", 'Error al reactivar: ' + result.error, "error");
                 return false;
             }
         } catch (error) {
             console.error('❌ PatientActions: Error al reactivar:', error);
-            alert('Error: ' + error.message);
+            await ModalService.alert("Error", 'Error: ' + error.message, "error");
             return false;
         }
     },
@@ -319,11 +325,17 @@ export const PatientActions = {
     async deletePatient(profileId, patientName) {
         // Verificar permisos
         if (!AuthManager.isAdmin()) {
-            alert('Solo los administradores pueden eliminar pacientes permanentemente.');
+            await ModalService.alert("Acceso Denegado", 'Solo los administradores pueden eliminar pacientes permanentemente.', "error");
             return false;
         }
 
-        if (!confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás COMPLETAMENTE SEGURO de eliminar PERMANENTEMENTE a "${patientName}"?\n\nEsta acción NO SE PUEDE DESHACER.\n\nSe eliminarán:\n- El perfil del paciente\n- TODO su historial de citas\n- Todos los registros de pagos\n\n¿Continuar?`)) {
+        if (!await ModalService.confirm(
+            "⚠️ ELIMINAR PACIENTE ⚠️",
+            `¿Estás COMPLETAMENTE SEGURO de eliminar PERMANENTEMENTE a "<strong>${patientName}</strong>"?<br><br>Esta acción NO SE PUEDE DESHACER.<br><br>Se eliminarán:<br>- El perfil del paciente<br>- TODO su historial de citas<br>- Todos los registros de pagos`,
+            "ELIMINAR DEFINITIVAMENTE",
+            "Cancelar",
+            "danger"
+        )) {
             return false;
         }
 
@@ -331,7 +343,7 @@ export const PatientActions = {
         const confirmation = prompt(`Para confirmar, escribe el nombre completo del paciente:\n"${patientName}"`);
 
         if (confirmation !== patientName) {
-            alert('Nombre incorrecto. Eliminación cancelada.');
+            await ModalService.alert("Error", 'Nombre incorrecto. Eliminación cancelada.', "error");
             return false;
         }
 
@@ -339,7 +351,7 @@ export const PatientActions = {
             const result = await deletePatientProfile(profileId, patientName);
 
             if (result.success) {
-                alert(`Paciente "${patientName}" eliminado permanentemente.`);
+                await ModalService.alert("Éxito", `Paciente "${patientName}" eliminado permanentemente.`, "success");
 
                 // Cerrar modal
                 if (PatientState.dom.patientHistoryModal) {
@@ -349,12 +361,12 @@ export const PatientActions = {
                 console.log('✅ PatientActions: Paciente eliminado:', patientName);
                 return true;
             } else {
-                alert('Error al eliminar: ' + result.error);
+                await ModalService.alert("Error", 'Error al eliminar: ' + result.error, "error");
                 return false;
             }
         } catch (error) {
             console.error('❌ PatientActions: Error al eliminar:', error);
-            alert('Error: ' + error.message);
+            await ModalService.alert("Error", 'Error: ' + error.message, "error");
             return false;
         }
     },
@@ -363,14 +375,6 @@ export const PatientActions = {
     // ACTUALIZACIÓN DE TERAPEUTA
     // ==========================================
 
-    /**
-     * Actualiza el terapeuta asignado a un paciente
-     * 
-     * @param {string} profileId - ID del perfil del paciente
-     * @param {string} newTherapist - Nuevo terapeuta ('diana' o 'sam')
-     * @param {string} patientName - Nombre del paciente
-     * @returns {Promise<boolean>} true si se actualizó correctamente
-     */
     /**
      * Actualiza el perfil del paciente (terapeuta, costo, etc.)
      * 
@@ -430,7 +434,25 @@ export const PatientActions = {
 
         } catch (error) {
             console.error('❌ PatientActions: Error al actualizar perfil:', error);
-            alert('Error al actualizar perfil: ' + error.message);
+            await ModalService.alert("Error", 'Error al actualizar perfil: ' + error.message, "error");
+            return false;
+        }
+    },
+
+    /**
+     * Alterna la confirmación directamente por ID
+     * @param {string} appointmentId
+     * @param {boolean} currentStatus
+     */
+    async toggleConfirmationDirect(appointmentId, currentStatus) {
+        try {
+            await updateDoc(doc(db, collectionPath, appointmentId), {
+                confirmed: !currentStatus
+            });
+            console.log('✅ PatientActions: Confirmación alternada para', appointmentId);
+            return true;
+        } catch (error) {
+            console.error('❌ PatientActions: Error al toggleconfirm:', error);
             return false;
         }
     }

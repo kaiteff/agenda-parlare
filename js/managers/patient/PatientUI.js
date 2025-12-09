@@ -20,6 +20,7 @@ import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
 import { AuthManager } from '../AuthManager.js';
 import { formatTime12h } from '../../utils/dateUtils.js';
+import { ModalService } from '../../utils/ModalService.js';
 
 /**
  * Gestión de UI y renderizado
@@ -34,7 +35,7 @@ export const PatientUI = {
      * Renderiza la lista completa de pacientes según el modo actual
      * Este es el método principal que coordina todo el renderizado
      */
-    renderList() {
+    async renderList() {
         const { dom, viewMode } = PatientState;
         if (!dom.patientsList) {
             console.warn('⚠️ PatientUI: DOM no inicializado');
@@ -42,372 +43,226 @@ export const PatientUI = {
         }
 
         try {
-            // 1. Obtener pacientes activos filtrados por terapeuta
-            const activePatients = PatientFilters.filterBySelectedTherapist(PatientState.patients);
+            const filters = PatientFilters;
+            const searchTerm = (dom.searchInput?.value || '').toLowerCase();
+            const showInactive = viewMode === 'inactive';
 
-            // 2. Aplicar filtro según modo de vista
-            let patientsToShow;
-            switch (viewMode) {
-                case 'today':
-                    patientsToShow = this._filterTodayPatients(activePatients);
-                    break;
-                case 'tomorrow':
-                    patientsToShow = this._filterTomorrowPatients(activePatients);
-                    break;
-                default:
-                    patientsToShow = activePatients;
+            // 1. Filtrar pacientes
+            let filteredPatients = filters.filterBySelectedTherapist(PatientState.patients || []);
+
+            // Filtro activo/inactivo
+            filteredPatients = filteredPatients.filter(p => (p.isActive !== false) !== showInactive);
+
+            const filteredCount = filteredPatients.length; // Guardar cuenta filtrada
+
+            // Filtro de búsqueda
+            if (searchTerm) {
+                filteredPatients = filteredPatients.filter(p =>
+                    p.name.toLowerCase().includes(searchTerm)
+                );
             }
 
-            // 3. Agregar totales de pagos
-            const patientsWithTotals = PatientFilters.addPaymentTotals(patientsToShow);
+            // 2. Ordenar alfabéticamente
+            filteredPatients.sort((a, b) => a.name.localeCompare(b.name));
 
-            // 4. Para vista "all", agregar info de próximas citas confirmadas
-            if (viewMode === 'all') {
-                this._addUpcomingAppointmentInfo(patientsWithTotals);
+            // 3. Preparar items especiales (encabezados de fecha)
+            let itemsToRender = [];
+
+            if (!searchTerm && !showInactive) {
+                const todayPatients = filters.getToday();
+                const tomorrowPatients = filters.getTomorrow();
+                const todayNames = new Set(todayPatients.map(p => p.name));
+                const tomorrowNames = new Set(tomorrowPatients.map(p => p.name));
+
+                // Agregar sección HOY si hay
+                if (todayPatients.length > 0) {
+                    itemsToRender.push({ type: 'header', label: 'Citas de Hoy', count: todayPatients.length, isToday: true });
+                    itemsToRender.push(...todayPatients.map(p => ({ ...p, type: 'patient', isToday: true })));
+                }
+
+                // Agregar sección MAÑANA si hay
+                if (tomorrowPatients.length > 0) {
+                    itemsToRender.push({ type: 'header', label: 'Citas de Mañana', count: tomorrowPatients.length });
+                    itemsToRender.push(...tomorrowPatients.map(p => ({ ...p, type: 'patient' })));
+                }
+
+                // Agregar RESTO (todos los demás activos)
+                const remainingPatients = filteredPatients.filter(p => !todayNames.has(p.name) && !tomorrowNames.has(p.name));
+                if (remainingPatients.length > 0) {
+                    if (itemsToRender.length > 0) {
+                        itemsToRender.push({ type: 'header', label: 'Todos los Pacientes', count: remainingPatients.length });
+                    }
+                    itemsToRender.push(...remainingPatients.map(p => ({ ...p, type: 'patient' })));
+                } else if (itemsToRender.length === 0) {
+                    itemsToRender = filteredPatients.map(p => ({ ...p, type: 'patient' }));
+                }
+
+            } else {
+                itemsToRender = filteredPatients.map(p => ({ ...p, type: 'patient' }));
             }
 
-            // 5. Ordenar según el modo
-            this._sortPatients(patientsWithTotals, viewMode);
+            // 4. Renderizar al DOM
+            dom.patientsList.innerHTML = ''; // Limpiar
 
-            // 6. Actualizar header con contadores
-            this._updateHeader(patientsWithTotals.length);
+            if (itemsToRender.length === 0) {
+                this._renderEmptyState(dom.patientsList, searchTerm);
+            } else {
+                this._renderPatientItems(dom.patientsList, itemsToRender);
+            }
 
-            // 7. Renderizar lista de pacientes
-            this._renderPatientItems(patientsWithTotals);
+            // 5. Actualizar header con la cuenta correcta
+            this.updateHeader(filteredCount); // Pasar cuenta filtrada
 
         } catch (error) {
             console.error('❌ PatientUI: Error rendering list:', error);
-            alert('Error al renderizar lista de pacientes: ' + error.message);
+            await ModalService.alert('Error Interfaz', 'Hubo un error al mostrar la lista de pacientes.');
         }
     },
 
-    // ==========================================
-    // RENDERIZADO DE HEADER
-    // ==========================================
-
     /**
-     * Actualiza el header con contadores y botones
-     * @private
-     * @param {number} count - Cantidad de pacientes en la vista actual
+     * Renderiza el encabezado de la lista de pacientes
+     * @param {number} currentCount - Cantidad de pacientes visualizados actualmente
      */
-    _updateHeader(count) {
-        const { dom, viewMode } = PatientState;
+    updateHeader(currentCount) {
+        const { dom, viewMode, activeCount, inactiveCount } = PatientState;
         if (!dom.patientsHeader) return;
 
-        const totalActive = PatientFilters.filterBySelectedTherapist(PatientState.patients).length;
-        const todayCount = PatientFilters.getToday().length;
-        const tomorrowCount = PatientFilters.getTomorrow().length;
+        const isInactiveMode = viewMode === 'inactive';
 
-        const modeLabels = {
-            'today': `HOY (${count})`,
-            'tomorrow': `MAÑANA (${count})`,
-            'all': `ACTIVOS (${count})`
-        };
+        // Si no se pasa currentCount (por llamada externa), usar activeCount del estado
+        const countToShow = (currentCount !== undefined) ? currentCount : activeCount;
 
-        dom.patientsHeader.innerHTML = `
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-gray-600">
-                        ${modeLabels[viewMode] || `ACTIVOS (${count})`}
-                    </span>
-                    <button id="btnNewPatient" onclick="event.stopPropagation(); event.preventDefault(); window.PatientManager.api.openNewPatient();" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        Nuevo
+        // Determinar qué contenido mostrar en el header
+        let html = '';
+        if (isInactiveMode) {
+            html = `
+                <div class="flex justify-between items-center bg-gray-100 p-2 rounded mb-2">
+                    <h2 class="text-sm font-bold text-gray-700">Papelera (${inactiveCount})</h2>
+                    <button id="exitInactiveModeBtn" class="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 bg-white rounded border hover:bg-gray-50 transition-colors">
+                        Volver a Todos
                     </button>
                 </div>
-                <div class="flex gap-1">
-                    <button id="btnViewToday" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'today' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}">
-                        Hoy (${todayCount})
-                    </button>
-                    <button id="btnViewTomorrow" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'tomorrow' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}">
-                        Mañana (${tomorrowCount})
-                    </button>
-                    <button id="btnViewAll" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'all' ? 'bg-gray-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}">
-                        Todos (${totalActive})
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Adjuntar listeners a los botones
-        this._attachHeaderListeners();
-    },
-
-    /**
-     * Adjunta event listeners a los botones del header
-     * @private
-     */
-    _attachHeaderListeners() {
-        document.getElementById('btnViewToday')?.addEventListener('click', () => {
-            PatientState.setViewMode('today');
-            this.renderList();
-        });
-
-        document.getElementById('btnViewTomorrow')?.addEventListener('click', () => {
-            PatientState.setViewMode('tomorrow');
-            this.renderList();
-        });
-
-        document.getElementById('btnViewAll')?.addEventListener('click', () => {
-            PatientState.setViewMode('all');
-            this.renderList();
-        });
-
-
-    },
-
-    // ==========================================
-    // RENDERIZADO DE ITEMS
-    // ==========================================
-
-    /**
-     * Renderiza la lista de tarjetas de pacientes
-     * @private
-     * @param {Array<Object>} patients - Lista de pacientes a renderizar
-     */
-    _renderPatientItems(patients) {
-        const { dom, viewMode } = PatientState;
-
-        if (patients.length === 0) {
-            const emptyMessages = {
-                'today': 'No hay citas para hoy',
-                'tomorrow': 'No hay citas para mañana',
-                'all': 'No hay pacientes activos'
-            };
-
-            dom.patientsList.innerHTML = `
-                <p class="text-xs text-gray-400 text-center py-4">
-                    ${emptyMessages[viewMode] || 'No hay pacientes'}
-                </p>
             `;
-            return;
-        }
-
-        dom.patientsList.innerHTML = '';
-
-        patients.forEach(patient => {
-            const patientEl = this._createPatientCard(patient, viewMode);
-            dom.patientsList.appendChild(patientEl);
-        });
-    },
-
-    /**
-     * Crea una tarjeta individual de paciente
-     * @private
-     * @param {Object} patient - Datos del paciente
-     * @param {string} viewMode - Modo de vista actual
-     * @returns {HTMLElement} Elemento DOM de la tarjeta
-     */
-    _createPatientCard(patient, viewMode) {
-        const patientEl = document.createElement('div');
-        patientEl.className = 'p-2 hover:bg-blue-50 rounded cursor-pointer transition-colors border-b border-gray-100 last:border-b-0';
-
-        const pendingRatio = patient.totalPending / (patient.totalPaid + patient.totalPending);
-        const pendingColor = pendingRatio > 0.5 ? 'text-red-600 font-semibold' : 'text-orange-600';
-
-        // Obtener pagos pendientes
-        const pendingPayments = PatientFilters.getPendingPayments(patient.name);
-
-        // Generar badge de confirmación y hora
-        let timeStr = '';
-        let confirmBadge = '';
-
-        // Para hoy/mañana: mostrar hora y confirmación
-        if ((viewMode === 'today' || viewMode === 'tomorrow') && patient.nextAppointment) {
-            timeStr = formatTime12h(patient.nextAppointment);
-
-            const confirmText = patient.confirmed ? '✓ OK' : '⏳ Pendiente';
-            const confirmClass = patient.confirmed
-                ? 'bg-green-100 text-green-700'
-                : 'bg-orange-100 text-orange-700';
-
-            confirmBadge = `<button
-                onclick="event.stopPropagation(); toggleConfirmationFromList('${patient.name}')"
-                class="text-[10px] ${confirmClass} px-1.5 py-0.5 rounded font-bold hover:opacity-80 transition-opacity cursor-pointer"
-                title="Click para ${patient.confirmed ? 'desconfirmar' : 'confirmar'}"
-            >${confirmText}</button>`;
-        }
-        // Para "todos": mostrar solo si tiene cita próxima
-        else if (viewMode === 'all' && patient.nextAppointment) {
-            const aptDate = patient.nextAppointment;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const dayAfterTomorrow = new Date(tomorrow);
-            dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-
-            // Determinar si es hoy o mañana
-            let dayLabel = '';
-            if (aptDate >= today && aptDate < tomorrow) {
-                dayLabel = 'Hoy';
-            } else if (aptDate >= tomorrow && aptDate < dayAfterTomorrow) {
-                dayLabel = 'Mañana';
-            }
-
-            if (dayLabel) {
-                timeStr = formatTime12h(aptDate);
-
-                // Mostrar badge con estado de confirmación
-                if (patient.confirmed) {
-                    confirmBadge = `<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">✓ ${dayLabel}</span>`;
-                } else {
-                    // Mostrar en naranja si NO está confirmada (alerta para recepcionista)
-                    confirmBadge = `<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">⏳ ${dayLabel}</span>`;
-                }
-            }
-        }
-
-        const canViewDetails = AuthManager.canViewDetails(patient);
-
-        patientEl.innerHTML = `
-            <div class="flex items-center justify-between mb-1">
-                <div class="flex items-center gap-2">
-                    <div class="font-bold text-gray-800">
-                        ${patient.name}
+        } else {
+            // Modo normal
+            html = `
+                <div class="flex justify-between items-end mb-2">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800 tracking-tight">Pacientes</h2>
+                        <p class="text-xs text-gray-500 font-medium mt-0.5">${countToShow} activos</p>
                     </div>
-                    ${canViewDetails ? confirmBadge : confirmBadge.replace('<button', '<span').replace('</button>', '</span>').replace(/onclick=".*?"/, '')}
+                    <button id="addPatientBtn" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 shadow-md transition-all transform active:scale-95 group" title="Nuevo Paciente">
+                        <svg class="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    </button>
                 </div>
-                ${timeStr ? `<div class="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">🕒 ${timeStr}</div>` : ''}
-            </div>
-
-            ${canViewDetails ? `
-            <div class="flex items-center justify-between text-xs mt-2">
-                <div class="text-gray-500">
-                    <span class="font-medium text-gray-700">${patient.totalPaid}</span> pagadas
-                </div>
-                <div class="${pendingColor}">
-                    <span class="font-bold">${patient.totalPending}</span> pendientes
-                </div>
-            </div>
-
-            ${pendingPayments.length > 0 ? `
-                <div class="mt-3 pt-2 border-t border-gray-100">
-                    <div class="text-xs font-semibold text-orange-700 mb-1">Pagos pendientes:</div>
-                    ${pendingPayments.slice(0, 2).map(apt => {
-            const aptDate = new Date(apt.date);
-            const dateStr = aptDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-            return `
-                            <div class="flex items-center justify-between py-1">
-                                <span class="text-xs text-orange-800">${dateStr} - $${apt.cost}</span>
-                                <button onclick="event.stopPropagation(); quickMarkAsPaid('${apt.id}')" 
-                                        class="px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-700 text-xs">
-                                    ✓ Pagado
-                                </button>
-                            </div>
-                        `;
-        }).join('')}
-                    
-                    ${pendingPayments.length > 2 ?
-                        `<div class="text-xs text-orange-600 text-center mt-1">+${pendingPayments.length - 2} más (click para ver)</div>`
-                        : ''}
-                </div>
-            ` : ''}
-            ` : ''} 
-        `;
-
-        // Click handler para abrir historial (solo si tiene permisos)
-        if (canViewDetails) {
-            patientEl.onclick = () => {
-                if (window.openPatientHistoryModal) {
-                    window.openPatientHistoryModal(patient);
-                }
-            };
-        } else {
-            patientEl.classList.add('opacity-75');
-            patientEl.classList.remove('cursor-pointer', 'hover:bg-blue-50');
-            patientEl.classList.add('cursor-default');
+            `;
         }
 
-        return patientEl;
+        dom.patientsHeader.innerHTML = html;
     },
 
     // ==========================================
-    // MÉTODOS AUXILIARES PRIVADOS
+    // HELPERS PRIVADOS DE RENDERIZADO
     // ==========================================
 
-    /**
-     * Filtra pacientes activos que tienen cita hoy
-     * @private
-     */
-    _filterTodayPatients(activePatients) {
-        const todayPatients = PatientFilters.getToday();
-        return activePatients
-            .filter(p => todayPatients.some(tp => tp.name === p.name))
-            .map(p => {
-                const todayData = todayPatients.find(tp => tp.name === p.name);
-                return {
-                    ...p,
-                    nextAppointment: todayData.appointmentTime,
-                    confirmed: todayData.confirmed
-                };
-            });
+    _renderEmptyState(container, searchTerm) {
+        if (searchTerm) {
+            container.innerHTML = `
+                <div class="text-center py-10 px-4">
+                    <div class="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <p class="text-sm text-gray-500 font-medium">No se encontraron pacientes para "${searchTerm}"</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-10 px-4">
+                    <div class="bg-blue-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    </div>
+                    <h3 class="text-gray-900 font-bold mb-1">Sin Pacientes</h3>
+                    <p class="text-xs text-gray-500 mb-4">Comienza registrando tu primer paciente.</p>
+                </div>
+            `;
+        }
     },
 
-    /**
-     * Filtra pacientes activos que tienen cita mañana
-     * @private
-     */
-    _filterTomorrowPatients(activePatients) {
-        const tomorrowPatients = PatientFilters.getTomorrow();
-        return activePatients
-            .filter(p => tomorrowPatients.some(tp => tp.name === p.name))
-            .map(p => {
-                const tomorrowData = tomorrowPatients.find(tp => tp.name === p.name);
-                return {
-                    ...p,
-                    nextAppointment: tomorrowData.appointmentTime,
-                    confirmed: tomorrowData.confirmed
-                };
-            })
-            .sort((a, b) => a.nextAppointment - b.nextAppointment);
-    },
+    _renderPatientItems(container, items) {
+        let htmlContent = '';
 
-    /**
-     * Agrega información de próximas citas a los pacientes (para vista "all")
-     * @private
-     * @param {Array<Object>} patients - Lista de pacientes a enriquecer (se modifica in-place)
-     */
-    _addUpcomingAppointmentInfo(patients) {
-        const now = new Date();
-        const appointments = PatientState.appointments || [];
-
-        patients.forEach(patient => {
-            // Buscar próximas citas del paciente (no canceladas, futuras)
-            const upcomingAppointments = appointments
-                .filter(apt =>
-                    apt.name === patient.name &&
-                    new Date(apt.date) >= now &&
-                    !apt.isCancelled
-                )
-                .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            if (upcomingAppointments.length > 0) {
-                const nextApt = upcomingAppointments[0];
-                patient.nextAppointment = new Date(nextApt.date);
-                patient.confirmed = nextApt.confirmed || false;
+        items.forEach(item => {
+            if (item.type === 'header') {
+                htmlContent += `
+                    <div class="sticky top-0 bg-white/95 backdrop-blur-sm px-2 py-2 border-b border-gray-100 z-10 flex items-center justify-between mt-2 first:mt-0">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider ${item.isToday ? 'text-blue-600' : ''}">${item.label}</h3>
+                        <span class="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${item.count}</span>
+                    </div>
+                `;
+            } else {
+                htmlContent += this._createPatientCard(item);
             }
         });
+
+        container.innerHTML = htmlContent;
     },
 
-    /**
-     * Ordena la lista de pacientes según el modo de vista
-     * @private
-     * @param {Array<Object>} patients - Lista a ordenar (se modifica in-place)
-     * @param {string} mode - Modo de vista
-     */
-    _sortPatients(patients, mode) {
-        if (mode === 'today' || mode === 'tomorrow') {
-            patients.sort((a, b) => {
-                if (a.nextAppointment && b.nextAppointment) {
-                    return a.nextAppointment - b.nextAppointment;
-                }
-                return 0;
-            });
-        } else {
-            patients.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    _createPatientCard(patient) {
+        // Calcular estado de deuda y próxima cita
+        const pendingApts = PatientFilters.getPendingPayments(patient.name);
+        const hasDebt = pendingApts.length > 0;
+        const totalDebt = pendingApts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
+
+        // Estilos condicionales
+        const selectedCardClass = (PatientState.selectedPatientId === patient.id)
+            ? 'bg-blue-50 border-blue-500 shadow-md ring-1 ring-blue-500'
+            : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-md';
+
+        const debtBadge = hasDebt
+            ? `<div class="absolute top-2 right-2 z-10 text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100 flex items-center gap-1 shadow-sm" title="Pago pendiente: $${totalDebt}">
+                 <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                 $${totalDebt}
+               </div>`
+            : '';
+
+        let timeBadge = '';
+        let statusColor = 'bg-gray-200';
+
+        if (patient.isToday && patient.appointmentTime) {
+            timeBadge = `
+                <div class="mt-2 flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-100/50 px-2 py-1 rounded inline-block">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    ${formatTime12h(patient.appointmentTime)}
+                </div>
+            `;
+            statusColor = patient.confirmed ? 'bg-green-500' : 'bg-blue-500';
         }
+
+        // Importante: data-patient-id debe estar en el contenedor principal clickable
+        // Agregamos onclick explícito como fallback robusto para asegurar que funciona incluso si la delegación falla
+        return `
+            <div data-patient-id="${patient.id}" 
+                 onclick="window.openPatientHistoryById('${patient.id}')"
+                 class="patient-card group relative p-3 rounded-xl border transition-all duration-200 cursor-pointer ${selectedCardClass} mb-2 active:scale-[0.98]">
+                
+                ${debtBadge}
+
+                <div class="flex items-center gap-3">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full ${statusColor} text-white flex items-center justify-center text-sm font-bold shadow-sm">
+                            ${patient.name.charAt(0).toUpperCase()}
+                        </div>
+                        ${patient.therapist === 'sam' ? '<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[8px] font-bold flex items-center justify-center border border-white" title="Sam">S</span>' : ''}
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate pr-14">
+                            ${patient.name}
+                        </h4>
+                        ${timeBadge}
+                    </div>
+                </div>
+            </div>
+        `;
     }
 };

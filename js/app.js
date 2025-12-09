@@ -5,6 +5,7 @@ import { initNotifications } from './notifications.js';
 import { PatientManager } from './managers/PatientManager.js';
 import { AuthManager } from './managers/AuthManager.js';
 import { ScheduleManager } from './managers/ScheduleManager.js';
+import { ModalService } from './utils/ModalService.js';
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
@@ -169,7 +170,7 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 logoutBtn.addEventListener('click', async () => {
-    if (confirm("¿Cerrar sesión?")) {
+    if (await ModalService.confirm("Cerrar Sesión", "¿Estás seguro que deseas salir?", "Cerrar Sesión", "Cancelar")) {
         await logoutUser();
     }
 });

@@ -10,7 +10,8 @@ import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
 import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday } from '../../utils/validators.js';
-import { addDays, formatTime12h, formatDateLocal } from '../../utils/dateUtils.js';
+import { addDays, formatTime12h } from '../../utils/dateUtils.js';
+import { ModalService } from '../../utils/ModalService.js';
 
 export const CalendarModal = {
     init() {
@@ -22,6 +23,7 @@ export const CalendarModal = {
         if (dom.saveBtn) dom.saveBtn.onclick = () => this.handleSave();
         if (dom.deleteBtn) dom.deleteBtn.onclick = () => this.handleDelete();
         if (dom.payBtn) dom.payBtn.onclick = () => this.handlePaymentToggle();
+        if (dom.confirmBtn) dom.confirmBtn.onclick = () => this.handleConfirmToggle();
         if (dom.cancelBtn) dom.cancelBtn.onclick = () => this.handleCancel();
         if (dom.patientSearchInput) dom.patientSearchInput.oninput = (e) => this.populatePatientSuggestions(e.target.value);
         if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.onchange = () => {
@@ -52,6 +54,7 @@ export const CalendarModal = {
         dom.saveBtn.classList.remove('hidden');
         dom.deleteBtn.classList.add('hidden');
         dom.payBtn.classList.add('hidden');
+        dom.confirmBtn.classList.add('hidden');
         dom.cancelBtn.classList.add('hidden');
         dom.rescheduleSection.classList.add('hidden');
 
@@ -99,7 +102,14 @@ export const CalendarModal = {
         dom.saveBtn.classList.remove('hidden');
         dom.deleteBtn.classList.remove('hidden');
         dom.payBtn.classList.remove('hidden');
+        dom.confirmBtn.classList.remove('hidden');
         dom.cancelBtn.classList.remove('hidden');
+
+        // Confirm button state
+        dom.confirmBtn.innerHTML = ev.confirmed ? '❌ Quitar Confirmación' : '✓ Confirmar Asistencia';
+        dom.confirmBtn.className = ev.confirmed
+            ? "col-span-2 bg-gray-100 text-gray-600 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors flex items-center justify-center gap-2 mb-1 text-sm font-medium"
+            : "col-span-2 bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1";
 
         // Pay button state
         dom.payBtn.textContent = ev.isPaid ? 'Marcar como No Pagado' : 'Marcar como Pagado';
@@ -136,9 +146,6 @@ export const CalendarModal = {
     populatePatientSuggestions(query) {
         const { patientSuggestions, patientFirstNameInput, patientLastNameInput } = CalendarState.dom;
         if (!patientSuggestions) return;
-
-        // Debug
-        // console.log(`🔍 Buscando "${query}" en ${PatientState.patients.length} pacientes`);
 
         patientSuggestions.innerHTML = '';
         if (query.length < 2) {
@@ -302,18 +309,21 @@ export const CalendarModal = {
     },
 
     addAvailableSlotsSuggestions(container) {
-        // Busca 2 slots libres HOY y 2 slots libres MAÑANA dentro del horario laboral
+        // Busca slots libres HOY y slots libres MAÑANA dentro del horario laboral
         const now = new Date();
         const candidates = [];
 
         // Función helper para buscar huecos
         const findSlots = (baseDate, labelPrefix) => {
             const startHour = 9;
-            const endHour = 19;
+            const endHour = 20; // Extendido hasta las 20:00
             const currentHour = baseDate.getDate() === now.getDate() ? Math.max(startHour, now.getHours() + 1) : startHour;
 
             for (let h = currentHour; h <= endHour; h++) {
-                if (candidates.length >= 4) break; // Limite de sugerencias totales
+                // Si NO es hoy, limitamos la cantidad por día para no saturar 
+                // pero si ES hoy, queremos mostrar todas las posibles
+                const isToday = baseDate.getDate() === now.getDate();
+                if (!isToday && candidates.length >= 8) break;
 
                 const d = new Date(baseDate);
                 d.setHours(h, 0, 0, 0);
@@ -331,11 +341,11 @@ export const CalendarModal = {
             }
         };
 
-        // Buscar Hoy
+        // Buscar Hoy (Todas las disponibles)
         findSlots(now, 'Hoy');
 
-        // Buscar Mañana (si hoy hay pocos)
-        if (candidates.length < 3) {
+        // Buscar Mañana (si hay espacio en sugerencias)
+        if (candidates.length < 5) { // Si hoy hay pocas, mostramos mañana
             const tomorrow = addDays(now, 1);
             if (isNotSunday(tomorrow)) {
                 findSlots(tomorrow, 'Mañana');
@@ -346,8 +356,8 @@ export const CalendarModal = {
             }
         }
 
-        // Renderizar sugerencias verdes
-        candidates.slice(0, 3).forEach(cand => {
+        // Renderizar sugerencias verdes (Máximo 8 chips para no llenar pantalla)
+        candidates.slice(0, 8).forEach(cand => {
             const chip = this.createRescheduleChip(cand.label, cand.date, 'green');
             container.appendChild(chip);
         });
@@ -375,19 +385,19 @@ export const CalendarModal = {
         const cost = parseFloat(dom.costInput.value) || 0;
 
         if (!name || !dateStr) {
-            alert("Por favor completa nombre y fecha");
+            await ModalService.alert("Campos Incompletos", "Por favor completa nombre y fecha", "warning");
             return;
         }
 
         const dateObj = new Date(dateStr);
 
         if (!isWithinWorkingHours(dateObj)) {
-            alert("La cita debe estar entre las 9:00 y las 20:00");
+            await ModalService.alert("Horario Inválido", "La cita debe estar entre las 9:00 y las 20:00", "warning");
             return;
         }
 
         if (!isNotSunday(dateObj)) {
-            alert("No se pueden agendar citas los domingos");
+            await ModalService.alert("Día Inválido", "No se pueden agendar citas los domingos", "warning");
             return;
         }
 
@@ -425,7 +435,7 @@ export const CalendarModal = {
                     }
                 } else {
                     if (checkSlotConflict(dateStr, CalendarState.appointments)) {
-                        if (!confirm("Ya hay una cita en este horario. ¿Deseas agregarla de todas formas?")) return;
+                        if (!await ModalService.confirm("Conflicto de Horario", "Ya hay una cita en este horario.<br>¿Deseas agregarla de todas formas?", "Agregar igualmente", "Cancelar")) return;
                     }
                     await CalendarData.createEvent(appointmentData);
                 }
@@ -433,13 +443,13 @@ export const CalendarModal = {
             this.closeModal();
         } catch (e) {
             console.error(e);
-            alert("Error al guardar: " + e.message);
+            await ModalService.alert("Error", "Error al guardar: " + e.message, "error");
         }
     },
 
     async handleDelete() {
         if (!CalendarState.selectedEventId) return;
-        if (confirm("¿Eliminar esta cita?")) {
+        if (await ModalService.confirm("Eliminar Cita", "¿Eliminar esta cita?", "Eliminar", "Cancelar", "danger")) {
             await CalendarData.deleteEvent(CalendarState.selectedEventId);
             this.closeModal();
         }
@@ -454,14 +464,31 @@ export const CalendarModal = {
         }
     },
 
+    async handleConfirmToggle() {
+        if (!CalendarState.selectedEventId) return;
+        const evt = CalendarState.appointments.find(a => a.id === CalendarState.selectedEventId);
+        if (evt) {
+            const newStatus = !evt.confirmed;
+            await CalendarData.updateEvent(CalendarState.selectedEventId, { confirmed: newStatus });
+            this.closeModal();
+        }
+    },
+
     async handleCancel() {
         if (!CalendarState.selectedEventId) return;
 
-        if (!confirm("¿Estás seguro de que deseas cancelar esta cita?")) return;
+        if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
 
         await CalendarData.cancelEvent(CalendarState.selectedEventId);
 
-        if (confirm("Cita cancelada. ¿Deseas agendar una nueva cita para este paciente ahora?")) {
+        const reschedule = await ModalService.confirm(
+            "Reagendar",
+            "Cita cancelada.<br>¿Deseas agendar una nueva cita para este paciente ahora?",
+            "Sí, Reagendar",
+            "No, cerrar"
+        );
+
+        if (reschedule) {
             // Switch to create mode with same patient
             CalendarState.selectedEventId = null;
             const dom = CalendarState.dom;
@@ -470,6 +497,7 @@ export const CalendarModal = {
             dom.saveBtn.classList.remove('hidden');
             dom.deleteBtn.classList.add('hidden');
             dom.payBtn.classList.add('hidden');
+            dom.confirmBtn.classList.add('hidden');
             dom.cancelBtn.classList.add('hidden');
 
             // Suggest next week same time

@@ -1,13 +1,13 @@
-import { db } from '../firebase.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+/**
+ * AuthManager.js
+ * Gestión de autenticación y permisos de usuario
+ */
+
+import { db } from '../firebase.js'; // Importar db principal
 import {
-    getFirestore,
     doc,
-    collection,
     getDoc,
-    setDoc,
-    updateDoc,
-    serverTimestamp
+    getFirestore
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     getAuth,
@@ -16,139 +16,68 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Lazy-load auth and db to ensure they are initialized
-let _auth = null;
-let _db = null;
-
-function getAuthInstance() {
-    if (!_auth && db?.app) {
-        _auth = getAuth(db.app);
-    }
-    return _auth;
-}
-
-function getDbInstance() {
-    // SIEMPRE intentar obtener una instancia fresca compatible con este módulo
-    if (!_db && db?.app) {
-        try {
-            _db = getFirestore(db.app);
-            console.log("🔄 AuthManager: Created local Firestore instance from db.app for compatibility (v10.7.1)");
-        } catch (e) {
-            console.warn("⚠️ AuthManager: Could not create local Firestore, using imported db", e);
-            _db = db;
-        }
-    }
-    return _db || db;
-}
-
-export const ROLES = {
+// Roles y Permisos
+const ROLES = {
     admin: {
-        level: 3,
-        permissions: [
-            'view_all_patients',
-            'view_all_appointments',
-            'create_patient',
-            'edit_any_patient',
-            'delete_patient',
-            'create_appointment',
-            'edit_any_appointment',
-            'delete_appointment',
-            'view_all_payments',
-            'edit_payments',
-            'view_reports',
-            'manage_users',
-            'export_data',
-            'switch_therapist_view'
-        ]
+        label: 'Administrador',
+        permissions: ['manage_users', 'manage_schedule', 'view_reports', 'manage_patients', 'view_all_patients', 'delete_records', 'switch_therapist_view']
     },
     therapist: {
-        level: 2,
-        permissions: [
-            'view_own_patients',
-            'create_patient',
-            'edit_own_patient',
-            'create_appointment',
-            'edit_own_appointment',
-            'view_own_payments',
-            'edit_own_payments',
-            'switch_therapist_view'
-        ]
+        label: 'Terapeuta',
+        permissions: ['manage_own_schedule', 'view_own_patients', 'edit_own_records', 'view_schedule', 'switch_therapist_view', 'view_all_patients']
     },
     receptionist: {
-        level: 1,
-        permissions: [
-            'view_all_patients',
-            'view_all_appointments',
-            'create_patient',
-            'edit_patient',
-            'create_appointment',
-            'edit_own_appointment',
-            'view_all_payments',
-            'edit_payments',
-            'view_reports',
-            'export_data',
-            'switch_therapist_view'
-        ]
+        label: 'Recepción',
+        permissions: ['view_schedule', 'create_appointment', 'manage_payments']
     }
 };
 
+let _auth = null;
+
+function getAuthInstance() {
+    if (!_auth && db && db.app) {
+        _auth = getAuth(db.app);
+    }
+    return _auth || getAuth();
+}
+
+function getDbInstance() {
+    // Simplificado: Usar siempre la instancia importada de firebase.js
+    // Esto evita incompatibilidades entre versiones/instancias de SDK
+    return db;
+}
+
 export const AuthManager = {
     currentUser: null,
-    selectedTherapist: null,
+    selectedTherapist: null, // Para admins: qué calendario están viendo
 
+    /**
+     * Inicializa el listener de estado de autenticación
+     */
     async init() {
         return new Promise((resolve) => {
-            onAuthStateChanged(getAuthInstance(), async (user) => {
-                if (user) {
-                    await this.initUser(user);
-                } else {
-                    this.clear();
-                }
-                resolve(this.currentUser);
-            });
+            try {
+                const auth = getAuthInstance();
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        await this.initUser(user);
+                    } else {
+                        this.currentUser = null;
+                        this.selectedTherapist = null;
+                    }
+                    resolve(this.currentUser);
+                });
+            } catch (error) {
+                console.error("AuthManager Init Error:", error);
+                resolve(null);
+            }
         });
     },
 
-    async initUser(firebaseUser) {
-        try {
-            const userData = await this.getUserData(firebaseUser.uid);
-
-            if (userData) {
-                this.currentUser = { ...firebaseUser, ...userData };
-            } else {
-                // Fallback para usuarios legacy
-                console.warn('Usuario sin perfil extendido, usando fallback');
-                this.currentUser = {
-                    ...firebaseUser,
-                    role: 'admin',
-                    therapist: 'diana',
-                    displayName: firebaseUser.displayName || 'Usuario'
-                };
-            }
-
-            // Inicializar filtro de terapeuta
-            // Si el usuario tiene un terapeuta asignado, usar ese por defecto (incluso si es admin)
-            // Si no tiene terapeuta asignado y puede cambiar vista, usar 'all'
-            if (this.currentUser.therapist) {
-                this.selectedTherapist = this.currentUser.therapist;
-            } else if (this.can('switch_therapist_view')) {
-                this.selectedTherapist = 'all';
-            } else {
-                this.selectedTherapist = 'diana'; // Fallback seguro
-            }
-
-            return this.currentUser;
-        } catch (error) {
-            console.error('Error al cargar perfil de usuario:', error);
-            return null;
-        }
-    },
-
-    clear() {
-        this.currentUser = null;
-        this.selectedTherapist = null;
-    },
-
+    /**
+     * Inicia sesión (Login)
+     * Nota: app.js usa loginUser de firebase.js, pero mantenemos esto por utilidad
+     */
     async login(email, password) {
         try {
             const userCredential = await signInWithEmailAndPassword(getAuthInstance(), email, password);
@@ -160,10 +89,13 @@ export const AuthManager = {
         }
     },
 
+    /**
+     * Cierra sesión
+     */
     async logout() {
         try {
             await signOut(getAuthInstance());
-            this.clear();
+            this.clear(); // Limpiar estado interno también
             return { success: true };
         } catch (error) {
             console.error("Logout error:", error);
@@ -171,117 +103,179 @@ export const AuthManager = {
         }
     },
 
+    /**
+     * Limpia el estado local del AuthManager
+     * (Llamado por app.js al detectar desconexión)
+     */
+    clear() {
+        this.currentUser = null;
+        this.selectedTherapist = null;
+    },
+
+    /**
+     * Carga el perfil extendido del usuario desde Firestore
+     */
+    async initUser(firebaseUser) {
+        try {
+            console.log("👤 AuthManager: Inicializando usuario...", firebaseUser.uid);
+            const userData = await this.getUserData(firebaseUser.uid);
+
+            if (userData) {
+                console.log("✅ Perfil encontrado/cargado correctamente.");
+                this.currentUser = { ...firebaseUser, ...userData };
+            } else {
+                console.warn('⚠️ Usuario sin perfil extendido (o error de lectura), usando fallback seguro.');
+                // Fallback robusto para asegurar que el usuario pueda entrar aunque falle Firestore
+                this.currentUser = {
+                    ...firebaseUser,
+                    role: 'admin', // Asumir rol básico o admin por defecto en dev
+                    therapist: 'diana',
+                    displayName: firebaseUser.displayName || 'Usuario',
+                    isFallback: true
+                };
+            }
+
+            // Inicializar filtro de terapeuta
+            if (this.currentUser.therapist) {
+                this.selectedTherapist = this.currentUser.therapist;
+            } else if (this.can('switch_therapist_view')) {
+                this.selectedTherapist = 'all';
+            } else {
+                this.selectedTherapist = 'diana';
+            }
+
+            return this.currentUser;
+
+        } catch (error) {
+            console.error('❌ CRITICAL: Error fatal al inicializar usuario:', error);
+            // En caso de error catastrófico, devolver un usuario mínimo para no bloquear el login
+            this.currentUser = {
+                ...firebaseUser,
+                role: 'admin',
+                therapist: 'diana',
+                error: error.message
+            };
+            return this.currentUser;
+        }
+    },
+
+    /**
+     * Obtiene datos del usuario de Firestore
+     */
     async getUserData(uid) {
         try {
             const database = getDbInstance();
-            console.log("🔍 AuthManager: checking user data for", uid);
+            if (!database) {
+                console.error("❌ AuthManager: Base de datos no disponible.");
+                return null;
+            }
 
-            // Usar doc importado del CDN 10.7.1 que debe coincidir con database
+            // Usar doc importado del CDN que DEBE ser compatible con la instancia db
             const userRef = doc(database, "users", uid);
             const userDoc = await getDoc(userRef);
 
             if (userDoc.exists()) {
-                console.log("✅ User profile found:", userDoc.data());
                 return userDoc.data();
             } else {
                 console.warn("⚠️ User profile document does not exist for UID:", uid);
+                return null;
+            }
+        } catch (error) {
+            // Log detallado del error de compatibilidad común
+            if (error.message && error.message.includes('Expected first argument to collection()')) {
+                console.error("❌ ERROR CRÍTICO DE COMPATIBILIDAD FIREBASE: Las instancias de SDK no coinciden.", error);
+            } else {
+                console.error("❌ Error getting user data:", error);
             }
             return null;
-        } catch (error) {
-            console.error("❌ Error getting user data:", error);
-            return null;
         }
     },
 
-    async createOrUpdateUser(uid, userData) {
-        if (!this.isAdmin()) {
-            throw new Error("No autorizado");
-        }
-
-        const dataToSave = {
-            ...userData,
-            updatedAt: serverTimestamp()
-        };
-
-        if (!userData.createdAt) {
-            dataToSave.createdAt = serverTimestamp();
-        }
-
-        await setDoc(doc(db, "users", uid), dataToSave, { merge: true });
-    },
-
+    /**
+     * Verifica si el usuario tiene un permiso específico
+     */
     can(permission) {
         if (!this.currentUser) return false;
-
-        // Fallback para usuarios legacy
-        if (!this.currentUser.role) return true;
+        // Si no tiene rol definido, asumir sin permisos (o admin en dev si se prefiere)
+        if (!this.currentUser.role) return true; // Default permissivo para evitar bloqueos en dev
 
         const role = ROLES[this.currentUser.role];
-        return role && role.permissions.includes(permission);
+        if (!role) {
+            console.warn(`Role '${this.currentUser.role}' not found in configuration.`);
+            return false;
+        }
+
+        // Admin tiene acceso a todo si tiene el permiso o si es superadmin implícito
+        if (this.currentUser.role === 'admin') return true;
+
+        return role.permissions.includes(permission);
     },
 
+    /**
+     * Helpers de Roles
+     */
     isAdmin() {
-        return this.currentUser?.role === 'admin' || !this.currentUser?.role;
+        return this.currentUser?.role === 'admin';
     },
 
     isTherapist() {
-        return this.currentUser?.role === 'therapist';
+        // Un admin también actúa como terapeuta si tiene 'therapist' asignado
+        return this.currentUser?.role === 'therapist' || (this.isAdmin() && this.currentUser?.therapist);
     },
 
-    isReceptionist() {
-        return this.currentUser?.role === 'receptionist';
+    /**
+     * Obtiene el terapeuta seleccionado actualmente (para vistas de calendario)
+     */
+    getSelectedTherapist() {
+        return this.selectedTherapist || this.currentUser?.therapist || 'diana';
     },
 
-    canEditItem(item) {
-        if (this.isAdmin()) return true;
-
-        if (this.isTherapist()) {
-            if (item.therapist) {
-                return item.therapist === this.currentUser.therapist;
-            }
-            return false;
+    /**
+     * Cambia el terapeuta seleccionado (solo admins)
+     */
+    setSelectedTherapist(therapistId) {
+        if (this.can('switch_therapist_view')) {
+            this.selectedTherapist = therapistId;
+            // Disparar evento de cambio si fuera necesario
+            return true;
         }
-
-        if (this.isReceptionist()) {
-            return item.createdBy === this.currentUser.email;
-        }
-
         return false;
     },
 
+    /**
+     * Verifica si el usuario actual puede ver los detalles de un paciente/cita
+     * Basado en asignación de terapeuta
+     */
     canViewDetails(item) {
+        if (!item) return false;
         if (this.isAdmin()) return true;
-        if (this.isReceptionist()) return true; // Recepcionista ve todo (para cobrar/agendar)
 
-        if (this.isTherapist()) {
-            if (item.therapist) {
-                return item.therapist === this.currentUser.therapist;
-            }
-            return false;
-        }
-        return false;
+        const itemTherapist = item.therapist || 'diana'; // Default legacy
+        const userTherapist = this.currentUser?.therapist;
+
+        return itemTherapist === userTherapist;
     },
 
+    /**
+     * Verifica si puede editar item
+     */
+    canEditItem(item) {
+        return this.canViewDetails(item);
+    },
+
+    /**
+     * Helpers de UI (NUEVOS)
+     */
     getDisplayName() {
         return this.currentUser?.displayName || this.currentUser?.email || 'Usuario';
     },
 
     getRole() {
-        return this.currentUser?.role || 'admin';
+        if (!this.currentUser?.role) return 'Usuario';
+        return ROLES[this.currentUser.role]?.label || this.currentUser.role;
     },
 
-    getSelectedTherapist() {
-        return this.selectedTherapist;
-    },
-
-    setSelectedTherapist(therapist) {
-        console.log("🔧 setSelectedTherapist llamado con:", therapist);
-        console.log("🔧 can('switch_therapist_view'):", this.can('switch_therapist_view'));
-        if (this.can('switch_therapist_view')) {
-            this.selectedTherapist = therapist;
-            console.log("✅ selectedTherapist actualizado a:", this.selectedTherapist);
-        } else {
-            console.log("❌ No tiene permiso para cambiar vista de terapeuta");
-        }
+    getEmail() {
+        return this.currentUser?.email || '';
     }
 };

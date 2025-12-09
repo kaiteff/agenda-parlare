@@ -94,10 +94,6 @@ export const PatientManager = {
             console.log('  🔄 Configurando listeners de datos...');
             await this._setupDataListeners();
 
-            // 4. El renderizado inicial lo hará el listener de Firestore cuando lleguen los datos
-            // No renderizamos aquí porque los datos aún no están disponibles
-            // PatientUI.renderList();
-
             console.log('✅ PatientManager inicializado correctamente');
 
         } catch (error) {
@@ -113,11 +109,46 @@ export const PatientManager = {
     _setupUIListeners() {
         const { dom } = PatientState;
 
-        // Modal de nuevo paciente
+        // 1. Delegación de eventos para la LISTA DE PACIENTES (Clicks en tarjetas)
+        if (dom.patientsList) {
+            dom.patientsList.addEventListener('click', (e) => {
+                const card = e.target.closest('.patient-card');
+                if (card) {
+                    const patientId = card.dataset.patientId;
+                    const patient = PatientState.patients.find(p => p.id === patientId);
+                    if (patient) {
+                        PatientModals.openHistory(patient);
+                    }
+                }
+            });
+        }
+
+        // 2. Delegación de eventos para el HEADER (Botón de agregar paciente)
+        if (dom.patientsHeader) {
+            dom.patientsHeader.addEventListener('click', (e) => {
+                const addBtn = e.target.closest('#addPatientBtn');
+                const exitInactiveBtn = e.target.closest('#exitInactiveModeBtn');
+
+                if (addBtn) {
+                    PatientModals.openNewPatient();
+                } else if (exitInactiveBtn) {
+                    PatientState.setViewMode('today'); // O el modo por defecto
+                    PatientUI.renderList();
+                }
+            });
+        }
+
+        // 3. Búsqueda en tiempo real
+        if (dom.searchInput) {
+            dom.searchInput.addEventListener('input', () => {
+                // Al escribir, renderizar de nuevo (el filtro se aplica en renderList)
+                PatientUI.renderList();
+            });
+        }
+
+        // 4. Listeners estáticos de modales
         if (dom.closeNewPatientModalBtn) {
-            dom.closeNewPatientModalBtn.onclick = () => {
-                PatientModals.closeNewPatient();
-            };
+            dom.closeNewPatientModalBtn.onclick = () => PatientModals.closeNewPatient();
         }
 
         if (dom.saveNewPatientBtn) {
@@ -126,27 +157,18 @@ export const PatientManager = {
             };
         }
 
-        // Botón de ver inactivos
-        const viewInactiveBtn = document.getElementById('viewInactivePatientsBtn');
-        if (viewInactiveBtn) {
-            viewInactiveBtn.onclick = () => {
+        // Botón de ver inactivos (Footer del sidebar)
+        if (dom.viewInactivePatientsBtn) {
+            dom.viewInactivePatientsBtn.onclick = () => {
                 PatientModals.openInactivePatients();
             };
         }
 
-        // Modal de inactivos
-        if (dom.closeInactivePatientsBtn) {
-            dom.closeInactivePatientsBtn.onclick = () => {
-                PatientModals.closeInactivePatients();
-            };
-        }
-        if (dom.closeInactivePatientsFooterBtn) {
-            dom.closeInactivePatientsFooterBtn.onclick = () => {
-                PatientModals.closeInactivePatients();
-            };
-        }
+        // Controles de modales de inactivos
+        if (dom.closeInactivePatientsBtn) dom.closeInactivePatientsBtn.onclick = () => PatientModals.closeInactivePatients();
+        if (dom.closeInactivePatientsFooterBtn) dom.closeInactivePatientsFooterBtn.onclick = () => PatientModals.closeInactivePatients();
 
-        console.log('  ✅ Listeners de UI configurados');
+        console.log('  ✅ Listeners de UI configurados (incluyendo delegación)');
     },
 
     /**
@@ -193,6 +215,15 @@ export const PatientManager = {
 
             // Re-renderizar lista cuando cambien las citas
             PatientUI.renderList();
+
+            // CRITICAL FIX: Si el modal de historial está abierto, refrescarlo
+            // Esto asegura que al confirmar/pagar, se vea reflejado al instante
+            const selectedPatient = PatientState.getSelectedPatient();
+            if (selectedPatient &&
+                PatientState.dom.patientHistoryModal &&
+                !PatientState.dom.patientHistoryModal.classList.contains('hidden')) {
+                PatientModals.openHistory(selectedPatient);
+            }
 
             console.log(`🔄 Citas actualizadas: ${appointments.length} citas`);
         });
@@ -298,12 +329,24 @@ if (typeof window !== 'undefined') {
 
     // Funciones específicas para onclick en HTML
     window.openPatientHistoryModal = (patient) => PatientModals.openHistory(patient);
+
+    // Nueva función robusta para abrir por ID desde HTML
+    window.openPatientHistoryById = (id) => {
+        const patient = PatientState.patients.find(p => p.id === id);
+        if (patient) {
+            PatientModals.openHistory(patient);
+        } else {
+            console.error("Paciente no encontrado para ID:", id);
+        }
+    };
+
     window.closePatientHistoryModal = () => PatientModals.closeHistory();
     window.openNewPatientModal = () => PatientModals.openNewPatient();
     window.closeNewPatientModal = () => PatientModals.closeNewPatient();
     window.quickMarkAsPaid = (id) => PatientActions.markAsPaid(id);
     window.toggleConfirmationFromList = (name) => PatientActions.toggleConfirmation(name);
     window.reactivatePatientFromList = (id, name) => PatientActions.reactivatePatient(id, name);
+    window.quickToggleConfirm = (id, status) => PatientActions.toggleConfirmationDirect(id, status);
 
     console.log('✅ PatientManager expuesto globalmente');
 }

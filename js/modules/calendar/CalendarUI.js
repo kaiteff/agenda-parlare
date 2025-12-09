@@ -149,17 +149,17 @@ export const CalendarUI = {
                                     // Gris, cursor normal (no mano), pero legible
                                     cardClasses = 'bg-gray-100 text-gray-700 border border-gray-200 cursor-default';
                                 } else {
-                                    cardClasses = `${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'} cursor-pointer hover:shadow-md`;
+                                    cardClasses = `${isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-green-200 shadow-md' : 'bg-white border-l-4 border-l-red-500 text-gray-700 shadow-sm border-gray-100'} cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md transition-all duration-200`;
                                 }
 
-                                eventCard.className = `${heightClass} rounded-md shadow-sm text-xs font-medium transition-all px-1.5 py-0.5 flex flex-col justify-center ${cardClasses}`;
+                                eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses}`;
 
                                 eventCard.innerHTML = `
                                     <div class="flex items-center justify-between gap-1 w-full">
-                                        <div class="truncate font-semibold flex-1 leading-tight">${eventName}</div>
-                                        ${isConfirmed && canView ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</div>` : ''}
+                                        <div class="truncate font-semibold flex-1 leading-tight tracking-tight">${eventName}</div>
+                                        ${isConfirmed && canView ? `<div class="flex-shrink-0 bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] shadow-sm ring-2 ring-white" title="Confirmado">✓</div>` : ''}
                                     </div>
-                                    ${matchingEvents.length === 1 && canView ? `<div class="text-[10px] opacity-90 leading-tight">$${evt.cost || '0'}</div>` : ''}
+                                    ${matchingEvents.length === 1 && canView ? `<div class="text-[10px] opacity-90 leading-tight font-light mt-0.5">$${evt.cost || '0'}</div>` : ''}
                                 `;
 
                                 eventCard.onclick = (e) => {
@@ -199,48 +199,8 @@ export const CalendarUI = {
     },
 
     renderBusySlots(dateStr) {
-        const { busySlotsContainer, busySlotsList } = CalendarState.dom;
-        if (!busySlotsContainer || !busySlotsList) return;
-
-        const currentFilter = AuthManager.getSelectedTherapist();
-        const therapist = (currentFilter && currentFilter !== 'all') ? currentFilter : (AuthManager.currentUser?.therapist || 'diana');
-
-        const busySlots = CalendarState.appointments.filter(p => {
-            const apptTherapist = p.therapist || 'diana';
-            if (apptTherapist !== therapist) return false;
-
-            const pDate = new Date(p.date);
-            let pDateStr;
-            try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
-            return pDateStr === dateStr;
-        }).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        if (busySlots.length === 0) {
-            busySlotsContainer.classList.add('hidden');
-            return;
-        }
-
-        busySlotsContainer.classList.remove('hidden');
-        busySlotsList.innerHTML = '';
-
-        busySlots.forEach(slot => {
-            const canView = AuthManager.canViewDetails(slot);
-            const slotName = slot.name; // SIEMPRE MOSTRAR NOMBRE
-
-            const slotDate = new Date(slot.date);
-            const timeStr = formatTime12h(slotDate);
-
-            const slotEl = document.createElement('div');
-            const colorClass = canView ? "bg-red-50 border-red-200" : "bg-gray-100 border-gray-200";
-            const textColor = canView ? "text-red-600" : "text-gray-500";
-
-            slotEl.className = `flex items-center justify-between border rounded px-2 py-1.5 ${colorClass}`;
-            slotEl.innerHTML = `
-                <span class="text-xs font-semibold ${textColor}">${timeStr}</span>
-                <span class="text-xs ${textColor} truncate ml-2">${slotName}</span>
-            `;
-            busySlotsList.appendChild(slotEl);
-        });
+        // Feature "Ocupación del día" eliminada por solicitud del usuario
+        // para reducir carga visual redundante.
     },
 
     updateStatus(msg) {
