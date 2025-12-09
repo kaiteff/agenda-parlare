@@ -1,18 +1,20 @@
 import { db } from '../firebase.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
+    getFirestore,
     doc,
+    collection,
     getDoc,
     setDoc,
     updateDoc,
     serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     getAuth,
     signInWithEmailAndPassword,
     signOut,
     onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // Lazy-load auth and db to ensure they are initialized
 let _auth = null;
@@ -26,12 +28,14 @@ function getAuthInstance() {
 }
 
 function getDbInstance() {
-    if (!_db) {
-        if (db) {
+    // SIEMPRE intentar obtener una instancia fresca compatible con este módulo
+    if (!_db && db?.app) {
+        try {
+            _db = getFirestore(db.app);
+            console.log("🔄 AuthManager: Created local Firestore instance from db.app for compatibility (v10.7.1)");
+        } catch (e) {
+            console.warn("⚠️ AuthManager: Could not create local Firestore, using imported db", e);
             _db = db;
-        } else {
-            console.warn("⚠️ AuthManager: db no está definido al importar, intentando recuperar de firebase.js...");
-            // En caso de emergencia, podríamos intentar re-importar o esperar
         }
     }
     return _db || db;
@@ -66,7 +70,8 @@ export const ROLES = {
             'create_appointment',
             'edit_own_appointment',
             'view_own_payments',
-            'edit_own_payments'
+            'edit_own_payments',
+            'switch_therapist_view'
         ]
     },
     receptionist: {
@@ -169,16 +174,21 @@ export const AuthManager = {
     async getUserData(uid) {
         try {
             const database = getDbInstance();
-            if (!database) {
-                throw new Error("Firestore not initialized");
-            }
-            const userDoc = await getDoc(doc(database, "users", uid));
+            console.log("🔍 AuthManager: checking user data for", uid);
+
+            // Usar doc importado del CDN 10.7.1 que debe coincidir con database
+            const userRef = doc(database, "users", uid);
+            const userDoc = await getDoc(userRef);
+
             if (userDoc.exists()) {
+                console.log("✅ User profile found:", userDoc.data());
                 return userDoc.data();
+            } else {
+                console.warn("⚠️ User profile document does not exist for UID:", uid);
             }
             return null;
         } catch (error) {
-            console.error("Error getting user data:", error);
+            console.error("❌ Error getting user data:", error);
             return null;
         }
     },
@@ -236,6 +246,19 @@ export const AuthManager = {
             return item.createdBy === this.currentUser.email;
         }
 
+        return false;
+    },
+
+    canViewDetails(item) {
+        if (this.isAdmin()) return true;
+        if (this.isReceptionist()) return true; // Recepcionista ve todo (para cobrar/agendar)
+
+        if (this.isTherapist()) {
+            if (item.therapist) {
+                return item.therapist === this.currentUser.therapist;
+            }
+            return false;
+        }
         return false;
     },
 

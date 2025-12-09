@@ -54,7 +54,13 @@ export const PatientFilters = {
             if (selectedTherapist && selectedTherapist !== 'all') {
                 matchesTherapist = (apt.therapist === selectedTherapist);
             } else {
-                matchesTherapist = AuthManager.canEditItem(apt);
+                // Si no hay filtro específico, aplicar reglas de rol
+                if (AuthManager.can('view_all_appointments')) {
+                    matchesTherapist = true;
+                } else {
+                    // Si no puede ver todas, debe coincidir con su terapeuta asignado
+                    matchesTherapist = (apt.therapist === AuthManager.currentUser?.therapist);
+                }
             }
 
             return aptDate >= today &&
@@ -90,7 +96,13 @@ export const PatientFilters = {
             if (selectedTherapist && selectedTherapist !== 'all') {
                 matchesTherapist = (apt.therapist === selectedTherapist);
             } else {
-                matchesTherapist = AuthManager.canEditItem(apt);
+                // Si no hay filtro específico, aplicar reglas de rol
+                if (AuthManager.can('view_all_appointments')) {
+                    matchesTherapist = true;
+                } else {
+                    // Si no puede ver todas, debe coincidir con su terapeuta asignado
+                    matchesTherapist = (apt.therapist === AuthManager.currentUser?.therapist);
+                }
             }
 
             return aptDate >= tomorrow &&

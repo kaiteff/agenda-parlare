@@ -136,24 +136,35 @@ export const CalendarUI = {
                             container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5 overflow-hidden";
 
                             matchingEvents.forEach(evt => {
+                                const canView = AuthManager.canViewDetails(evt);
+                                const eventName = evt.name; // SIEMPRE MOSTRAR NOMBRE
+
                                 const eventCard = document.createElement('div');
                                 const isPaid = evt.isPaid;
                                 const isConfirmed = evt.confirmed;
                                 const heightClass = matchingEvents.length > 1 ? 'flex-1 min-h-0' : 'h-full';
 
-                                eventCard.className = `${heightClass} rounded-md shadow-sm text-xs font-medium cursor-pointer transition-all hover:shadow-md px-1.5 py-0.5 flex flex-col justify-center ${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'}`;
+                                let cardClasses;
+                                if (!canView) {
+                                    // Gris, cursor normal (no mano), pero legible
+                                    cardClasses = 'bg-gray-100 text-gray-700 border border-gray-200 cursor-default';
+                                } else {
+                                    cardClasses = `${isPaid ? 'bg-green-600 text-white' : 'bg-red-100 text-red-800 border border-red-200'} cursor-pointer hover:shadow-md`;
+                                }
+
+                                eventCard.className = `${heightClass} rounded-md shadow-sm text-xs font-medium transition-all px-1.5 py-0.5 flex flex-col justify-center ${cardClasses}`;
 
                                 eventCard.innerHTML = `
                                     <div class="flex items-center justify-between gap-1 w-full">
-                                        <div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>
-                                        ${isConfirmed ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</div>` : ''}
+                                        <div class="truncate font-semibold flex-1 leading-tight">${eventName}</div>
+                                        ${isConfirmed && canView ? `<div class="flex-shrink-0 ${isPaid ? 'bg-blue-500' : 'bg-blue-600'} text-white rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</div>` : ''}
                                     </div>
-                                    ${matchingEvents.length === 1 ? `<div class="text-[10px] opacity-90 leading-tight">$${evt.cost || '0'}</div>` : ''}
+                                    ${matchingEvents.length === 1 && canView ? `<div class="text-[10px] opacity-90 leading-tight">$${evt.cost || '0'}</div>` : ''}
                                 `;
 
                                 eventCard.onclick = (e) => {
                                     e.stopPropagation();
-                                    if (onEventClick) onEventClick(evt);
+                                    if (canView && onEventClick) onEventClick(evt);
                                 };
 
                                 container.appendChild(eventCard);
@@ -213,16 +224,22 @@ export const CalendarUI = {
         busySlotsList.innerHTML = '';
 
         busySlots.forEach(slot => {
+            const canView = AuthManager.canViewDetails(slot);
+            const slotName = slot.name; // SIEMPRE MOSTRAR NOMBRE
+
             const slotDate = new Date(slot.date);
             const hour = slotDate.getHours();
             const minute = slotDate.getMinutes();
             const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
             const slotEl = document.createElement('div');
-            slotEl.className = "flex items-center justify-between bg-red-50 border border-red-200 rounded px-2 py-1.5";
+            const colorClass = canView ? "bg-red-50 border-red-200" : "bg-gray-100 border-gray-200";
+            const textColor = canView ? "text-red-600" : "text-gray-500";
+
+            slotEl.className = `flex items-center justify-between border rounded px-2 py-1.5 ${colorClass}`;
             slotEl.innerHTML = `
-                <span class="text-xs font-semibold text-red-700">${timeStr}</span>
-                <span class="text-xs text-red-600 truncate ml-2">${slot.name}</span>
+                <span class="text-xs font-semibold ${textColor}">${timeStr}</span>
+                <span class="text-xs ${textColor} truncate ml-2">${slotName}</span>
             `;
             busySlotsList.appendChild(slotEl);
         });

@@ -18,6 +18,7 @@
 
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
+import { AuthManager } from '../AuthManager.js';
 
 /**
  * Gestión de UI y renderizado
@@ -108,7 +109,7 @@ export const PatientUI = {
                     <span class="text-xs font-bold text-gray-600">
                         ${modeLabels[viewMode] || `ACTIVOS (${count})`}
                     </span>
-                    <button id="btnNewPatient" onclick="event.stopPropagation(); event.preventDefault(); console.log('Click Nuevo'); if(window.openNewPatientModal) window.openNewPatientModal(); else if(window.PatientManager) window.PatientManager.api.openNewPatient(); else alert('Espere un momento, cargando sistema...');" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
+                    <button id="btnNewPatient" onclick="event.stopPropagation(); event.preventDefault(); window.PatientManager.api.openNewPatient();" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -264,15 +265,20 @@ export const PatientUI = {
             }
         }
 
+        const canViewDetails = AuthManager.canViewDetails(patient);
+
         patientEl.innerHTML = `
             <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center gap-2">
-                    <div class="font-bold text-gray-800">${patient.name}</div>
-                    ${confirmBadge}
+                    <div class="font-bold text-gray-800">
+                        ${patient.name}
+                    </div>
+                    ${canViewDetails ? confirmBadge : confirmBadge.replace('<button', '<span').replace('</button>', '</span>').replace(/onclick=".*?"/, '')}
                 </div>
                 ${timeStr ? `<div class="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">🕒 ${timeStr}</div>` : ''}
             </div>
 
+            ${canViewDetails ? `
             <div class="flex items-center justify-between text-xs mt-2">
                 <div class="text-gray-500">
                     <span class="font-medium text-gray-700">${patient.totalPaid}</span> pagadas
@@ -300,18 +306,25 @@ export const PatientUI = {
         }).join('')}
                     
                     ${pendingPayments.length > 2 ?
-                    `<div class="text-xs text-orange-600 text-center mt-1">+${pendingPayments.length - 2} más (click para ver)</div>`
-                    : ''}
+                        `<div class="text-xs text-orange-600 text-center mt-1">+${pendingPayments.length - 2} más (click para ver)</div>`
+                        : ''}
                 </div>
             ` : ''}
+            ` : ''} 
         `;
 
-        // Click handler para abrir historial
-        patientEl.onclick = () => {
-            if (window.openPatientHistoryModal) {
-                window.openPatientHistoryModal(patient);
-            }
-        };
+        // Click handler para abrir historial (solo si tiene permisos)
+        if (canViewDetails) {
+            patientEl.onclick = () => {
+                if (window.openPatientHistoryModal) {
+                    window.openPatientHistoryModal(patient);
+                }
+            };
+        } else {
+            patientEl.classList.add('opacity-75');
+            patientEl.classList.remove('cursor-pointer', 'hover:bg-blue-50');
+            patientEl.classList.add('cursor-default');
+        }
 
         return patientEl;
     },

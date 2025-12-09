@@ -18,6 +18,8 @@ const logoutBtn = document.getElementById('logoutBtn');
 // Inicializar aplicación
 console.log("🚀 Iniciando Agenda Parlare...");
 
+
+
 // Manejar estado de autenticación
 async function handleAuthState(user) {
     if (user) {
@@ -90,19 +92,16 @@ function updateUserUI() {
                 const newTherapist = e.target.value;
                 AuthManager.setSelectedTherapist(newTherapist);
 
-                // Recargar lista de pacientes si existe la función
-                if (typeof window.renderPatientsList === 'function') {
-                    console.log("🔄 Recargando lista de pacientes (OLD)...");
-                    window.renderPatientsList();
-                } else if (window.PatientManager) {
-                    console.log("🔄 Recargando lista de pacientes (NEW)...");
+                // Recargar lista de pacientes
+                if (window.PatientManager) {
+                    console.log("🔄 Recargando lista de pacientes...");
                     window.PatientManager.api.refreshList();
                 }
 
                 // Recargar calendario
-                if (typeof renderCalendar === 'function') {
+                if (typeof window.renderCalendar === 'function') {
                     console.log("🔄 Recargando calendario...");
-                    renderCalendar();
+                    window.renderCalendar();
                 }
             };
         } else {
