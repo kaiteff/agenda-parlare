@@ -10,7 +10,7 @@ import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
 import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday } from '../../utils/validators.js';
-import { addDays } from '../../utils/dateUtils.js';
+import { addDays, formatTime12h, formatDateLocal } from '../../utils/dateUtils.js';
 
 export const CalendarModal = {
     init() {
@@ -222,7 +222,7 @@ export const CalendarModal = {
                 nextDate.setDate(nextDate.getDate() + 7);
             }
 
-            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+            const timeStr = formatTime12h(hour);
             const container = CalendarState.dom.patientSearchInput.parentNode;
             const div = document.createElement('div');
             div.id = 'schedulingSuggestion';
@@ -285,16 +285,79 @@ export const CalendarModal = {
         const { rescheduleOptions } = CalendarState.dom;
         rescheduleOptions.innerHTML = '';
 
+        // 1. Opciones "Hoy y esta Semana" (Slots disponibles próximos)
+        this.addAvailableSlotsSuggestions(rescheduleOptions);
+
+        // 2. Opciones "Prox Semana y 2 Semanas" (Smart Check)
         const nextWeek = addDays(currentDate, 7);
         const next2Weeks = addDays(currentDate, 14);
 
-        rescheduleOptions.appendChild(this.createRescheduleChip('Misma hora prox. semana', nextWeek));
-        rescheduleOptions.appendChild(this.createRescheduleChip('En 2 semanas', next2Weeks));
+        if (!checkSlotConflict(nextWeek.toISOString(), CalendarState.appointments)) {
+            rescheduleOptions.appendChild(this.createRescheduleChip('Misma hora prox. semana', nextWeek));
+        }
+
+        if (!checkSlotConflict(next2Weeks.toISOString(), CalendarState.appointments)) {
+            rescheduleOptions.appendChild(this.createRescheduleChip('En 2 semanas', next2Weeks));
+        }
     },
 
-    createRescheduleChip(label, dateObj) {
+    addAvailableSlotsSuggestions(container) {
+        // Busca 2 slots libres HOY y 2 slots libres MAÑANA dentro del horario laboral
+        const now = new Date();
+        const candidates = [];
+
+        // Función helper para buscar huecos
+        const findSlots = (baseDate, labelPrefix) => {
+            const startHour = 9;
+            const endHour = 19;
+            const currentHour = baseDate.getDate() === now.getDate() ? Math.max(startHour, now.getHours() + 1) : startHour;
+
+            for (let h = currentHour; h <= endHour; h++) {
+                if (candidates.length >= 4) break; // Limite de sugerencias totales
+
+                const d = new Date(baseDate);
+                d.setHours(h, 0, 0, 0);
+
+                // Ignorar pasado
+                if (d <= now) continue;
+
+                // Verificar conflicto (usando ISOString local manual para asegurar fecha correcta)
+                const offset = d.getTimezoneOffset() * 60000;
+                const iso = (new Date(d - offset)).toISOString();
+
+                if (!checkSlotConflict(iso, CalendarState.appointments)) {
+                    candidates.push({ date: d, label: `${labelPrefix} ${formatTime12h(h)}` });
+                }
+            }
+        };
+
+        // Buscar Hoy
+        findSlots(now, 'Hoy');
+
+        // Buscar Mañana (si hoy hay pocos)
+        if (candidates.length < 3) {
+            const tomorrow = addDays(now, 1);
+            if (isNotSunday(tomorrow)) {
+                findSlots(tomorrow, 'Mañana');
+            } else {
+                // Si mañana es domingo, buscar lunes
+                const monday = addDays(now, 2);
+                findSlots(monday, 'Lunes');
+            }
+        }
+
+        // Renderizar sugerencias verdes
+        candidates.slice(0, 3).forEach(cand => {
+            const chip = this.createRescheduleChip(cand.label, cand.date, 'green');
+            container.appendChild(chip);
+        });
+    },
+
+    createRescheduleChip(label, dateObj, color = 'blue') {
         const chip = document.createElement('div');
-        chip.className = "bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs cursor-pointer hover:bg-blue-100 border border-blue-200 transition-colors";
+        const bgClass = color === 'green' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
+
+        chip.className = `${bgClass} px-3 py-1 rounded-full text-xs cursor-pointer border transition-colors whitespace-nowrap`;
         chip.textContent = label;
         chip.onclick = () => {
             const offset = dateObj.getTimezoneOffset() * 60000;

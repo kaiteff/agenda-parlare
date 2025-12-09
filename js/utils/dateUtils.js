@@ -134,3 +134,29 @@ export function getMonthNameES(date) {
     ];
     return months[date.getMonth()];
 }
+
+/**
+ * Formatea una hora en formato 12h (AM/PM)
+ * @param {Date|number} input - Objeto Date o número entero de hora (0-23)
+ * @returns {string} - Hora formateada (ej. "10:00 am", "1:00 pm")
+ */
+export function formatTime12h(input) {
+    let hour, minute = 0;
+
+    if (input instanceof Date) {
+        hour = input.getHours();
+        minute = input.getMinutes();
+    } else if (typeof input === 'number') {
+        hour = Math.floor(input);
+        minute = Math.round((input - hour) * 60);
+    } else {
+        return "";
+    }
+
+    const period = hour >= 12 ? 'pm' : 'am';
+    let displayHour = hour % 12;
+    if (displayHour === 0) displayHour = 12; // 0 horas es 12 am, 12 horas es 12 pm
+
+    const displayMinute = minute.toString().padStart(2, '0');
+    return `${displayHour}:${displayMinute} ${period}.`;
+}

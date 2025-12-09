@@ -5,7 +5,7 @@
 
 import { CalendarState } from './CalendarState.js';
 import { AuthManager } from '../../managers/AuthManager.js';
-import { addDays, formatDateLocal } from '../../utils/dateUtils.js';
+import { addDays, formatDateLocal, formatTime12h } from '../../utils/dateUtils.js';
 
 export const CalendarUI = {
     /**
@@ -72,7 +72,7 @@ export const CalendarUI = {
 
                 const hourCell = document.createElement('div');
                 hourCell.className = "p-2 border-r border-b border-gray-200 text-right";
-                hourCell.innerHTML = `<span class="text-xs font-medium text-gray-500">${hour.toString().padStart(2, '0')}:00</span>`;
+                hourCell.innerHTML = `<span class="text-xs font-medium text-gray-500">${formatTime12h(hour)}</span>`;
                 row.appendChild(hourCell);
 
                 weekDays.forEach((dayDate) => {
@@ -228,9 +228,7 @@ export const CalendarUI = {
             const slotName = slot.name; // SIEMPRE MOSTRAR NOMBRE
 
             const slotDate = new Date(slot.date);
-            const hour = slotDate.getHours();
-            const minute = slotDate.getMinutes();
-            const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            const timeStr = formatTime12h(slotDate);
 
             const slotEl = document.createElement('div');
             const colorClass = canView ? "bg-red-50 border-red-200" : "bg-gray-100 border-gray-200";

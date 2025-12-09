@@ -19,6 +19,7 @@
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
 import { AuthManager } from '../AuthManager.js';
+import { formatTime12h } from '../../utils/dateUtils.js';
 
 /**
  * Gestión de UI y renderizado
@@ -215,10 +216,7 @@ export const PatientUI = {
 
         // Para hoy/mañana: mostrar hora y confirmación
         if ((viewMode === 'today' || viewMode === 'tomorrow') && patient.nextAppointment) {
-            timeStr = patient.nextAppointment.toLocaleTimeString('es-ES', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            timeStr = formatTime12h(patient.nextAppointment);
 
             const confirmText = patient.confirmed ? '✓ OK' : '⏳ Pendiente';
             const confirmClass = patient.confirmed
@@ -250,10 +248,7 @@ export const PatientUI = {
             }
 
             if (dayLabel) {
-                timeStr = aptDate.toLocaleTimeString('es-ES', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                timeStr = formatTime12h(aptDate);
 
                 // Mostrar badge con estado de confirmación
                 if (patient.confirmed) {
