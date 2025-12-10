@@ -6,6 +6,7 @@ import { PatientManager } from './managers/PatientManager.js';
 import { AuthManager } from './managers/AuthManager.js';
 import { ScheduleManager } from './managers/ScheduleManager.js';
 import { ModalService } from './utils/ModalService.js';
+import { ToastService } from './utils/ToastService.js';
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
@@ -137,6 +138,10 @@ async function initializeModules() {
         console.log("🚀 Inicializando ScheduleManager...");
         ScheduleManager.init();
     } catch (e) { console.error("❌ Error ScheduleManager:", e); }
+
+    try {
+        ToastService.init();
+    } catch (e) { console.error("❌ Error ToastService:", e); }
 
     console.log("✅ Todos los módulos inicializados");
 }

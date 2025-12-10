@@ -15,6 +15,7 @@ import { isSlotFree } from '../utils/validators.js';
 import { createAppointment } from '../services/appointmentService.js';
 import { getStartOfWeek, addDays, formatDateLocal } from '../utils/dateUtils.js';
 import { ModalService } from '../utils/ModalService.js';
+import { ToastService } from '../utils/ToastService.js';
 
 export const ScheduleManager = {
     // Estado interno
@@ -443,7 +444,7 @@ export const ScheduleManager = {
                 if (result.success) createdCount++;
             }
 
-            await ModalService.alert("Éxito", `Se agendaron ${createdCount} citas exitosamente.`, "success");
+            await ToastService.success(`Se agendaron ${createdCount} citas exitosamente.`, 4000);
             this.closeModal();
 
         } catch (error) {

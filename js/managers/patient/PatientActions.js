@@ -25,6 +25,9 @@ import { PatientModals } from './PatientModals.js';
 import { AuthManager } from '../AuthManager.js';
 import { ScheduleManager } from '../ScheduleManager.js';
 import { ModalService } from '../../utils/ModalService.js';
+import { ToastService } from '../../utils/ToastService.js';
+import { SheetService } from '../../services/google/SheetService.js';
+import { getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /**
  * Acciones del usuario sobre pacientes
@@ -50,7 +53,7 @@ export const PatientActions = {
 
         // Validación
         if (!firstName || !lastName) {
-            await ModalService.alert("Campos requeridos", "Por favor ingrese nombre y apellidos.", "warning");
+            ToastService.warning("Por favor ingrese nombre y apellidos.");
             return false;
         }
 
@@ -88,7 +91,7 @@ export const PatientActions = {
 
                 return true;
             } else {
-                await ModalService.alert("Error", 'Error al crear paciente: ' + result.error, "error");
+                ToastService.error('Error al crear paciente: ' + result.error);
                 return false;
             }
         } catch (error) {
@@ -125,10 +128,26 @@ export const PatientActions = {
                 button.disabled = true;
             }
 
-            // Actualizar en Firestore
-            await updateDoc(doc(db, collectionPath, appointmentId), {
+            // 1. Obtener datos para Sheet (antes o durante el update)
+            const aptRef = doc(db, collectionPath, appointmentId);
+            const aptSnap = await getDoc(aptRef);
+            const aptData = aptSnap.exists() ? aptSnap.data() : null;
+
+            // 2. Actualizar en Firestore
+            await updateDoc(aptRef, {
                 isPaid: true
             });
+
+            // 3. Registrar en Google Sheets
+            if (aptData) {
+                // No esperamos a que termine para no bloquear la UI, pero iniciamos el proceso
+                SheetService.logPayment({
+                    date: aptData.date,
+                    patientName: aptData.name,
+                    amount: aptData.cost || 0,
+                    therapist: aptData.therapist || 'diana'
+                }).catch(err => console.error("Error logging to sheet:", err));
+            }
 
             // Feedback visual
             if (button) {
@@ -150,6 +169,7 @@ export const PatientActions = {
             }, 300);
 
             console.log('✅ PatientActions: Pago marcado:', appointmentId);
+            ToastService.success("Pago registrado correctamente");
             return true;
 
         } catch (error) {
@@ -201,7 +221,7 @@ export const PatientActions = {
             }).sort((a, b) => new Date(a.date) - new Date(b.date));
 
             if (upcomingAppointments.length === 0) {
-                await ModalService.alert("Sin Cita", "No se encontró cita para hoy o mañana", "info");
+                ToastService.info("No se encontró cita para hoy o mañana", 2000);
                 return false;
             }
 
@@ -218,6 +238,8 @@ export const PatientActions = {
             const dayLabel = isToday ? 'hoy' : 'mañana';
 
             console.log(`✅ PatientActions: Cita de ${dayLabel} ${newStatus ? 'confirmada' : 'desconfirmada'} para ${patientName}`);
+
+            ToastService.success(`Cita de ${dayLabel} ${newStatus ? 'CONFIRMADA' : 'Marcada como Pendiente'}`);
 
             // Forzar re-render de la lista para actualizar UI inmediatamente
             // El listener de Firestore también lo hará, pero esto asegura actualización inmediata
@@ -260,7 +282,7 @@ export const PatientActions = {
             const result = await deactivatePatientService(profileId);
 
             if (result.success) {
-                await ModalService.alert("Éxito", `Paciente "${patientName}" dado de baja exitosamente.`, "success");
+                ToastService.success(`Paciente "${patientName}" dado de baja exitosamente.`);
 
                 // Cerrar modal de historial
                 if (PatientState.dom.patientHistoryModal) {
@@ -296,7 +318,7 @@ export const PatientActions = {
             const result = await reactivatePatientService(profileId);
 
             if (result.success) {
-                await ModalService.alert("Éxito", `Paciente "${patientName}" reactivado exitosamente.`, "success");
+                ToastService.success(`Paciente "${patientName}" reactivado exitosamente.`);
                 console.log('✅ PatientActions: Paciente reactivado:', patientName);
                 return true;
             } else {
@@ -351,7 +373,7 @@ export const PatientActions = {
             const result = await deletePatientProfile(profileId, patientName);
 
             if (result.success) {
-                await ModalService.alert("Éxito", `Paciente "${patientName}" eliminado permanentemente.`, "success");
+                ToastService.success(`Paciente "${patientName}" eliminado permanentemente.`);
 
                 // Cerrar modal
                 if (PatientState.dom.patientHistoryModal) {
@@ -386,7 +408,7 @@ export const PatientActions = {
     async updatePatientProfile(profileId, updates, patientName) {
         try {
             const { updateDoc, doc } = await import('../../firebase.js');
-            const { collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+            const { collection, query, where, getDocs, writeBatch, getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
             // 1. Update Profile
             const profileUpdates = {
@@ -430,6 +452,7 @@ export const PatientActions = {
             }
 
             console.log(`✅ PatientActions: Perfil actualizado para ${patientName}`);
+            ToastService.success("Perfil actualizado correctamente");
             return true;
 
         } catch (error) {
@@ -450,10 +473,23 @@ export const PatientActions = {
                 confirmed: !currentStatus
             });
             console.log('✅ PatientActions: Confirmación alternada para', appointmentId);
+
+            const newStatus = !currentStatus;
+            ToastService.success(newStatus ? 'Asistencia CONFIRMADA' : 'Asistencia PENDIENTE');
+
             return true;
         } catch (error) {
             console.error('❌ PatientActions: Error al toggleconfirm:', error);
             return false;
         }
     }
+};
+
+// Funciones globales para botones HTML
+window.quickToggleConfirm = (aptId, currentStatus) => {
+    PatientActions.toggleConfirmationDirect(aptId, currentStatus);
+};
+
+window.quickMarkAsPaid = (aptId) => {
+    PatientActions.markAsPaid(aptId);
 };
