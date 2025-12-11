@@ -252,7 +252,7 @@ export const PatientUI = {
                         <div class="w-10 h-10 rounded-full ${statusColor} text-white flex items-center justify-center text-sm font-bold shadow-sm">
                             ${patient.name.charAt(0).toUpperCase()}
                         </div>
-                        ${patient.therapist === 'sam' ? '<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[8px] font-bold flex items-center justify-center border border-white" title="Sam">S</span>' : ''}
+                        <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full ${patient.therapist === 'sam' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'} text-[8px] font-bold flex items-center justify-center border border-white" title="${patient.therapist === 'sam' ? 'Sam' : 'Diana'}">${patient.therapist === 'sam' ? 'S' : 'D'}</span>
                     </div>
                     
                     <div class="flex-1 min-w-0">

@@ -168,6 +168,37 @@ export const PatientManager = {
         if (dom.closeInactivePatientsBtn) dom.closeInactivePatientsBtn.onclick = () => PatientModals.closeInactivePatients();
         if (dom.closeInactivePatientsFooterBtn) dom.closeInactivePatientsFooterBtn.onclick = () => PatientModals.closeInactivePatients();
 
+        // 5. Delegación para HISTORIAL (Confirmar/Pagar)
+        if (dom.patientHistoryList) {
+            dom.patientHistoryList.addEventListener('click', async (e) => {
+                const confirmBtn = e.target.closest('.confirm-btn');
+                const payBtn = e.target.closest('.pay-btn');
+
+                if (confirmBtn) {
+                    e.stopPropagation();
+                    const id = confirmBtn.dataset.id;
+                    const status = confirmBtn.dataset.status === 'true';
+                    await PatientActions.toggleConfirmationDirect(id, status);
+                } else if (payBtn) {
+                    e.stopPropagation();
+                    const id = payBtn.dataset.id;
+                    await PatientActions.markAsPaid(id);
+                }
+            });
+        }
+
+        // 6. Delegación para INACTIVOS (Reactivar)
+        if (dom.inactivePatientsList) {
+            dom.inactivePatientsList.addEventListener('click', async (e) => {
+                const reactivateBtn = e.target.closest('.reactivate-btn');
+                if (reactivateBtn) {
+                    const id = reactivateBtn.dataset.id;
+                    const name = reactivateBtn.dataset.name;
+                    await PatientActions.reactivatePatient(id, name);
+                }
+            });
+        }
+
         console.log('  ✅ Listeners de UI configurados (incluyendo delegación)');
     },
 
@@ -343,10 +374,10 @@ if (typeof window !== 'undefined') {
     window.closePatientHistoryModal = () => PatientModals.closeHistory();
     window.openNewPatientModal = () => PatientModals.openNewPatient();
     window.closeNewPatientModal = () => PatientModals.closeNewPatient();
-    window.quickMarkAsPaid = (id) => PatientActions.markAsPaid(id);
-    window.toggleConfirmationFromList = (name) => PatientActions.toggleConfirmation(name);
-    window.reactivatePatientFromList = (id, name) => PatientActions.reactivatePatient(id, name);
-    window.quickToggleConfirm = (id, status) => PatientActions.toggleConfirmationDirect(id, status);
+    window.closeNewPatientModal = () => PatientModals.closeNewPatient();
+
+    // Globals removed: quickMarkAsPaid, toggleConfirmationFromList, reactivatePatientFromList, quickToggleConfirm
+    // These are now handled by event delegation in PatientManager._setupUIListeners
 
     console.log('✅ PatientManager expuesto globalmente');
 }

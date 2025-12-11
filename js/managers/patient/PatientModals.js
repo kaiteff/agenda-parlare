@@ -361,7 +361,7 @@ export const PatientModals = {
             }
         };
 
-        const showPayBtn = canViewFinancials && !apt.isPaid && !apt.isCancelled && isPast;
+        const showPayBtn = canViewFinancials && !apt.isPaid && !apt.isCancelled;
         const showConfirmBtn = !apt.isCancelled && !isPast;
 
         // Costo solo si canViewFinancials
@@ -376,18 +376,22 @@ export const PatientModals = {
                     ${costHtml}
                     <div class="flex gap-2">
                          ${showConfirmBtn ? `
-                            <button onclick="event.stopPropagation(); quickToggleConfirm('${apt.id}', ${apt.confirmed})" 
-                                    class="px-2 py-1 ${apt.confirmed ? 'bg-gray-100 text-gray-600 border border-gray-300' : 'bg-blue-600 text-white'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1 transition-colors" title="${apt.confirmed ? 'Quitar confirmación' : 'Confirmar asistencia'}">
-                                ${apt.confirmed ? '<span class="text-[10px]">❌</span>' : '<span class="text-[10px]">✓</span> Confirmar'}
+                            <button type="button" 
+                                    class="confirm-btn px-2 py-1 ${apt.confirmed ? 'bg-gray-100 text-gray-600 border border-gray-300' : 'bg-blue-600 text-white'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1 transition-colors" 
+                                    title="${apt.confirmed ? 'Quitar confirmación' : 'Confirmar asistencia'}"
+                                    data-id="${apt.id}" 
+                                    data-status="${apt.confirmed}">
+                                ${apt.confirmed ? '<span class="text-[10px] pointer-events-none">❌</span>' : '<span class="text-[10px] pointer-events-none">✓</span> Confirmar'}
                             </button>
                         ` : ''}
                         
                         ${showPayBtn ? `
-                            <button onclick="event.stopPropagation(); quickMarkAsPaid('${apt.id}')" 
-                                    class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-bold shadow-sm transition-transform active:scale-95 flex items-center gap-1">
-                                <span>$</span> Pagar
-                            </button>
-                        ` : ''}
+                                <button type="button"
+                                        class="pay-btn px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-bold shadow-sm transition-transform active:scale-95 flex items-center gap-1"
+                                        data-id="${apt.id}">
+                                    <span class="pointer-events-none">$</span> Pagar
+                                </button>
+                            ` : ''}
                     </div>
                 </div>
             `;
@@ -552,8 +556,9 @@ export const PatientModals = {
                     </div>
                 </div>
                 <button 
-                    onclick="reactivatePatientFromList('${patient.id}', '${patient.name}')"
-                    class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+                    class="reactivate-btn px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                    data-id="${patient.id}"
+                    data-name="${patient.name}">
                     ✓ Reactivar
                 </button>
             `;

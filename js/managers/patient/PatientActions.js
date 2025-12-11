@@ -484,12 +484,3 @@ export const PatientActions = {
         }
     }
 };
-
-// Funciones globales para botones HTML
-window.quickToggleConfirm = (aptId, currentStatus) => {
-    PatientActions.toggleConfirmationDirect(aptId, currentStatus);
-};
-
-window.quickMarkAsPaid = (aptId) => {
-    PatientActions.markAsPaid(aptId);
-};
