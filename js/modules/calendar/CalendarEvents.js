@@ -40,7 +40,7 @@ export const CalendarEvents = {
             'calendarGrid', 'currentMonthLabel', 'prevWeekBtn', 'nextWeekBtn', 'todayBtn', 'statusMsg',
             'miniCalendarGrid', 'miniMonthLabel', 'miniPrevBtn', 'miniNextBtn',
             'eventModal', 'modalTitle', 'patientSearch', 'patientFirstName', 'patientLastName',
-            'appointmentDate', 'cost', 'saveBtn', 'deleteBtn', 'payBtn', 'confirmBtn', 'cancelBtn',
+            'appointmentDate', 'cost', 'appointmentTherapist', 'saveBtn', 'deleteBtn', 'payBtn', 'confirmBtn', 'cancelBtn',
             'rescheduleSection', 'rescheduleOptions', 'busySlotsContainer', 'busySlotsList',
             'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList'
         ];
@@ -53,6 +53,7 @@ export const CalendarEvents = {
             else if (id === 'patientLastName') dom.patientLastNameInput = el;
             else if (id === 'appointmentDate') dom.appointmentDateInput = el;
             else if (id === 'cost') dom.costInput = el;
+            else if (id === 'appointmentTherapist') dom.appointmentTherapistInput = el;
             else if (id === 'isRecurring') dom.isRecurringCheckbox = el;
             else dom[id] = el;
         });

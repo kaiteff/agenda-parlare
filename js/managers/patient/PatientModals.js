@@ -548,15 +548,38 @@ export const PatientModals = {
             const patientEl = document.createElement('div');
             patientEl.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200 mb-2 flex items-center justify-between';
 
+            // Calcular deuda
+            const pendingApts = PatientFilters.getPendingPayments(patient.name);
+            const totalDebt = pendingApts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
+
+            const debtHtml = totalDebt > 0
+                ? `<div class="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 flex items-center gap-1 mt-1 w-fit">
+                     <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                     Deuda: $${totalDebt}
+                   </div>`
+                : '';
+
+            const legacyHtml = patient.legacyData
+                ? `<div class="mt-1 text-xs text-gray-500 bg-gray-100 p-1.5 rounded border border-gray-200">
+                     <div class="font-medium text-gray-700 mb-0.5">Recordatorio:</div>
+                     <div class="flex items-center gap-2">
+                        <span>📅 ${patient.legacyData.usualDay} ${patient.legacyData.usualTime}</span>
+                        <span>💰 $${patient.legacyData.lastCost}</span>
+                     </div>
+                   </div>`
+                : '';
+
             patientEl.innerHTML = `
                 <div>
                     <div class="font-semibold text-gray-800">${patient.name}</div>
                     <div class="text-xs text-gray-500">
                         Terapeuta: ${patient.therapist === 'diana' ? 'Diana' : 'Sam'}
                     </div>
+                    ${debtHtml}
+                    ${legacyHtml}
                 </div>
                 <button 
-                    class="reactivate-btn px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                    class="reactivate-btn px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm h-fit"
                     data-id="${patient.id}"
                     data-name="${patient.name}">
                     ✓ Reactivar

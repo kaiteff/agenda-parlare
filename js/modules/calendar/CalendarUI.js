@@ -65,7 +65,8 @@ export const CalendarUI = {
             grid.appendChild(headerRow);
 
             // Time Slots
-            for (let hour = 9; hour <= 20; hour++) {
+            // UPDATE: Iniciar a las 8 AM por solicitud del usuario
+            for (let hour = 8; hour <= 20; hour++) {
                 const row = document.createElement('div');
                 const rowColor = hour % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
                 row.className = `grid grid-cols-7 ${rowColor}`;
@@ -107,12 +108,21 @@ export const CalendarUI = {
 
                             slotEvents.forEach(evt => {
                                 const therapistName = (evt.therapist || 'diana') === 'diana' ? 'Diana' : 'Sam';
-                                const bgColor = (evt.therapist || 'diana') === 'diana' ? 'bg-pink-100 text-pink-800 border-pink-200' : 'bg-blue-100 text-blue-800 border-blue-200';
+
+                                // LOGIC FIX: Si está pagado, mostrar en VERDE igual que en la tarjeta individual
+                                let bgColor = '';
+                                if (evt.isPaid) {
+                                    bgColor = 'bg-green-100 text-green-800 border-green-200';
+                                } else {
+                                    bgColor = (evt.therapist || 'diana') === 'diana'
+                                        ? 'bg-pink-100 text-pink-800 border-pink-200'
+                                        : 'bg-blue-100 text-blue-800 border-blue-200';
+                                }
 
                                 const chip = document.createElement('div');
                                 chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} cursor-pointer hover:brightness-95 truncate`;
-                                chip.textContent = `${therapistName} Ocupada`;
-                                chip.title = `${therapistName}: ${evt.name}`;
+                                chip.textContent = evt.isPaid ? 'Pagado' : `${therapistName}`; // Mostrar "Pagado" o Nombre
+                                chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})`;
 
                                 chip.onclick = (e) => {
                                     e.stopPropagation();

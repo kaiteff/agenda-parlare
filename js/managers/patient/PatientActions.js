@@ -21,6 +21,7 @@
 import { db, updateDoc, doc, collectionPath } from '../../firebase.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
+import { PatientFilters } from './PatientFilters.js';
 import { PatientModals } from './PatientModals.js';
 import { AuthManager } from '../AuthManager.js';
 import { ScheduleManager } from '../ScheduleManager.js';
@@ -133,27 +134,67 @@ export const PatientActions = {
             const aptSnap = await getDoc(aptRef);
             const aptData = aptSnap.exists() ? aptSnap.data() : null;
 
-            // 2. Actualizar en Firestore
-            await updateDoc(aptRef, {
-                isPaid: true
-            });
+            // CHECK: Toggle de Pago (Pagar o Anular)
+            if (aptData && aptData.isPaid) {
+                // CASO 1: YA ESTABA PAGADO -> ANULAR (REEMBOLSO EN SHEETS)
 
-            // 3. Registrar en Google Sheets
-            if (aptData) {
-                // No esperamos a que termine para no bloquear la UI, pero iniciamos el proceso
+                if (!await ModalService.confirm("Anular Pago", `Esta cita ya está pagada. ¿Deseas <b>ANULAR</b> el pago?<br><br>Esto registrará un monto negativo en Excel para cancelar la suma.`)) {
+                    // Restaurar botón si cancela
+                    if (button) {
+                        button.textContent = '✓ Pagado';
+                        button.disabled = false;
+                        button.classList.add('bg-green-700');
+                    }
+                    return true; // No hacemos cambios
+                }
+
+                // A. Actualizar DB (Quitar pagado)
+                await updateDoc(aptRef, { isPaid: false });
+
+                // B. Registrar Negativo en Sheets
+                const cost = aptData.cost || 0;
                 SheetService.logPayment({
                     date: aptData.date,
                     patientName: aptData.name,
-                    amount: aptData.cost || 0,
+                    amount: -Math.abs(cost), // Monto negativo (corrección)
+                    status: "ANULADO",
                     therapist: aptData.therapist || 'diana'
-                }).catch(err => console.error("Error logging to sheet:", err));
-            }
+                }).catch(err => console.error("Error logging reversal:", err));
 
-            // Feedback visual
-            if (button) {
-                button.textContent = '✓ Pagado!';
-                button.classList.remove('bg-green-600', 'hover:bg-green-700');
-                button.classList.add('bg-green-700', 'cursor-default');
+                // C. Feedback UI
+                ToastService.info("Pago ANULADO correctamente");
+
+                // Actualizar botón visualmente al estado "Por Pagar"
+                if (button) {
+                    button.textContent = 'Marcar Pagado';
+                    button.classList.remove('bg-green-700', 'cursor-default');
+                    button.classList.add('bg-green-600', 'hover:bg-green-700');
+                    button.disabled = false;
+                }
+
+            } else {
+                // CASO 2: NO ESTABA PAGADO -> PAGAR NORMAL
+
+                await updateDoc(aptRef, { isPaid: true });
+
+                const cost = aptData.cost || 0;
+                SheetService.logPayment({
+                    date: aptData.date || new Date().toISOString(),
+                    patientName: aptData.name || 'Desconocido',
+                    amount: Math.abs(cost),
+                    status: "Pagado",
+                    therapist: aptData.therapist || 'diana'
+                }).catch(err => console.error("Error logging payment:", err));
+
+                ToastService.success("Pago registrado correctamente");
+
+                if (button) {
+                    button.textContent = '✓ Pagado!';
+                    button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    button.classList.add('bg-green-700', 'cursor-default'); // Visualmente 'disabled'
+                    // No deshabilitamos 'true' para permitir anular después si se equivocó
+                    button.disabled = false;
+                }
             }
 
             // Si el modal de historial está abierto, actualizarlo
@@ -269,9 +310,19 @@ export const PatientActions = {
      * @returns {Promise<boolean>} true si se desactivó correctamente
      */
     async deactivatePatient(profileId, patientName) {
+        // Calcular deuda pendiente antes de confirmar
+        const pendingApts = PatientFilters.getPendingPayments(patientName);
+        const totalDebt = pendingApts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
+
+        let confirmMessage = `¿Estás seguro de dar de baja a "<strong>${patientName}</strong>"?<br><br>El paciente quedará inactivo pero sus datos se conservarán.`;
+
+        if (totalDebt > 0) {
+            confirmMessage += `<br><br><div class="bg-red-50 p-3 rounded border border-red-200 text-red-700 font-bold text-center">⚠️ ALERTA DE DEUDA ⚠️<br>Este paciente debe: $${totalDebt}</div>`;
+        }
+
         if (!await ModalService.confirm(
             "Dar de baja",
-            `¿Estás seguro de dar de baja a "<strong>${patientName}</strong>"?<br><br>El paciente quedará inactivo pero sus datos se conservarán.`,
+            confirmMessage,
             "Dar de baja",
             "Cancelar"
         )) {
@@ -279,7 +330,30 @@ export const PatientActions = {
         }
 
         try {
-            const result = await deactivatePatientService(profileId);
+            // Recopilar info para recordatorio antes de borrar
+            let legacyData = null;
+            const appointments = PatientState.appointments || [];
+            // Buscar última/próxima cita representativa para guardar costo y horario
+            const recentApt = appointments
+                .filter(a => a.name === patientName && !a.isCancelled)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))[0]; // La más reciente o futura
+
+            if (recentApt) {
+                const dateObj = new Date(recentApt.date);
+                const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                legacyData = {
+                    usualDay: days[dateObj.getDay()],
+                    usualTime: dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                    lastCost: recentApt.cost
+                };
+            }
+
+            // 1. Cancelar citas futuras
+            const { cancelFutureAppointments } = await import('../../services/patientService.js');
+            await cancelFutureAppointments(patientName);
+
+            // 2. Desactivar perfil guardando recordatorio
+            const result = await deactivatePatientService(profileId, null, legacyData);
 
             if (result.success) {
                 ToastService.success(`Paciente "${patientName}" dado de baja exitosamente.`);

@@ -124,7 +124,9 @@ export const PatientFilters = {
         const selectedTherapist = AuthManager.getSelectedTherapist();
 
         return patients.filter(p => {
-            if (p.isActive === false) return false;
+            // REMOVED: if (p.isActive === false) return false;
+            // La UI se encarga de filtrar activos/inactivos según el modo de vista.
+            // Si filtramos aquí, la vista de "Papelera" (inactivos) quedaría vacía siempre.
 
             // 1. Si hay un terapeuta específico seleccionado (ej: "Diana" o "Sam")
             if (selectedTherapist && selectedTherapist !== 'all') {
@@ -167,7 +169,7 @@ export const PatientFilters = {
                 const matchesTherapist = AuthManager.canViewDetails(apt);
 
                 return apt.name === patientName &&
-                    aptDate < today &&
+                    (aptDate < today || (aptDate.toDateString() === today.toDateString())) && // Incuye hoy y pasadas
                     !apt.isPaid &&
                     !apt.isCancelled &&
                     matchesTherapist;
@@ -207,6 +209,7 @@ export const PatientFilters = {
      * Y asegura enlazar con el ID correcto del perfil del paciente
      * @private
      */
+
     _groupByPatient(appointments) {
         const patientsMap = new Map();
         // Obtener lista completa de perfiles para cruzar IDs
@@ -218,21 +221,25 @@ export const PatientFilters = {
 
             if (!existing || aptTime < existing.appointmentTime) {
                 // Buscar el perfil real del paciente para obtener su ID correcto
-                // Esto es crucial para que el click en "Hoy/Mañana" funcione y abra el historial
                 const patientProfile = allPatients.find(p => p.name === apt.name);
+
+                // CRUCIAL: Si el paciente está INACTIVO, no mostrarlo en listas de Hoy/Mañana
+                if (patientProfile && patientProfile.isActive === false) {
+                    return;
+                }
+
                 const realPatientId = patientProfile ? patientProfile.id : (apt.patientId || null);
 
                 if (!realPatientId) {
-                    // Si no encontramos ID, no podremos abrir historial, pero al menos mostramos la tarjeta
-                    // console.warn(`⚠️ PatientFilters: No se encontró perfil para ${apt.name}`);
+                    // Si no encontramos ID, alerta suave
                 }
 
                 patientsMap.set(apt.name, {
                     name: apt.name,
                     appointmentTime: aptTime,
                     confirmed: apt.confirmed || false,
-                    therapist: apt.therapist, // Importante conservar terapeuta
-                    id: realPatientId, // USAR ID DEL PERFIL PARA QUE EL CLICK FUNCIONE
+                    therapist: apt.therapist,
+                    id: realPatientId,
                     hasProfile: !!patientProfile
                 });
             }

@@ -18,3 +18,7 @@ Thumbs.db
 
 # Configuración sensible (credenciales de Firebase)
 js/firebase.js
+
+# Google Drive files
+*.gsheet
+*.gdoc

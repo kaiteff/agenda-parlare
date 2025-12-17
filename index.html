@@ -403,11 +403,22 @@
                     </div>
 
                     <!-- Date & Time -->
+                    <!-- Date & Time -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora</label>
+                        <input type="datetime-local" id="appointmentDate"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+
+                    <!-- Therapist & Cost -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora</label>
-                            <input type="datetime-local" id="appointmentDate"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
+                            <select id="appointmentTherapist"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
+                                <option value="diana">Diana</option>
+                                <option value="sam">Sam</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Costo ($)</label>

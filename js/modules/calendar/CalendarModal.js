@@ -50,6 +50,11 @@ export const CalendarModal = {
         dom.patientLastNameInput.disabled = false;
         dom.costInput.value = '0';
 
+        // Reset/Default Therapist
+        if (dom.appointmentTherapistInput) {
+            dom.appointmentTherapistInput.value = AuthManager.currentUser?.therapist || 'diana';
+        }
+
         // Reset buttons
         dom.saveBtn.classList.remove('hidden');
         dom.deleteBtn.classList.add('hidden');
@@ -98,6 +103,11 @@ export const CalendarModal = {
 
         dom.costInput.value = ev.cost || 0;
 
+        // Set Therapist
+        if (dom.appointmentTherapistInput) {
+            dom.appointmentTherapistInput.value = ev.therapist || 'diana';
+        }
+
         // Buttons
         dom.saveBtn.classList.remove('hidden');
         dom.deleteBtn.classList.remove('hidden');
@@ -144,7 +154,7 @@ export const CalendarModal = {
     },
 
     populatePatientSuggestions(query) {
-        const { patientSuggestions, patientFirstNameInput, patientLastNameInput } = CalendarState.dom;
+        const { patientSuggestions, patientFirstNameInput, patientLastNameInput, appointmentTherapistInput } = CalendarState.dom;
         if (!patientSuggestions) return;
 
         patientSuggestions.innerHTML = '';
@@ -169,6 +179,12 @@ export const CalendarModal = {
                     patientLastNameInput.value = p.lastName || '';
                     patientFirstNameInput.disabled = true;
                     patientLastNameInput.disabled = true;
+
+                    // Auto-select therapist
+                    if (appointmentTherapistInput) {
+                        appointmentTherapistInput.value = p.therapist || 'diana';
+                    }
+
                     patientSuggestions.classList.add('hidden');
                     this.analyzeAndSuggest(p.name);
                 };
@@ -383,9 +399,23 @@ export const CalendarModal = {
         const name = dom.patientSearchInput.value.trim();
         const dateStr = dom.appointmentDateInput.value;
         const cost = parseFloat(dom.costInput.value) || 0;
+        const therapist = dom.appointmentTherapistInput ? dom.appointmentTherapistInput.value : (AuthManager.currentUser?.therapist || 'diana');
 
         if (!name || !dateStr) {
             await ModalService.alert("Campos Incompletos", "Por favor completa nombre y fecha", "warning");
+            return;
+        }
+
+        if (cost <= 0) {
+            await ModalService.alert("Costo Requerido", "Por favor ingresa un costo válido para la cita (mayor a 0).", "warning");
+            // Highlight input
+            if (dom.costInput) {
+                dom.costInput.focus();
+                dom.costInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                dom.costInput.oninput = () => {
+                    dom.costInput.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+                };
+            }
             return;
         }
 
@@ -410,12 +440,18 @@ export const CalendarModal = {
                 PatientState.patients
             );
 
+            // Should also update profile therapist if needed? 
+            // For now, we prefer the explicit selection for the appointment.
+            // But if it's a new patient, we might want to save the therapist preference? 
+            // ensurePatientProfile doesn't seem to take therapist as arg easily without modifying it.
+            // Let's stick to appointment-level assignment for now.
+
             const appointmentData = {
                 name: profile.name,
                 patientId: profile.id,
                 date: dateStr,
                 cost: cost,
-                therapist: profile.therapist || AuthManager.currentUser?.therapist || 'diana'
+                therapist: therapist
             };
 
             if (CalendarState.selectedEventId) {

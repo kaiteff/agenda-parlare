@@ -55,8 +55,8 @@ export const SheetService = {
                     dateObj.toLocaleDateString(), // Col A: Fecha
                     dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Col B: Hora Texto
                     paymentData.patientName,      // Col C: Paciente
-                    paymentData.amount,           // Col D: Monto
-                    "Pagado",                     // Col E: Estatus
+                    paymentData.amount,           // Col D: Monto (Puede ser negativo)
+                    paymentData.status || "Pagado", // Col E: Estatus (Pagado o ANULADO)
                     new Date().toISOString(),     // Col F: ID Técnico
                     dateObj.getHours()            // Col G: HORA SIMPLE (Clave para fórmula) 
                 ]

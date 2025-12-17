@@ -50,16 +50,32 @@ export const CalendarData = {
         const result = await togglePaymentStatus(id, currentStatus);
 
         // Si se marcó como pagado exitosamente, registrar en Sheets
-        if (result.success && result.newState === true) {
+        if (result.success) {
             const appointment = CalendarState.appointments.find(a => a.id === id);
+
             if (appointment) {
-                console.log("💰 CalendarData: Marcado como pagado, enviando a Sheets...", appointment);
-                SheetService.logPayment({
-                    date: appointment.date,
-                    patientName: appointment.name,
-                    amount: appointment.cost || 0,
-                    therapist: appointment.therapist
-                }).catch(err => console.error("Error background sheet logging:", err));
+                if (result.newState === true) {
+                    // PAGO POSITIVO
+                    console.log("💰 CalendarData: Marcado como PAGADO, enviando a Sheets...", appointment);
+                    SheetService.logPayment({
+                        date: appointment.date,
+                        patientName: appointment.name,
+                        amount: Math.abs(appointment.cost || 0),
+                        status: "Pagado",
+                        therapist: appointment.therapist
+                    }).catch(err => console.error("Error sheet logging:", err));
+                } else {
+                    // PAGO NEGATIVO (ANULACIÓN)
+                    console.log("💰 CalendarData: Marcado como ANULADO, enviando corrección a Sheets...", appointment);
+                    SheetService.logPayment({
+                        date: appointment.date,
+                        patientName: appointment.name,
+                        // Enviamos negativo para restar
+                        amount: -Math.abs(appointment.cost || 0),
+                        status: "ANULADO",
+                        therapist: appointment.therapist
+                    }).catch(err => console.error("Error sheet logging (reversal):", err));
+                }
             }
         }
         return result;
