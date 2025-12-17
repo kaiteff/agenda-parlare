@@ -104,5 +104,20 @@ export const SheetService = {
             }
             return false;
         }
+    },
+    /**
+     * Registra un evento de asistencia/cancelación en el Sheet
+     * @param {Object} eventData { date, patientName, status, therapist }
+     */
+    async logAttendance(eventData) {
+        console.log(`📝 SheetService: Registrando asistencia/estatus...`, eventData);
+        // Reutilizamos la lógica de logPayment pero con monto 0 y estatus personalizado
+        return this.logPayment({
+            date: eventData.date,
+            patientName: eventData.patientName,
+            amount: 0,
+            status: eventData.status,
+            therapist: eventData.therapist
+        });
     }
 };

@@ -12,6 +12,7 @@ import { ensurePatientProfile } from '../../services/patientService.js';
 import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday } from '../../utils/validators.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
+import { SheetService } from '../../services/google/SheetService.js';
 
 export const CalendarModal = {
     init() {
@@ -506,6 +507,14 @@ export const CalendarModal = {
         if (evt) {
             const newStatus = !evt.confirmed;
             await CalendarData.updateEvent(CalendarState.selectedEventId, { confirmed: newStatus });
+
+            SheetService.logAttendance({
+                date: evt.date,
+                patientName: evt.name,
+                status: newStatus ? "CONFIRMADO" : "PENDIENTE",
+                therapist: evt.therapist
+            }).catch(e => console.error("Error logging confirmation:", e));
+
             this.closeModal();
         }
     },
@@ -515,7 +524,19 @@ export const CalendarModal = {
 
         if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
 
-        await CalendarData.cancelEvent(CalendarState.selectedEventId);
+        const eventId = CalendarState.selectedEventId;
+        const evt = CalendarState.appointments.find(a => a.id === eventId);
+
+        await CalendarData.cancelEvent(eventId);
+
+        if (evt) {
+            SheetService.logAttendance({
+                date: evt.date,
+                patientName: evt.name,
+                status: "CANCELADO",
+                therapist: evt.therapist
+            }).catch(e => console.error("Error logging cancellation:", e));
+        }
 
         const reschedule = await ModalService.confirm(
             "Reagendar",

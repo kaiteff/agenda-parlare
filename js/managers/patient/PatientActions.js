@@ -274,6 +274,14 @@ export const PatientActions = {
                 confirmed: newStatus
             });
 
+            // Log en Sheet
+            SheetService.logAttendance({
+                date: appointment.date,
+                patientName: patientName,
+                status: newStatus ? "CONFIRMADO" : "PENDIENTE",
+                therapist: appointment.therapist
+            }).catch(e => console.error("Error logging attendance:", e));
+
             const aptDate = new Date(appointment.date);
             const isToday = aptDate >= today && aptDate < tomorrow;
             const dayLabel = isToday ? 'hoy' : 'mañana';
