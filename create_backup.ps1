@@ -16,8 +16,8 @@ $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $backupFolder = Join-Path $backupRoot $timestamp
 New-Item -ItemType Directory -Path $backupFolder | Out-Null
 
-# Archivos y carpetas a respaldar (excluyendo la carpeta de backups)
-$itemsToBackup = Get-ChildItem -Path . -Force | Where-Object { $_.Name -ne 'backups' }
+# Archivos y carpetas a respaldar (excluyendo la carpeta de backups y Diana)
+$itemsToBackup = Get-ChildItem -Path . -Force | Where-Object { $_.Name -ne 'backups' -and $_.Name -ne 'Diana' }
 
 # Copiar archivos y carpetas
 foreach ($item in $itemsToBackup) {

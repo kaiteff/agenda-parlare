@@ -22,3 +22,6 @@ js/firebase.js
 # Google Drive files
 *.gsheet
 *.gdoc
+
+# Exclude Google Drive synced folders
+Diana/
