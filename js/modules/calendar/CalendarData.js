@@ -6,6 +6,7 @@
 import { db, collectionPath, collection, onSnapshot, query } from '../../firebase.js';
 import { CalendarState } from './CalendarState.js';
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from '../../services/appointmentService.js';
+import { SheetService } from '../../services/google/SheetService.js';
 
 export const CalendarData = {
     /**
@@ -46,7 +47,22 @@ export const CalendarData = {
     },
 
     async togglePayment(id, currentStatus) {
-        return await togglePaymentStatus(id, currentStatus);
+        const result = await togglePaymentStatus(id, currentStatus);
+
+        // Si se marcó como pagado exitosamente, registrar en Sheets
+        if (result.success && result.newState === true) {
+            const appointment = CalendarState.appointments.find(a => a.id === id);
+            if (appointment) {
+                console.log("💰 CalendarData: Marcado como pagado, enviando a Sheets...", appointment);
+                SheetService.logPayment({
+                    date: appointment.date,
+                    patientName: appointment.name,
+                    amount: appointment.cost || 0,
+                    therapist: appointment.therapist
+                }).catch(err => console.error("Error background sheet logging:", err));
+            }
+        }
+        return result;
     },
 
     async toggleConfirmation(id, currentStatus) {
