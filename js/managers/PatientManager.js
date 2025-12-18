@@ -21,6 +21,7 @@ import { PatientFilters } from './patient/PatientFilters.js';
 import { PatientUI } from './patient/PatientUI.js';
 import { PatientActions } from './patient/PatientActions.js';
 import { PatientModals } from './patient/PatientModals.js';
+import { PatientModalsHTML } from './patient/PatientModalsHTML.js';
 import { patientProfiles, patientsData } from '../firebase.js';
 import { onSnapshot, collection, query } from '../firebase.js';
 
@@ -78,6 +79,10 @@ export const PatientManager = {
         console.log('🏥 Inicializando PatientManager...');
 
         try {
+            // 0. Inyectar Modales (Refactoring Phase 2)
+            console.log('  💉 Inyectando HTML de modales...');
+            PatientModalsHTML.inject();
+
             // 1. Inicializar referencias DOM
             console.log('  📋 Inicializando DOM...');
             PatientState.initDOM();

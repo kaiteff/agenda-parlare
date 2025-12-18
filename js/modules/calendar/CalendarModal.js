@@ -165,7 +165,7 @@ export const CalendarModal = {
         }
 
         const matches = PatientState.patients.filter(p =>
-            p.name.toLowerCase().includes(query.toLowerCase()) && p.isActive
+            p.name.toLowerCase().includes(query.toLowerCase()) && p.isActive !== false
         );
 
         if (matches.length > 0) {

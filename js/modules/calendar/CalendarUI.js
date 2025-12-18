@@ -120,9 +120,16 @@ export const CalendarUI = {
                                 }
 
                                 const chip = document.createElement('div');
-                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} cursor-pointer hover:brightness-95 truncate`;
-                                chip.textContent = evt.isPaid ? 'Pagado' : `${therapistName}`; // Mostrar "Pagado" o Nombre
-                                chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})`;
+                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} cursor-pointer hover:brightness-95 truncate px-1 gap-1`;
+
+                                // Content: Name + Checkmark if confirmed
+                                let content = evt.isPaid ? 'Pagado' : `${therapistName}`;
+                                if (evt.confirmed) {
+                                    content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
+                                }
+
+                                chip.innerHTML = content;
+                                chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})${evt.confirmed ? ' - CONFIRMADO' : ''}`;
 
                                 chip.onclick = (e) => {
                                     e.stopPropagation();
