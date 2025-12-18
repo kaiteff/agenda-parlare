@@ -143,8 +143,135 @@ async function initializeModules() {
         ToastService.init();
     } catch (e) { console.error("❌ Error ToastService:", e); }
 
+    // Init Financial Report UI
+    const openReportsBtn = document.getElementById('openReportsBtn');
+    if (openReportsBtn) {
+        openReportsBtn.addEventListener('click', async () => {
+            // Dynamic import
+            const { FinancialReport } = await import('./modules/reports/FinancialReport.js');
+            const { CalendarState } = await import('./modules/calendar/CalendarState.js');
+            const { AuthManager } = await import('./managers/AuthManager.js');
+
+            // Lógica de roles
+            const user = AuthManager.currentUser;
+            const role = user?.role;
+            const therapistId = user?.therapist;
+
+            let appointmentsToProcess = CalendarState.appointments;
+
+            // Si es Terapeuta (NO admin), filtrar sus citas
+            // Si es Admin, ve todo. Si es Recepción, ve todo pero con UI limitada luego.
+            // Filtrar explícitamente si el rol es 'therapist'
+            if (role === 'therapist') {
+                appointmentsToProcess = appointmentsToProcess.filter(a =>
+                    (a.therapist || 'diana').toLowerCase() === therapistId.toLowerCase()
+                );
+            }
+            // 2. Admin: Filtro visual actual (Solo Diana, Solo Sam, o Todos)
+            else if (role === 'admin' && AuthManager.can('switch_therapist_view')) {
+                const currentView = AuthManager.getSelectedTherapist(); // 'diana', 'sam', 'all'
+                if (currentView !== 'all') {
+                    appointmentsToProcess = appointmentsToProcess.filter(a =>
+                        (a.therapist || 'diana').toLowerCase() === currentView.toLowerCase()
+                    );
+                }
+            }
+
+            const report = FinancialReport.generateMonthlyReport(appointmentsToProcess, CalendarState.currentDate);
+            renderFinancialReport(report, role);
+        });
+    }
+
     console.log("✅ Todos los módulos inicializados");
 }
+
+function renderFinancialReport(report, userRole) {
+    const modal = document.getElementById('financialReportModal');
+    if (!modal) return;
+
+    // Elementos UI
+    const cardIncome = document.getElementById('cardIncome');
+    const cardPending = document.getElementById('cardPending');
+    const cardTotal = document.getElementById('cardTotal');
+    const breakdownSection = document.getElementById('therapistBreakdownSection');
+    const debtorsSection = document.getElementById('debtorsSection');
+
+    // Default Visibility (Reset)
+    if (cardIncome) cardIncome.classList.remove('hidden');
+    if (cardPending) cardPending.classList.remove('hidden');
+    // FIX: Ocultar desglose por terapeuta (Redundante según usuario)
+    if (breakdownSection) breakdownSection.classList.add('hidden');
+    if (debtorsSection) debtorsSection.classList.remove('hidden');
+
+    // APLICAR REGLAS DE VISIBILIDAD
+    // 1. Recepcionista (Yari): No ve Ingreso Total
+    if (userRole === 'receptionist') {
+        if (cardIncome) cardIncome.classList.add('hidden');
+    }
+
+    // Update Text
+    document.getElementById('reportMonthLabel').textContent = report.meta.monthName;
+    document.getElementById('reportTotalIncome').textContent = FinancialReport.formatCurrency(report.summary.totalIncome);
+    document.getElementById('reportTotalPending').textContent = FinancialReport.formatCurrency(report.summary.totalPending);
+    document.getElementById('reportTotalCount').textContent = report.summary.totalAppointments;
+    document.getElementById('reportCompletionRate').textContent = `${report.summary.completionRate}% Pagadas`;
+
+    // Render Debtors List
+    const debtorsBody = document.getElementById('debtorsListBody');
+    if (debtorsBody) {
+        debtorsBody.innerHTML = '';
+
+        if (!report.debtors || report.debtors.length === 0) {
+            debtorsBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-400">Excelente, no hay deudas pendientes del pasado.</td></tr>';
+        } else {
+            report.debtors.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-red-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-3 font-medium text-gray-900">${d.name}</td>
+                    <td class="px-6 py-3 text-gray-500 capitalize">${d.therapist}</td>
+                    <td class="px-6 py-3 text-right font-bold text-red-600">${FinancialReport.formatCurrency(d.totalDebt)}</td>
+                    <td class="px-6 py-3 text-xs text-gray-400">
+                        ${d.details.length} cita(s) pendiente(s) antes de hoy
+                    </td>
+                `;
+                debtorsBody.appendChild(tr);
+            });
+        }
+    }
+
+    // Render Breakdown
+    const tbody = document.getElementById('reportItemsBody');
+    tbody.innerHTML = '';
+
+    Object.values(report.byTherapist).forEach(t => {
+        // Solo mostrar terapeutas con actividad
+        if (t.count > 0) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50 transition-colors";
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-medium text-gray-900 capitalize">${t.name}</td>
+                <td class="px-6 py-4 text-gray-500">${t.count} <span class="text-xs">(${t.paidCount} pagadas)</span></td>
+                <td class="px-6 py-4 text-green-600 font-medium">${Math.round((t.paidCount / (t.count || 1)) * 100)}%</td>
+                <td class="px-6 py-4 text-right font-bold text-gray-900">${FinancialReport.formatCurrency(t.income)}</td>
+                <td class="px-6 py-4 text-right text-red-500">${FinancialReport.formatCurrency(t.pending)}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    });
+
+    modal.classList.remove('hidden');
+}
+
+// Helper needed because FinancialReport is imported inside the event
+const FinancialReport = {
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }).format(amount);
+    }
+};
 
 // Event Listeners
 loginForm.addEventListener('submit', async (e) => {
