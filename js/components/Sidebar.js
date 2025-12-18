@@ -1,46 +1,88 @@
 /**
- * PatientUI.js
- * Gestión de UI y renderizado de pacientes
- * 
- * Este módulo es responsable de:
- * - Renderizar la lista de pacientes
- * - Renderizar el header con contadores
- * - Renderizar tarjetas individuales de pacientes
- * - Configurar event listeners de UI
- * 
- * NO maneja:
- * - Lógica de negocio (ver PatientActions.js)
- * - Filtrado de datos (ver PatientFilters.js)
- * - Estado (ver PatientState.js)
- * 
- * @module PatientUI
+ * Sidebar.js
+ * Componente para gestionar la barra lateral (Lista de Pacientes)
  */
 
-import { PatientState } from './PatientState.js';
-import { PatientFilters } from './PatientFilters.js';
-import { AuthManager } from '../AuthManager.js';
-import { formatTime12h } from '../../utils/dateUtils.js';
-import { ModalService } from '../../utils/ModalService.js';
+import { PatientState } from '../managers/patient/PatientState.js';
+import { PatientFilters } from '../managers/patient/PatientFilters.js';
+import { PatientModals } from '../managers/patient/PatientModals.js';
+import { PatientActions } from '../managers/patient/PatientActions.js';
+import { formatTime12h } from '../utils/dateUtils.js';
+import { ModalService } from '../utils/ModalService.js';
 
-/**
- * Gestión de UI y renderizado
- */
-export const PatientUI = {
-
-    // ==========================================
-    // RENDERIZADO PRINCIPAL
-    // ==========================================
+export const Sidebar = {
 
     /**
-     * Renderiza la lista completa de pacientes según el modo actual
-     * Este es el método principal que coordina todo el renderizado
+     * Inicializa el componente Sidebar
      */
-    async renderList() {
-        const { dom, viewMode } = PatientState;
-        if (!dom.patientsList) {
-            console.warn('⚠️ PatientUI: DOM no inicializado');
-            return;
+    init() {
+        console.log('📌 Inicializando Sidebar...');
+        this._setupListeners();
+    },
+
+    /**
+     * Configura los listeners de eventos para la Sidebar
+     * @private
+     */
+    _setupListeners() {
+        const { dom } = PatientState;
+
+        // 1. Delegación de eventos para la LISTA DE PACIENTES (Clicks en tarjetas)
+        if (dom.patientsList) {
+            dom.patientsList.addEventListener('click', (e) => {
+                const card = e.target.closest('.patient-card');
+
+                // Si es un click en badges de deuda, no abrir historial inmediatamente (opcional)
+                // Pero por ahora mantenemos comportamiento: click en card -> historial
+
+                if (card) {
+                    const patientId = card.dataset.patientId;
+                    const patient = PatientState.patients.find(p => p.id === patientId);
+                    if (patient) {
+                        PatientModals.openHistory(patient);
+                    }
+                }
+            });
         }
+
+        // 2. HEADER DEL SIDEBAR (Botón agregar, Salir de inactivos)
+        if (dom.patientsHeader) {
+            dom.patientsHeader.addEventListener('click', (e) => {
+                const addBtn = e.target.closest('#addPatientBtn');
+                const exitInactiveBtn = e.target.closest('#exitInactiveModeBtn');
+
+                if (addBtn) {
+                    PatientModals.openNewPatient();
+                } else if (exitInactiveBtn) {
+                    PatientState.setViewMode('today');
+                    this.render(); // Re-renderizar
+                }
+            });
+        }
+
+        // 3. Búsqueda en tiempo real
+        if (dom.searchInput) {
+            dom.searchInput.addEventListener('input', () => {
+                this.render();
+            });
+        }
+
+        // 4. Footer del Sidebar (Ver inactivos)
+        if (dom.viewInactivePatientsBtn) {
+            dom.viewInactivePatientsBtn.onclick = () => {
+                PatientModals.openInactivePatients();
+            };
+        }
+
+        console.log('  ✅ Sidebar listeners configurados');
+    },
+
+    /**
+     * Renderiza la lista completa de pacientes
+     */
+    async render() {
+        const { dom, viewMode } = PatientState;
+        if (!dom.patientsList) return;
 
         try {
             const filters = PatientFilters;
@@ -53,7 +95,7 @@ export const PatientUI = {
             // Filtro activo/inactivo
             filteredPatients = filteredPatients.filter(p => (p.isActive !== false) !== showInactive);
 
-            const filteredCount = filteredPatients.length; // Guardar cuenta filtrada
+            const filteredCount = filteredPatients.length;
 
             // Filtro de búsqueda
             if (searchTerm) {
@@ -65,7 +107,7 @@ export const PatientUI = {
             // 2. Ordenar alfabéticamente
             filteredPatients.sort((a, b) => a.name.localeCompare(b.name));
 
-            // 3. Preparar items especiales (encabezados de fecha)
+            // 3. Preparar items (headers y pacientes)
             let itemsToRender = [];
 
             if (!searchTerm && !showInactive) {
@@ -74,19 +116,19 @@ export const PatientUI = {
                 const todayNames = new Set(todayPatients.map(p => p.name));
                 const tomorrowNames = new Set(tomorrowPatients.map(p => p.name));
 
-                // Agregar sección HOY si hay
+                // Sección HOY
                 if (todayPatients.length > 0) {
                     itemsToRender.push({ type: 'header', label: 'Citas de Hoy', count: todayPatients.length, isToday: true });
                     itemsToRender.push(...todayPatients.map(p => ({ ...p, type: 'patient', isToday: true })));
                 }
 
-                // Agregar sección MAÑANA si hay
+                // Sección MAÑANA
                 if (tomorrowPatients.length > 0) {
                     itemsToRender.push({ type: 'header', label: 'Citas de Mañana', count: tomorrowPatients.length });
                     itemsToRender.push(...tomorrowPatients.map(p => ({ ...p, type: 'patient' })));
                 }
 
-                // Agregar RESTO (todos los demás activos)
+                // Sección RESTO
                 const remainingPatients = filteredPatients.filter(p => !todayNames.has(p.name) && !tomorrowNames.has(p.name));
                 if (remainingPatients.length > 0) {
                     if (itemsToRender.length > 0) {
@@ -94,6 +136,7 @@ export const PatientUI = {
                     }
                     itemsToRender.push(...remainingPatients.map(p => ({ ...p, type: 'patient' })));
                 } else if (itemsToRender.length === 0) {
+                    // Si no hay hoy/mañana pero hay pacientes
                     itemsToRender = filteredPatients.map(p => ({ ...p, type: 'patient' }));
                 }
 
@@ -102,37 +145,33 @@ export const PatientUI = {
             }
 
             // 4. Renderizar al DOM
-            dom.patientsList.innerHTML = ''; // Limpiar
+            dom.patientsList.innerHTML = '';
 
             if (itemsToRender.length === 0) {
                 this._renderEmptyState(dom.patientsList, searchTerm);
             } else {
-                this._renderPatientItems(dom.patientsList, itemsToRender);
+                this._renderItems(dom.patientsList, itemsToRender);
             }
 
-            // 5. Actualizar header con la cuenta correcta
-            this.updateHeader(filteredCount); // Pasar cuenta filtrada
+            // 5. Actualizar header
+            this._updateHeader(filteredCount);
 
         } catch (error) {
-            console.error('❌ PatientUI: Error rendering list:', error);
-            await ModalService.alert('Error Interfaz', 'Hubo un error al mostrar la lista de pacientes.');
+            console.error('❌ Sidebar: Error renderizando lista:', error);
         }
     },
 
     /**
-     * Renderiza el encabezado de la lista de pacientes
-     * @param {number} currentCount - Cantidad de pacientes visualizados actualmente
+     * Renderiza el encabezado del sidebar
+     * @private
      */
-    updateHeader(currentCount) {
+    _updateHeader(currentCount) {
         const { dom, viewMode, activeCount, inactiveCount } = PatientState;
         if (!dom.patientsHeader) return;
 
         const isInactiveMode = viewMode === 'inactive';
-
-        // Si no se pasa currentCount (por llamada externa), usar activeCount del estado
         const countToShow = (currentCount !== undefined) ? currentCount : activeCount;
 
-        // Determinar qué contenido mostrar en el header
         let html = '';
         if (isInactiveMode) {
             html = `
@@ -144,7 +183,6 @@ export const PatientUI = {
                 </div>
             `;
         } else {
-            // Modo normal
             html = `
                 <div class="flex justify-between items-end mb-2">
                     <div>
@@ -157,13 +195,8 @@ export const PatientUI = {
                 </div>
             `;
         }
-
         dom.patientsHeader.innerHTML = html;
     },
-
-    // ==========================================
-    // HELPERS PRIVADOS DE RENDERIZADO
-    // ==========================================
 
     _renderEmptyState(container, searchTerm) {
         if (searchTerm) {
@@ -188,9 +221,8 @@ export const PatientUI = {
         }
     },
 
-    _renderPatientItems(container, items) {
+    _renderItems(container, items) {
         let htmlContent = '';
-
         items.forEach(item => {
             if (item.type === 'header') {
                 htmlContent += `
@@ -200,20 +232,17 @@ export const PatientUI = {
                     </div>
                 `;
             } else {
-                htmlContent += this._createPatientCard(item);
+                htmlContent += this._createCard(item);
             }
         });
-
         container.innerHTML = htmlContent;
     },
 
-    _createPatientCard(patient) {
-        // Calcular estado de deuda y próxima cita
+    _createCard(patient) {
         const pendingApts = PatientFilters.getPendingPayments(patient.name);
         const hasDebt = pendingApts.length > 0;
         const totalDebt = pendingApts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
 
-        // Estilos condicionales
         const selectedCardClass = (PatientState.selectedPatientId === patient.id)
             ? 'bg-blue-50 border-blue-500 shadow-md ring-1 ring-blue-500'
             : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-md';
@@ -238,11 +267,8 @@ export const PatientUI = {
             statusColor = patient.confirmed ? 'bg-green-500' : 'bg-blue-500';
         }
 
-        // Importante: data-patient-id debe estar en el contenedor principal clickable
-        // Agregamos onclick explícito como fallback robusto para asegurar que funciona incluso si la delegación falla
         return `
-            <div data-patient-id="${patient.id}" 
-                 onclick="window.openPatientHistoryById('${patient.id}')"
+            <div data-patient-id="${patient.id}"
                  class="patient-card group relative p-3 rounded-xl border transition-all duration-200 cursor-pointer ${selectedCardClass} mb-2 active:scale-[0.98]">
                 
                 ${debtBadge}
