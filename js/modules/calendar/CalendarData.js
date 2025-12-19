@@ -82,10 +82,41 @@ export const CalendarData = {
     },
 
     async toggleConfirmation(id, currentStatus) {
-        return await toggleConfirmationStatus(id, currentStatus);
+        const result = await toggleConfirmationStatus(id, currentStatus);
+        
+        if (result.success) {
+            const evt = CalendarState.appointments.find(a => a.id === id);
+            if (evt) {
+                const newStatus = !currentStatus; // toggleConfirmationStatus returns the new status object, but here we just need the logic
+                // Actually toggleConfirmationStatus returns { success: true } usually
+                // We better rely on the calculated new status
+                
+                SheetService.logAttendance({
+                    date: evt.date,
+                    patientName: evt.name,
+                    status: newStatus ? "CONFIRMADO" : "PENDIENTE",
+                    therapist: evt.therapist
+                }).catch(e => console.error("Error logging confirmation:", e));
+            }
+        }
+        return result;
     },
 
     async cancelEvent(id) {
-        return await cancelAppointment(id);
+        // Get event before cancelling to have data for log
+        const evt = CalendarState.appointments.find(a => a.id === id);
+        
+        const result = await cancelAppointment(id);
+        
+        if (result.success && evt) {
+             SheetService.logAttendance({
+                date: evt.date,
+                patientName: evt.name,
+                status: "CANCELADO",
+                therapist: evt.therapist
+            }).catch(e => console.error("Error logging cancellation:", e));
+        }
+
+        return result;
     }
 };

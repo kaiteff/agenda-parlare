@@ -6,13 +6,15 @@
 import { CalendarState } from './CalendarState.js';
 import { CalendarData } from './CalendarData.js';
 import { CalendarUI } from './CalendarUI.js';
+import { CalendarSuggestions } from './CalendarSuggestions.js';
+
 import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
 import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday } from '../../utils/validators.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
-import { SheetService } from '../../services/google/SheetService.js';
+
 
 export const CalendarModal = {
     init() {
@@ -29,11 +31,11 @@ export const CalendarModal = {
         if (dom.patientSearchInput) dom.patientSearchInput.oninput = (e) => this.populatePatientSuggestions(e.target.value);
         if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.onchange = () => {
             dom.recurringSection.classList.toggle('hidden', !dom.isRecurringCheckbox.checked);
-            if (dom.isRecurringCheckbox.checked) this.generateRecurringDates();
+            if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
         };
-        if (dom.recurringOptions) dom.recurringOptions.onchange = () => this.generateRecurringDates();
+        if (dom.recurringOptions) dom.recurringOptions.onchange = () => CalendarSuggestions.generateRecurringDates();
         if (dom.appointmentDateInput) dom.appointmentDateInput.onchange = (e) => {
-            if (dom.isRecurringCheckbox.checked) this.generateRecurringDates();
+            if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
             CalendarUI.renderBusySlots(e.target.value.split('T')[0]);
         };
     },
@@ -139,7 +141,9 @@ export const CalendarModal = {
 
         // Reschedule
         dom.rescheduleSection.classList.remove('hidden');
-        this.generateRescheduleOptions(date);
+        // Reschedule
+        dom.rescheduleSection.classList.remove('hidden');
+        CalendarSuggestions.generateRescheduleOptions(date);
 
         // Recurrence (hide for edit)
         dom.isRecurringCheckbox.checked = false;
@@ -186,8 +190,13 @@ export const CalendarModal = {
                         appointmentTherapistInput.value = p.therapist || 'diana';
                     }
 
+                    // Set Cost
+                    if (CalendarState.dom.costInput) {
+                        CalendarState.dom.costInput.value = p.defaultCost || 0;
+                    }
+
                     patientSuggestions.classList.add('hidden');
-                    this.analyzeAndSuggest(p.name);
+                    CalendarSuggestions.analyzeAndSuggest(p.name);
                 };
                 patientSuggestions.appendChild(div);
             });
@@ -204,202 +213,14 @@ export const CalendarModal = {
         }
     },
 
-    analyzeAndSuggest(patientName) {
-        const suggestionBox = document.getElementById('schedulingSuggestion');
-        if (suggestionBox) suggestionBox.remove();
-        if (!patientName) return;
-
-        const history = CalendarState.appointments.filter(p => p.name === patientName && !p.isCancelled);
-        if (history.length < 1) return;
-
-        const hasFuture = history.some(p => new Date(p.date) > new Date());
-        if (hasFuture) return;
-
-        // Find pattern
-        const patterns = {};
-        history.forEach(apt => {
-            const d = new Date(apt.date);
-            const key = `${d.getDay()}-${d.getHours()}`;
-            patterns[key] = (patterns[key] || 0) + 1;
-        });
-
-        let bestPattern = null;
-        let maxCount = 0;
-        for (const [key, count] of Object.entries(patterns)) {
-            if (count > maxCount) {
-                maxCount = count;
-                bestPattern = key;
-            }
-        }
-
-        if (bestPattern) {
-            const [dayOfWeek, hour] = bestPattern.split('-').map(Number);
-            const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const today = new Date();
-            let nextDate = new Date();
-            nextDate.setHours(hour, 0, 0, 0);
-            let daysToAdd = (dayOfWeek + 7 - today.getDay()) % 7;
-            if (daysToAdd === 0 && nextDate < today) daysToAdd = 7;
-            nextDate.setDate(today.getDate() + daysToAdd);
-
-            if (checkSlotConflict(nextDate.toISOString(), CalendarState.appointments)) {
-                nextDate.setDate(nextDate.getDate() + 7);
-            }
-
-            const timeStr = formatTime12h(hour);
-            const container = CalendarState.dom.patientSearchInput.parentNode;
-            const div = document.createElement('div');
-            div.id = 'schedulingSuggestion';
-            div.className = "mt-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between animate-fade-in";
-            div.innerHTML = `
-                <div class="text-xs text-indigo-800">
-                    <span class="font-bold">💡 Sugerencia:</span> Suele venir los <span class="font-semibold">${days[dayOfWeek]} a las ${timeStr}</span>.
-                </div>
-                <button type="button" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition-colors shadow-sm">
-                    Usar y Repetir
-                </button>
-            `;
-
-            div.querySelector('button').onclick = () => {
-                const offset = nextDate.getTimezoneOffset() * 60000;
-                const localISOTime = (new Date(nextDate - offset)).toISOString().slice(0, 16);
-                CalendarState.dom.appointmentDateInput.value = localISOTime;
-                if (CalendarState.dom.isRecurringCheckbox) {
-                    CalendarState.dom.isRecurringCheckbox.checked = true;
-                    CalendarState.dom.recurringSection.classList.remove('hidden');
-                    this.generateRecurringDates();
-                }
-                CalendarUI.renderBusySlots(localISOTime.split('T')[0]);
-                div.remove();
-            };
-            container.appendChild(div);
-        }
-    },
-
-    generateRecurringDates() {
-        const { appointmentDateInput, recurringOptions, recurringDatesList } = CalendarState.dom;
-        if (!appointmentDateInput.value) return;
-
-        const baseDate = new Date(appointmentDateInput.value);
-        const frequency = recurringOptions.value; // 'weekly' or 'biweekly'
-        const count = 4;
-        const dates = [];
-
-        recurringDatesList.innerHTML = '';
-
-        for (let i = 0; i < count; i++) {
-            const d = new Date(baseDate);
-            const daysToAdd = i * (frequency === 'weekly' ? 7 : 14);
-            d.setDate(d.getDate() + daysToAdd);
-            dates.push(d);
-
-            const li = document.createElement('li');
-            const isConflict = checkSlotConflict(d.toISOString(), CalendarState.appointments);
-            li.className = `text-xs flex justify-between items-center p-1 rounded ${isConflict ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'}`;
-            li.innerHTML = `
-                <span>${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                ${isConflict ? '<span class="font-bold text-red-600">Ocupado</span>' : '<span class="text-green-600">Disponible</span>'}
-            `;
-            recurringDatesList.appendChild(li);
-        }
-        return dates;
-    },
-
-    generateRescheduleOptions(currentDate) {
-        const { rescheduleOptions } = CalendarState.dom;
-        rescheduleOptions.innerHTML = '';
-
-        // 1. Opciones "Hoy y esta Semana" (Slots disponibles próximos)
-        this.addAvailableSlotsSuggestions(rescheduleOptions);
-
-        // 2. Opciones "Prox Semana y 2 Semanas" (Smart Check)
-        const nextWeek = addDays(currentDate, 7);
-        const next2Weeks = addDays(currentDate, 14);
-
-        if (!checkSlotConflict(nextWeek.toISOString(), CalendarState.appointments)) {
-            rescheduleOptions.appendChild(this.createRescheduleChip('Misma hora prox. semana', nextWeek));
-        }
-
-        if (!checkSlotConflict(next2Weeks.toISOString(), CalendarState.appointments)) {
-            rescheduleOptions.appendChild(this.createRescheduleChip('En 2 semanas', next2Weeks));
-        }
-    },
-
-    addAvailableSlotsSuggestions(container) {
-        // Busca slots libres HOY y slots libres MAÑANA dentro del horario laboral
-        const now = new Date();
-        const candidates = [];
-
-        // Función helper para buscar huecos
-        const findSlots = (baseDate, labelPrefix) => {
-            const startHour = 9;
-            const endHour = 20; // Extendido hasta las 20:00
-            const currentHour = baseDate.getDate() === now.getDate() ? Math.max(startHour, now.getHours() + 1) : startHour;
-
-            for (let h = currentHour; h <= endHour; h++) {
-                // Si NO es hoy, limitamos la cantidad por día para no saturar 
-                // pero si ES hoy, queremos mostrar todas las posibles
-                const isToday = baseDate.getDate() === now.getDate();
-                if (!isToday && candidates.length >= 8) break;
-
-                const d = new Date(baseDate);
-                d.setHours(h, 0, 0, 0);
-
-                // Ignorar pasado
-                if (d <= now) continue;
-
-                // Verificar conflicto (usando ISOString local manual para asegurar fecha correcta)
-                const offset = d.getTimezoneOffset() * 60000;
-                const iso = (new Date(d - offset)).toISOString();
-
-                if (!checkSlotConflict(iso, CalendarState.appointments)) {
-                    candidates.push({ date: d, label: `${labelPrefix} ${formatTime12h(h)}` });
-                }
-            }
-        };
-
-        // Buscar Hoy (Todas las disponibles)
-        findSlots(now, 'Hoy');
-
-        // Buscar Mañana (si hay espacio en sugerencias)
-        if (candidates.length < 5) { // Si hoy hay pocas, mostramos mañana
-            const tomorrow = addDays(now, 1);
-            if (isNotSunday(tomorrow)) {
-                findSlots(tomorrow, 'Mañana');
-            } else {
-                // Si mañana es domingo, buscar lunes
-                const monday = addDays(now, 2);
-                findSlots(monday, 'Lunes');
-            }
-        }
-
-        // Renderizar sugerencias verdes (Máximo 8 chips para no llenar pantalla)
-        candidates.slice(0, 8).forEach(cand => {
-            const chip = this.createRescheduleChip(cand.label, cand.date, 'green');
-            container.appendChild(chip);
-        });
-    },
-
-    createRescheduleChip(label, dateObj, color = 'blue') {
-        const chip = document.createElement('div');
-        const bgClass = color === 'green' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
-
-        chip.className = `${bgClass} px-3 py-1 rounded-full text-xs cursor-pointer border transition-colors whitespace-nowrap`;
-        chip.textContent = label;
-        chip.onclick = () => {
-            const offset = dateObj.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(dateObj - offset)).toISOString().slice(0, 16);
-            CalendarState.dom.appointmentDateInput.value = localISOTime;
-            CalendarUI.renderBusySlots(localISOTime.split('T')[0]);
-        };
-        return chip;
-    },
 
     async handleSave() {
+        console.log("💾 handleSave invocado");
         const dom = CalendarState.dom;
         const name = dom.patientSearchInput.value.trim();
         const dateStr = dom.appointmentDateInput.value;
         const cost = parseFloat(dom.costInput.value) || 0;
+        console.log("   - Datos:", { name, dateStr, cost });
         const therapist = dom.appointmentTherapistInput ? dom.appointmentTherapistInput.value : (AuthManager.currentUser?.therapist || 'diana');
 
         if (!name || !dateStr) {
@@ -423,7 +244,7 @@ export const CalendarModal = {
         const dateObj = new Date(dateStr);
 
         if (!isWithinWorkingHours(dateObj)) {
-            await ModalService.alert("Horario Inválido", "La cita debe estar entre las 9:00 y las 20:00", "warning");
+            await ModalService.alert("Horario Inválido", "La cita debe estar entre las 8:00 y las 20:00", "warning");
             return;
         }
 
@@ -461,7 +282,7 @@ export const CalendarModal = {
             } else {
                 // Create
                 if (dom.isRecurringCheckbox.checked) {
-                    const dates = this.generateRecurringDates();
+                    const dates = CalendarSuggestions.generateRecurringDates();
                     // Create multiple
                     for (const date of dates) {
                         const offset = date.getTimezoneOffset() * 60000;
@@ -471,13 +292,17 @@ export const CalendarModal = {
                         }
                     }
                 } else {
+                    console.log("   - Creando cita única...");
                     if (checkSlotConflict(dateStr, CalendarState.appointments)) {
+                        console.log("   - Conflicto detectado");
                         if (!await ModalService.confirm("Conflicto de Horario", "Ya hay una cita en este horario.<br>¿Deseas agregarla de todas formas?", "Agregar igualmente", "Cancelar")) return;
                     }
-                    await CalendarData.createEvent(appointmentData);
+                    const result = await CalendarData.createEvent(appointmentData);
+                    console.log("   - Resultado createEvent:", result);
                 }
             }
             this.closeModal();
+            console.log("✅ Cita guardada y modal cerrado");
         } catch (e) {
             console.error(e);
             await ModalService.alert("Error", "Error al guardar: " + e.message, "error");
@@ -505,16 +330,7 @@ export const CalendarModal = {
         if (!CalendarState.selectedEventId) return;
         const evt = CalendarState.appointments.find(a => a.id === CalendarState.selectedEventId);
         if (evt) {
-            const newStatus = !evt.confirmed;
-            await CalendarData.updateEvent(CalendarState.selectedEventId, { confirmed: newStatus });
-
-            SheetService.logAttendance({
-                date: evt.date,
-                patientName: evt.name,
-                status: newStatus ? "CONFIRMADO" : "PENDIENTE",
-                therapist: evt.therapist
-            }).catch(e => console.error("Error logging confirmation:", e));
-
+            await CalendarData.toggleConfirmation(CalendarState.selectedEventId, evt.confirmed);
             this.closeModal();
         }
     },
@@ -525,18 +341,8 @@ export const CalendarModal = {
         if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
 
         const eventId = CalendarState.selectedEventId;
-        const evt = CalendarState.appointments.find(a => a.id === eventId);
-
+        // Logic moved to CalendarData
         await CalendarData.cancelEvent(eventId);
-
-        if (evt) {
-            SheetService.logAttendance({
-                date: evt.date,
-                patientName: evt.name,
-                status: "CANCELADO",
-                therapist: evt.therapist
-            }).catch(e => console.error("Error logging cancellation:", e));
-        }
 
         const reschedule = await ModalService.confirm(
             "Reagendar",

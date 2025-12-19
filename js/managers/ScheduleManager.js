@@ -107,7 +107,8 @@ export const ScheduleManager = {
      * @param {string} patientName - Nombre del paciente
      * @param {string} therapist - Terapeuta asignado
      */
-    openModal(patientId, patientName, therapist) {
+    openModal(patientId, patientName, therapist, defaultCost = 0) {
+        console.log(`OpenModal llamado con cost: ${defaultCost}`);
         this.state.patientId = patientId;
         this.state.patientName = patientName;
         this.state.therapist = therapist || 'diana';
@@ -118,7 +119,7 @@ export const ScheduleManager = {
         // Reset UI
         if (this.dom.patientName) this.dom.patientName.textContent = `Paciente: ${patientName}`;
         if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = true;
-        if (this.dom.costInput) this.dom.costInput.value = 0;
+        if (this.dom.costInput) this.dom.costInput.value = defaultCost;
 
         // Reset radio buttons
         if (this.dom.recurrenceInputs) {
@@ -290,8 +291,8 @@ export const ScheduleManager = {
      */
     _getDailySlots(date) {
         const slots = [];
-        const startHour = 9; // 9:00 AM
-        const endHour = 20;  // 8:00 PM
+        const startHour = 8; // 8:00 AM
+        const endHour = 21;  // 8:00 PM (end of slot)
         const now = new Date();
 
         // Si es hoy, no mostrar horas pasadas

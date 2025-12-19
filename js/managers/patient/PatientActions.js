@@ -52,7 +52,7 @@ export const PatientActions = {
         const lastName = dom.newPatientLastName?.value.trim();
         const therapist = dom.newPatientTherapist?.value || 'diana';
         const defaultCost = dom.newPatientDefaultCost ? parseFloat(dom.newPatientDefaultCost.value) : 0;
-        const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 25;
+        const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 250;
 
         // Validación
         if (!firstName || !lastName) {
@@ -89,7 +89,7 @@ export const PatientActions = {
 
                 // Abrir modal de agendar primera cita
                 setTimeout(() => {
-                    ScheduleManager.openModal(result.id, fullName, therapist);
+                    ScheduleManager.openModal(result.id, fullName, therapist, defaultCost);
                 }, 300);
 
                 return true;

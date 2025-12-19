@@ -1,0 +1,58 @@
+--- a/js/patients.js
++++ b/js/patients.js
+@@ -189,8 +189,9 @@ function updatePatientsHeader(count) {
+ 
+     const totalActive = patientProfiles.filter(p => p.isActive !== false).length;
+     const todayCount = getTodayPatients().length;
++    const tomorrowCount = getTomorrowPatients().length;
+ 
+     patientsHeader.innerHTML = `
+         <div class="flex items-center justify-between mb-2">
+             <div class="flex items-center gap-2">
+                 <span class="text-xs font-bold text-gray-600">
+-                    ${showOnlyToday ? `HOY (${count})` : `ACTIVOS (${count})`}
++                    ${viewMode === 'today' ? `HOY (${count})` : viewMode === 'tomorrow' ? `MAÑANA (${count})` : `ACTIVOS (${count})`}
+                 </span>
+                 <button id="btnNewPatient" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded hover:bg-green-200 transition-colors flex items-center gap-1" title="Crear nuevo paciente">
+                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                     Nuevo
+                 </button>
+             </div>
+-            <button id="toggleViewBtn" 
+-                    class="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
+-                ${showOnlyToday ? `Ver Todos (${totalActive})` : `Solo Hoy (${todayCount})`}
+-            </button>
++            <div class="flex gap-1">
++                <button id="btnViewToday" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'today' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}">
++                    Hoy (${todayCount})
++                </button>
++                <button id="btnViewTomorrow" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'tomorrow' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}">
++                    Mañana (${tomorrowCount})
++                </button>
++                <button id="btnViewAll" class="text-xs px-2 py-1 rounded transition-colors ${viewMode === 'all' ? 'bg-gray-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}">
++                    Todos (${totalActive})
++                </button>
++            </div>
+         </div>
+     `;
+ 
+-    const toggleBtn = document.getElementById('toggleViewBtn');
+-    if (toggleBtn) {
+-        toggleBtn.onclick = togglePatientView;
+-    }
++    document.getElementById('btnViewToday')?.addEventListener('click', () => { viewMode = 'today'; renderPatientsList(); });
++    document.getElementById('btnViewTomorrow')?.addEventListener('click', () => { viewMode = 'tomorrow'; renderPatientsList(); });
++    document.getElementById('btnViewAll')?.addEventListener('click', () => { viewMode = 'all'; renderPatientsList(); });
+ 
+     const newPatientBtn = document.getElementById('btnNewPatient');
+     if (newPatientBtn) {
+         newPatientBtn.onclick = window.createNewPatient;
+     }
+ }
+ 
+-// Toggle entre vista Hoy y Todos
+-function togglePatientView() {
+-    showOnlyToday = !showOnlyToday;
+-    renderPatientsList();
+-}
+-

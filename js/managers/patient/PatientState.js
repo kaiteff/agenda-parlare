@@ -75,6 +75,8 @@ export const PatientState = {
         newPatientFirstName: null,
         newPatientLastName: null,
         newPatientTherapist: null,
+        newPatientDefaultCost: null,
+        newPatientClinicFee: null,
         saveNewPatientBtn: null,
         closeNewPatientModalBtn: null,
 
@@ -126,6 +128,8 @@ export const PatientState = {
         this.dom.newPatientFirstName = document.getElementById('newPatientFirstName');
         this.dom.newPatientLastName = document.getElementById('newPatientLastName');
         this.dom.newPatientTherapist = document.getElementById('newPatientTherapist');
+        this.dom.newPatientDefaultCost = document.getElementById('newPatientDefaultCost');
+        this.dom.newPatientClinicFee = document.getElementById('newPatientClinicFee');
         this.dom.saveNewPatientBtn = document.getElementById('saveNewPatientBtn');
         this.dom.closeNewPatientModalBtn = document.getElementById('closeNewPatientModalBtn');
 

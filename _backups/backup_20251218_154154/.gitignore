@@ -1,0 +1,27 @@
+# Backups
+backups/
+
+# Node modules (si usas npm en el futuro)
+node_modules/
+
+# Archivos temporales
+*.tmp
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Configuración sensible (credenciales de Firebase)
+js/firebase.js
+
+# Google Drive files
+*.gsheet
+*.gdoc
+
+# Exclude Google Drive synced folders
+Diana/
