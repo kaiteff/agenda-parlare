@@ -16,8 +16,10 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Configuración sensible (credenciales de Firebase)
+# Configuración sensible (credenciales)
 js/firebase.js
+whatsapp_config.json
+firebase_service_key.json
 
 # Google Drive files
 *.gsheet

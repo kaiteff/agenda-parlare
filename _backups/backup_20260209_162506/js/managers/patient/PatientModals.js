@@ -450,9 +450,6 @@ export const PatientModals = {
         if (document.getElementById('editPatientClinicFee')) {
             document.getElementById('editPatientClinicFee').value = patient.clinicFee || 250;
         }
-        if (document.getElementById('editPatientPhone')) {
-            document.getElementById('editPatientPhone').value = patient.phone || '';
-        }
 
         // Botón de guardar cambios
         if (dom.savePatientEditBtn) {
@@ -460,15 +457,13 @@ export const PatientModals = {
                 const newTherapist = dom.editPatientTherapist.value;
                 const newCost = dom.editPatientCost ? parseFloat(dom.editPatientCost.value) : 0;
                 const newClinicFee = document.getElementById('editPatientClinicFee') ? parseFloat(document.getElementById('editPatientClinicFee').value) : 250;
-                const newPhone = document.getElementById('editPatientPhone')?.value.trim() || '';
 
                 const success = await PatientActions.updatePatientProfile(
                     patient.id,
                     {
                         therapist: newTherapist,
                         defaultCost: newCost,
-                        clinicFee: newClinicFee,
-                        phone: newPhone
+                        clinicFee: newClinicFee
                     },
                     patient.name
                 );

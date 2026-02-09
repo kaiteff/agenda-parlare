@@ -54,7 +54,6 @@ export const PatientActions = {
         const therapist = dom.newPatientTherapist?.value || 'diana';
         const defaultCost = dom.newPatientDefaultCost ? parseFloat(dom.newPatientDefaultCost.value) : 0;
         const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 250;
-        const phone = document.getElementById('newPatientPhone')?.value.trim() || '';
 
         // Validación
         if (!firstName || !lastName) {
@@ -73,7 +72,7 @@ export const PatientActions = {
             }
 
             // Crear perfil (con datos extra)
-            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { defaultCost, clinicFee, phone });
+            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { defaultCost, clinicFee });
 
             if (result.success) {
                 // Cerrar modal de nuevo paciente
@@ -82,8 +81,6 @@ export const PatientActions = {
                 // Limpiar inputs
                 if (dom.newPatientFirstName) dom.newPatientFirstName.value = '';
                 if (dom.newPatientLastName) dom.newPatientLastName.value = '';
-                const phoneInput = document.getElementById('newPatientPhone');
-                if (phoneInput) phoneInput.value = '';
 
                 // Cambiar a vista "Todos" si no está ahí
                 if (PatientState.getViewMode() !== 'all') {

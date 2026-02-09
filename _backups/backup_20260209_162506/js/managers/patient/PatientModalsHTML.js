@@ -61,20 +61,13 @@ export const PatientModalsHTML = {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Terapeuta Asignado</label>
-                            <select id="newPatientTherapist"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                                <option value="diana">Diana</option>
-                                <option value="sam">Sam</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📱 WhatsApp</label>
-                            <input type="tel" id="newPatientPhone" placeholder="33 2495 5791"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Terapeuta Asignado</label>
+                        <select id="newPatientTherapist"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="diana">Diana</option>
+                            <option value="sam">Sam</option>
+                        </select>
                     </div>
 
                     <div class="pt-4 flex gap-3">
@@ -194,11 +187,6 @@ export const PatientModalsHTML = {
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Cuota Parlare</label>
                                 <input type="number" id="editPatientClinicFee"
                                     class="w-full border rounded px-3 py-2 text-sm bg-blue-50" placeholder="250.00">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">📱 WhatsApp</label>
-                                <input type="tel" id="editPatientPhone"
-                                    class="w-full border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
                             </div>
                         </div>
                         <div class="mt-4 flex justify-end gap-2">
