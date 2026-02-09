@@ -38,15 +38,27 @@ export const GoogleAuthService = {
     loadGapi() {
         return new Promise((resolve, reject) => {
             if (window.gapi) {
+                let resolved = false;
+                const timeoutId = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        reject(new Error("Timeout loading GAPI client"));
+                    }
+                }, 10000); // 10s timeout
+
                 window.gapi.load('client', async () => {
+                    if (resolved) return;
+                    clearTimeout(timeoutId);
                     try {
                         await window.gapi.client.init({
                             apiKey: this.config.apiKey,
                             discoveryDocs: this.config.discoveryDocs,
                         });
                         this.gapiInited = true;
+                        resolved = true;
                         resolve();
                     } catch (err) {
+                        resolved = true;
                         reject(err);
                     }
                 });
@@ -91,8 +103,24 @@ export const GoogleAuthService = {
 
         // Si no, pedirlo
         return new Promise((resolve, reject) => {
+            let timeoutId;
+            let resolved = false;
+
+            // Timeout de 15 segundos para evitar que se quede colgado eternamente si el popup se bloquea
+            timeoutId = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    console.error("❌ GoogleAuthService: Timeout esperando autenticación (posible popup bloqueado)");
+                    reject(new Error("Timeout: La ventana de autenticación no respondió. Verifica si fue bloqueada."));
+                }
+            }, 15000);
+
             try {
                 this.tokenClient.callback = (resp) => {
+                    if (resolved) return; // Si ya expiró el timeout, ignorar
+                    resolved = true;
+                    clearTimeout(timeoutId);
+
                     if (resp.error !== undefined) {
                         reject(resp);
                     }
@@ -111,15 +139,21 @@ export const GoogleAuthService = {
                     resolve(resp);
                 };
 
-                // Si forzamos consentimiento (útil para errores 403), usamos prompt: 'select_account'
-                // para permitir cambiar de usuario explícitamente.
-                const promptConfig = forceConsent ? 'select_account' : '';
+                // Siempre mostrar selector de cuenta para evitar usar la cuenta equivocada en móvil
+                const promptConfig = 'select_account';
 
                 console.log(`🔄 GoogleAuthService: Solicitando token (Prompt: ${promptConfig || 'auto'})...`);
-                this.tokenClient.requestAccessToken({ prompt: promptConfig });
+                this.tokenClient.requestAccessToken({
+                    prompt: promptConfig,
+                    hint: 'rodriguezd.danielrob@gmail.com'
+                });
             } catch (err) {
-                console.error("Error requesting token", err);
-                reject(err);
+                if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timeoutId);
+                    console.error("Error requesting token", err);
+                    reject(err);
+                }
             }
         });
     },
@@ -132,9 +166,16 @@ export const GoogleAuthService = {
         if (!token) return false;
 
         // Si no tenemos timestamp (primera vez o recarga), asumimos inválido para forzar refresh seguro
-        // O podríamos intentar usarlo y capturar el 401, pero refresh preventivo es mejor UX
         if (!this.tokenExpiration) return false;
 
         return Date.now() < this.tokenExpiration;
+    },
+
+    /**
+     * Verifica si las credenciales están configuradas
+     */
+    isConfigured() {
+        return this.config.clientId && !this.config.clientId.includes('YOUR_') &&
+            this.config.apiKey && !this.config.apiKey.includes('YOUR_');
     }
 };

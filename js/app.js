@@ -8,7 +8,8 @@ import { ScheduleManager } from './managers/ScheduleManager.js';
 import { ModalService } from './utils/ModalService.js';
 import { ToastService } from './utils/ToastService.js';
 import { NetworkMonitor } from './services/NetworkMonitor.js';
-import { Header } from './components/Header.js'; // Nuevo componente
+import { Header } from './components/Header.js?v=2'; // Nuevo componente
+import { GoogleAuthService } from './services/google/GoogleAuthService.js';
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
@@ -97,6 +98,14 @@ async function initializeModules() {
     try {
         NetworkMonitor.init();
     } catch (e) { console.error("❌ Error NetworkMonitor:", e); }
+
+    // Inicializar Google Auth (Pre-carga de scripts)
+    try {
+        console.log("🚀 Inicializando GoogleAuthService...");
+        GoogleAuthService.init().then(() => {
+            console.log("✅ Google Auth Ready (Pre-init)");
+        }).catch(e => console.error("❌ Error GoogleAuthService pre-init:", e));
+    } catch (e) { console.error("❌ Error GoogleAuthService:", e); }
 
     console.log("✅ Todos los módulos inicializados");
 }

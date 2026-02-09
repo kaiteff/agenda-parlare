@@ -117,9 +117,28 @@ export const SheetService = {
             return true;
 
         } catch (error) {
-            console.error("❌ SheetService: Error detallado:", JSON.stringify(error, null, 2));
+            // Google API errors have non-enumerable properties, extract them manually
+            const errorDetails = {
+                message: error.message,
+                status: error.status,
+                statusText: error.statusText,
+                body: error.body,
+                result: error.result,
+                name: error.name,
+                stack: error.stack?.split('\n')[0]
+            };
+            console.error("❌ SheetService: Error detallado:", JSON.stringify(errorDetails, null, 2));
 
             const errorCode = error.result?.error?.code || error.status;
+            const errorMessage = error.message || '';
+
+            // --- MANEJO DE TIMEOUT / POPUP BLOQUEADO ---
+            if (errorMessage.includes('Timeout') || errorMessage.includes('popup')) {
+                console.warn("⚠️ SheetService: Timeout de autenticación detectado.");
+                ToastService.warning("⚠️ No se pudo abrir la ventana de Google. Verifica si el navegador bloqueó la ventana emergente.", 8000);
+                SyncStatus.setError();
+                return false;
+            }
 
             // --- MANEJO DE RETRY POR ERROR DE SERVIDOR (503, 500, etc) ---
             if ([500, 502, 503, 504, 429].includes(errorCode)) {

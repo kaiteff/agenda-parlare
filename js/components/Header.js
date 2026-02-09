@@ -41,7 +41,7 @@ export const Header = {
                     <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                         ${AuthManager.getDisplayName().charAt(0)}
                     </div>
-                    <div>
+                    <div class="hidden md:block">
                         <div class="font-bold text-gray-800">${AuthManager.getDisplayName()}</div>
                         <div class="text-xs text-gray-500 capitalize">${AuthManager.getRole()}</div>
                     </div>
@@ -89,7 +89,7 @@ export const Header = {
                     <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 011.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
                     </svg>
-                    <span class="text-xs text-red-500 font-bold">Sin Conexión</span>
+                    <span class="text-xs text-red-500 font-bold hidden md:inline">Sin Conexión</span>
                 `;
                 className += 'bg-red-50 border-red-100 opacity-100';
                 container.title = "Sin conexión a internet";
@@ -97,28 +97,28 @@ export const Header = {
             case STATES.IDLE:
                 html = `
                     <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
-                    <span class="text-xs text-gray-400 font-medium">Sincronizado</span>
+                    <span class="text-xs text-gray-400 font-medium hidden md:inline">Sincronizado</span>
                 `;
                 className += 'bg-gray-50 border-gray-100 opacity-50 hover:opacity-100';
                 break;
             case STATES.SAVING:
                 html = `
                     <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    <span class="text-xs text-blue-600 font-bold">Guardando...</span>
+                    <span class="text-xs text-blue-600 font-bold hidden md:inline">Guardando...</span>
                 `;
                 className += 'bg-blue-50 border-blue-100 shadow-sm';
                 break;
             case STATES.SAVED:
                 html = `
                     <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    <span class="text-xs text-green-600 font-bold">Guardado</span>
+                    <span class="text-xs text-green-600 font-bold hidden md:inline">Guardado</span>
                 `;
                 className += 'bg-green-50 border-green-100 shadow-sm';
                 break;
             case STATES.ERROR:
                 html = `
                     <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    <span class="text-xs text-red-600 font-bold">Error al guardar</span>
+                    <span class="text-xs text-red-600 font-bold hidden md:inline">Error al guardar</span>
                 `;
                 className += 'bg-red-50 border-red-100 cursor-pointer hover:bg-red-100';
                 container.title = "Click para reintentar (verifica tu conexión)";
@@ -176,9 +176,13 @@ export const Header = {
         // Control de visibilidad
         if (openReportsBtn) {
             if (user?.role !== 'admin') {
-                openReportsBtn.classList.add('hidden');
+                // Ocultar completamente para no admins
+                openReportsBtn.style.display = 'none';
             } else {
-                openReportsBtn.classList.remove('hidden');
+                // Para admins, dejar que las clases CSS (hidden md:flex) controlen la visibilidad responsive
+                openReportsBtn.style.display = '';
+                // Asegurarnos que NO quitamos 'hidden' si está presente por defecto en el HTML para mobile
+                // El bug anterior era: openReportsBtn.classList.remove('hidden'); -> Esto lo mostraba en mobile
             }
         }
     },
@@ -258,6 +262,31 @@ export const Header = {
                 if (await ModalService.confirm("Cerrar Sesión", "¿Estás seguro que deseas salir?", "Cerrar Sesión", "Cancelar")) {
                     await logoutUser();
                 }
+                return;
+            }
+
+            // 3. Botón Menú Hamburguesa (Mobile)
+            const mobileMenuBtn = e.target.closest('#mobileMenuBtn');
+            const overlay = document.getElementById('sidebarOverlay');
+            const sidebar = document.getElementById('mainSidebar');
+
+            if (mobileMenuBtn && sidebar && overlay) {
+                // Toggle sidebar
+                const isClosed = sidebar.classList.contains('-translate-x-full');
+                if (isClosed) {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            }
+
+            // 4. Click en Overlay para cerrar sidebar
+            if (e.target.id === 'sidebarOverlay') {
+                const sidebar = document.getElementById('mainSidebar');
+                if (sidebar) sidebar.classList.add('-translate-x-full');
+                e.target.classList.add('hidden');
             }
         });
     }

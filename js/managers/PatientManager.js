@@ -109,8 +109,9 @@ export const PatientManager = {
         // Delegación para HISTORIAL (Confirmar/Pagar) - Esto ocurre DENTRO del modal
         if (dom.patientHistoryList) {
             dom.patientHistoryList.addEventListener('click', async (e) => {
-                const confirmBtn = e.target.closest('.confirm-btn');
-                const payBtn = e.target.closest('.pay-btn');
+                const target = e.target;
+                const payBtn = target.closest('.pay-btn');
+                const confirmBtn = target.closest('.confirm-btn');
 
                 if (confirmBtn) {
                     e.stopPropagation();
@@ -120,7 +121,7 @@ export const PatientManager = {
                 } else if (payBtn) {
                     e.stopPropagation();
                     const id = payBtn.dataset.id;
-                    await PatientActions.markAsPaid(id);
+                    await PatientActions.markAsPaid(id, { target: payBtn });
                 }
             });
         }

@@ -38,15 +38,21 @@ def get_local_ip():
         return "127.0.0.1"
 
 def get_free_port(start_port):
-    # Intentar forzar 8081 primero
+    # Intentar primero el puerto 8081 (Requerido para Google Auth)
+    target_port = 8081
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('', 8081))
-            return 8081
+            s.bind(('', target_port))
+            return target_port
     except OSError:
-        pass # Si falla, sigue la logica normal
-
+        print(f"\n[WARN] El puerto {target_port} está OCUPADO por otro proceso (posiblemente System/IIS).")
+        print("Intentando buscar otro puerto libre...")
+    
+    # Buscar otro puerto si el 8081 falla
     port = start_port
+    if port == target_port:
+        port += 1
+        
     while port < start_port + MAX_RETRIES:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -54,7 +60,9 @@ def get_free_port(start_port):
                 return port
         except OSError:
             port += 1
-    raise IOError("No se encontraron puertos libres.")
+            
+    print("[ERROR] No se encontraron puertos libres.")
+    sys.exit(1)
 
 def run():
     # Cambiar al directorio del script

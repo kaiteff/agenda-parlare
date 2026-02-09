@@ -28,6 +28,7 @@ import { ScheduleManager } from '../ScheduleManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { SheetService } from '../../services/google/SheetService.js';
+import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
 import { getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /**
@@ -130,6 +131,20 @@ export const PatientActions = {
             if (button) {
                 button.textContent = '⏳ Guardando...';
                 button.disabled = true;
+            }
+
+            // 0. PRE-AUTH: Pedir token inmediatamente para evitar bloqueo de popup en móviles
+            // Al hacerlo aquí, estamos dentro del "contexto de interacción del usuario" (click)
+            try {
+                // ToastService.info("DEBUG: Iniciando autenticación...");
+                await GoogleAuthService.ensureToken();
+                // ToastService.success("DEBUG: Auth OK");
+            } catch (authErr) {
+                console.error("❌ Auth pre-check failed:", authErr);
+                ToastService.error("Error Auth: " + (authErr.message || JSON.stringify(authErr)));
+                // Si falla el auth, no seguimos, pero el error ya fue manejado/logueado en el servicio
+                // Dejamos que el bloque catch principal maneje la restauración de UI
+                throw authErr;
             }
 
             // 1. Obtener datos para Sheet (antes o durante el update)
