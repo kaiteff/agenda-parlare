@@ -3,6 +3,7 @@
  * Componente para gestionar la barra superior (Header)
  */
 
+import { SyncStatus } from '../services/SyncStatus.js';
 import { AuthManager } from '../managers/AuthManager.js';
 import { ModalService } from '../utils/ModalService.js';
 import { logoutUser } from '../firebase.js';
@@ -24,6 +25,7 @@ export const Header = {
      */
     render() {
         this._renderUserInfo();
+        this._renderSyncStatus(); // Nuevo indicador
         this._renderTherapistSelector();
         this._setupReportButton();
     },
@@ -46,6 +48,85 @@ export const Header = {
                 </div>
             `;
         }
+    },
+
+    /**
+     * Renderiza el indicador de sincronización
+     */
+    _renderSyncStatus() {
+        const userInfoEl = document.getElementById('userInfo');
+        if (!userInfoEl) return;
+
+        // Crear contenedor si no existe
+        let syncContainer = document.getElementById('syncStatusContainer');
+        if (!syncContainer) {
+            syncContainer = document.createElement('div');
+            syncContainer.id = 'syncStatusContainer';
+            syncContainer.className = 'ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 transition-all duration-300';
+            userInfoEl.parentElement.insertBefore(syncContainer, userInfoEl.nextSibling);
+
+            // Suscribirse a cambios
+            SyncStatus.subscribe((state) => {
+                this._updateSyncUI(state);
+            });
+        }
+    },
+
+    /**
+     * Actualiza la UI del indicador según el estado
+     */
+    _updateSyncUI(state) {
+        const container = document.getElementById('syncStatusContainer');
+        if (!container) return;
+
+        const STATES = SyncStatus.STATES;
+        let html = '';
+        let className = 'ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 ';
+
+        switch (state) {
+            case STATES.OFFLINE:
+                html = `
+                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 011.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
+                    </svg>
+                    <span class="text-xs text-red-500 font-bold">Sin Conexión</span>
+                `;
+                className += 'bg-red-50 border-red-100 opacity-100';
+                container.title = "Sin conexión a internet";
+                break;
+            case STATES.IDLE:
+                html = `
+                    <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+                    <span class="text-xs text-gray-400 font-medium">Sincronizado</span>
+                `;
+                className += 'bg-gray-50 border-gray-100 opacity-50 hover:opacity-100';
+                break;
+            case STATES.SAVING:
+                html = `
+                    <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span class="text-xs text-blue-600 font-bold">Guardando...</span>
+                `;
+                className += 'bg-blue-50 border-blue-100 shadow-sm';
+                break;
+            case STATES.SAVED:
+                html = `
+                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <span class="text-xs text-green-600 font-bold">Guardado</span>
+                `;
+                className += 'bg-green-50 border-green-100 shadow-sm';
+                break;
+            case STATES.ERROR:
+                html = `
+                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <span class="text-xs text-red-600 font-bold">Error al guardar</span>
+                `;
+                className += 'bg-red-50 border-red-100 cursor-pointer hover:bg-red-100';
+                container.title = "Click para reintentar (verifica tu conexión)";
+                break;
+        }
+
+        container.innerHTML = html;
+        container.className = className;
     },
 
     /**

@@ -387,6 +387,8 @@ export const ScheduleManager = {
         }
 
         try {
+            if (this.dom.confirmBtn.textContent === 'Agendando...') return; // Prevent double click
+
             this.dom.confirmBtn.disabled = true;
             this.dom.confirmBtn.textContent = 'Agendando...';
 
@@ -430,10 +432,10 @@ export const ScheduleManager = {
             let createdCount = 0;
             const cost = this.dom.costInput ? parseFloat(this.dom.costInput.value) || 0 : 0;
 
-            for (const date of appointmentsToCreate) {
+            for (const aptDate of appointmentsToCreate) {
                 const appointmentData = {
                     name: this.state.patientName,
-                    date: date.toISOString(),
+                    date: aptDate.toISOString(),
                     cost: cost,
                     therapist: this.state.therapist,
                     confirmed: false,
@@ -441,7 +443,7 @@ export const ScheduleManager = {
                     isCancelled: false
                 };
 
-                const result = await createAppointment(appointmentData, PatientState.appointments || []);
+                const result = await createAppointment(appointmentData);
                 if (result.success) createdCount++;
             }
 

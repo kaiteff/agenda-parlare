@@ -65,6 +65,7 @@ export const PatientActions = {
         try {
             // Deshabilitar botón mientras guarda
             if (dom.saveNewPatientBtn) {
+                if (dom.saveNewPatientBtn.disabled) return false; // Prevent double click
                 dom.saveNewPatientBtn.disabled = true;
                 dom.saveNewPatientBtn.textContent = 'Guardando...';
             }
@@ -136,8 +137,23 @@ export const PatientActions = {
             const aptSnap = await getDoc(aptRef);
             const aptData = aptSnap.exists() ? aptSnap.data() : null;
 
+            if (!aptData) {
+                ToastService.error("Error: No se encontró la cita.");
+                return false;
+            }
+
+            // VALIDACIÓN: No permitir pagos de $0 (a menos que sea anulación)
+            if (!aptData.isPaid && (aptData.cost === undefined || aptData.cost <= 0)) {
+                ToastService.warning("⚠️ No se puede registrar un pago de $0. Edita la cita primero.");
+                if (button) {
+                    button.textContent = '$ Pagar';
+                    button.disabled = false;
+                }
+                return false;
+            }
+
             // CHECK: Toggle de Pago (Pagar o Anular)
-            if (aptData && aptData.isPaid) {
+            if (aptData.isPaid) {
                 // CASO 1: YA ESTABA PAGADO -> ANULAR (REEMBOLSO EN SHEETS)
 
                 if (!await ModalService.confirm("Anular Pago", `Esta cita ya está pagada. ¿Deseas <b>ANULAR</b> el pago?<br><br>Esto registrará un monto negativo en Excel para cancelar la suma.`)) {

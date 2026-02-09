@@ -5,6 +5,8 @@
 
 import { ToastService } from '../../utils/ToastService.js';
 import { GoogleAuthService } from './GoogleAuthService.js';
+import { SyncStatus } from '../SyncStatus.js';
+import { NetworkMonitor } from '../NetworkMonitor.js';
 
 export const SheetService = {
     // Configuración MULTI-ARCHIVO
@@ -24,6 +26,15 @@ export const SheetService = {
      * @param {boolean} isRetry - Si es un reintento automático tras fallo de auth
      */
     async logPayment(paymentData, isAuthRetry = false, networkRetries = 0) {
+        // 0. Verificar Conexión
+        if (!NetworkMonitor.checkConnection()) {
+            ToastService.error("Sin conexión a internet. No se puede sincronizar con Excel.");
+            SyncStatus.setOffline();
+            return false;
+        }
+
+        if (networkRetries === 0 && !isAuthRetry) SyncStatus.setSaving(); // Inicio de guardado
+
         console.log(`📝 SheetService: Preparando para registrar pago...`, {
             payment: paymentData,
             authRetried: isAuthRetry,
@@ -102,6 +113,7 @@ export const SheetService = {
 
             console.log(`✅ SheetService: Pago enviado a archivo de ${therapistKey}`, response);
             ToastService.success(`Sincronizado con Excel de ${therapistKey}`);
+            SyncStatus.setSaved(); // Éxito
             return true;
 
         } catch (error) {
@@ -149,6 +161,7 @@ export const SheetService = {
             } else {
                 ToastService.error("Error de conexión con Google Sheets. Revisa la consola.");
             }
+            SyncStatus.setError(); // Error final
             return false;
         }
     },

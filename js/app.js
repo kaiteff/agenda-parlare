@@ -7,6 +7,7 @@ import { AuthManager } from './managers/AuthManager.js';
 import { ScheduleManager } from './managers/ScheduleManager.js';
 import { ModalService } from './utils/ModalService.js';
 import { ToastService } from './utils/ToastService.js';
+import { NetworkMonitor } from './services/NetworkMonitor.js';
 import { Header } from './components/Header.js'; // Nuevo componente
 
 // Referencias DOM
@@ -92,6 +93,10 @@ async function initializeModules() {
     try {
         ToastService.init();
     } catch (e) { console.error("❌ Error ToastService:", e); }
+
+    try {
+        NetworkMonitor.init();
+    } catch (e) { console.error("❌ Error NetworkMonitor:", e); }
 
     console.log("✅ Todos los módulos inicializados");
 }

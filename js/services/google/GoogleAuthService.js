@@ -14,6 +14,7 @@ export const GoogleAuthService = {
     tokenClient: null,
     gapiInited: false,
     gisInited: false,
+    tokenExpiration: null,
 
     /**
      * Inicializa GAPI y GIS
@@ -78,10 +79,14 @@ export const GoogleAuthService = {
     async ensureToken(forceConsent = false) {
         if (!this.tokenClient) await this.init();
 
-        // Si NO forzamos y ya tenemos token válido, usarlo
-        if (!forceConsent) {
-            const currentToken = window.gapi.client.getToken();
-            if (currentToken) return true;
+        // Si NO forzamos y ya tenemos token válido y NO expirado, usarlo
+        if (!forceConsent && this.isTokenValid()) {
+            return true;
+        }
+
+        // Si el token va a expirar pronto o no existe, pedir uno nuevo (background refresh si es posible)
+        if (!forceConsent && this.tokenExpiration) {
+            console.log("🔄 GoogleAuthService: Token próximo a expirar. Renovando silenciosamente...");
         }
 
         // Si no, pedirlo
@@ -96,6 +101,12 @@ export const GoogleAuthService = {
                     if (window.gapi && window.gapi.client) {
                         window.gapi.client.setToken(resp);
                     }
+
+                    // Calcular expiración (expires_in viene en segundos, por defecto 3599)
+                    const expiresIn = resp.expires_in || 3599;
+                    // Guardamos expiración real menos 5 minutos de margen de seguridad
+                    this.tokenExpiration = Date.now() + (expiresIn * 1000) - (5 * 60 * 1000);
+                    console.log(`🕒 GoogleAuthService: Token válido hasta ${new Date(this.tokenExpiration).toLocaleTimeString()}`);
 
                     resolve(resp);
                 };
@@ -114,10 +125,16 @@ export const GoogleAuthService = {
     },
 
     /**
-     * Verifica si las credenciales están configuradas
+     * Verifica si el token actual es válido y no ha expirado
      */
-    isConfigured() {
-        return this.config.clientId !== 'YOUR_CLIENT_ID_HERE' &&
-            this.config.apiKey !== 'YOUR_API_KEY_HERE';
+    isTokenValid() {
+        const token = window.gapi?.client?.getToken();
+        if (!token) return false;
+
+        // Si no tenemos timestamp (primera vez o recarga), asumimos inválido para forzar refresh seguro
+        // O podríamos intentar usarlo y capturar el 401, pero refresh preventivo es mejor UX
+        if (!this.tokenExpiration) return false;
+
+        return Date.now() < this.tokenExpiration;
     }
 };
