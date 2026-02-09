@@ -68,23 +68,45 @@ function renderNotificationItem(notification) {
     const bgClass = notification.isRead ? 'bg-white' : 'bg-blue-50';
     notifEl.className = `p-4 border-b border-gray-100 hover:bg-blue-100 cursor-pointer transition-colors ${bgClass}`;
 
-    const oldDate = new Date(notification.oldDate);
-    const newDate = new Date(notification.newDate);
-    const oldStr = oldDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    const newStr = newDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    // Determinar tipo de notificación
+    const notifType = notification.type || 'reschedule';
+    let icon, iconBg, title, details;
+
+    if (notifType === 'whatsapp_cancel') {
+        icon = `<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+        iconBg = 'bg-red-100';
+        title = `❌ ${notification.patientName} canceló por WhatsApp`;
+        const aptDate = notification.appointmentDate ? new Date(notification.appointmentDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        details = aptDate ? `<p class="text-xs text-red-500 mt-1">Cita cancelada: ${aptDate}</p>` : '';
+    } else if (notifType === 'whatsapp_confirm') {
+        icon = `<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+        iconBg = 'bg-green-100';
+        title = `✅ ${notification.patientName} confirmó por WhatsApp`;
+        const aptDate = notification.appointmentDate ? new Date(notification.appointmentDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        details = aptDate ? `<p class="text-xs text-green-600 mt-1">Cita confirmada: ${aptDate}</p>` : '';
+    } else {
+        // Default: reagendada (existing behavior)
+        icon = `<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
+        iconBg = 'bg-blue-100';
+        title = `🔄 ${notification.patientName} reagendada`;
+        const oldDate = new Date(notification.oldDate);
+        const newDate = new Date(notification.newDate);
+        const oldStr = oldDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const newStr = newDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        details = `<p class="text-xs text-gray-500 mt-1">Anterior: ${oldStr}</p><p class="text-xs text-green-600 mt-0.5">Nueva: ${newStr}</p>`;
+    }
+
+    const timestamp = notification.timestamp?.toDate?.() || (notification.timestamp ? new Date(notification.timestamp) : new Date());
 
     notifEl.innerHTML = `
         <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
+            <div class="flex-shrink-0 w-10 h-10 ${iconBg} rounded-full flex items-center justify-center">
+                ${icon}
             </div>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800">🔄 ${notification.patientName} reagendada</p>
-                <p class="text-xs text-gray-500 mt-1">Anterior: ${oldStr}</p>
-                <p class="text-xs text-green-600 mt-0.5">Nueva: ${newStr}</p>
-                <p class="text-xs text-gray-400 mt-2">${new Date(notification.timestamp?.toDate?.() || notification.timestamp).toLocaleString('es-ES')}</p>
+                <p class="text-sm font-semibold text-gray-800">${title}</p>
+                ${details}
+                <p class="text-xs text-gray-400 mt-2">${timestamp.toLocaleString('es-ES')}</p>
             </div>
             ${!notification.isRead ? '<div class="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>' : ''}
         </div>
