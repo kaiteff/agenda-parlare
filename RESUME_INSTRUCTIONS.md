@@ -12,6 +12,9 @@ Ejecuta el siguiente comando en la terminal:
 python serve.py
 ```
 
+El script buscará automáticamente el puerto **8081**. Si ese puerto está ocupado, intentará otro, pero **PARA QUE FUNCIONE GOOGLE AUTH, DEBE SER EL 8081**.
+Si ves que inicia en otro puerto, cierra lo que esté ocupando el 8081 e intenta de nuevo.
+
 O simplemente abre el archivo `serve.py` si tienes Python asociado.
 
 > **Nota**: No uses `server-hot.ps1` ni otros métodos antiguos. `serve.py` es el script oficial actual.

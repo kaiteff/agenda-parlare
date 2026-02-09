@@ -6,7 +6,7 @@ import sys
 import webbrowser
 
 # Configuración
-START_PORT = 8000
+START_PORT = 8081
 MAX_RETRIES = 100
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -17,7 +17,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Expires', '0')
         super().end_headers()
 
+def get_local_ip():
+    try:
+        # Intenta obtener todas las IPs
+        host_name = socket.gethostname()
+        ips = socket.gethostbyname_ex(host_name)[2]
+        
+        # Filtrar por 192.168 (comun en casa)
+        for ip in ips:
+            if ip.startswith("192.168."):
+                return ip
+        
+        # Si no, fallback al metodo anterior
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        return "127.0.0.1"
+
 def get_free_port(start_port):
+    # Intentar forzar 8081 primero
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', 8081))
+            return 8081
+    except OSError:
+        pass # Si falla, sigue la logica normal
+
     port = start_port
     while port < start_port + MAX_RETRIES:
         try:
@@ -34,16 +62,23 @@ def run():
     
     try:
         port = get_free_port(START_PORT)
+        local_ip = get_local_ip()
         
         with socketserver.TCPServer(("", port), Handler) as httpd:
-            url = f"http://localhost:{port}"
+            url_local = f"http://localhost:{port}"
+            url_lan = f"http://{local_ip}:{port}"
+            
             print(f"\n[OK] Servidor iniciado exitosamente")
-            print(f"URL: {url}")
+            print(f"URL Local : {url_local}")
+            print(f"URL Movil : {url_lan}  <-- USALA EN TU CELULAR")
             print(f"Directorio: {os.getcwd()}")
             print(f"Presiona Ctrl+C para detener\n")
             
-            # Abrir navegador automáticamente
-            webbrowser.open(url)
+            if port != 8081:
+                print("ADVERTENCIA: No se esta usando el puerto 8081. Google Auth podria fallar.")
+            
+            # Abrir navegador automaticamente
+            webbrowser.open(url_local)
             
             httpd.serve_forever()
             
