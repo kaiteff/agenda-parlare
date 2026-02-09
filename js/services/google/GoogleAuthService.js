@@ -100,9 +100,9 @@ export const GoogleAuthService = {
                     resolve(resp);
                 };
 
-                // Si forzamos consentimiento (útil para errores 403), usamos prompt: 'consent'
-                // Si no, dejamos que Google decida (a veces es silencioso si ya autorizaste)
-                const promptConfig = forceConsent ? 'consent' : '';
+                // Si forzamos consentimiento (útil para errores 403), usamos prompt: 'select_account'
+                // para permitir cambiar de usuario explícitamente.
+                const promptConfig = forceConsent ? 'select_account' : '';
 
                 console.log(`🔄 GoogleAuthService: Solicitando token (Prompt: ${promptConfig || 'auto'})...`);
                 this.tokenClient.requestAccessToken({ prompt: promptConfig });

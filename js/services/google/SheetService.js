@@ -23,8 +23,12 @@ export const SheetService = {
      * @param {Object} paymentData 
      * @param {boolean} isRetry - Si es un reintento automático tras fallo de auth
      */
-    async logPayment(paymentData, isRetry = false) {
-        console.log(`📝 SheetService: Preparando para registrar pago (Intento: ${isRetry ? 2 : 1})...`, paymentData);
+    async logPayment(paymentData, isAuthRetry = false, networkRetries = 0) {
+        console.log(`📝 SheetService: Preparando para registrar pago...`, {
+            payment: paymentData,
+            authRetried: isAuthRetry,
+            networkAttempt: networkRetries + 1
+        });
 
         const therapistKey = paymentData.therapist?.toLowerCase() || 'diana';
         const targetSpreadsheetId = this.config.spreadsheets[therapistKey];
@@ -42,10 +46,13 @@ export const SheetService = {
         }
 
         try {
-            console.log("🛠️ DEBUG: Intentando autenticar con Google...");
+            // Solo loguear esto en el primer intento de red para no spamear
+            if (networkRetries === 0) console.log("🛠️ DEBUG: Intentando autenticar con Google...");
+
             // 2. Autenticación
-            await GoogleAuthService.ensureToken(isRetry);
-            console.log("🛠️ DEBUG: Autenticación exitosa. Preparando datos...");
+            await GoogleAuthService.ensureToken(isAuthRetry);
+
+            if (networkRetries === 0) console.log("🛠️ DEBUG: Autenticación exitosa. Preparando datos...");
 
             // 3. Preparar datos para la pestaña "App_Data"
             // Estructura: [Fecha, Hora, Paciente, Monto, Estatus, Timestamp, HoraSimple, Parlare, Terapeuta]
@@ -59,9 +66,15 @@ export const SheetService = {
             const finalClinicFee = totalAmount < 0 ? -Math.abs(rawClinicFee) : Math.abs(rawClinicFee);
             const therapistIncome = totalAmount - finalClinicFee;
 
+            // Force DD/MM/YYYY format specifically for Sheets formulas
+            const day = dateObj.getDate().toString().padStart(2, '0');
+            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const year = dateObj.getFullYear();
+            const dateStr = `${day}/${month}/${year}`;
+
             const values = [
                 [
-                    dateObj.toLocaleDateString(), // Col A: Fecha
+                    dateStr, // Col A: Fecha (DD/MM/YYYY Manual)
                     dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Col B: Hora Texto
                     paymentData.patientName,      // Col C: Paciente
                     totalAmount,                  // Col D: Monto (Puede ser negativo)
@@ -94,21 +107,44 @@ export const SheetService = {
         } catch (error) {
             console.error("❌ SheetService: Error detallado:", JSON.stringify(error, null, 2));
 
+            const errorCode = error.result?.error?.code || error.status;
+
+            // --- MANEJO DE RETRY POR ERROR DE SERVIDOR (503, 500, etc) ---
+            if ([500, 502, 503, 504, 429].includes(errorCode)) {
+                const MAX_RETRIES = 5;
+                if (networkRetries < MAX_RETRIES) {
+                    const delay = Math.pow(2, networkRetries) * 1000; // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+                    console.warn(`⚠️ SheetService: Error temporal ${errorCode}. Reintentando en ${delay / 1000}s... (Intento ${networkRetries + 1}/${MAX_RETRIES})`);
+
+                    // Notificar al usuario discretamente si está tardando
+                    if (networkRetries > 0) {
+                        ToastService.info(`Servicio de Google ocupado. Reintentando (${networkRetries + 1})...`);
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this.logPayment(paymentData, isAuthRetry, networkRetries + 1);
+                } else {
+                    ToastService.error(`Google Sheets no responde después de ${MAX_RETRIES} intentos. Intenta más tarde.`);
+                    return false;
+                }
+            }
+
             // Manejo Automático de Error 403 (Permisos)
-            if (error.result?.error?.code === 403 && !isRetry) {
+            // Solo si no es ya un reintento de auth
+            if (errorCode === 403 && !isAuthRetry) {
                 console.log("🔄 SheetService: Detectado error 403. Reintentando con login forzado...");
                 ToastService.info("Renovando permisos de Google... Revisa la ventana emergente.");
-                return this.logPayment(paymentData, true); // Reintento recursivo
+                return this.logPayment(paymentData, true, 0); // Reintento recursivo de Auth (reset network retries)
             }
 
             // Mensajes de error específicos con instrucciones claras
-            if (error.result?.error?.code === 404) {
+            if (errorCode === 404) {
                 ToastService.error(`No encontrado. Verifica el ID del archivo de ${therapistKey}.`);
             } else if (error.result?.error?.message?.includes('Unable to parse range')) {
                 const instructions = `Falta la pestaña "${this.config.targetSheetName}" en el Excel de ${therapistKey}. Créala para solucionar.`;
                 console.error(instructions);
                 ToastService.error(instructions, 6000);
-            } else if (error.result?.error?.code === 403) {
+            } else if (errorCode === 403) {
                 ToastService.error(`Acceso denegado. Verifica que tu usuario tenga permiso de EDITAR el archivo.`);
             } else {
                 ToastService.error("Error de conexión con Google Sheets. Revisa la consola.");
