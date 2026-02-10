@@ -16,6 +16,9 @@ import { createAppointment } from '../services/appointmentService.js';
 import { getStartOfWeek, addDays, formatDateLocal } from '../utils/dateUtils.js';
 import { ModalService } from '../utils/ModalService.js';
 import { ToastService } from '../utils/ToastService.js';
+import { Logger } from '../utils/Logger.js';
+
+const log = Logger.create('ScheduleMgr');
 
 export const ScheduleManager = {
     // Estado interno
@@ -39,6 +42,7 @@ export const ScheduleManager = {
     init() {
         this._initDOM();
         this._setupListeners();
+        log.info('Inicializado');
         // Exponer globalmente para onclicks en HTML
         window.ScheduleManager = this;
     },
@@ -146,10 +150,10 @@ export const ScheduleManager = {
                 modal.style.display = 'flex';
                 modal.style.zIndex = '9999';
 
-                console.log("✅ ScheduleManager: Modal abierto para", patientName);
+                log.info("Modal abierto para", patientName);
             });
         } else {
-            console.error("❌ ScheduleManager: No se encontró el modal 'scheduleNewPatientModal'");
+            log.error("No se encontró el modal 'scheduleNewPatientModal'");
         }
     },
 
@@ -157,7 +161,7 @@ export const ScheduleManager = {
      * Cierra el modal
      */
     closeModal() {
-        console.log('🚪 ScheduleManager.closeModal() llamado');
+        log.debug('closeModal() llamado');
         const modal = document.getElementById('scheduleNewPatientModal');
         if (modal) {
             modal.classList.add('hidden');
@@ -447,11 +451,12 @@ export const ScheduleManager = {
                 if (result.success) createdCount++;
             }
 
+            log.success(`Se agendaron ${createdCount} citas exitosamente.`);
             await ToastService.success(`Se agendaron ${createdCount} citas exitosamente.`, 4000);
             this.closeModal();
 
         } catch (error) {
-            console.error('Error al agendar citas:', error);
+            log.error('Error al agendar citas:', error);
             await ModalService.alert("Error", 'Error al agendar citas: ' + error.message, "error");
             this.dom.confirmBtn.disabled = false;
             this.dom.confirmBtn.textContent = 'Agendar Cita';

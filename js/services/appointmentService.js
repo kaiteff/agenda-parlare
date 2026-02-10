@@ -1,6 +1,47 @@
 // appointmentService.js - Servicio para gestión de citas
-import { db, collectionPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
+import { db, collectionPath, notificationsPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
 import { validateAppointment } from '../utils/validators.js';
+import { Logger } from '../utils/Logger.js';
+
+const log = Logger.create('AptService');
+
+// Helper para crear notificaciones internas
+async function _createNotification(title, message, type = 'info', metadata = {}) {
+    try {
+        await addDoc(collection(db, notificationsPath), {
+            title,
+            message,
+            type,
+            timestamp: serverTimestamp(),
+            isRead: false,
+            ...metadata
+        });
+    } catch (error) {
+        log.warn('Error creando notificación interna:', error);
+    }
+}
+
+// Google Calendar sync (fire-and-forget, no bloquea el flujo principal)
+async function _syncToCalendar(action, data) {
+    try {
+        const { GoogleCalendarService } = await import('./google/GoogleCalendarService.js');
+
+        const success = await (async () => {
+            if (action === 'create') return await GoogleCalendarService.createEvent(data);
+            if (action === 'update') return await GoogleCalendarService.updateEvent(data);
+            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data);
+            return false;
+        })();
+
+        if (success) {
+            log.debug(`Calendar sync (${action}) exitoso`);
+        } else {
+            log.warn(`Calendar sync (${action}) falló o no estaba habilitado`);
+        }
+    } catch (err) {
+        log.warn('Calendar sync error (non-blocking):', err.message);
+    }
+}
 
 /**
  * Crea una nueva cita
@@ -13,6 +54,7 @@ export async function createAppointment(appointmentData, existingAppointments) {
         // Validar datos
         const validation = validateAppointment(appointmentData, existingAppointments, appointmentData.therapist);
         if (!validation.valid) {
+            log.warn('Validación fallida al crear cita:', validation.errors);
             return { success: false, error: validation.errors.join('\n') };
         }
 
@@ -27,9 +69,23 @@ export async function createAppointment(appointmentData, existingAppointments) {
             createdAt: serverTimestamp()
         });
 
-        return { success: true, id: docRef.id };
+        const newId = docRef.id;
+        log.success(`Cita creada [${newId}] para ${appointmentData.name}`);
+
+        // Crear notificación interna
+        _createNotification(
+            'Nueva Cita',
+            `Se agendó cita para ${appointmentData.name} el ${new Date(appointmentData.date).toLocaleString()}`,
+            'success',
+            { appointmentId: newId, patientName: appointmentData.name }
+        );
+
+        // Sync a Google Calendar (no bloquea)
+        _syncToCalendar('create', { ...appointmentData, id: newId });
+
+        return { success: true, id: newId };
     } catch (error) {
-        console.error("Error creando cita:", error);
+        log.error("Error creando cita:", error);
         return { success: false, error: error.message };
     }
 }
@@ -47,6 +103,7 @@ export async function updateAppointment(id, updateData, existingAppointments) {
         if (updateData.date || updateData.name) {
             const validation = validateAppointment({ ...updateData, id }, existingAppointments, updateData.therapist);
             if (!validation.valid) {
+                log.warn('Validación fallida al actualizar cita:', validation.errors);
                 return { success: false, error: validation.errors.join('\n') };
             }
         }
@@ -57,9 +114,23 @@ export async function updateAppointment(id, updateData, existingAppointments) {
             updatedAt: serverTimestamp()
         });
 
+        log.info(`Cita actualizada [${id}]`);
+
+        // Crear notificación interna
+        const patientName = updateData.name ? updateData.name : 'un paciente';
+        _createNotification(
+            'Cita Actualizada',
+            `Se actualizó la cita de ${patientName}`,
+            'info',
+            { appointmentId: id, patientName: updateData.name || null }
+        );
+
+        // Sync a Google Calendar (no bloquea)
+        _syncToCalendar('update', { ...updateData, id });
+
         return { success: true };
     } catch (error) {
-        console.error("Error actualizando cita:", error);
+        log.error("Error actualizando cita:", error);
         return { success: false, error: error.message };
     }
 }
@@ -72,9 +143,14 @@ export async function updateAppointment(id, updateData, existingAppointments) {
 export async function deleteAppointment(id) {
     try {
         await deleteDoc(doc(db, collectionPath, id));
+        log.info(`Cita eliminada permanentemente [${id}]`);
+
+        _createNotification('Cita Eliminada', 'Se ha eliminado una cita permanentemente', 'warning');
+
+        _syncToCalendar('delete', id);
         return { success: true };
     } catch (error) {
-        console.error("Error eliminando cita:", error);
+        log.error("Error eliminando cita:", error);
         return { success: false, error: error.message };
     }
 }
@@ -91,9 +167,19 @@ export async function cancelAppointment(id) {
             isCancelled: true,
             cancelledAt: serverTimestamp()
         });
+        log.info(`Cita cancelada [${id}]`);
+
+        _createNotification(
+            'Cita Cancelada',
+            'Se ha cancelado una cita',
+            'warning',
+            { appointmentId: id }
+        );
+
+        _syncToCalendar('delete', id);
         return { success: true };
     } catch (error) {
-        console.error("Error cancelando cita:", error);
+        log.error("Error cancelando cita:", error);
         return { success: false, error: error.message };
     }
 }
@@ -109,9 +195,10 @@ export async function togglePaymentStatus(id, currentStatus) {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, { isPaid: newStatus });
+        log.debug(`Cita [${id}] pago: ${newStatus}`);
         return { success: true, newState: newStatus };
     } catch (error) {
-        console.error("Error cambiando estado de pago:", error);
+        log.error("Error cambiando estado de pago:", error);
         return { success: false, error: error.message };
     }
 }
@@ -127,9 +214,10 @@ export async function toggleConfirmationStatus(id, currentStatus) {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, { confirmed: newStatus });
+        log.debug(`Cita [${id}] confirmada: ${newStatus}`);
         return { success: true, newState: newStatus };
     } catch (error) {
-        console.error("Error cambiando confirmación:", error);
+        log.error("Error cambiando confirmación:", error);
         return { success: false, error: error.message };
     }
 }

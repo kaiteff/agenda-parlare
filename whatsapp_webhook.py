@@ -7,17 +7,20 @@ Cuando un paciente responde al recordatorio:
 - "Cancelar" / "No" → Cancela la cita en Firestore
 
 Uso local:
-    python whatsapp_webhook.py                # Inicia en puerto 5000
-    ngrok http 5000                           # Expone el servidor
+    python whatsapp_webhook.py
 
-Luego configura la URL de ngrok en Twilio:
-    Sandbox Settings → "When a message comes in" → https://xxxxx.ngrok.io/webhook
+Uso en Render (producción):
+    Variables de entorno requeridas:
+    - TWILIO_SID, TWILIO_TOKEN, TWILIO_WHATSAPP_FROM
+    - FIREBASE_SERVICE_KEY_B64 (service key JSON codificado en base64)
 """
 
 import json
 import os
 import sys
 import re
+import base64
+import tempfile
 from datetime import datetime, timedelta
 from flask import Flask, request
 
@@ -26,18 +29,34 @@ if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# ── Config ───────────────────────────────────────────────────────────
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'whatsapp_config.json')
-with open(CONFIG_PATH, 'r') as f:
-    config = json.load(f)
+# ── Config (env vars for Render, JSON file for local) ────────────────
+IS_RENDER = os.environ.get('RENDER', False)
+
+if IS_RENDER:
+    config = {
+        'twilio_sid': os.environ['TWILIO_SID'],
+        'twilio_token': os.environ['TWILIO_TOKEN'],
+        'twilio_whatsapp_from': os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886'),
+    }
+else:
+    CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'whatsapp_config.json')
+    with open(CONFIG_PATH, 'r') as f:
+        config = json.load(f)
 
 # ── Firebase ─────────────────────────────────────────────────────────
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-SERVICE_KEY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'firebase_service_key.json')
 if not firebase_admin._apps:
-    cred = credentials.Certificate(SERVICE_KEY_PATH)
+    if IS_RENDER:
+        # En Render: service key como variable de entorno (base64)
+        key_b64 = os.environ['FIREBASE_SERVICE_KEY_B64']
+        key_json = json.loads(base64.b64decode(key_b64).decode('utf-8'))
+        cred = credentials.Certificate(key_json)
+    else:
+        # Local: archivo JSON
+        SERVICE_KEY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'firebase_service_key.json')
+        cred = credentials.Certificate(SERVICE_KEY_PATH)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
@@ -209,13 +228,15 @@ def health():
 
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     print("=" * 50)
     print("📱 Parlare WhatsApp Webhook Server")
     print("=" * 50)
-    print(f"Escuchando en http://localhost:5000/webhook")
-    print(f"Health check: http://localhost:5000/health")
-    print(f"\nPara exponer con ngrok:")
-    print(f"  ngrok http 5000")
+    print(f"Escuchando en http://localhost:{port}/webhook")
+    print(f"Health check: http://localhost:{port}/health")
+    if not IS_RENDER:
+        print(f"\nPara exponer con ngrok:")
+        print(f"  ngrok http {port}")
     print("=" * 50)
     
-    app.run(port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=not IS_RENDER)

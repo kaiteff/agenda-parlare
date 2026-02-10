@@ -160,10 +160,10 @@ export const SheetService = {
                 }
             }
 
-            // Manejo Automático de Error 403 (Permisos)
+            // Manejo Automático de Error 401/403 (Token expirado o sin permisos)
             // Solo si no es ya un reintento de auth
-            if (errorCode === 403 && !isAuthRetry) {
-                console.log("🔄 SheetService: Detectado error 403. Reintentando con login forzado...");
+            if ((errorCode === 401 || errorCode === 403) && !isAuthRetry) {
+                console.log(`🔄 SheetService: Detectado error ${errorCode}. Reintentando con login forzado...`);
                 ToastService.info("Renovando permisos de Google... Revisa la ventana emergente.");
                 return this.logPayment(paymentData, true, 0); // Reintento recursivo de Auth (reset network retries)
             }

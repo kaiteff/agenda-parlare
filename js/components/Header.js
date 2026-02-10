@@ -255,6 +255,33 @@ export const Header = {
                 return; // Importante
             }
 
+            // 1b. Botón de Corte de Caja
+            const corteBtn = e.target.closest('#openCorteBtn');
+            if (corteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    const { CorteDeCaja } = await import('../modules/reports/CorteDeCaja.js');
+                    CorteDeCaja.open();
+                } catch (err) {
+                    console.error("Error abriendo Corte de Caja:", err);
+                }
+                return;
+            }
+
+            // 1c. Botón Copiar Corte
+            const corteCopyBtn = e.target.closest('#corteCopyBtn');
+            if (corteCopyBtn) {
+                e.preventDefault();
+                try {
+                    const { CorteDeCaja } = await import('../modules/reports/CorteDeCaja.js');
+                    CorteDeCaja.copyToClipboard();
+                } catch (err) {
+                    console.error("Error copiando corte:", err);
+                }
+                return;
+            }
+
             // 2. Botón de Logout
             const logoutBtn = e.target.closest('#logoutBtn');
             if (logoutBtn) {

@@ -145,6 +145,9 @@ export const CalendarModal = {
         dom.rescheduleSection.classList.remove('hidden');
         CalendarSuggestions.generateRescheduleOptions(date);
 
+        // Smart Suggestion (Best Pattern)
+        CalendarSuggestions.analyzeAndSuggest(ev.name);
+
         // Recurrence (hide for edit)
         dom.isRecurringCheckbox.checked = false;
         dom.recurringSection.classList.add('hidden');

@@ -9,7 +9,7 @@
  * PatientManager (coordinador)
  * ├── PatientState (estado centralizado)
  * ├── PatientFilters (lógica pura)
- * ├── Sidebar (Componente UI Lista) [NUEVO]
+ * ├── Sidebar (Componente UI Lista)
  * ├── PatientActions (CRUD)
  * └── PatientModals (modales)
  * 
@@ -22,8 +22,10 @@ import { Sidebar } from '../components/Sidebar.js';
 import { PatientActions } from './patient/PatientActions.js';
 import { PatientModals } from './patient/PatientModals.js';
 import { PatientModalsHTML } from './patient/PatientModalsHTML.js';
-import { patientProfiles, patientsData } from '../firebase.js';
-import { onSnapshot, collection, query } from '../firebase.js';
+import { db, collectionPath, collection, onSnapshot, query, orderBy } from '../firebase.js';
+import { Logger } from '../utils/Logger.js';
+
+const log = Logger.create('PatientMgr');
 
 /**
  * Manager principal para gestión de pacientes
@@ -37,7 +39,7 @@ export const PatientManager = {
 
     state: PatientState,
     filters: PatientFilters,
-    ui: Sidebar, // Reemplazamos UI con Sidebar en la API pública para renderizado de lista
+    ui: Sidebar,
     actions: PatientActions,
     modals: PatientModals,
 
@@ -49,15 +51,13 @@ export const PatientManager = {
      * Inicializa el sistema completo de pacientes
      */
     async init() {
-        console.log('🏥 Inicializando PatientManager...');
+        log.info('Inicializando...');
 
         try {
             // 0. Inyectar Modales
-            console.log('  💉 Inyectando HTML de modales...');
             PatientModalsHTML.inject();
 
             // 1. Inicializar referencias DOM
-            console.log('  📋 Inicializando DOM...');
             PatientState.initDOM();
 
             if (!PatientState.isDOMReady()) {
@@ -65,20 +65,18 @@ export const PatientManager = {
             }
 
             // 2. Inicializar Componente Sidebar
-            console.log('  🎨 Inicializando Sidebar...');
             Sidebar.init();
 
             // 3. Configurar listeners de UI (Restantes que no son de Sidebar)
             this._setupRemainingUIListeners();
 
-            // 4. Configurar listeners de datos (Firestore)
-            console.log('  🔄 Configurando listeners de datos...');
-            await this._setupDataListeners();
+            // 4. Configurar listener de datos (Firestore)
+            this._setupRealtimeListener();
 
-            console.log('✅ PatientManager inicializado correctamente');
+            log.success('Inicializado correctamente');
 
         } catch (error) {
-            console.error('❌ Error al inicializar PatientManager:', error);
+            log.error('Error al inicializar:', error);
             throw error;
         }
     },
@@ -91,7 +89,7 @@ export const PatientManager = {
     _setupRemainingUIListeners() {
         const { dom } = PatientState;
 
-        // Listeners estáticos de modales (que no están en la lista principal)
+        // Listeners estáticos de modales
         if (dom.closeNewPatientModalBtn) {
             dom.closeNewPatientModalBtn.onclick = () => PatientModals.closeNewPatient();
         }
@@ -140,91 +138,120 @@ export const PatientManager = {
     },
 
     /**
-     * Configura los listeners de datos de Firestore
-     * @private
+     * Configura listener de Firestore en tiempo real
+     * Escucha la colección de CITAS y genera los perfiles de pacientes en el cliente
      */
-    async _setupDataListeners() {
-        const { db, collection, query, onSnapshot } = await import('../firebase.js');
+    _setupRealtimeListener() {
+        // Obtenemos todas las citas ordenadas por fecha reciente
+        const q = query(collection(db, collectionPath), orderBy("date", "desc"));
 
-        // Listener para perfiles de pacientes
-        const profilesRef = collection(db, 'patientProfiles');
-        const profilesQuery = query(profilesRef);
-
-        onSnapshot(profilesQuery, (snapshot) => {
-            const profiles = [];
-            snapshot.forEach((doc) => {
-                profiles.push({ id: doc.id, ...doc.data() });
-            });
-
-            PatientState.updatePatients(profiles);
-
-            // Re-renderizar Sidebar cuando cambien los datos
-            Sidebar.render();
-
-            console.log(`🔄 Perfiles actualizados: ${profiles.length} pacientes`);
-        });
-
-        // Listener para citas (appointments)
-        const appointmentsRef = collection(db, 'appointments');
-        const appointmentsQuery = query(appointmentsRef);
-
-        onSnapshot(appointmentsQuery, (snapshot) => {
+        onSnapshot(q, (snapshot) => {
             const appointments = [];
             snapshot.forEach((doc) => {
                 appointments.push({ id: doc.id, ...doc.data() });
             });
 
-            PatientState.updateAppointments(appointments);
-
-            if (typeof window !== 'undefined') {
-                window.patientsData = appointments;
-            }
-
-            // Re-renderizar Sidebar cuando cambien las citas
-            Sidebar.render();
-
-            // Refrescar modal de historial si está abierto
-            const selectedPatient = PatientState.getSelectedPatient();
-            if (selectedPatient &&
-                PatientState.dom.patientHistoryModal &&
-                !PatientState.dom.patientHistoryModal.classList.contains('hidden')) {
-                PatientModals.openHistory(selectedPatient);
-            }
-
-            console.log(`🔄 Citas actualizadas: ${appointments.length} citas`);
+            this._processData(appointments);
+        }, (error) => {
+            log.error("Error al obtener citas en tiempo real:", error);
         });
     },
 
-    // ==========================================
-    // API PÚBLICA
-    // ==========================================
+    /**
+     * Procesa los datos crudos de citas para generar perfiles abstractos de pacientes
+     * @param {Array} appointments 
+     */
+    _processData(appointments) {
+        log.time('Procesamiento de datos', () => {
+            const patientMap = new Map();
 
-    api: {
-        getPatient(id) {
-            return PatientState.patients.find(p => p.id === id);
-        },
-        getActivePatients() {
-            return PatientState.patients.filter(p => p.isActive !== false);
-        },
-        getTodayCount() {
-            return PatientFilters.getToday().length;
-        },
-        getTomorrowCount() {
-            return PatientFilters.getTomorrow().length;
-        },
-        refreshList() {
-            Sidebar.render();
-        },
-        // Métodos proxy para mantener compatibilidad
-        openHistory: PatientModals.openHistory,
-        openNewPatient: PatientModals.openNewPatient,
-        markAsPaid: PatientActions.markAsPaid,
-        toggleConfirmation: PatientActions.toggleConfirmation
+            // 1. Agrupar citas por paciente (normalizar nombres)
+            appointments.forEach(app => {
+                const normalizedName = app.name.trim().toLowerCase();
+
+                if (!patientMap.has(normalizedName)) {
+                    patientMap.set(normalizedName, {
+                        id: normalizedName, // ID temporal basado en nombre normalizado
+                        name: app.name.trim(), // Nombre display (el primero encontrado)
+                        normalizedName: normalizedName,
+                        appointments: [],
+                        totalPaid: 0,
+                        totalPending: 0,
+                        lastVisit: null,
+                        isActive: true,
+                        therapist: app.therapist || 'diana' // Default
+                    });
+                }
+
+                const patient = patientMap.get(normalizedName);
+                patient.appointments.push(app);
+            });
+
+            // 2. Calcular totales y ordenar
+            const patients = Array.from(patientMap.values()).map(p => {
+                // Calcular totales
+                p.totalPaid = p.appointments
+                    .filter(a => a.isPaid && !a.isCancelled)
+                    .reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0);
+
+                p.totalPending = p.appointments
+                    .filter(a => !a.isPaid && !a.isCancelled)
+                    .reduce((sum, a) => sum + (parseFloat(a.cost) || 0), 0);
+
+                // Ordenar citas del paciente (más reciente primero - ya vienen ordenadas pero por seguridad)
+                p.appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (p.appointments.length > 0) {
+                    p.lastVisit = p.appointments[0].date;
+                    // Usar el terapeuta de la cita más reciente como el "actual"
+                    if (p.appointments[0].therapist) {
+                        p.therapist = p.appointments[0].therapist;
+                    }
+                }
+
+                // Determinar si está activo (ej: última cita hace menos de 6 meses)
+                // Por ahora mantenemos todos activos salvo lógica futura específica
+                // p.isActive = ...
+
+                return p;
+            });
+
+            // Actualizar estado centralizado
+            PatientState.updatePatients(patients);
+            PatientState.updateAppointments(appointments);
+
+            // Re-renderizar UI
+            this.render();
+
+            log.info(`Perfiles actualizados: ${patients.length} pacientes`);
+            log.debug(`Citas actualizadas: ${appointments.length} citas`);
+
+            return patients;
+        });
+    },
+
+    /**
+     * Renderiza la interfaz principal (delega en Sidebar)
+     */
+    render() {
+        Sidebar.render();
+
+        // Refrescar modal de historial si está abierto para reflejar cambios en tiempo real
+        const selectedPatient = PatientState.getSelectedPatient();
+        if (selectedPatient &&
+            PatientState.dom.patientHistoryModal &&
+            !PatientState.dom.patientHistoryModal.classList.contains('hidden')) {
+            // Buscar el paciente actualizado en el nuevo estado
+            const updatedPatient = PatientState.patients.find(p => p.id === selectedPatient.id);
+            if (updatedPatient) {
+                PatientModals.openHistory(updatedPatient);
+            }
+        }
     }
 };
 
 // ==========================================
-// EXPOSICIÓN GLOBAL
+// EXPOSICIÓN GLOBAL (Compatibilidad HTML)
 // ==========================================
 
 if (typeof window !== 'undefined') {

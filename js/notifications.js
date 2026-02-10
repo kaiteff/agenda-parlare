@@ -1,8 +1,12 @@
 // notifications.js - Sistema de notificaciones persistentes
 
-import { db, notificationsPath, userId, collection, onSnapshot, query, updateDoc, doc, deleteDoc } from './firebase.js';
-import { getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db, notificationsPath, collection, onSnapshot, query, updateDoc, doc, deleteDoc, getDocs, getDoc, collectionPath } from './firebase.js'; // Added getDoc, collectionPath
 import { ModalService } from './utils/ModalService.js';
+import { Logger } from './utils/Logger.js';
+import { CalendarModal } from './modules/calendar/CalendarModal.js'; // Import CalendarModal
+import { CalendarState } from './modules/calendar/CalendarState.js'; // Import CalendarState
+
+const log = Logger.create('Notifications');
 
 // Referencias DOM
 let notificationBell, notificationBadge, notificationPanel, notificationList;
@@ -16,50 +20,63 @@ export function initNotifications() {
 
     setupEventListeners();
     setupNotificationsListener();
+    log.info('Inicializado');
 }
 
 // Listener de Firestore
 function setupNotificationsListener() {
-    const notifColRef = collection(db, notificationsPath);
-    const notifQuery = query(notifColRef);
+    try {
+        const notifColRef = collection(db, notificationsPath);
+        const notifQuery = query(notifColRef);
 
-    onSnapshot(notifQuery, (snapshot) => {
-        notificationList.innerHTML = '';
-        let unreadCounter = 0;
+        onSnapshot(notifQuery, (snapshot) => {
+            if (!notificationList) return;
 
-        const notifications = [];
-        snapshot.forEach((doc) => {
-            notifications.push({ id: doc.id, ...doc.data() });
+            notificationList.innerHTML = '';
+            let unreadCounter = 0;
+
+            const notifications = [];
+            snapshot.forEach((doc) => {
+                notifications.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Ordenar por fecha desc
+            notifications.sort((a, b) => {
+                const aTime = a.timestamp?.toDate?.() || new Date(a.timestamp);
+                const bTime = b.timestamp?.toDate?.() || new Date(b.timestamp);
+                return bTime - aTime;
+            });
+
+            if (notifications.length === 0) {
+                renderEmptyState();
+                updateNotificationBadge(0);
+                return;
+            }
+
+            notifications.forEach(notif => {
+                if (!notif.isRead) unreadCounter++;
+                renderNotificationItem(notif);
+            });
+
+            updateNotificationBadge(unreadCounter);
+            log.debug(`Cargadas ${notifications.length} notificaciones (${unreadCounter} sin leer)`);
+        }, (error) => {
+            log.error("Error en listener:", error);
         });
+    } catch (error) {
+        log.error("Error configurando listener:", error);
+    }
+}
 
-        notifications.sort((a, b) => {
-            const aTime = a.timestamp?.toDate?.() || new Date(a.timestamp);
-            const bTime = b.timestamp?.toDate?.() || new Date(b.timestamp);
-            return bTime - aTime;
-        });
-
-        if (notifications.length === 0) {
-            notificationList.innerHTML = `
-                <div class="p-8 text-center text-gray-400">
-                    <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                    </svg>
-                    <p class="text-sm">No hay notificaciones</p>
-                </div>
-            `;
-            updateNotificationBadge(0);
-            return;
-        }
-
-        notifications.forEach(notif => {
-            if (!notif.isRead) unreadCounter++;
-            renderNotificationItem(notif);
-        });
-
-        updateNotificationBadge(unreadCounter);
-    }, (error) => {
-        console.error("Error Notifications: " + error.message);
-    });
+function renderEmptyState() {
+    notificationList.innerHTML = `
+        <div class="p-8 text-center text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p class="text-sm">No hay notificaciones</p>
+        </div>
+    `;
 }
 
 // Renderizar item de notificación
@@ -84,16 +101,44 @@ function renderNotificationItem(notification) {
         title = `✅ ${notification.patientName} confirmó por WhatsApp`;
         const aptDate = notification.appointmentDate ? new Date(notification.appointmentDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
         details = aptDate ? `<p class="text-xs text-green-600 mt-1">Cita confirmada: ${aptDate}</p>` : '';
+    } else if (['success', 'info', 'warning', 'error'].includes(notifType)) {
+        // Notificaciones genéricas
+        const config = {
+            success: { text: 'text-green-600', bg: 'bg-green-100', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>' },
+            info: { text: 'text-blue-600', bg: 'bg-blue-100', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>' },
+            warning: { text: 'text-yellow-600', bg: 'bg-yellow-100', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>' },
+            error: { text: 'text-red-600', bg: 'bg-red-100', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>' }
+        };
+
+        const style = config[notifType] || config.info;
+        icon = `<svg class="w-5 h-5 ${style.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24">${style.icon}</svg>`;
+        iconBg = style.bg;
+        title = notification.title || 'Notificación';
+        details = `<p class="text-xs text-gray-600 mt-1">${notification.message || ''}</p>`;
+
     } else {
-        // Default: reagendada (existing behavior)
-        icon = `<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
-        iconBg = 'bg-blue-100';
-        title = `🔄 ${notification.patientName} reagendada`;
-        const oldDate = new Date(notification.oldDate);
-        const newDate = new Date(notification.newDate);
-        const oldStr = oldDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        const newStr = newDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        details = `<p class="text-xs text-gray-500 mt-1">Anterior: ${oldStr}</p><p class="text-xs text-green-600 mt-0.5">Nueva: ${newStr}</p>`;
+        // Fallback: Default antigua (reagendada)
+        // Solo si tenemos datos de paciente, sino mostramos genérico
+        if (notification.patientName) {
+            icon = `<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
+            iconBg = 'bg-blue-100';
+            title = `🔄 ${notification.patientName} reagendada`;
+
+            // Handle dates safely
+            let oldStr = 'N/A', newStr = 'N/A';
+            try {
+                if (notification.oldDate) oldStr = new Date(notification.oldDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                if (notification.newDate) newStr = new Date(notification.newDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            } catch (e) { log.warn('Error formateando fechas', e); }
+
+            details = `<p class="text-xs text-gray-500 mt-1">Anterior: ${oldStr}</p><p class="text-xs text-green-600 mt-0.5">Nueva: ${newStr}</p>`;
+        } else {
+            // Fallback total si no hay tipo ni nombre
+            icon = `<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>`;
+            iconBg = 'bg-gray-100';
+            title = notification.title || 'Notificación';
+            details = `<p class="text-xs text-gray-600 mt-1">${notification.message || ''}</p>`;
+        }
     }
 
     const timestamp = notification.timestamp?.toDate?.() || (notification.timestamp ? new Date(notification.timestamp) : new Date());
@@ -112,7 +157,37 @@ function renderNotificationItem(notification) {
         </div>
     `;
 
-    notifEl.onclick = () => markNotificationAsRead(notification.id, notification.isRead);
+    notifEl.onclick = async () => {
+        markNotificationAsRead(notification.id, notification.isRead);
+
+        // Cierra el panel
+        notificationPanel.classList.add('hidden');
+
+        if (notification.appointmentId) {
+            log.info(`Abriendo cita desde notificación: ${notification.appointmentId}`);
+            try {
+                // 1. Buscar en estado local
+                let appointment = CalendarState.appointments.find(a => a.id === notification.appointmentId);
+
+                // 2. Si no está en memoria, buscar en DB
+                if (!appointment) {
+                    const docSnap = await getDoc(doc(db, collectionPath, notification.appointmentId));
+                    if (docSnap.exists()) {
+                        appointment = { id: docSnap.id, ...docSnap.data() };
+                    }
+                }
+
+                if (appointment) {
+                    CalendarModal.openEditModal(appointment);
+                } else {
+                    await ModalService.alert('Información', 'La cita ya no existe o fue eliminada.', 'info');
+                }
+            } catch (err) {
+                log.error("Error abriendo cita desde notificación:", err);
+            }
+        }
+    };
+
     notificationList.appendChild(notifEl);
 }
 
@@ -123,8 +198,9 @@ async function markNotificationAsRead(notifId, currentStatus) {
         await updateDoc(doc(db, notificationsPath, notifId), {
             isRead: true
         });
+        log.debug(`Notificación ${notifId} marcada como leída`);
     } catch (e) {
-        console.error("Error marking notification as read:", e);
+        log.error("Error marcando notificación como leída:", e);
     }
 }
 
@@ -149,8 +225,9 @@ async function clearAllNotifications() {
                 deletePromises.push(deleteDoc(doc(db, notificationsPath, docSnap.id)));
             });
             await Promise.all(deletePromises);
+            log.success('Todas las notificaciones eliminadas');
         } catch (e) {
-            console.error("Error clearing notifications:", e);
+            log.error("Error clearing notifications:", e);
             await ModalService.alert("Error", "Error al limpiar notificaciones: " + e.message, "error");
         }
     }
@@ -158,12 +235,16 @@ async function clearAllNotifications() {
 
 // Event listeners
 function setupEventListeners() {
-    notificationBell.onclick = () => {
-        notificationPanel.classList.toggle('hidden');
-    };
+    if (notificationBell) {
+        notificationBell.onclick = () => {
+            notificationPanel.classList.toggle('hidden');
+        };
+    }
 
     document.addEventListener('click', (e) => {
-        if (!notificationBell.contains(e.target) && !notificationPanel.contains(e.target)) {
+        if (notificationBell && notificationPanel &&
+            !notificationBell.contains(e.target) &&
+            !notificationPanel.contains(e.target)) {
             notificationPanel.classList.add('hidden');
         }
     });

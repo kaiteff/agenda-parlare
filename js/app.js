@@ -1,4 +1,5 @@
 // app.js - Punto de entrada principal de la aplicación
+import { Logger } from './utils/Logger.js';
 import { initializeFirebase, loginUser, logoutUser } from './firebase.js';
 import { CalendarManager } from './modules/calendar/CalendarManager.js';
 import { initNotifications } from './notifications.js';
@@ -8,8 +9,10 @@ import { ScheduleManager } from './managers/ScheduleManager.js';
 import { ModalService } from './utils/ModalService.js';
 import { ToastService } from './utils/ToastService.js';
 import { NetworkMonitor } from './services/NetworkMonitor.js';
-import { Header } from './components/Header.js?v=2'; // Nuevo componente
+import { Header } from './components/Header.js?v=2';
 import { GoogleAuthService } from './services/google/GoogleAuthService.js';
+
+const log = Logger.create('App');
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
@@ -18,47 +21,36 @@ const loginForm = document.getElementById('loginForm');
 const emailInput = document.getElementById('emailInput');
 const passwordInput = document.getElementById('passwordInput');
 const loginError = document.getElementById('loginError');
-const logoutBtn = document.getElementById('logoutBtn'); // Mantenemos ref para listener inicial si es necesario, pero Header.js lo maneja
 
 // Inicializar aplicación
-console.log("🚀 Iniciando Agenda Parlare...");
+log.info("Iniciando Agenda Parlare...");
 
 // Manejar estado de autenticación
 async function handleAuthState(user) {
     if (user) {
-        // Inicializar usuario con AuthManager
         const userData = await AuthManager.initUser(user);
 
         if (!userData) {
-            console.error("❌ Usuario no autorizado");
+            log.error("Usuario no autorizado");
             loginError.textContent = "Usuario no autorizado para acceder al sistema.";
             loginError.classList.remove('hidden');
             await logoutUser();
             return;
         }
 
-        // Usuario logueado y autorizado
-        console.log(`✅ Usuario autenticado: ${userData.displayName}`);
-        console.log(`🔑 Rol: ${userData.role}`);
-        console.log(`👤 Terapeuta: ${userData.therapist || 'N/A'}`);
+        log.success(`Usuario autenticado: ${userData.displayName} (${userData.role})`);
 
         loginContainer.classList.add('hidden');
         appContent.classList.remove('hidden');
 
-        // Inicializar Header (Maneja info usuario, selector, logout, reportes)
         Header.init();
-
-        // Inicializar módulos si es necesario (idempotente)
         initializeModules();
     } else {
-        // Usuario no logueado
-        console.log("🔒 Usuario no autenticado");
+        log.info("Usuario no autenticado");
         AuthManager.clear();
 
         loginContainer.classList.remove('hidden');
         appContent.classList.add('hidden');
-
-        // Limpiar formulario
         loginForm.reset();
         loginError.classList.add('hidden');
     }
@@ -70,44 +62,38 @@ async function initializeModules() {
     if (modulesInitialized) return;
     modulesInitialized = true;
 
-    // Inicializar módulos con manejo de errores
-    try {
-        console.log("🚀 Inicializando PatientManager...");
-        await PatientManager.init();
-    } catch (e) { console.error("❌ Error PatientManager.init():", e); }
+    log.group('Inicializando Módulos', { timestamp: new Date() });
 
     try {
-        console.log("🚀 Inicializando Calendar...");
-        CalendarManager.initCalendar();
-    } catch (e) { console.error("❌ Error initCalendar:", e); }
+        await Promise.all([
+            initModule('PatientManager', () => PatientManager.init()),
+            initModule('Calendar', () => CalendarManager.initCalendar()),
+            initModule('Notifications', () => initNotifications()),
+            initModule('ScheduleManager', () => ScheduleManager.init()),
+            initModule('ToastService', () => ToastService.init()),
+            initModule('NetworkMonitor', () => NetworkMonitor.init())
+        ]);
 
+        // Google Auth (async pero no bloqueante)
+        GoogleAuthService.init()
+            .then(() => log.success('GoogleAuthService listo'))
+            .catch(e => log.error('GoogleAuthService error:', e));
+
+        log.success("Todos los módulos inicializados");
+    } catch (error) {
+        log.error("Error crítico inicializando módulos", error);
+    }
+
+    console.groupEnd();
+}
+
+async function initModule(name, fn) {
     try {
-        console.log("🚀 Inicializando Notifications...");
-        initNotifications();
-    } catch (e) { console.error("❌ Error initNotifications:", e); }
-
-    try {
-        console.log("🚀 Inicializando ScheduleManager...");
-        ScheduleManager.init();
-    } catch (e) { console.error("❌ Error ScheduleManager:", e); }
-
-    try {
-        ToastService.init();
-    } catch (e) { console.error("❌ Error ToastService:", e); }
-
-    try {
-        NetworkMonitor.init();
-    } catch (e) { console.error("❌ Error NetworkMonitor:", e); }
-
-    // Inicializar Google Auth (Pre-carga de scripts)
-    try {
-        console.log("🚀 Inicializando GoogleAuthService...");
-        GoogleAuthService.init().then(() => {
-            console.log("✅ Google Auth Ready (Pre-init)");
-        }).catch(e => console.error("❌ Error GoogleAuthService pre-init:", e));
-    } catch (e) { console.error("❌ Error GoogleAuthService:", e); }
-
-    console.log("✅ Todos los módulos inicializados");
+        await fn();
+        log.info(`${name} OK`);
+    } catch (e) {
+        log.error(`Error en ${name}:`, e);
+    }
 }
 
 // Event Listeners
@@ -130,13 +116,8 @@ loginForm.addEventListener('submit', async (e) => {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
     } else {
-        // Éxito: Forzar actualización de UI si tenemos el usuario
-        if (result.user) {
-            handleAuthState(result.user);
-        }
-        // Si no hay usuario en el result, esperamos al listener
+        if (result.user) handleAuthState(result.user);
     }
 });
 
-// Iniciar Firebase
 initializeFirebase(handleAuthState);

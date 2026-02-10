@@ -1,5 +1,5 @@
 import http.server
-import socketserver
+from http.server import ThreadingHTTPServer
 import socket
 import os
 import sys
@@ -72,7 +72,8 @@ def run():
         port = get_free_port(START_PORT)
         local_ip = get_local_ip()
         
-        with socketserver.TCPServer(("", port), Handler) as httpd:
+        with ThreadingHTTPServer(("", port), Handler) as httpd:
+            httpd.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             url_local = f"http://localhost:{port}"
             url_lan = f"http://{local_ip}:{port}"
             
