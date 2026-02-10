@@ -11,14 +11,16 @@ import { CalendarSuggestions } from './CalendarSuggestions.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
-import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday } from '../../utils/validators.js';
+import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday, isSlotFree } from '../../utils/validators.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
+import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
 
 
 export const CalendarModal = {
     init() {
         this.bindEvents();
+        this.bindGridEvents();
     },
 
     bindEvents() {
@@ -79,6 +81,9 @@ export const CalendarModal = {
         dom.appointmentDateInput.value = localISOTime;
 
         CalendarUI.renderBusySlots(dateStr);
+        // NEW: Render Custom Grid for Create Mode
+        this.renderDailySlots(date);
+
         dom.eventModal.classList.remove('hidden');
         dom.patientSearchInput.focus();
     },
@@ -152,7 +157,11 @@ export const CalendarModal = {
         dom.isRecurringCheckbox.checked = false;
         dom.recurringSection.classList.add('hidden');
 
-        CalendarUI.renderBusySlots(localISOTime.split('T')[0]);
+        CalendarUI.renderBusySlots(localISOTime.split('T')[0]); // Mantiene compatibilidad si algo lo usa
+
+        // NEW: Render Custom Daily Grid
+        this.renderDailySlots(date);
+
         dom.eventModal.classList.remove('hidden');
     },
 
@@ -219,6 +228,14 @@ export const CalendarModal = {
 
     async handleSave() {
         console.log("💾 handleSave invocado");
+
+        // Ensure Google Token (Popup)
+        try {
+            await GoogleAuthService.ensureToken(false);
+        } catch (authErr) {
+            console.warn("Google Auth pre-check failed:", authErr);
+        }
+
         const dom = CalendarState.dom;
         const name = dom.patientSearchInput.value.trim();
         const dateStr = dom.appointmentDateInput.value;
@@ -373,10 +390,148 @@ export const CalendarModal = {
                 nextWeek.setDate(nextWeek.getDate() + 7);
                 const offset = nextWeek.getTimezoneOffset() * 60000;
                 const iso = (new Date(nextWeek - offset)).toISOString().slice(0, 16);
+
                 dom.appointmentDateInput.value = iso;
+
+                // Update Grid UI
+                this.renderDailySlots(nextWeek);
             }
         } else {
             this.closeModal();
         }
+    },
+
+    // ─── NEW: Grid Logic ───────────────────────────────
+
+    bindGridEvents() {
+        // Se vinculan directamente al documento o se buscan al abrir, 
+        // pero mejor vincularlos una vez si existen en index.html siempre.
+        setTimeout(() => {
+            const prevBtn = document.getElementById('prevDayBtn');
+            const nextBtn = document.getElementById('nextDayBtn');
+            const dateNav = document.getElementById('dateNavPicker');
+
+            if (prevBtn) prevBtn.onclick = (e) => { e.preventDefault(); this.shiftDay(-1); };
+            if (nextBtn) nextBtn.onclick = (e) => { e.preventDefault(); this.shiftDay(1); };
+            if (dateNav) dateNav.onchange = (e) => this.renderDailySlots(e.target.value);
+
+            // Update grid when therapist changes
+            const dom = CalendarState.dom;
+            if (dom.appointmentTherapistInput) {
+                dom.appointmentTherapistInput.onchange = () => {
+                    if (this.currentGridDate) this.renderDailySlots(this.currentGridDate);
+                };
+            }
+        }, 500); // Pequeño delay para asegurar DOM
+    },
+
+    shiftDay(offset) {
+        if (!this.currentGridDate) this.currentGridDate = new Date();
+        const newDate = new Date(this.currentGridDate);
+        newDate.setDate(newDate.getDate() + offset);
+
+        // Skip Sundays
+        if (newDate.getDay() === 0) {
+            newDate.setDate(newDate.getDate() + (offset > 0 ? 1 : -1));
+        }
+
+        this.renderDailySlots(newDate);
+    },
+
+    renderDailySlots(dateInput) {
+        // Normalizar fecha
+        let dateObj;
+        if (typeof dateInput === 'string') {
+            // Si viene de input date (YYYY-MM-DD), agregar T12:00:00 para evitar offset
+            if (dateInput.includes('T')) {
+                dateObj = new Date(dateInput);
+            } else {
+                dateObj = new Date(dateInput + 'T12:00:00');
+            }
+        } else {
+            dateObj = new Date(dateInput);
+        }
+
+        this.currentGridDate = dateObj;
+
+        // Actualizar Nav Picker (YYYY-MM-DD)
+        const dateNav = document.getElementById('dateNavPicker');
+        if (dateNav) {
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            dateNav.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        const grid = document.getElementById('dailySlotsGrid');
+        const hiddenInput = document.getElementById('appointmentDate');
+        if (!grid || !hiddenInput) return;
+
+        grid.innerHTML = '';
+
+        // Obtener la hora actual seleccionada (para resaltarla)
+        const currentSelectedISO = hiddenInput.value;
+        const currentSelectedDate = currentSelectedISO ? new Date(currentSelectedISO) : null;
+
+        // Obtener el terapeuta seleccionado
+        const tInput = CalendarState.dom.appointmentTherapistInput;
+        const selectedTherapist = tInput ? tInput.value : (AuthManager.currentUser?.therapist || 'diana');
+
+        // Rango de horas 8 a 20
+        for (let hour = 8; hour <= 20; hour++) {
+            const slotDate = new Date(dateObj);
+            slotDate.setHours(hour, 0, 0, 0);
+
+            // Verificar disponibilidad con utils
+            // Pasar excludeId para que la cita actual no se bloquee a sí misma
+            const isFree = isSlotFree(slotDate, CalendarState.appointments, CalendarState.selectedEventId, selectedTherapist);
+
+            // Verificar si es la hora seleccionada actualmente
+            let isSelected = false;
+            if (currentSelectedDate) {
+                isSelected = currentSelectedDate.getDate() === slotDate.getDate() &&
+                    currentSelectedDate.getMonth() === slotDate.getMonth() &&
+                    currentSelectedDate.getHours() === hour;
+            }
+
+            const btn = document.createElement('button');
+            const timeStr = formatTime12h(hour);
+
+            if (isSelected) {
+                // Estilo seleccionado (Verde o Azul fuerte)
+                btn.className = "bg-blue-600 text-white font-bold py-2 rounded shadow-md ring-2 ring-blue-300 transition-all transform scale-105";
+                btn.textContent = timeStr + " ✓";
+            } else if (!isFree) {
+                // Ocupado
+                btn.className = "bg-gray-100 text-gray-400 py-2 rounded cursor-not-allowed border border-gray-100 text-xs";
+                btn.textContent = timeStr;
+                btn.disabled = true;
+            } else {
+                // Libre
+                btn.className = "bg-white text-gray-700 border border-gray-200 py-2 rounded hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all font-medium text-sm";
+                btn.textContent = timeStr;
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    this.selectSlot(slotDate);
+                };
+            }
+            grid.appendChild(btn);
+        }
+    },
+
+    selectSlot(dateObj) {
+        // Actualizar hidden input con formato ISO local
+        const offset = dateObj.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(dateObj - offset)).toISOString().slice(0, 16);
+
+        const hiddenInput = CalendarState.dom.appointmentDateInput || document.getElementById('appointmentDate');
+        if (hiddenInput) {
+            hiddenInput.value = localISOTime;
+            // Disparar evento change si es necesario
+            // hiddenInput.dispatchEvent(new Event('change'));
+        }
+
+        // Re-render para mostrar selección
+        this.renderDailySlots(dateObj);
     }
 };

@@ -565,10 +565,44 @@
 
                     <!-- Date & Time -->
                     <!-- Date & Time -->
+                    <!-- Date & Time (Custom Grid UI) -->
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora</label>
-                        <input type="datetime-local" id="appointmentDate"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+
+                        <!-- Hidden input for backward compatibility with logic -->
+                        <input type="hidden" id="appointmentDate">
+
+                        <div class="border border-gray-300 rounded-lg overflow-hidden">
+                            <!-- Date Nav -->
+                            <div class="flex items-center justify-between bg-gray-50 p-2 border-b border-gray-200">
+                                <button id="prevDayBtn"
+                                    class="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 19l-7-7 7-7"></path>
+                                    </svg>
+                                </button>
+
+                                <div class="relative">
+                                    <input type="date" id="dateNavPicker"
+                                        class="bg-transparent font-bold text-gray-800 text-sm text-center focus:outline-none cursor-pointer">
+                                </div>
+
+                                <button id="nextDayBtn"
+                                    class="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Slots Grid -->
+                            <div id="dailySlotsGrid"
+                                class="grid grid-cols-4 gap-2 p-3 max-h-56 overflow-y-auto bg-white scroller">
+                                <!-- Slots injected by JS -->
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Therapist & Cost & Clinic Fee -->

@@ -12,6 +12,7 @@
 import { PatientState } from './patient/PatientState.js';
 import { AuthManager } from './AuthManager.js';
 import { isSlotFree } from '../utils/validators.js';
+import { GoogleAuthService } from '../services/google/GoogleAuthService.js';
 import { createAppointment } from '../services/appointmentService.js';
 import { getStartOfWeek, addDays, formatDateLocal } from '../utils/dateUtils.js';
 import { ModalService } from '../utils/ModalService.js';
@@ -393,6 +394,14 @@ export const ScheduleManager = {
         try {
             if (this.dom.confirmBtn.textContent === 'Agendando...') return; // Prevent double click
 
+            // Ensure Google Token (Popup)
+            try {
+                await GoogleAuthService.ensureToken(false);
+            } catch (authErr) {
+                console.warn("Google Auth pre-check failed:", authErr);
+                // Continue saving locally even if auth fails
+            }
+
             this.dom.confirmBtn.disabled = true;
             this.dom.confirmBtn.textContent = 'Agendando...';
 
@@ -447,7 +456,7 @@ export const ScheduleManager = {
                     isCancelled: false
                 };
 
-                const result = await createAppointment(appointmentData);
+                const result = await createAppointment(appointmentData, PatientState.appointments);
                 if (result.success) createdCount++;
             }
 
