@@ -86,6 +86,7 @@ export const CalendarModal = {
 
         // Reset buttons
         dom.saveBtn.classList.remove('hidden');
+        if (dom.waBtn) dom.waBtn.classList.add('hidden');
         dom.deleteBtn.classList.add('hidden');
         dom.payBtn.classList.add('hidden');
         dom.confirmBtn.classList.add('hidden');
@@ -152,6 +153,44 @@ export const CalendarModal = {
         dom.payBtn.classList.remove('hidden');
         dom.confirmBtn.classList.remove('hidden');
         dom.cancelBtn.classList.remove('hidden');
+
+        if (dom.waBtn) {
+            if (isSchool) {
+                dom.waBtn.classList.add('hidden');
+            } else {
+                dom.waBtn.classList.remove('hidden');
+                dom.waBtn.onclick = (e) => {
+                    e.preventDefault();
+                    const patientName = dom.patientFirstNameInput.value || ev.name.split(' ')[0];
+                    const apptDateStr = dom.appointmentDateInput.value.split(',')[0];
+                    if (!apptDateStr) return;
+                    
+                    const apptDate = new Date(apptDateStr);
+                    const dateStr = apptDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                    const timeStr = apptDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    const therapist = dom.appointmentTherapistInput.value || 'diana';
+                    const therapistName = therapist.charAt(0).toUpperCase() + therapist.slice(1);
+                    
+                    let message = `Hola ${patientName}, te recuerdo tu cita el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
+                    message = encodeURIComponent(message);
+                    
+                    let phoneStr = '';
+                    if (window.PatientState && window.PatientState.patients) {
+                        const profile = window.PatientState.patients.find(p => p.id === ev.patientId);
+                        if (profile && profile.phone) {
+                            let digits = profile.phone.replace(/\D/g, '');
+                            if (!digits.startsWith('52') && digits.length === 10) {
+                                digits = '52' + digits;
+                            }
+                            phoneStr = digits;
+                        }
+                    }
+                    
+                    const url = phoneStr ? `https://wa.me/${phoneStr}?text=${message}` : `https://wa.me/?text=${message}`;
+                    window.open(url, '_blank');
+                };
+            }
+        }
 
         // Confirm button state
         dom.confirmBtn.innerHTML = ev.confirmed ? '❌ Quitar Confirmación' : '✓ Confirmar Asistencia';
