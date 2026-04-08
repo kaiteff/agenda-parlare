@@ -50,12 +50,13 @@ export const CalendarData = {
                 console.log("💰 CalendarData: Cita movida y estaba pagada. Actualizando en Sheets...", existingEvt.name);
                 
                 try {
-                    // 1. Anular el de la fecha anterior (Hacemos await para evitar conflictos de concurrencia en la API de Google)
+                    // 1. Anular el pago en la fecha/hora anterior con monto negativo
+                    //    Usamos status "Pagado" con monto negativo para que SUMIF lo reste correctamente
                     await SheetService.logPayment({
                         date: existingEvt.date,
                         patientName: existingEvt.name,
                         amount: -Math.abs(existingEvt.cost || 0),
-                        status: "REPROGRAMADO - ANULADO",
+                        status: "Pagado",
                         therapist: existingEvt.therapist
                     });
                     
@@ -117,22 +118,7 @@ export const CalendarData = {
 
     async toggleConfirmation(id, currentStatus) {
         const result = await toggleConfirmationStatus(id, currentStatus, CalendarState.appointments);
-        
-        if (result.success) {
-            const evt = CalendarState.appointments.find(a => a.id === id);
-            if (evt) {
-                const newStatus = !currentStatus; // toggleConfirmationStatus returns the new status object, but here we just need the logic
-                // Actually toggleConfirmationStatus returns { success: true } usually
-                // We better rely on the calculated new status
-                
-                SheetService.logAttendance({
-                    date: evt.date,
-                    patientName: evt.name,
-                    status: newStatus ? "CONFIRMADO" : "PENDIENTE",
-                    therapist: evt.therapist
-                }).catch(e => console.error("Error logging confirmation:", e));
-            }
-        }
+        // Confirmación no genera entrada financiera en Sheets
         return result;
     },
 
