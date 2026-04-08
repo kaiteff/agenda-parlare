@@ -30,6 +30,11 @@ export const CalendarModal = {
         if (dom.payBtn) dom.payBtn.onclick = () => this.handlePaymentToggle();
         if (dom.confirmBtn) dom.confirmBtn.onclick = () => this.handleConfirmToggle();
         if (dom.cancelBtn) dom.cancelBtn.onclick = () => this.handleCancel();
+        if (dom.waBtn) dom.waBtn.onclick = (e) => {
+            e.preventDefault();
+            const evt = CalendarState.appointments.find(a => a.id === CalendarState.selectedEventId);
+            if (evt) this.openWhatsAppReminder(evt, dom);
+        };
         if (dom.patientSearchInput) dom.patientSearchInput.oninput = (e) => this.populatePatientSuggestions(e.target.value);
         if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.onchange = () => {
             dom.recurringSection.classList.toggle('hidden', !dom.isRecurringCheckbox.checked);
@@ -102,8 +107,7 @@ export const CalendarModal = {
         // Set date
         const date = new Date(dateStr + 'T00:00:00');
         date.setHours(hour);
-        const offset = date.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(date - offset)).toISOString().slice(0, 16);
+        const localISOTime = this._getLocalISOStringFormat(date);
         dom.appointmentDateInput.value = localISOTime;
 
         CalendarUI.renderBusySlots(dateStr);
@@ -131,8 +135,7 @@ export const CalendarModal = {
 
         // Date
         const date = new Date(ev.date);
-        const offset = date.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(date - offset)).toISOString().slice(0, 16);
+        const localISOTime = this._getLocalISOStringFormat(date);
         dom.appointmentDateInput.value = localISOTime;
 
         dom.costInput.value = ev.cost || 0;
@@ -156,41 +159,7 @@ export const CalendarModal = {
         dom.cancelBtn.classList.remove('hidden');
 
         if (dom.waBtn) {
-            if (isSchool) {
-                dom.waBtn.classList.add('hidden');
-            } else {
-                dom.waBtn.classList.remove('hidden');
-                dom.waBtn.onclick = (e) => {
-                    e.preventDefault();
-                    const patientName = dom.patientFirstNameInput.value || ev.name.split(' ')[0];
-                    const apptDateStr = dom.appointmentDateInput.value.split(',')[0];
-                    if (!apptDateStr) return;
-                    
-                    const apptDate = new Date(apptDateStr);
-                    const dateStr = apptDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-                    const timeStr = apptDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
-                    const therapist = dom.appointmentTherapistInput.value || 'diana';
-                    const therapistName = therapist.charAt(0).toUpperCase() + therapist.slice(1);
-                    
-                    let message = `Hola ${patientName}, te recuerdo tu cita el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
-                    message = encodeURIComponent(message);
-                    
-                    let phoneStr = '';
-                    if (window.PatientState && window.PatientState.patients) {
-                        const profile = window.PatientState.patients.find(p => p.id === ev.patientId);
-                        if (profile && profile.phone) {
-                            let digits = profile.phone.replace(/\D/g, '');
-                            if (!digits.startsWith('52') && digits.length === 10) {
-                                digits = '52' + digits;
-                            }
-                            phoneStr = digits;
-                        }
-                    }
-                    
-                    const url = phoneStr ? `https://wa.me/${phoneStr}?text=${message}` : `https://wa.me/?text=${message}`;
-                    window.open(url, '_blank');
-                };
-            }
+            dom.waBtn.classList.toggle('hidden', isSchool);
         }
 
         // Confirm button state
@@ -402,24 +371,7 @@ export const CalendarModal = {
             } else {
                 // Create
                 if (dom.isRecurringCheckbox.checked) {
-                    // Validar que solo funcione bien si es 1 hora seleccionada por ahora, o crear ambas recurrentes
-                    // Para simplicidad, pasamos la primera para recurringDates, y si hay segunda le sumamos 1 hora
-                    const mainDate = document.getElementById('appointmentDate').value.split(',')[0];
-                    document.getElementById('appointmentDate').value = mainDate; // temporal
-                    const dates = CalendarSuggestions.generateRecurringDates();
-                    document.getElementById('appointmentDate').value = dateStrArray.join(','); // restaurar
-                    
-                    for (const date of dates) {
-                        for (let i=0; i < dateStrArray.length; i++) {
-                            const offsetObj = new Date(date);
-                            offsetObj.setHours(offsetObj.getHours() + i); // Añadir 1 hr a la segunda
-                            const offset = offsetObj.getTimezoneOffset() * 60000;
-                            const iso = (new Date(offsetObj - offset)).toISOString().slice(0, 16);
-                            if (!checkSlotConflict(iso, CalendarState.appointments)) {
-                                await CalendarData.createEvent({ ...appointmentData, date: iso });
-                            }
-                        }
-                    }
+                    await this._processRecurrenceCreation(appointmentData, dateStrArray);
                 } else {
                     for (const dateStr of dateStrArray) {
                         await CalendarData.createEvent({ ...appointmentData, date: dateStr });
@@ -493,8 +445,7 @@ export const CalendarModal = {
                 const current = new Date(dom.appointmentDateInput.value);
                 const nextWeek = new Date(current);
                 nextWeek.setDate(nextWeek.getDate() + 7);
-                const offset = nextWeek.getTimezoneOffset() * 60000;
-                const iso = (new Date(nextWeek - offset)).toISOString().slice(0, 16);
+                const iso = this._getLocalISOStringFormat(nextWeek);
 
                 dom.appointmentDateInput.value = iso;
 
@@ -633,8 +584,7 @@ export const CalendarModal = {
 
     selectSlot(dateObj) {
         // Actualizar hidden input con formato ISO local
-        const offset = dateObj.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(dateObj - offset)).toISOString().slice(0, 16);
+        const localISOTime = this._getLocalISOStringFormat(dateObj);
 
         const hiddenInput = CalendarState.dom.appointmentDateInput || document.getElementById('appointmentDate');
         const isSchoolVisit = document.querySelector('input[name="appointmentType"]:checked')?.value === 'school';
@@ -675,5 +625,57 @@ export const CalendarModal = {
 
         // Re-render para mostrar selección
         this.renderDailySlots(dateObj);
+    },
+
+    openWhatsAppReminder(ev, dom) {
+        const patientName = dom.patientFirstNameInput.value || (ev.name ? ev.name.split(' ')[0] : '');
+        const apptDateStr = dom.appointmentDateInput.value.split(',')[0];
+        if (!apptDateStr) return;
+        
+        const apptDate = new Date(apptDateStr);
+        const dateStr = apptDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+        const timeStr = apptDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const therapist = dom.appointmentTherapistInput.value || 'diana';
+        const therapistName = therapist.charAt(0).toUpperCase() + therapist.slice(1);
+        
+        const message = encodeURIComponent(`Hola ${patientName}, te recuerdo tu cita el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`);
+        
+        let phoneStr = '';
+        if (window.PatientState && window.PatientState.patients && ev.patientId) {
+            const profile = window.PatientState.patients.find(p => p.id === ev.patientId);
+            if (profile && profile.phone) {
+                let digits = profile.phone.replace(/\D/g, '');
+                if (!digits.startsWith('52') && digits.length === 10) {
+                    digits = '52' + digits;
+                }
+                phoneStr = digits;
+            }
+        }
+        const url = phoneStr ? `https://wa.me/${phoneStr}?text=${message}` : `https://wa.me/?text=${message}`;
+        window.open(url, '_blank');
+    },
+
+    _getLocalISOStringFormat(dateObj) {
+        const offset = dateObj.getTimezoneOffset() * 60000;
+        return (new Date(dateObj - offset)).toISOString().slice(0, 16);
+    },
+
+    async _processRecurrenceCreation(appointmentData, dateStrArray) {
+        const dom = CalendarState.dom;
+        const mainDate = dom.appointmentDateInput.value.split(',')[0];
+        dom.appointmentDateInput.value = mainDate; // temporal for CalendarSuggestions
+        const dates = CalendarSuggestions.generateRecurringDates();
+        dom.appointmentDateInput.value = dateStrArray.join(','); // restore
+        
+        for (const date of dates) {
+            for (let i = 0; i < dateStrArray.length; i++) {
+                const offsetObj = new Date(date);
+                offsetObj.setHours(offsetObj.getHours() + i);
+                const iso = this._getLocalISOStringFormat(offsetObj);
+                if (!checkSlotConflict(iso, CalendarState.appointments)) {
+                    await CalendarData.createEvent({ ...appointmentData, date: iso });
+                }
+            }
+        }
     }
 };
