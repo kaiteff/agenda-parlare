@@ -6,6 +6,8 @@
 import { CalendarState } from './CalendarState.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { addDays, formatDateLocal, formatTime12h } from '../../utils/dateUtils.js';
+import { CalendarData } from './CalendarData.js';
+import { ModalService } from '../../utils/ModalService.js';
 
 export const CalendarUI = {
     /**
@@ -123,6 +125,15 @@ export const CalendarUI = {
                                 const chip = document.createElement('div');
                                 chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} cursor-pointer hover:brightness-95 truncate px-1 gap-1`;
 
+                                chip.draggable = true;
+                                chip.ondragstart = (e) => {
+                                    e.dataTransfer.setData("text/plain", evt.id);
+                                    chip.style.opacity = '0.5';
+                                };
+                                chip.ondragend = (e) => {
+                                    chip.style.opacity = '1';
+                                };
+
                                 // Content: Name + Checkmark if confirmed
                                 let content = evt.isPaid ? 'Pagado' : `${therapistName}`;
                                 if (evt.confirmed) {
@@ -172,6 +183,17 @@ export const CalendarUI = {
 
                                 eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses}`;
 
+                                if (canView) {
+                                    eventCard.draggable = true;
+                                    eventCard.ondragstart = (e) => {
+                                        e.dataTransfer.setData("text/plain", evt.id);
+                                        eventCard.style.opacity = '0.5';
+                                    };
+                                    eventCard.ondragend = (e) => {
+                                        eventCard.style.opacity = '1';
+                                    };
+                                }
+
                                 eventCard.innerHTML = `
                                     <div class="flex items-center justify-between gap-1 w-full">
                                         <div class="truncate font-semibold flex-1 leading-tight tracking-tight">${eventName}</div>
@@ -193,6 +215,47 @@ export const CalendarUI = {
                             this.renderEmptySlot(cell, dateStr, hour, onEmptySlotClick);
                         }
                     }
+
+                    // Hacer la celda un target para dropear
+                    cell.ondragover = (e) => {
+                        e.preventDefault();
+                        if (!cell.classList.contains('bg-blue-100')) {
+                            cell.classList.add('bg-blue-100', 'ring-2', 'ring-blue-400', 'ring-inset');
+                        }
+                    };
+                    cell.ondragleave = (e) => {
+                        cell.classList.remove('bg-blue-100', 'ring-2', 'ring-blue-400', 'ring-inset');
+                    };
+                    cell.ondrop = async (e) => {
+                        e.preventDefault();
+                        cell.classList.remove('bg-blue-100', 'ring-2', 'ring-blue-400', 'ring-inset');
+                        const evtId = e.dataTransfer.getData("text/plain");
+                        if (!evtId) return;
+                        
+                        const evt = CalendarState.appointments.find(a => a.id === evtId);
+                        if (!evt) return;
+
+                        const [year, month, day] = dateStr.split('-');
+                        const newDateObj = new Date(year, month - 1, day, hour, 0, 0);
+
+                        // Evitar mover si es la misma fecha y hora
+                        const currentEvtDate = new Date(evt.date);
+                        if (currentEvtDate.getTime() === newDateObj.getTime()) return;
+
+                        const confirmed = await ModalService.confirm(
+                            'Mover Cita',
+                            `¿Estás seguro que deseas mover la cita de <b>${evt.name}</b><br>al <b>${dateStr}</b> a las <b>${hour}:00</b>?`,
+                            'Sí, mover',
+                            'Cancelar',
+                            'info'
+                        );
+
+                        if (confirmed) {
+                            CalendarUI.updateStatus("Moviendo cita...");
+                            await CalendarData.updateEvent(evt.id, { date: newDateObj.toISOString() });
+                            CalendarUI.updateStatus("Cita movida exitosamente.");
+                        }
+                    };
 
                     row.appendChild(cell);
                 });

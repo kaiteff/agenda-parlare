@@ -39,7 +39,41 @@ export const CalendarData = {
     },
 
     async updateEvent(id, data) {
-        return await updateAppointment(id, data, CalendarState.appointments);
+        const existingEvt = CalendarState.appointments.find(a => a.id === id);
+        const result = await updateAppointment(id, data, CalendarState.appointments);
+        
+        // Si la cita se movió de horario (cambió la fecha)
+        if (result.success && data.date && existingEvt && existingEvt.date !== data.date) {
+            // Si la cita ya estaba pagada, tenemos que anularla de la fecha/hora anterior 
+            // y reportarla en la nueva.
+            if (existingEvt.isPaid) {
+                console.log("💰 CalendarData: Cita movida y estaba pagada. Actualizando en Sheets...", existingEvt.name);
+                
+                try {
+                    // 1. Anular el de la fecha anterior (Hacemos await para evitar conflictos de concurrencia en la API de Google)
+                    await SheetService.logPayment({
+                        date: existingEvt.date,
+                        patientName: existingEvt.name,
+                        amount: -Math.abs(existingEvt.cost || 0),
+                        status: "REPROGRAMADO - ANULADO",
+                        therapist: existingEvt.therapist
+                    });
+                    
+                    // 2. Registrar en la fecha nueva
+                    await SheetService.logPayment({
+                        date: data.date,
+                        patientName: existingEvt.name,
+                        amount: Math.abs(existingEvt.cost || 0),
+                        status: "Pagado",
+                        therapist: existingEvt.therapist
+                    });
+                } catch (err) {
+                    console.error("Error sincronizando cambios de fecha en Sheets:", err);
+                }
+            }
+        }
+
+        return result;
     },
 
     async deleteEvent(id) {

@@ -529,8 +529,8 @@
 
         <!-- 3. APPOINTMENT / EVENT MODAL -->
         <div id="eventModal"
-            class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 modal-panel relative">
+            class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 modal-panel relative max-h-[90vh] overflow-y-auto scroller">
 
                 <!-- Close X -->
                 <button onclick="document.getElementById('eventModal').classList.add('hidden')"
@@ -544,9 +544,21 @@
                 <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-6">Detalles de Cita</h3>
 
                 <div class="space-y-5">
-                    <!-- Patient Search / Name -->
+                    <!-- Appointment Type Selection -->
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-700">
+                            <input type="radio" name="appointmentType" value="patient" checked class="text-blue-600 focus:ring-blue-500 w-4 h-4">
+                            <span>Paciente</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-700">
+                            <input type="radio" name="appointmentType" value="school" class="text-blue-600 focus:ring-blue-500 w-4 h-4">
+                            <span>Escuela / Exterior</span>
+                        </label>
+                    </div>
+
+                    <!-- Patient/School Search / Name -->
                     <div class="relative">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente</label>
+                        <label id="patientSearchLabel" class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente</label>
                         <input type="text" id="patientSearch" placeholder="Buscar o escribir nombre..."
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
 
@@ -556,7 +568,7 @@
                         </div>
 
                         <!-- Auto-fill Name Fields (Hidden/Disabled usually) -->
-                        <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div class="grid grid-cols-2 gap-2 mt-2" id="patientNameFields">
                             <input type="text" id="patientFirstName" placeholder="Nombre"
                                 class="text-sm border rounded px-2 py-1 bg-gray-50" disabled>
                             <input type="text" id="patientLastName" placeholder="Apellidos"

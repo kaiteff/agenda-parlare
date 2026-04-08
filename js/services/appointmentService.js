@@ -59,6 +59,7 @@ export async function createAppointment(appointmentData, existingAppointments) {
         }
 
         const docRef = await addDoc(collection(db, collectionPath), {
+            ...appointmentData,
             name: appointmentData.name.trim(),
             date: appointmentData.date,
             cost: appointmentData.cost || 0,
@@ -99,9 +100,12 @@ export async function createAppointment(appointmentData, existingAppointments) {
  */
 export async function updateAppointment(id, updateData, existingAppointments) {
     try {
+        const existingData = existingAppointments.find(a => a.id === id) || {};
+        const mergedData = { ...existingData, ...updateData, id };
+
         // Si se actualiza fecha o nombre, validar
         if (updateData.date || updateData.name) {
-            const validation = validateAppointment({ ...updateData, id }, existingAppointments, updateData.therapist);
+            const validation = validateAppointment(mergedData, existingAppointments, mergedData.therapist);
             if (!validation.valid) {
                 log.warn('Validación fallida al actualizar cita:', validation.errors);
                 return { success: false, error: validation.errors.join('\n') };

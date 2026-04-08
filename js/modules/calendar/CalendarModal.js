@@ -40,6 +40,26 @@ export const CalendarModal = {
             if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
             CalendarUI.renderBusySlots(e.target.value.split('T')[0]);
         };
+
+        // Radio buttons "Tipo de cita"
+        const typeRadios = document.querySelectorAll('input[name="appointmentType"]');
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const isPatient = e.target.value === 'patient';
+                const nameFields = document.getElementById('patientNameFields');
+                const searchLabel = document.getElementById('patientSearchLabel');
+
+                if (nameFields) nameFields.style.display = isPatient ? 'grid' : 'none';
+                if (searchLabel) searchLabel.textContent = isPatient ? 'Paciente' : 'Nombre del Lugar / Escuela';
+                if (dom.patientSearchInput) dom.patientSearchInput.placeholder = isPatient ? 'Buscar o escribir nombre...' : 'Escribe Nombre de Escuela o Actividad...';
+                
+                // Si cambiamos a paciente y hay múltiples fechas, dejamos solo 1
+                if (isPatient && dom.appointmentDateInput && dom.appointmentDateInput.value.includes(',')) {
+                    dom.appointmentDateInput.value = dom.appointmentDateInput.value.split(',')[0];
+                    if (CalendarModal.currentGridDate) CalendarModal.renderDailySlots(CalendarModal.currentGridDate);
+                }
+            });
+        });
     },
 
     openCreateModal(dateStr, hour) {
@@ -55,10 +75,14 @@ export const CalendarModal = {
         dom.patientLastNameInput.disabled = false;
         dom.costInput.value = '0';
 
-        // Reset/Default Therapist
+        // Reset Therapist and Type
         if (dom.appointmentTherapistInput) {
             dom.appointmentTherapistInput.value = AuthManager.currentUser?.therapist || 'diana';
         }
+        const defaultRadio = document.querySelector('input[name="appointmentType"][value="patient"]');
+        if (defaultRadio) defaultRadio.checked = true;
+        // Trigger manual change to reset UI
+        defaultRadio?.dispatchEvent(new Event('change'));
 
         // Reset buttons
         dom.saveBtn.classList.remove('hidden');
@@ -111,9 +135,15 @@ export const CalendarModal = {
 
         dom.costInput.value = ev.cost || 0;
 
-        // Set Therapist
+        // Set Therapist and Type
         if (dom.appointmentTherapistInput) {
             dom.appointmentTherapistInput.value = ev.therapist || 'diana';
+        }
+        const isSchool = ev.isSchoolVisit === true || ev.name.toLowerCase().startsWith('escuela:');
+        const typeRadio = document.querySelector(`input[name="appointmentType"][value="${isSchool ? 'school' : 'patient'}"]`);
+        if (typeRadio) {
+            typeRadio.checked = true;
+            typeRadio.dispatchEvent(new Event('change'));
         }
 
         // Buttons
@@ -261,64 +291,86 @@ export const CalendarModal = {
             return;
         }
 
-        const dateObj = new Date(dateStr);
-
-        if (!isWithinWorkingHours(dateObj)) {
-            await ModalService.alert("Horario Inválido", "La cita debe estar entre las 8:00 y las 20:00", "warning");
-            return;
-        }
-
-        if (!isNotSunday(dateObj)) {
-            await ModalService.alert("Día Inválido", "No se pueden agendar citas los domingos", "warning");
-            return;
-        }
-
         try {
-            // Ensure profile
-            const profile = await ensurePatientProfile(
-                name,
-                dom.patientFirstNameInput.value,
-                dom.patientLastNameInput.value,
-                PatientState.patients
-            );
+            const isSchoolVisit = document.querySelector('input[name="appointmentType"]:checked')?.value === 'school';
+            const dateStrArray = dom.appointmentDateInput.value.split(','); // Para múltiples slots
 
-            // Should also update profile therapist if needed? 
-            // For now, we prefer the explicit selection for the appointment.
-            // But if it's a new patient, we might want to save the therapist preference? 
-            // ensurePatientProfile doesn't seem to take therapist as arg easily without modifying it.
-            // Let's stick to appointment-level assignment for now.
+            // Validar conflictos para todas las fechas seleccionadas
+            for (const dateStr of dateStrArray) {
+                const dateObj = new Date(dateStr);
+                if (!isWithinWorkingHours(dateObj)) {
+                    await ModalService.alert("Horario Inválido", "La cita debe estar entre las 8:00 y las 20:00", "warning");
+                    return;
+                }
+                if (!isNotSunday(dateObj)) {
+                    await ModalService.alert("Día Inválido", "No se pueden agendar citas los domingos", "warning");
+                    return;
+                }
+                if (!CalendarState.selectedEventId || dateStrArray.length > 1) {
+                     if (checkSlotConflict(dateStr, CalendarState.appointments, CalendarState.selectedEventId)) {
+                        if (!await ModalService.confirm("Conflicto de Horario", `Ya hay una cita a las ${new Date(dateStr).toLocaleTimeString()}.<br>¿Deseas agregarla de todas formas?`, "Agregar igualmente", "Cancelar")) return;
+                     }
+                }
+            }
 
-            const appointmentData = {
-                name: profile.name,
-                patientId: profile.id,
-                date: dateStr,
-                cost: cost,
-                therapist: therapist
+            // Repartir el costo total equitativamente entre las horas seleccionadas
+            const costPerSlot = cost / dateStrArray.length;
+
+            let appointmentData = {
+                cost: costPerSlot,
+                therapist: therapist,
+                isSchoolVisit: isSchoolVisit
             };
 
+            if (isSchoolVisit) {
+                // No interactuar con pacientes, solo guardar el evento
+                appointmentData.name = name.startsWith('Escuela:') ? name : `Escuela: ${name}`;
+                appointmentData.patientId = null;
+            } else {
+                // Flujo normal de paciente
+                const profile = await ensurePatientProfile(
+                    name,
+                    dom.patientFirstNameInput.value,
+                    dom.patientLastNameInput.value,
+                    PatientState.patients
+                );
+                appointmentData.name = profile.name;
+                appointmentData.patientId = profile.id;
+            }
+
             if (CalendarState.selectedEventId) {
-                // Update
-                await CalendarData.updateEvent(CalendarState.selectedEventId, appointmentData);
+                // Update el primero
+                await CalendarData.updateEvent(CalendarState.selectedEventId, { ...appointmentData, date: dateStrArray[0] });
+                
+                // Si seleccionó una segunda hora durante la edición, la creamos
+                if (dateStrArray.length > 1) {
+                    await CalendarData.createEvent({ ...appointmentData, date: dateStrArray[1] });
+                }
             } else {
                 // Create
                 if (dom.isRecurringCheckbox.checked) {
+                    // Validar que solo funcione bien si es 1 hora seleccionada por ahora, o crear ambas recurrentes
+                    // Para simplicidad, pasamos la primera para recurringDates, y si hay segunda le sumamos 1 hora
+                    const mainDate = document.getElementById('appointmentDate').value.split(',')[0];
+                    document.getElementById('appointmentDate').value = mainDate; // temporal
                     const dates = CalendarSuggestions.generateRecurringDates();
-                    // Create multiple
+                    document.getElementById('appointmentDate').value = dateStrArray.join(','); // restaurar
+                    
                     for (const date of dates) {
-                        const offset = date.getTimezoneOffset() * 60000;
-                        const iso = (new Date(date - offset)).toISOString().slice(0, 16);
-                        if (!checkSlotConflict(iso, CalendarState.appointments)) {
-                            await CalendarData.createEvent({ ...appointmentData, date: iso });
+                        for (let i=0; i < dateStrArray.length; i++) {
+                            const offsetObj = new Date(date);
+                            offsetObj.setHours(offsetObj.getHours() + i); // Añadir 1 hr a la segunda
+                            const offset = offsetObj.getTimezoneOffset() * 60000;
+                            const iso = (new Date(offsetObj - offset)).toISOString().slice(0, 16);
+                            if (!checkSlotConflict(iso, CalendarState.appointments)) {
+                                await CalendarData.createEvent({ ...appointmentData, date: iso });
+                            }
                         }
                     }
                 } else {
-                    console.log("   - Creando cita única...");
-                    if (checkSlotConflict(dateStr, CalendarState.appointments)) {
-                        console.log("   - Conflicto detectado");
-                        if (!await ModalService.confirm("Conflicto de Horario", "Ya hay una cita en este horario.<br>¿Deseas agregarla de todas formas?", "Agregar igualmente", "Cancelar")) return;
+                    for (const dateStr of dateStrArray) {
+                        await CalendarData.createEvent({ ...appointmentData, date: dateStr });
                     }
-                    const result = await CalendarData.createEvent(appointmentData);
-                    console.log("   - Resultado createEvent:", result);
                 }
             }
             this.closeModal();
@@ -488,10 +540,13 @@ export const CalendarModal = {
 
             // Verificar si es la hora seleccionada actualmente
             let isSelected = false;
-            if (currentSelectedDate) {
-                isSelected = currentSelectedDate.getDate() === slotDate.getDate() &&
-                    currentSelectedDate.getMonth() === slotDate.getMonth() &&
-                    currentSelectedDate.getHours() === hour;
+            let currentSelectedDateArray = currentSelectedISO ? currentSelectedISO.split(',').map(d => new Date(d)) : [];
+            if (currentSelectedDateArray.length > 0) {
+                isSelected = currentSelectedDateArray.some(d => 
+                    d.getDate() === slotDate.getDate() &&
+                    d.getMonth() === slotDate.getMonth() &&
+                    d.getHours() === hour
+                );
             }
 
             const btn = document.createElement('button');
@@ -501,6 +556,10 @@ export const CalendarModal = {
                 // Estilo seleccionado (Verde o Azul fuerte)
                 btn.className = "bg-blue-600 text-white font-bold py-2 rounded shadow-md ring-2 ring-blue-300 transition-all transform scale-105";
                 btn.textContent = timeStr + " ✓";
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    this.selectSlot(slotDate);
+                };
             } else if (!isFree) {
                 // Ocupado
                 btn.className = "bg-gray-100 text-gray-400 py-2 rounded cursor-not-allowed border border-gray-100 text-xs";
@@ -525,10 +584,40 @@ export const CalendarModal = {
         const localISOTime = (new Date(dateObj - offset)).toISOString().slice(0, 16);
 
         const hiddenInput = CalendarState.dom.appointmentDateInput || document.getElementById('appointmentDate');
+        const isSchoolVisit = document.querySelector('input[name="appointmentType"]:checked')?.value === 'school';
+        
         if (hiddenInput) {
-            hiddenInput.value = localISOTime;
-            // Disparar evento change si es necesario
-            // hiddenInput.dispatchEvent(new Event('change'));
+            let selectedDates = hiddenInput.value ? hiddenInput.value.split(',') : [];
+            
+            if (!isSchoolVisit) {
+                // Solo una hora permitida
+                selectedDates = [localISOTime];
+            } else {
+                if (selectedDates.includes(localISOTime)) {
+                    // Deseleccionar si hacemos click de nuevo
+                    selectedDates = selectedDates.filter(d => d !== localISOTime);
+                    if (selectedDates.length === 0) selectedDates = [localISOTime]; // always 1
+                } else {
+                    if (selectedDates.length < 2) {
+                        const str1 = selectedDates[0];
+                        const str2 = localISOTime;
+                        const dateMatch = str1.substr(0, 10) === str2.substr(0, 10);
+                        const hr1 = parseInt(str1.substr(11, 2), 10);
+                        const hr2 = parseInt(str2.substr(11, 2), 10);
+
+                        // Validate same day and adjacent hour
+                        if (dateMatch && Math.abs(hr1 - hr2) === 1) {
+                            selectedDates.push(localISOTime);
+                            selectedDates.sort(); // Order chronologically
+                        } else {
+                            selectedDates = [localISOTime];
+                        }
+                    } else {
+                        selectedDates = [localISOTime];
+                    }
+                }
+            }
+            hiddenInput.value = selectedDates.join(',');
         }
 
         // Re-render para mostrar selección
