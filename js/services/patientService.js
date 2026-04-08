@@ -41,7 +41,8 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             dateInactivated: null,
             lastSessionDate: null,
             defaultCost: options.defaultCost || 0,
-            clinicFee: options.clinicFee !== undefined ? options.clinicFee : 250
+            clinicFee: options.clinicFee !== undefined ? options.clinicFee : 250,
+            wantsWhatsapp: options.wantsWhatsapp !== false
         };
 
         const docRef = await addDoc(collection(db, patientProfilesPath), profileData);

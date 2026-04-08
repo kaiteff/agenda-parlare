@@ -93,6 +93,10 @@ def get_patient_phones():
         name = profile.get('name', '')
         phone = profile.get('phone', '')
         if name and phone:
+            wants_whatsapp = profile.get('wantsWhatsapp', True)
+            if wants_whatsapp is False:
+                continue
+                
             phones[name.lower()] = {
                 'phone': phone,
                 'name': name

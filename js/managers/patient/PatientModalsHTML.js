@@ -75,6 +75,11 @@ export const PatientModalsHTML = {
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📱 WhatsApp</label>
                             <input type="tel" id="newPatientPhone" placeholder="33 2495 5791"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                            <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input type="checkbox" id="newPatientWantsWhatsapp" checked
+                                    class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
+                                <span class="text-xs text-gray-600 font-medium">Recibir recordatorios automáticos</span>
+                            </label>
                         </div>
                     </div>
 
@@ -201,6 +206,11 @@ export const PatientModalsHTML = {
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">📱 WhatsApp</label>
                                 <input type="tel" id="editPatientPhone"
                                     class="w-full border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
+                                <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                    <input type="checkbox" id="editPatientWantsWhatsapp" checked
+                                        class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
+                                    <span class="text-xs text-gray-600 font-medium tracking-tight">Recibir recordatorios automáticos</span>
+                                </label>
                             </div>
                         </div>
                         <div class="mt-4 flex justify-end gap-2">

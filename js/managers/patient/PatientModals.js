@@ -453,6 +453,9 @@ export const PatientModals = {
         if (document.getElementById('editPatientPhone')) {
             document.getElementById('editPatientPhone').value = patient.phone || '';
         }
+        if (document.getElementById('editPatientWantsWhatsapp')) {
+            document.getElementById('editPatientWantsWhatsapp').checked = patient.wantsWhatsapp !== false;
+        }
 
         // Botón de guardar cambios
         if (dom.savePatientEditBtn) {
@@ -461,6 +464,7 @@ export const PatientModals = {
                 const newCost = dom.editPatientCost ? parseFloat(dom.editPatientCost.value) : 0;
                 const newClinicFee = document.getElementById('editPatientClinicFee') ? parseFloat(document.getElementById('editPatientClinicFee').value) : 250;
                 const newPhone = document.getElementById('editPatientPhone')?.value.trim() || '';
+                const wantsWhatsapp = document.getElementById('editPatientWantsWhatsapp')?.checked !== false;
 
                 const success = await PatientActions.updatePatientProfile(
                     patient.id,
@@ -468,7 +472,8 @@ export const PatientModals = {
                         therapist: newTherapist,
                         defaultCost: newCost,
                         clinicFee: newClinicFee,
-                        phone: newPhone
+                        phone: newPhone,
+                        wantsWhatsapp: wantsWhatsapp
                     },
                     patient.name
                 );

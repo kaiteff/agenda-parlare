@@ -55,6 +55,7 @@ export const PatientActions = {
         const defaultCost = dom.newPatientDefaultCost ? parseFloat(dom.newPatientDefaultCost.value) : 0;
         const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 250;
         const phone = document.getElementById('newPatientPhone')?.value.trim() || '';
+        const wantsWhatsapp = document.getElementById('newPatientWantsWhatsapp')?.checked !== false;
 
         // Validación
         if (!firstName || !lastName) {
@@ -73,7 +74,7 @@ export const PatientActions = {
             }
 
             // Crear perfil (con datos extra)
-            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { defaultCost, clinicFee, phone });
+            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { defaultCost, clinicFee, phone, wantsWhatsapp });
 
             if (result.success) {
                 // Cerrar modal de nuevo paciente
@@ -548,6 +549,8 @@ export const PatientActions = {
             if (updates.therapist) profileUpdates.therapist = updates.therapist;
             if (updates.defaultCost !== undefined) profileUpdates.defaultCost = updates.defaultCost;
             if (updates.clinicFee !== undefined) profileUpdates.clinicFee = updates.clinicFee;
+            if (updates.phone !== undefined) profileUpdates.phone = updates.phone;
+            if (updates.wantsWhatsapp !== undefined) profileUpdates.wantsWhatsapp = updates.wantsWhatsapp;
 
             await updateDoc(doc(db, 'patientProfiles', profileId), profileUpdates);
 
