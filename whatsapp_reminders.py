@@ -129,8 +129,9 @@ def send_reminder(phone_number, patient_name, appointment_time, therapist, dry_r
         f"Hola {patient_name}, te recordamos tu cita mañana "
         f"{tomorrow} a las {appointment_time} con {therapist.title()}.\n\n"
         f"Responde:\n"
-        f"✅ *OK* para confirmar\n"
-        f"❌ *CANCELAR* para cancelar\n\n"
+        f"1️⃣ *OK* para confirmar\n"
+        f"2️⃣ *CANCELAR* para cancelar\n"
+        f"3️⃣ *YARI* para hablar con recepción\n\n"
         f"¡Te esperamos! 😊"
     )
     

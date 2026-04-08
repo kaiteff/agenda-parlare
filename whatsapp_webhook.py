@@ -93,9 +93,10 @@ def create_notification(patient_name, notif_type, message, appointment_date='', 
 # ── Flask App ────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# Palabras clave para confirmar/cancelar
+# Palabras clave para confirmar/cancelar/hablar con recepción
 CONFIRM_KEYWORDS = ['ok', 'si', 'sí', 'confirmo', 'confirmar', 'yes', 'va', 'listo', '1']
 CANCEL_KEYWORDS = ['cancelar', 'cancelo', 'no', 'cancel', '2']
+YARI_KEYWORDS = ['recepcion', 'recepción', 'yari', 'hablar', '3']
 
 
 def normalize_phone(phone):
@@ -214,9 +215,15 @@ def webhook():
         print(f"   ❌ Cita CANCELADA para {patient['name']}")
         resp.message(f"Tu cita de mañana ha sido cancelada. Si deseas reagendar, por favor contáctanos. 📞")
         
+    elif incoming_msg in YARI_KEYWORDS:
+        print(f"   📞 {patient['name']} solicitó hablar con recepción")
+        # TODO: Cambiar este número por el número real de Yari
+        yari_phone = "52XXXXXXXXXX" 
+        resp.message(f"Con gusto {patient['name'].split()[0]}. Puedes enviarle un mensaje directo a Yari (Recepción) haciendo clic aquí: https://wa.me/{yari_phone} o llamando a ese número.")
+        
     else:
         print(f"   ❓ Respuesta no reconocida: '{incoming_msg}'")
-        resp.message(f"Hola {patient['name'].split()[0]}, no entendimos tu respuesta. Responde:\n• *OK* para confirmar tu cita\n• *CANCELAR* para cancelarla")
+        resp.message(f"Hola {patient['name'].split()[0]}, no entendimos tu respuesta. Responde:\n• *1* para confirmar tu cita\n• *2* para cancelarla\n• *3* para hablar con recepción")
     
     return str(resp), 200
 

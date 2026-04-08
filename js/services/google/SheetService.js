@@ -14,7 +14,8 @@ export const SheetService = {
     config: {
         spreadsheets: {
             diana: '1KUoPue_fekBpXVzdo9MxguqV5Cvl85AVEizX-SpmSZ4',
-            sam: '1XKpgEE59wZ3BdbMfhcoJnyDJ064nFJRO7VhUvAb2Mjg'
+            sam: '1XKpgEE59wZ3BdbMfhcoJnyDJ064nFJRO7VhUvAb2Mjg',
+            vero: '1o84rt6ZfGm0eb8URNGgadClVaeJGgna0dzBhdAjx6pc'
         },
         // Nombre fijo de la pestaña donde la App escribirá en CADA archivo
         targetSheetName: 'App_Data'

@@ -107,16 +107,17 @@ export const CalendarUI = {
                             container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5";
 
                             slotEvents.forEach(evt => {
-                                const therapistName = (evt.therapist || 'diana') === 'diana' ? 'Diana' : 'Sam';
+                                const tKey = evt.therapist || 'diana';
+                                const therapistName = tKey.charAt(0).toUpperCase() + tKey.slice(1);
 
                                 // LOGIC FIX: Si está pagado, mostrar en VERDE igual que en la tarjeta individual
                                 let bgColor = '';
                                 if (evt.isPaid) {
                                     bgColor = 'bg-green-100 text-green-800 border-green-200';
                                 } else {
-                                    bgColor = (evt.therapist || 'diana') === 'diana'
-                                        ? 'bg-pink-100 text-pink-800 border-pink-200'
-                                        : 'bg-blue-100 text-blue-800 border-blue-200';
+                                    if (tKey === 'diana') bgColor = 'bg-pink-100 text-pink-800 border-pink-200';
+                                    else if (tKey === 'sam') bgColor = 'bg-blue-100 text-blue-800 border-blue-200';
+                                    else bgColor = 'bg-purple-100 text-purple-800 border-purple-200';
                                 }
 
                                 const chip = document.createElement('div');
