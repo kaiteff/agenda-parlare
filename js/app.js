@@ -11,6 +11,7 @@ import { ToastService } from './utils/ToastService.js';
 import { NetworkMonitor } from './services/NetworkMonitor.js';
 import { Header } from './components/Header.js?v=2';
 import { GoogleAuthService } from './services/google/GoogleAuthService.js';
+import { SupportVault } from './modules/support/SupportVault.js';
 
 const log = Logger.create('App');
 
@@ -73,6 +74,11 @@ async function initializeModules() {
             initModule('ToastService', () => ToastService.init()),
             initModule('NetworkMonitor', () => NetworkMonitor.init())
         ]);
+
+        if (AuthManager.isAdmin()) {
+            await initModule('SupportVault', () => SupportVault.init());
+            document.getElementById('openSupportVaultBtn')?.classList.remove('hidden');
+        }
 
         // Google Auth (async pero no bloqueante)
         GoogleAuthService.init()
