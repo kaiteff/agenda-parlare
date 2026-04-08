@@ -90,6 +90,7 @@ export const CalendarModal = {
         dom.deleteBtn.classList.add('hidden');
         dom.payBtn.classList.add('hidden');
         dom.confirmBtn.classList.add('hidden');
+        if (dom.confirmedAtLabel) dom.confirmedAtLabel.classList.add('hidden');
         dom.cancelBtn.classList.add('hidden');
         dom.rescheduleSection.classList.add('hidden');
 
@@ -195,8 +196,21 @@ export const CalendarModal = {
         // Confirm button state
         dom.confirmBtn.innerHTML = ev.confirmed ? '❌ Quitar Confirmación' : '✓ Confirmar Asistencia';
         dom.confirmBtn.className = ev.confirmed
-            ? "col-span-2 bg-gray-100 text-gray-600 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors flex items-center justify-center gap-2 mb-1 text-sm font-medium"
-            : "col-span-2 bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1";
+            ? "w-full bg-gray-100 text-gray-600 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors flex items-center justify-center gap-2 mb-1 text-sm font-medium"
+            : "w-full bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1";
+
+        if (dom.confirmedAtLabel && ev.confirmed) {
+            dom.confirmedAtLabel.classList.remove('hidden');
+            let ds = '';
+            if (ev.confirmedAt && ev.confirmedAt.toDate) { // Firestore Date
+                ds = ev.confirmedAt.toDate().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+            } else if (ev.confirmedAt) { // ISO String
+                ds = new Date(ev.confirmedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+            }
+            dom.confirmedAtLabel.textContent = ds ? `Confirmado el: ${ds}` : 'Confirmado';
+        } else if (dom.confirmedAtLabel) {
+            dom.confirmedAtLabel.classList.add('hidden');
+        }
 
         // Pay button state
         dom.payBtn.textContent = ev.isPaid ? 'Marcar como No Pagado' : 'Marcar como Pagado';

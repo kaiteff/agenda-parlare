@@ -185,7 +185,10 @@ def webhook():
     if incoming_msg in CONFIRM_KEYWORDS:
         # Confirmar cita
         apt_ref = db.collection('appointments').document(appointment['id'])
-        apt_ref.update({'confirmed': True})
+        apt_ref.update({
+            'confirmed': True,
+            'confirmedAt': firestore.SERVER_TIMESTAMP
+        })
         
         # Crear notificación en la app
         create_notification(

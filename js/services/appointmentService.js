@@ -217,8 +217,10 @@ export async function toggleConfirmationStatus(id, currentStatus) {
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
-        await updateDoc(docRef, { confirmed: newStatus });
-        log.debug(`Cita [${id}] confirmada: ${newStatus}`);
+        const updateData = { confirmed: newStatus };
+        if (newStatus) updateData.confirmedAt = serverTimestamp();
+        await updateDoc(docRef, updateData);
+        log.info(`Cita [${id}] cambio su estado de confirmación a: ${newStatus}`);
         return { success: true, newState: newStatus };
     } catch (error) {
         log.error("Error cambiando confirmación:", error);

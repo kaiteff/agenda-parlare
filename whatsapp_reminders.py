@@ -72,8 +72,8 @@ def get_tomorrow_appointments():
         apt = doc.to_dict()
         apt['id'] = doc.id
         
-        # Filtrar canceladas
-        if apt.get('isCancelled', False):
+        # Filtrar canceladas o ya confirmadas
+        if apt.get('isCancelled', False) or apt.get('confirmed', False):
             continue
             
         appointments.append(apt)
