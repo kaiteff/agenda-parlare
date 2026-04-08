@@ -165,6 +165,8 @@ export const CalendarUI = {
                                 let bgColor = '';
                                 if (evt.isPaid) {
                                     bgColor = 'bg-green-100 text-green-800 border-green-200';
+                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
+                                    bgColor = 'bg-gray-800 text-gray-100 border-gray-900';
                                 } else {
                                     if (tKey === 'diana') bgColor = 'bg-pink-100 text-pink-800 border-pink-200';
                                     else if (tKey === 'sam') bgColor = 'bg-blue-100 text-blue-800 border-blue-200';
@@ -226,8 +228,8 @@ export const CalendarUI = {
                                 if (!canView) {
                                     // Gris, cursor normal (no mano), pero legible
                                     cardClasses = 'bg-gray-100 text-gray-700 border border-gray-200 cursor-default';
-                                } else if (evt.isFullDayBlock) {
-                                    cardClasses = 'bg-gray-800 text-gray-100 shadow-sm border-gray-900 cursor-default uppercase tracking-widest text-[10px]';
+                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
+                                    cardClasses = 'bg-gray-800 text-gray-100 shadow-sm border-gray-900 cursor-pointer uppercase tracking-widest text-[10px] hover:bg-gray-700 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200';
                                 } else {
                                     cardClasses = `${isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-green-200 shadow-md' : 'bg-white border-l-4 border-l-red-500 text-gray-700 shadow-sm border-gray-100'} cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md transition-all duration-200`;
                                 }
