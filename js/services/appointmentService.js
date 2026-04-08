@@ -194,12 +194,17 @@ export async function cancelAppointment(id) {
  * @param {boolean} currentStatus - Estado actual
  * @returns {Promise<Object>} - Resultado { success, newState, error }
  */
-export async function togglePaymentStatus(id, currentStatus) {
+export async function togglePaymentStatus(id, currentStatus, existingAppointments = []) {
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, { isPaid: newStatus });
         log.debug(`Cita [${id}] pago: ${newStatus}`);
+
+        // Re-sync Google Calendar con estado actualizado
+        const existing = existingAppointments.find(a => a.id === id);
+        if (existing) _syncToCalendar('update', { ...existing, isPaid: newStatus });
+
         return { success: true, newState: newStatus };
     } catch (error) {
         log.error("Error cambiando estado de pago:", error);
@@ -213,14 +218,19 @@ export async function togglePaymentStatus(id, currentStatus) {
  * @param {boolean} currentStatus - Estado actual
  * @returns {Promise<Object>} - Resultado { success, newState, error }
  */
-export async function toggleConfirmationStatus(id, currentStatus) {
+export async function toggleConfirmationStatus(id, currentStatus, existingAppointments = []) {
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
         const updateData = { confirmed: newStatus };
         if (newStatus) updateData.confirmedAt = serverTimestamp();
         await updateDoc(docRef, updateData);
-        log.info(`Cita [${id}] cambio su estado de confirmación a: ${newStatus}`);
+        log.info(`Cita [${id}] confirmación: ${newStatus}`);
+
+        // Re-sync Google Calendar con estado actualizado
+        const existing = existingAppointments.find(a => a.id === id);
+        if (existing) _syncToCalendar('update', { ...existing, confirmed: newStatus });
+
         return { success: true, newState: newStatus };
     } catch (error) {
         log.error("Error cambiando confirmación:", error);

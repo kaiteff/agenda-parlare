@@ -81,7 +81,7 @@ export const CalendarData = {
     },
 
     async togglePayment(id, currentStatus) {
-        const result = await togglePaymentStatus(id, currentStatus);
+        const result = await togglePaymentStatus(id, currentStatus, CalendarState.appointments);
 
         // Si se marcó como pagado exitosamente, registrar en Sheets
         if (result.success) {
@@ -116,7 +116,7 @@ export const CalendarData = {
     },
 
     async toggleConfirmation(id, currentStatus) {
-        const result = await toggleConfirmationStatus(id, currentStatus);
+        const result = await toggleConfirmationStatus(id, currentStatus, CalendarState.appointments);
         
         if (result.success) {
             const evt = CalendarState.appointments.find(a => a.id === id);

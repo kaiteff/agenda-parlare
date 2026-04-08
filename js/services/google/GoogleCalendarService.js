@@ -192,12 +192,12 @@ export const GoogleCalendarService = {
         const therapist = tKey.charAt(0).toUpperCase() + tKey.slice(1);
 
         return {
-            summary: appointment.name,
+            summary: appointment.name || '(Sin nombre)',
             description: [
-                `Terapeuta: ${therapist}`,
-                appointment.cost ? `Costo: $${appointment.cost}` : '',
-                appointment.isPaid ? '✅ Pagado' : '⏳ Pendiente',
-                '',
+                'Terapeuta: ' + therapist,
+                appointment.cost ? 'Costo: $' + appointment.cost : '',
+                appointment.confirmed ? '✅ Asistencia confirmada' : '',
+                appointment.isPaid ? '💰 Pagado' : '',
                 '📱 Agenda Parlare'
             ].filter(Boolean).join('\n'),
             start: {
@@ -211,11 +211,10 @@ export const GoogleCalendarService = {
             reminders: {
                 useDefault: false,
                 overrides: [
-                    { method: 'popup', minutes: 30 },
-                    { method: 'popup', minutes: 10 }
+                    { method: 'popup', minutes: 5 }
                 ]
             },
-            // Colores por terapeuta: Diana = Rosa (Flamingo=4), Sam = Azul (Peacock=7), Vero = Morado (Grape=3)
+            // Colores: Diana = Rosa (4), Sam = Azul (7), Vero = Morado (3)
             colorId: tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3'
         };
     },
