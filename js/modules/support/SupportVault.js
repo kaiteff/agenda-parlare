@@ -18,6 +18,9 @@ export const SupportVault = {
         if (this.isInitialized) return;
         this.injectHTML();
         this.bindEvents();
+        // Mostrar botón
+        const btn = document.getElementById('openSupportVaultBtn');
+        if (btn) btn.style.display = 'flex';
         this.isInitialized = true;
     },
 

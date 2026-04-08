@@ -75,13 +75,8 @@ async function initializeModules() {
             initModule('NetworkMonitor', () => NetworkMonitor.init())
         ]);
 
-        if (AuthManager.isAdmin()) {
-            await initModule('SupportVault', () => SupportVault.init());
-            const vaultBtn = document.getElementById('openSupportVaultBtn');
-            if (vaultBtn) {
-                vaultBtn.style.display = 'flex';
-            }
-        }
+        // Support Vault - siempre init, controla visibilidad internamente
+        await initModule('SupportVault', () => SupportVault.init());
 
         // Google Auth (async pero no bloqueante)
         GoogleAuthService.init()
