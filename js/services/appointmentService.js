@@ -129,8 +129,8 @@ export async function updateAppointment(id, updateData, existingAppointments) {
             { appointmentId: id, patientName: updateData.name || null }
         );
 
-        // Sync a Google Calendar (no bloquea)
-        _syncToCalendar('update', { ...updateData, id });
+        // Sync a Google Calendar con datos COMPLETOS (no solo el delta)
+        _syncToCalendar('update', mergedData);
 
         return { success: true };
     } catch (error) {
