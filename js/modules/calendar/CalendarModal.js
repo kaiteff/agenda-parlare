@@ -78,7 +78,7 @@ export const CalendarModal = {
         dom.patientLastNameInput.value = '';
         dom.patientFirstNameInput.disabled = false;
         dom.patientLastNameInput.disabled = false;
-        dom.costInput.value = '0';
+        dom.costInput.value = '800';
 
         // Reset Therapist and Type
         if (dom.appointmentTherapistInput) {
@@ -236,9 +236,20 @@ export const CalendarModal = {
             return;
         }
 
-        const matches = PatientState.patients.filter(p =>
-            p.name.toLowerCase().includes(query.toLowerCase()) && p.isActive !== false
-        );
+        // Filtrar por terapeuta seleccionado en el modal
+        const selectedTherapist = CalendarState.dom.appointmentTherapistInput?.value || AuthManager.getSelectedTherapist();
+        const isViewAll = !selectedTherapist || selectedTherapist === 'all';
+
+        const matches = PatientState.patients.filter(p => {
+            if (p.isActive === false) return false;
+            if (!p.name.toLowerCase().includes(query.toLowerCase())) return false;
+            // Si hay terapeuta seleccionado, filtrar por ese terapeuta
+            if (!isViewAll) {
+                const patientTherapist = p.therapist || 'diana';
+                if (patientTherapist !== selectedTherapist) return false;
+            }
+            return true;
+        });
 
         if (matches.length > 0) {
             patientSuggestions.classList.remove('hidden');
@@ -258,9 +269,9 @@ export const CalendarModal = {
                         appointmentTherapistInput.value = p.therapist || 'diana';
                     }
 
-                    // Set Cost
+                    // Set Cost - usar defaultCost del paciente o 800 si no tiene
                     if (CalendarState.dom.costInput) {
-                        CalendarState.dom.costInput.value = p.defaultCost || 0;
+                        CalendarState.dom.costInput.value = p.defaultCost || 800;
                     }
 
                     patientSuggestions.classList.add('hidden');

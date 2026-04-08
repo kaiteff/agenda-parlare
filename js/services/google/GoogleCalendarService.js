@@ -188,8 +188,8 @@ export const GoogleCalendarService = {
         const startDate = new Date(appointment.date);
         const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hora
 
-        const therapist = (appointment.therapist || 'diana').charAt(0).toUpperCase() +
-            (appointment.therapist || 'diana').slice(1);
+        const tKey = (appointment.therapist || 'diana').toLowerCase();
+        const therapist = tKey.charAt(0).toUpperCase() + tKey.slice(1);
 
         return {
             summary: appointment.name,
@@ -215,7 +215,8 @@ export const GoogleCalendarService = {
                     { method: 'popup', minutes: 10 }
                 ]
             },
-            colorId: therapist === 'Diana' ? '9' : '7' // 9=grape, 7=cyan
+            // Colores por terapeuta: Diana = Rosa (Flamingo=4), Sam = Azul (Peacock=7), Vero = Morado (Grape=3)
+            colorId: tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3'
         };
     },
 
