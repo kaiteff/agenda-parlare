@@ -57,14 +57,57 @@ export const CalendarUI = {
 
                 const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'short' });
                 const dayNum = dayDate.getDate();
+                let dateStr = "";
+                try { dateStr = formatDateLocal(dayDate); } catch(e) {}
+                
                 dayHeader.innerHTML = `
-                    <div class="text-xs font-semibold text-gray-500 uppercase">${dayName}</div>
+                    <div class="flex items-center justify-center gap-1">
+                        <div class="text-xs font-semibold text-gray-500 uppercase">${dayName}</div>
+                        <button class="day-block-btn text-gray-300 hover:text-red-500 transition-colors" title="Bloquear Día Completo" data-date="${dateStr}">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        </button>
+                    </div>
                     <div class="text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-800'}">${dayNum}</div>
                 `;
                 headerRow.appendChild(dayHeader);
             });
 
             grid.appendChild(headerRow);
+            
+            // Listener para el botón de "Bloquear Día"
+            headerRow.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.day-block-btn');
+                if (!btn) return;
+                
+                const dDate = btn.dataset.date;
+                const selectedTherapist = AuthManager.getSelectedTherapist();
+                let therapistToBlock = selectedTherapist;
+
+                // Si está en vista 'all', preguntar a quién
+                if (!selectedTherapist || selectedTherapist === 'all') {
+                    const ans = prompt("¿A qué terapeuta quieres bloquear en este día? (diana, sam, vero)", "diana");
+                    if (!ans) return;
+                    
+                    const lowerAns = ans.toLowerCase().trim();
+                    if (['diana', 'sam', 'vero'].includes(lowerAns)) {
+                        therapistToBlock = lowerAns;
+                    } else {
+                        ModalService.alert("Error", "Terapeuta no válido. Debe ser diana, sam o vero.", "error");
+                        return;
+                    }
+                }
+
+                if (await ModalService.confirm("Bloquear Día", `¿Quieres bloquear todo el día ${dDate} para la agenda de ${therapistToBlock}?`)) {
+                    await CalendarData.createEvent({
+                        name: "⛔ Día Inhábil/Vacaciones",
+                        date: dDate + "T08:00:00", // Hora neutra para pasar validaciones
+                        cost: 0,
+                        isSchoolVisit: true,
+                        isFullDayBlock: true,
+                        therapist: therapistToBlock
+                    });
+                }
+            });
 
             // Time Slots
             // UPDATE: Iniciar a las 8 AM por solicitud del usuario
@@ -93,10 +136,16 @@ export const CalendarUI = {
 
                     // Filtrar eventos
                     const slotEvents = CalendarState.appointments.filter(p => {
+                        if (p.isCancelled) return false;
                         const pDate = new Date(p.date);
                         let pDateStr;
                         try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
-                        return pDateStr === dateStr && pDate.getHours() === hour && !p.isCancelled;
+                        
+                        if (p.isFullDayBlock) {
+                            return pDateStr === dateStr;
+                        }
+                        
+                        return pDateStr === dateStr && pDate.getHours() === hour;
                     });
 
                     const selectedTherapist = AuthManager.getSelectedTherapist();
@@ -177,6 +226,8 @@ export const CalendarUI = {
                                 if (!canView) {
                                     // Gris, cursor normal (no mano), pero legible
                                     cardClasses = 'bg-gray-100 text-gray-700 border border-gray-200 cursor-default';
+                                } else if (evt.isFullDayBlock) {
+                                    cardClasses = 'bg-gray-800 text-gray-100 shadow-sm border-gray-900 cursor-default uppercase tracking-widest text-[10px]';
                                 } else {
                                     cardClasses = `${isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-green-200 shadow-md' : 'bg-white border-l-4 border-l-red-500 text-gray-700 shadow-sm border-gray-100'} cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md transition-all duration-200`;
                                 }

@@ -145,7 +145,11 @@ export const CalendarModal = {
             dom.appointmentTherapistInput.value = ev.therapist || 'diana';
         }
         const isSchool = ev.isSchoolVisit === true || ev.name.toLowerCase().startsWith('escuela:');
-        const typeRadio = document.querySelector(`input[name="appointmentType"][value="${isSchool ? 'school' : 'patient'}"]`);
+        let radioValue = 'patient';
+        if (ev.isHourlyBlock || ev.name.includes('⛔')) radioValue = 'block';
+        else if (isSchool) radioValue = 'school';
+
+        const typeRadio = document.querySelector(`input[name="appointmentType"][value="${radioValue}"]`);
         if (typeRadio) {
             typeRadio.checked = true;
             typeRadio.dispatchEvent(new Event('change'));
@@ -289,18 +293,23 @@ export const CalendarModal = {
         }
 
         const dom = CalendarState.dom;
-        const name = dom.patientSearchInput.value.trim();
+        const typeRadio = document.querySelector('input[name="appointmentType"]:checked')?.value;
+        const isBlock = typeRadio === 'block';
+        
+        let name = dom.patientSearchInput.value.trim();
+        if (isBlock && !name) name = "⛔ Hora Inhábil";
+        
         const dateStr = dom.appointmentDateInput.value;
         const cost = parseFloat(dom.costInput.value) || 0;
-        console.log("   - Datos:", { name, dateStr, cost });
+        console.log("   - Datos:", { name, dateStr, cost, typeRadio });
         const therapist = dom.appointmentTherapistInput ? dom.appointmentTherapistInput.value : (AuthManager.currentUser?.therapist || 'diana');
 
-        if (!name || !dateStr) {
+        if (!name && !isBlock) {
             await ModalService.alert("Campos Incompletos", "Por favor completa nombre y fecha", "warning");
             return;
         }
 
-        if (cost <= 0) {
+        if (cost <= 0 && !isBlock) {
             await ModalService.alert("Costo Requerido", "Por favor ingresa un costo válido para la cita (mayor a 0).", "warning");
             // Highlight input
             if (dom.costInput) {
@@ -314,7 +323,7 @@ export const CalendarModal = {
         }
 
         try {
-            const isSchoolVisit = document.querySelector('input[name="appointmentType"]:checked')?.value === 'school';
+            const isSchoolVisit = typeRadio === 'school';
             const dateStrArray = dom.appointmentDateInput.value.split(','); // Para múltiples slots
 
             // Validar conflictos para todas las fechas seleccionadas
@@ -341,12 +350,15 @@ export const CalendarModal = {
             let appointmentData = {
                 cost: costPerSlot,
                 therapist: therapist,
-                isSchoolVisit: isSchoolVisit
+                isSchoolVisit: isSchoolVisit || isBlock,
+                isHourlyBlock: isBlock,
+                isFullDayBlock: false // we distinguish from full day
             };
 
-            if (isSchoolVisit) {
+            if (isSchoolVisit || isBlock) {
                 // No interactuar con pacientes, solo guardar el evento
-                appointmentData.name = name.startsWith('Escuela:') ? name : `Escuela: ${name}`;
+                appointmentData.name = name;
+                if (isSchoolVisit && !name.startsWith('Escuela:')) appointmentData.name = `Escuela: ${name}`;
                 appointmentData.patientId = null;
             } else {
                 // Flujo normal de paciente

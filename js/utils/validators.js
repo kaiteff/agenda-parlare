@@ -29,6 +29,14 @@ export function isSlotFree(dateObj, appointments, excludeId = null, therapist = 
 
         if (apptTherapist !== targetTherapist) return false;
 
+        if (apptTherapist !== targetTherapist) return false;
+
+        if (p.isFullDayBlock) {
+            const pDateStr = p.date.split('T')[0];
+            const targetDateStr = dateObj.toISOString().split('T')[0];
+            return pDateStr === targetDateStr;
+        }
+
         const pDate = new Date(p.date);
         const pTime = pDate.getTime();
         // Considera ocupado si hay una cita dentro de 1 hora
@@ -54,6 +62,14 @@ export function checkSlotConflict(dateTimeStr, appointments, excludeId = null, t
         const targetTherapist = therapist || 'diana';
 
         if (apptTherapist !== targetTherapist) return false;
+
+        if (apptTherapist !== targetTherapist) return false;
+
+        if (p.isFullDayBlock) {
+            const pDateStr = p.date.split('T')[0];
+            const targetDateStr = dateTimeStr.split('T')[0];
+            return pDateStr === targetDateStr;
+        }
 
         const pTime = new Date(p.date).getTime();
         return Math.abs(pTime - selectedTime) < 3600000;
