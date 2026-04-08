@@ -77,7 +77,10 @@ async function initializeModules() {
 
         if (AuthManager.isAdmin()) {
             await initModule('SupportVault', () => SupportVault.init());
-            document.getElementById('openSupportVaultBtn')?.classList.remove('hidden');
+            const vaultBtn = document.getElementById('openSupportVaultBtn');
+            if (vaultBtn) {
+                vaultBtn.style.display = 'flex';
+            }
         }
 
         // Google Auth (async pero no bloqueante)
