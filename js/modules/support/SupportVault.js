@@ -4,12 +4,11 @@
  * Permite purgar por completo pacientes y todas sus citas (incluyendo sync con Google Calendar).
  */
 
-import { db, collectionPath, patientProfilesPath, collection, query, where, getDocs, writeBatch, doc } from '../../firebase.js';
+import { db, collectionPath, patientProfilesPath, collection, query, where, getDocs, writeBatch, doc, updateDoc, serverTimestamp } from '../../firebase.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { GoogleCalendarService } from '../../services/google/GoogleCalendarService.js';
-import { updatePatientProfile } from '../../services/patientService.js';
 
 export const SupportVault = {
     isInitialized: false,
@@ -219,10 +218,11 @@ export const SupportVault = {
         ToastService.info('Aplicando cambio de nombre...');
 
         try {
-            await updatePatientProfile(patient.id, {
+            await updateDoc(doc(db, patientProfilesPath, patient.id), {
                 name: trimmed,
                 firstName: trimmed.split(' ')[0],
-                lastName: trimmed.split(' ').slice(1).join(' ') || ''
+                lastName: trimmed.split(' ').slice(1).join(' ') || '',
+                updatedAt: serverTimestamp()
             });
 
             const q1 = query(collection(db, collectionPath), where('patientId', '==', patient.id));
