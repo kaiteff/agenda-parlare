@@ -18,7 +18,7 @@
  * @module PatientActions
  */
 
-import { db, updateDoc, doc, collectionPath } from '../../firebase.js';
+import { db, updateDoc, doc, collectionPath, patientProfilesPath } from '../../firebase.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
@@ -29,7 +29,45 @@ import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { SheetService } from '../../services/google/SheetService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
-import { getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/**
+ * Obtiene el clinicFee de un paciente consultando Firestore directamente.
+ * Evita depender del estado en memoria (PatientState.patients) que puede estar filtrado por terapeuta.
+ * @param {string} patientName
+ * @returns {Promise<number>} clinicFee del paciente, o 250 si no se encuentra
+ */
+async function _getClinicFeeForPatient(patientName) {
+    try {
+        // Primero intentar desde el estado en memoria (más rápido)
+        const fromState = PatientState.patients.find(
+            p => p.name?.toLowerCase() === patientName?.toLowerCase()
+        );
+        if (fromState && fromState.clinicFee !== undefined) {
+            return parseFloat(fromState.clinicFee);
+        }
+
+        // Si no está en memoria, consultar Firestore directamente
+        const q = query(
+            collection(db, patientProfilesPath),
+            where('name', '==', patientName)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            const profileData = snap.docs[0].data();
+            if (profileData.clinicFee !== undefined) {
+                console.log(`💰 clinicFee para "${patientName}" (Firestore): ${profileData.clinicFee}`);
+                return parseFloat(profileData.clinicFee);
+            }
+        }
+
+        console.warn(`⚠️ No se encontró clinicFee para "${patientName}", usando default 250`);
+        return 250;
+    } catch (err) {
+        console.error('❌ Error obteniendo clinicFee:', err);
+        return 250;
+    }
+}
 
 /**
  * Acciones del usuario sobre pacientes
@@ -191,9 +229,8 @@ export const PatientActions = {
                 // B. Registrar Negativo en Sheets
                 const cost = aptData.cost || 0;
 
-                // Buscar Clinic Fee actualizado por si acaso
-                const patientProfile = PatientState.patients.find(p => p.name === aptData.name);
-                const clinicFee = patientProfile && patientProfile.clinicFee !== undefined ? parseFloat(patientProfile.clinicFee) : 25;
+                // Buscar Clinic Fee leyendo directo de Firestore para evitar desfase de estado en memoria
+                const clinicFee = await _getClinicFeeForPatient(aptData.name);
 
                 SheetService.logPayment({
                     date: aptData.date,
@@ -222,9 +259,8 @@ export const PatientActions = {
 
                 const cost = aptData.cost || 0;
 
-                // Buscar Clinic Fee
-                const patientProfile = PatientState.patients.find(p => p.name === (aptData.name || ''));
-                const clinicFee = patientProfile && patientProfile.clinicFee !== undefined ? parseFloat(patientProfile.clinicFee) : 250;
+                // Buscar Clinic Fee leyendo directo de Firestore para evitar desfase de estado en memoria
+                const clinicFee = await _getClinicFeeForPatient(aptData.name || '');
 
                 SheetService.logPayment({
                     date: aptData.date || new Date().toISOString(),

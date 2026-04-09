@@ -3,10 +3,35 @@
  * Gestiona la capa de datos del calendario y la comunicación con Firebase
  */
 
-import { db, collectionPath, collection, onSnapshot, query } from '../../firebase.js';
+import { db, collectionPath, patientProfilesPath, collection, onSnapshot, query } from '../../firebase.js';
 import { CalendarState } from './CalendarState.js';
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from '../../services/appointmentService.js';
 import { SheetService } from '../../services/google/SheetService.js';
+import { getDocs, query as fsQuery, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/**
+ * Obtiene el clinicFee de un paciente desde Firestore.
+ * @param {string} patientName
+ * @returns {Promise<number>}
+ */
+async function getClinicFee(patientName) {
+    try {
+        const q = fsQuery(
+            collection(db, patientProfilesPath),
+            where('name', '==', patientName)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            const data = snap.docs[0].data();
+            if (data.clinicFee !== undefined) {
+                return parseFloat(data.clinicFee);
+            }
+        }
+    } catch (err) {
+        console.error('Error obteniendo clinicFee en CalendarData:', err);
+    }
+    return 250; // Default
+}
 
 export const CalendarData = {
     /**
@@ -50,14 +75,16 @@ export const CalendarData = {
                 console.log("💰 CalendarData: Cita movida y estaba pagada. Actualizando en Sheets...", existingEvt.name);
                 
                 try {
+                    const clinicFee = await getClinicFee(existingEvt.name);
+
                     // 1. Anular el pago en la fecha/hora anterior con monto negativo
-                    //    Usamos status "Pagado" con monto negativo para que SUMIF lo reste correctamente
                     await SheetService.logPayment({
                         date: existingEvt.date,
                         patientName: existingEvt.name,
                         amount: -Math.abs(existingEvt.cost || 0),
                         status: "Pagado",
-                        therapist: existingEvt.therapist
+                        therapist: existingEvt.therapist,
+                        clinicFee: clinicFee
                     });
                     
                     // 2. Registrar en la fecha nueva
@@ -66,7 +93,8 @@ export const CalendarData = {
                         patientName: existingEvt.name,
                         amount: Math.abs(existingEvt.cost || 0),
                         status: "Pagado",
-                        therapist: existingEvt.therapist
+                        therapist: existingEvt.therapist,
+                        clinicFee: clinicFee
                     });
                 } catch (err) {
                     console.error("Error sincronizando cambios de fecha en Sheets:", err);
@@ -89,28 +117,32 @@ export const CalendarData = {
             const appointment = CalendarState.appointments.find(a => a.id === id);
 
             if (appointment) {
-                if (result.newState === true) {
-                    // PAGO POSITIVO
-                    console.log("💰 CalendarData: Marcado como PAGADO, enviando a Sheets...", appointment);
-                    SheetService.logPayment({
-                        date: appointment.date,
-                        patientName: appointment.name,
-                        amount: Math.abs(appointment.cost || 0),
-                        status: "Pagado",
-                        therapist: appointment.therapist
-                    }).catch(err => console.error("Error sheet logging:", err));
-                } else {
-                    // PAGO NEGATIVO (ANULACIÓN)
-                    console.log("💰 CalendarData: Marcado como ANULADO, enviando corrección a Sheets...", appointment);
-                    SheetService.logPayment({
-                        date: appointment.date,
-                        patientName: appointment.name,
-                        // Enviamos negativo para restar
-                        amount: -Math.abs(appointment.cost || 0),
-                        status: "ANULADO",
-                        therapist: appointment.therapist
-                    }).catch(err => console.error("Error sheet logging (reversal):", err));
-                }
+                // Obtener clinicFee real del paciente desde Firestore
+                getClinicFee(appointment.name).then(clinicFee => {
+                    if (result.newState === true) {
+                        // PAGO POSITIVO
+                        console.log("💰 CalendarData: Marcado como PAGADO, enviando a Sheets...", appointment.name, '- clinicFee:', clinicFee);
+                        SheetService.logPayment({
+                            date: appointment.date,
+                            patientName: appointment.name,
+                            amount: Math.abs(appointment.cost || 0),
+                            status: "Pagado",
+                            therapist: appointment.therapist,
+                            clinicFee: clinicFee
+                        }).catch(err => console.error("Error sheet logging:", err));
+                    } else {
+                        // PAGO NEGATIVO (ANULACIÓN)
+                        console.log("💰 CalendarData: Marcado como ANULADO, enviando corrección a Sheets...", appointment.name, '- clinicFee:', clinicFee);
+                        SheetService.logPayment({
+                            date: appointment.date,
+                            patientName: appointment.name,
+                            amount: -Math.abs(appointment.cost || 0),
+                            status: "ANULADO",
+                            therapist: appointment.therapist,
+                            clinicFee: clinicFee
+                        }).catch(err => console.error("Error sheet logging (reversal):", err));
+                    }
+                }).catch(err => console.error("Error obteniendo clinicFee para Sheets:", err));
             }
         }
         return result;
