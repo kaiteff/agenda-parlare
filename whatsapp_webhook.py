@@ -125,6 +125,7 @@ def home():
     <head>
         <meta charset="UTF-8">
         <title>Parláre - Centro de Atención</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <style>
             body { 
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -137,7 +138,6 @@ def home():
                 overflow: hidden;
                 position: relative;
             }
-            /* Fondo con el logo gigante */
             body::before {
                 content: "";
                 position: absolute;
@@ -164,8 +164,18 @@ def home():
             }
             .logo { width: 180px; height: auto; margin-bottom: 1.5rem; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
             h1 { color: #000; margin: 0; font-size: 3rem; font-weight: 800; letter-spacing: -1px; }
-            .accent { color: #e11d48; } /* Magenta del colibrí */
+            .accent { color: #e11d48; }
             p { color: #334155; font-size: 1.2rem; line-height: 1.6; margin-top: 1rem; }
+            .social-links { margin-top: 2rem; display: flex; justify-content: center; gap: 1.5rem; }
+            .social-links a { 
+                color: #64748b; 
+                font-size: 2rem; 
+                transition: all 0.3s ease;
+                text-decoration: none;
+            }
+            .social-links a:hover { transform: translateY(-5px); }
+            .fa-instagram:hover { color: #e1306c; }
+            .fa-facebook:hover { color: #1877f2; }
             .status { 
                 margin-top: 2.5rem; 
                 display: inline-flex; 
@@ -178,7 +188,6 @@ def home():
                 font-weight: 700; 
                 font-size: 1rem; 
                 border: 1px solid #bbf7d0;
-                box-shadow: 0 4px 10px rgba(34, 197, 94, 0.1);
             }
             .dot { width: 12px; height: 12px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 10px #22c55e; }
         </style>
@@ -188,10 +197,15 @@ def home():
             <img src="/static/images/logo.png" alt="Parlare Logo" class="logo">
             <h1>Parl<span class="accent">á</span>re</h1>
             <p><strong>Centro de atención en problemas de lenguaje y habla.</strong></p>
-            <p>Especialistas dedicados al desarrollo integral de la comunicación infantil.</p>
+            
+            <div class="social-links">
+                <a href="https://www.facebook.com/parlarehablaylenguaje" target="_blank" title="Facebook"><i class="fab fa-facebook"></i></a>
+                <a href="https://www.instagram.com/centrodeatencionparlare/" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+            </div>
+
             <div class="status">
                 <div class="dot"></div>
-                Sistema de Notificaciones Activo V6
+                Sistema de Notificaciones Activo V7
             </div>
         </div>
     </body>
