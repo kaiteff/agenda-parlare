@@ -126,7 +126,8 @@ export const PatientModalsHTML = {
                 </div>
 
                 <!-- Scrollable Content -->
-                <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 scroller">
+                    <div class="stats-container"></div>
 
                     <!-- Stats Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

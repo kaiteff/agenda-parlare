@@ -153,8 +153,13 @@ export const PatientModals = {
 
         // Calcular estadísticas
         const now = new Date();
-        const completed = appointments.filter(apt => new Date(apt.date) < now);
-        const upcoming = appointments.filter(apt => new Date(apt.date) >= now);
+        const attended = appointments.filter(apt => apt.isPaid && !apt.isCancelled).length;
+        const cancelled = appointments.filter(apt => apt.isCancelled).length;
+        const totalPast = appointments.filter(apt => new Date(apt.date) < now).length;
+        
+        // Calcular engagement (tasa de asistencia)
+        const engagementRate = totalPast > 0 ? Math.round((attended / totalPast) * 100) : 100;
+        const engagementColor = engagementRate > 80 ? 'bg-green-500' : engagementRate > 50 ? 'bg-orange-500' : 'bg-red-500';
 
         const { totalPaid, totalPending } = PatientFilters.calculatePaymentTotals(appointments);
 
@@ -162,24 +167,50 @@ export const PatientModals = {
         if (dom.patientHistoryTitle) {
             const therapistName = patient.therapist === 'diana' ? 'Diana' : patient.therapist === 'sam' ? 'Sam' : patient.therapist || 'No asignado';
             dom.patientHistoryTitle.innerHTML = `
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                <div>
-                    <div>Historial de ${patient.name}</div>
-                    <div class="text-xs text-gray-500 font-normal">Terapeuta: ${therapistName}</div>
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl shadow-sm border border-white">
+                        ${patient.name.charAt(0)}
+                    </div>
+                    <div>
+                        <div class="text-lg font-extrabold text-gray-900 leading-tight">${patient.name}</div>
+                        <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full ${patient.isActive !== false ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                            Terapeuta: ${therapistName.toUpperCase()}
+                        </div>
+                    </div>
                 </div>
             `;
         }
 
-        // Actualizar totales
+        // Inyectar bloque de Analítica Visual
+        const statsContainer = dom.patientHistoryModal.querySelector('.stats-container');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <!-- Tarjeta engagement -->
+                    <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Asistencia</div>
+                        <div class="flex items-end gap-2 mb-1">
+                            <span class="text-2xl font-black text-gray-800">${engagementRate}%</span>
+                            <span class="text-[10px] text-gray-400 mb-1">de eficacia</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="${engagementColor} h-full transition-all duration-1000" style="width: ${engagementRate}%"></div>
+                        </div>
+                    </div>
+                    <!-- Tarjeta Financiera Rapida -->
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100">
+                        <div class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Total Pagado</div>
+                        <div class="text-2xl font-black text-blue-700">$${totalPaid}</div>
+                        <div class="text-[10px] text-blue-500 font-medium mt-1">Citas totales: ${appointments.length}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Actualizar totales de la parte inferior (antiguos dom)
         if (dom.patientTotalPaid) dom.patientTotalPaid.textContent = `$${totalPaid}`;
         if (dom.patientTotalPending) dom.patientTotalPending.textContent = `$${totalPending}`;
-
-        // Actualizar estadísticas
-        if (dom.patientTotalAppointments) dom.patientTotalAppointments.textContent = appointments.length;
-        if (dom.patientCompletedAppointments) dom.patientCompletedAppointments.textContent = completed.length;
-        if (dom.patientUpcomingAppointments) dom.patientUpcomingAppointments.textContent = upcoming.length;
 
         // Renderizar lista de citas
         this._renderPatientAppointments(appointments, canViewFinancials);
