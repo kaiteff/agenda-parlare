@@ -124,26 +124,74 @@ def home():
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Parlare - Centro de Atención</title>
+        <title>Parláre - Centro de Atención</title>
         <style>
-            body { font-family: sans-serif; background: #eff6ff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-            .card { background: white; padding: 3rem; border-radius: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1); text-align: center; max-width: 450px; width: 90%; }
-            .logo { width: 120px; height: 120px; margin-bottom: 2rem; border-radius: 50%; object-fit: cover; border: 4px solid #eff6ff; }
-            h1 { color: #1e40af; margin: 0; font-size: 2.5rem; }
-            p { color: #475569; font-size: 1.1rem; line-height: 1.6; }
-            .status { margin-top: 2rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #f0fdf4; color: #15803d; border-radius: 2rem; font-weight: bold; font-size: 0.9rem; border: 1px solid #bbf7d0; }
-            .dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; }
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                background: #f8fafc; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                min-height: 100vh; 
+                margin: 0;
+                overflow: hidden;
+                position: relative;
+            }
+            /* Fondo con el logo gigante */
+            body::before {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 120%;
+                height: 120%;
+                background: url('/static/images/logo.png') no-repeat center;
+                background-size: contain;
+                opacity: 0.05;
+                transform: translate(-50%, -50%) rotate(-15deg);
+                z-index: -1;
+            }
+            .card { 
+                background: rgba(255, 255, 255, 0.95); 
+                padding: 4rem 3rem; 
+                border-radius: 2.5rem; 
+                box-shadow: 0 40px 60px -15px rgba(0,0,0,0.1); 
+                text-align: center; 
+                max-width: 500px; 
+                width: 90%; 
+                border: 1px solid rgba(255,255,255,0.3);
+                backdrop-filter: blur(10px);
+            }
+            .logo { width: 180px; height: auto; margin-bottom: 1.5rem; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
+            h1 { color: #000; margin: 0; font-size: 3rem; font-weight: 800; letter-spacing: -1px; }
+            .accent { color: #e11d48; } /* Magenta del colibrí */
+            p { color: #334155; font-size: 1.2rem; line-height: 1.6; margin-top: 1rem; }
+            .status { 
+                margin-top: 2.5rem; 
+                display: inline-flex; 
+                align-items: center; 
+                gap: 0.7rem; 
+                padding: 0.8rem 2rem; 
+                background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); 
+                color: #166534; 
+                border-radius: 9999px; 
+                font-weight: 700; 
+                font-size: 1rem; 
+                border: 1px solid #bbf7d0;
+                box-shadow: 0 4px 10px rgba(34, 197, 94, 0.1);
+            }
+            .dot { width: 12px; height: 12px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 10px #22c55e; }
         </style>
     </head>
     <body>
         <div class="card">
             <img src="/static/images/logo.png" alt="Parlare Logo" class="logo">
-            <h1>Parlare</h1>
-            <p><strong>Especialistas en terapia de lenguaje y habla.</strong></p>
-            <p>Dedicados al desarrollo integral de la comunicación infantil y juvenil.</p>
+            <h1>Parl<span class="accent">á</span>re</h1>
+            <p><strong>Centro de atención en problemas de lenguaje y habla.</strong></p>
+            <p>Especialistas dedicados al desarrollo integral de la comunicación infantil.</p>
             <div class="status">
                 <div class="dot"></div>
-                Sistema de Notificaciones Activo V5
+                Sistema de Notificaciones Activo V6
             </div>
         </div>
     </body>
