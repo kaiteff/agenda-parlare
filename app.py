@@ -1,6 +1,5 @@
 """
-whatsapp_webhook.py
-Versión unificada y mejorada para Parlare.
+app.py - Servidor principal de Parlare en Render.
 """
 
 import json
@@ -127,7 +126,7 @@ def home():
             <h1 style="color:#0284c7; margin:0;">Parlare</h1>
             <p style="color:#475569; font-size:1.2rem;">Centro de atención en problemas de lenguaje y habla.</p>
             <div style="margin-top:2rem; color:#166534; background:#dcfce7; padding:0.5rem 1rem; border-radius:2rem; display:inline-block; font-weight:bold;">
-                ● Sistema de Notificaciones Activo V5
+                ● Sistema de Notificaciones Activo V4
             </div>
         </div>
     </body>

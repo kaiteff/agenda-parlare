@@ -72,7 +72,11 @@ export const SheetService = {
 
             // Cálculos de desglose
             const totalAmount = paymentData.amount || 0;
-            const rawClinicFee = paymentData.clinicFee !== undefined ? paymentData.clinicFee : 250; // Default 250 si no viene
+            const therapistKey = paymentData.therapist?.toLowerCase() || 'diana';
+            
+            // Lógica de cobro de clínica por defecto: Vero $400, otros $250
+            const defaultFee = therapistKey === 'vero' ? 400 : 250;
+            const rawClinicFee = paymentData.clinicFee !== undefined ? paymentData.clinicFee : defaultFee;
 
             // Si el monto total es negativo (anulación), el desglose también debe ser negativo
             const finalClinicFee = totalAmount < 0 ? -Math.abs(rawClinicFee) : Math.abs(rawClinicFee);

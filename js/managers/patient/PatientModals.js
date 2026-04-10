@@ -58,7 +58,7 @@ export const PatientModals = {
 
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
-        if (costInput) costInput.value = '';
+        if (costInput) costInput.value = '800';
         if (clinicFeeInput) clinicFeeInput.value = '250.00';
 
         // Configurar terapeuta
