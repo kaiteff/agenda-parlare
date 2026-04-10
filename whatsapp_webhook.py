@@ -120,14 +120,30 @@ def format_time(date_str):
 @app.route('/index')
 def home():
     return """
-    <html>
-    <head><title>Parlare - Centro de Atención</title></head>
-    <body style="font-family:sans-serif; background:#f0f9ff; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0;">
-        <div style="background:white; padding:3rem; border-radius:1rem; box-shadow:0 10px 15px rgba(0,0,0,0.1); text-align:center;">
-            <h1 style="color:#0284c7; margin:0;">Parlare</h1>
-            <p style="color:#475569; font-size:1.2rem;">Centro de atención en problemas de lenguaje y habla.</p>
-            <div style="margin-top:2rem; color:#166534; background:#dcfce7; padding:0.5rem 1rem; border-radius:2rem; display:inline-block; font-weight:bold;">
-                ● Sistema de Notificaciones Activo V5
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Parlare - Centro de Atención</title>
+        <style>
+            body { font-family: sans-serif; background: #eff6ff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+            .card { background: white; padding: 3rem; border-radius: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1); text-align: center; max-width: 450px; width: 90%; }
+            .logo { width: 120px; height: 120px; margin-bottom: 2rem; border-radius: 50%; object-fit: cover; border: 4px solid #eff6ff; }
+            h1 { color: #1e40af; margin: 0; font-size: 2.5rem; }
+            p { color: #475569; font-size: 1.1rem; line-height: 1.6; }
+            .status { margin-top: 2rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #f0fdf4; color: #15803d; border-radius: 2rem; font-weight: bold; font-size: 0.9rem; border: 1px solid #bbf7d0; }
+            .dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <img src="/static/images/logo.png" alt="Parlare Logo" class="logo">
+            <h1>Parlare</h1>
+            <p><strong>Especialistas en terapia de lenguaje y habla.</strong></p>
+            <p>Dedicados al desarrollo integral de la comunicación infantil y juvenil.</p>
+            <div class="status">
+                <div class="dot"></div>
+                Sistema de Notificaciones Activo V5
             </div>
         </div>
     </body>
