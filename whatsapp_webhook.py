@@ -1,18 +1,11 @@
 """
 whatsapp_webhook.py
-Servidor Flask que recibe respuestas de WhatsApp vía Twilio.
+Servidor Flask que recibe respuestas de WhatsApp vía Twilio y envía recordatorios.
 
-Cuando un paciente responde al recordatorio:
-- "OK" / "Si" / "Confirmo" → Confirma la cita en Firestore
-- "Cancelar" / "No" → Cancela la cita en Firestore
-
-Uso local:
-    python whatsapp_webhook.py
-
-Uso en Render (producción):
-    Variables de entorno requeridas:
-    - TWILIO_SID, TWILIO_TOKEN, TWILIO_WHATSAPP_FROM
-    - FIREBASE_SERVICE_KEY_B64 (service key JSON codificado en base64)
+Endpoints:
+- POST /webhook: Recibe respuestas (OK, Cancelar, etc)
+- GET  /cron/reminders: Envía recordatorios para mañana (activado por cron-job externo)
+- GET  /health: Estado del servidor
 """
 
 import json
@@ -20,28 +13,31 @@ import os
 import sys
 import re
 import base64
-import tempfile
 from datetime import datetime, timedelta
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 # Fix Windows encoding
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# ── Config (env vars for Render, JSON file for local) ────────────────
+# ── Config ───────────────────────────────────────────────────────────
 IS_RENDER = os.environ.get('RENDER', False)
 
 if IS_RENDER:
     config = {
         'twilio_sid': os.environ['TWILIO_SID'],
         'twilio_token': os.environ['TWILIO_TOKEN'],
-        'twilio_whatsapp_from': os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886'),
+        'twilio_whatsapp_from': os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+16066451055'),
+        'test_mode': False
     }
 else:
     CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'whatsapp_config.json')
-    with open(CONFIG_PATH, 'r') as f:
-        config = json.load(f)
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+    else:
+        config = {'test_mode': True}
 
 # ── Firebase ─────────────────────────────────────────────────────────
 import firebase_admin
@@ -49,12 +45,10 @@ from firebase_admin import credentials, firestore
 
 if not firebase_admin._apps:
     if IS_RENDER:
-        # En Render: service key como variable de entorno (base64)
         key_b64 = os.environ['FIREBASE_SERVICE_KEY_B64']
         key_json = json.loads(base64.b64decode(key_b64).decode('utf-8'))
         cred = credentials.Certificate(key_json)
     else:
-        # Local: archivo JSON
         SERVICE_KEY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'firebase_service_key.json')
         cred = credentials.Certificate(SERVICE_KEY_PATH)
     firebase_admin.initialize_app(cred)
@@ -67,12 +61,12 @@ from twilio.twiml.messaging_response import MessagingResponse
 
 twilio_client = Client(config['twilio_sid'], config['twilio_token'])
 
-# ── Notifications Path (same as frontend) ────────────────────────────
+# ── Notifications Path ──────────────────────────────────────────────
 NOTIFICATIONS_PATH = 'artifacts/taconotaco-d94fc/public/data/notifications'
 
+# ── Helpers ──────────────────────────────────────────────────────────
 
 def create_notification(patient_name, notif_type, message, appointment_date='', appointment_id=''):
-    """Crea una notificación en Firestore que la app mostrará en tiempo real"""
     try:
         notif_data = {
             'patientName': patient_name,
@@ -85,96 +79,65 @@ def create_notification(patient_name, notif_type, message, appointment_date='', 
             'source': 'whatsapp'
         }
         db.collection(NOTIFICATIONS_PATH).add(notif_data)
-        print(f"   🔔 Notificación creada: {message}")
     except Exception as e:
         print(f"   ⚠️ Error creando notificación: {e}")
 
+def normalize_phone(phone):
+    digits = re.sub(r'\D', '', phone)
+    if digits.startswith('521'): digits = digits[3:]
+    elif digits.startswith('52'): digits = digits[2:]
+    elif digits.startswith('1') and len(digits) == 11: digits = digits[1:]
+    return digits[-10:]
+
+def find_patients_by_phone(phone):
+    normalized_incoming = normalize_phone(phone)
+    profiles_ref = db.collection('patientProfiles')
+    results = profiles_ref.stream()
+    patients = []
+    for doc in results:
+        profile = doc.to_dict()
+        p_phone = profile.get('phone', '')
+        if p_phone and normalize_phone(p_phone) == normalized_incoming:
+            patients.append({'id': doc.id, 'name': profile.get('name', ''), 'phone': p_phone})
+    return patients
+
+def find_tomorrow_appointment(patient_name):
+    tomorrow = datetime.now() + timedelta(days=1)
+    start = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    end = tomorrow.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+    results = db.collection('appointments').where('date', '>=', start).where('date', '<=', end).stream()
+    for doc in results:
+        apt = doc.to_dict()
+        if not apt.get('isCancelled', False) and apt.get('name', '').lower() == patient_name.lower():
+            return {'id': doc.id, **apt}
+    return None
+
+def format_time(date_str):
+    try:
+        dt_utc = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        dt_local = dt_utc.astimezone()
+        return dt_local.strftime('%I:%M %p').lstrip('0')
+    except:
+        return date_str
 
 # ── Flask App ────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# Palabras clave para confirmar/cancelar/hablar con recepción
 CONFIRM_KEYWORDS = ['ok', 'si', 'sí', 'confirmo', 'confirmar', 'yes', 'va', 'listo', '1']
 CANCEL_KEYWORDS = ['cancelar', 'cancelo', 'no', 'cancel', '2']
 YARI_KEYWORDS = ['recepcion', 'recepción', 'yari', 'hablar', '3']
 
-
-def normalize_phone(phone):
-    """Normaliza un número de teléfono para comparación"""
-    digits = re.sub(r'\D', '', phone)
-    # Remover prefijo de país si existe
-    if digits.startswith('521'):
-        digits = digits[3:]
-    elif digits.startswith('52'):
-        digits = digits[2:]
-    elif digits.startswith('1') and len(digits) == 11:
-        digits = digits[1:]
-    return digits[-10:]  # Últimos 10 dígitos
-
-
-def find_patients_by_phone(phone):
-    """Busca pacientes por su número de teléfono"""
-    normalized_incoming = normalize_phone(phone)
-    
-    profiles_ref = db.collection('patientProfiles')
-    results = profiles_ref.stream()
-    
-    patients = []
-    for doc in results:
-        profile = doc.to_dict()
-        patient_phone = profile.get('phone', '')
-        if patient_phone and normalize_phone(patient_phone) == normalized_incoming:
-            patients.append({
-                'id': doc.id,
-                'name': profile.get('name', ''),
-                'phone': patient_phone
-            })
-    
-    return patients
-
-
-def find_tomorrow_appointment(patient_name):
-    """Busca la cita de mañana para un paciente"""
-    tomorrow = datetime.now() + timedelta(days=1)
-    start = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    end = tomorrow.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
-    
-    appointments_ref = db.collection('appointments')
-    query = appointments_ref.where('date', '>=', start).where('date', '<=', end)
-    results = query.stream()
-    
-    for doc in results:
-        apt = doc.to_dict()
-        if apt.get('isCancelled', False):
-            continue
-        if apt.get('name', '').lower() == patient_name.lower():
-            return {'id': doc.id, **apt}
-    
-    return None
-
-
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    """Recibe mensajes entrantes de Twilio"""
     incoming_msg = request.form.get('Body', '').strip().lower()
     from_number = request.form.get('From', '')
-    
-    print(f"\n📥 Mensaje recibido de {from_number}: '{incoming_msg}'")
-    
-    # Crear respuesta TwiML
     resp = MessagingResponse()
     
-    # Buscar pacientes por teléfono
     patients = find_patients_by_phone(from_number)
-    
     if not patients:
-        print(f"   ❓ No se encontró paciente con teléfono: {from_number}")
         resp.message("No encontramos tu número en nuestro sistema. Por favor contacta a la clínica directamente.")
         return str(resp), 200
-    
-    print(f"   👤 Pacientes con este número: {[p['name'] for p in patients]}")
-    
-    # Buscar cita de mañana (Iterar sobre cada perfil asociado al número)
+
     appointment = None
     patient = None
     for p in patients:
@@ -183,79 +146,78 @@ def webhook():
             appointment = apt
             patient = p
             break
-    
+
     if not appointment:
         first_name = patients[0]['name'].split()[0]
-        print(f"   📅 No se encontró cita de mañana para ninguno de los pacientes")
         resp.message(f"Hola {first_name}, no encontramos una cita tuya para mañana.")
         return str(resp), 200
-    
-    # Procesar respuesta
+
     if incoming_msg in CONFIRM_KEYWORDS:
-        # Confirmar cita
-        apt_ref = db.collection('appointments').document(appointment['id'])
-        apt_ref.update({
+        db.collection('appointments').document(appointment['id']).update({
             'confirmed': True,
             'confirmedAt': firestore.SERVER_TIMESTAMP
         })
-        
-        # Crear notificación en la app
-        create_notification(
-            patient_name=patient['name'],
-            notif_type='whatsapp_confirm',
-            message=f"{patient['name']} confirmó su cita por WhatsApp",
-            appointment_date=appointment.get('date', '')
-        )
-        
-        print(f"   ✅ Cita CONFIRMADA para {patient['name']}")
+        create_notification(patient['name'], 'whatsapp_confirm', f"{patient['name']} confirmó su cita por WhatsApp", appointment.get('date', ''))
         resp.message(f"✅ ¡Perfecto {patient['name'].split()[0]}! Tu cita de mañana está confirmada. ¡Te esperamos!")
-        
     elif incoming_msg in CANCEL_KEYWORDS:
-        # Cancelar cita
-        apt_ref = db.collection('appointments').document(appointment['id'])
-        apt_ref.update({'isCancelled': True})
-        
-        # Crear notificación en la app
-        create_notification(
-            patient_name=patient['name'],
-            notif_type='whatsapp_cancel',
-            message=f"{patient['name']} canceló su cita por WhatsApp",
-            appointment_date=appointment.get('date', ''),
-            appointment_id=appointment['id']
-        )
-        
-        print(f"   ❌ Cita CANCELADA para {patient['name']}")
+        db.collection('appointments').document(appointment['id']).update({'isCancelled': True})
+        create_notification(patient['name'], 'whatsapp_cancel', f"{patient['name']} canceló su cita por WhatsApp", appointment.get('date', ''), appointment['id'])
         resp.message(f"Tu cita de mañana ha sido cancelada. Si deseas reagendar, por favor contáctanos. 📞")
-        
     elif incoming_msg in YARI_KEYWORDS:
-        print(f"   📞 {patient['name']} solicitó hablar con recepción")
-        # TODO: Cambiar este número por el número real de Yari
-        yari_phone = "52XXXXXXXXXX" 
-        resp.message(f"Con gusto {patient['name'].split()[0]}. Puedes enviarle un mensaje directo a Yari (Recepción) haciendo clic aquí: https://wa.me/{yari_phone} o llamando a ese número.")
-        
+        yari_phone = "523324955791" # Número de recepción
+        resp.message(f"Con gusto. Puedes enviarle un mensaje directo a Recepción haciendo clic aquí: https://wa.me/{yari_phone}")
     else:
-        print(f"   ❓ Respuesta no reconocida: '{incoming_msg}'")
-        resp.message(f"Hola {patient['name'].split()[0]}, no entendimos tu respuesta. Responde:\n• *1* para confirmar tu cita\n• *2* para cancelarla\n• *3* para hablar con recepción")
+        resp.message(f"Hola {patient['name'].split()[0]}, no entendimos tu respuesta. Responde:\n• *1* para confirmar\n• *2* para cancelar\n• *3* para ayuda")
     
     return str(resp), 200
 
+@app.route('/cron/reminders', methods=['GET'])
+def run_reminders():
+    """Endpoint para enviar recordatorios masivos (activado vía web cron)"""
+    auth_key = request.args.get('key')
+    if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_debug_key'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # 1. Citas de mañana
+    tomorrow = datetime.now() + timedelta(days=1)
+    start_iso = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    end_iso = tomorrow.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+    
+    results = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+    appointments = [dict(doc.to_dict(), id=doc.id) for doc in results if not doc.to_dict().get('isCancelled') and not doc.to_dict().get('confirmed')]
+
+    # 2. Teléfonos
+    profiles = db.collection('patientProfiles').stream()
+    patient_phones = {p.to_dict().get('name', '').lower(): p.to_dict() for p in profiles if p.to_dict().get('phone')}
+
+    results_log = []
+    tomorrow_str = tomorrow.strftime('%d/%m/%Y')
+
+    for apt in appointments:
+        p_name = apt.get('name', 'Paciente')
+        p_info = patient_phones.get(p_name.lower())
+        if not p_info or p_info.get('wantsWhatsapp') is False: continue
+
+        phone = p_info['phone']
+        dest = f"whatsapp:+52{phone}" if not phone.startswith('whatsapp:') else phone
+        apt_time = format_time(apt.get('date', ''))
+        therapist = apt.get('therapist', 'diana').title()
+
+        msg = (f"🏥 Parlare - Recordatorio\n\nHola {p_name}, te recordamos tu cita mañana {tomorrow_str} a las {apt_time} con {therapist}.\n\n"
+               f"Responde:\n1️⃣ *OK* para confirmar\n2️⃣ *CANCELAR* para cancelar\n3️⃣ *AYUDA* para recepción\n\n¡Te esperamos! 😊")
+        
+        try:
+            twilio_client.messages.create(body=msg, from_=config['twilio_whatsapp_from'], to=dest)
+            results_log.append(f"SUCCESS: {p_name}")
+        except Exception as e:
+            results_log.append(f"ERROR: {p_name} - {str(e)}")
+
+    return jsonify({'status': 'done', 'results': results_log}), 200
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
     return {'status': 'ok', 'service': 'Parlare WhatsApp Webhook'}, 200
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("=" * 50)
-    print("📱 Parlare WhatsApp Webhook Server")
-    print("=" * 50)
-    print(f"Escuchando en http://localhost:{port}/webhook")
-    print(f"Health check: http://localhost:{port}/health")
-    if not IS_RENDER:
-        print(f"\nPara exponer con ngrok:")
-        print(f"  ngrok http {port}")
-    print("=" * 50)
-    
     app.run(host='0.0.0.0', port=port, debug=not IS_RENDER)
