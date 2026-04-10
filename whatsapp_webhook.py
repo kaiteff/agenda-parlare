@@ -112,24 +112,25 @@ def normalize_phone(phone):
     return digits[-10:]  # Últimos 10 dígitos
 
 
-def find_patient_by_phone(phone):
-    """Busca un paciente por su número de teléfono"""
+def find_patients_by_phone(phone):
+    """Busca pacientes por su número de teléfono"""
     normalized_incoming = normalize_phone(phone)
     
     profiles_ref = db.collection('patientProfiles')
     results = profiles_ref.stream()
     
+    patients = []
     for doc in results:
         profile = doc.to_dict()
         patient_phone = profile.get('phone', '')
         if patient_phone and normalize_phone(patient_phone) == normalized_incoming:
-            return {
+            patients.append({
                 'id': doc.id,
                 'name': profile.get('name', ''),
                 'phone': patient_phone
-            }
+            })
     
-    return None
+    return patients
 
 
 def find_tomorrow_appointment(patient_name):
@@ -163,22 +164,30 @@ def webhook():
     # Crear respuesta TwiML
     resp = MessagingResponse()
     
-    # Buscar paciente por teléfono
-    patient = find_patient_by_phone(from_number)
+    # Buscar pacientes por teléfono
+    patients = find_patients_by_phone(from_number)
     
-    if not patient:
+    if not patients:
         print(f"   ❓ No se encontró paciente con teléfono: {from_number}")
         resp.message("No encontramos tu número en nuestro sistema. Por favor contacta a la clínica directamente.")
         return str(resp), 200
     
-    print(f"   👤 Paciente encontrado: {patient['name']}")
+    print(f"   👤 Pacientes con este número: {[p['name'] for p in patients]}")
     
-    # Buscar cita de mañana
-    appointment = find_tomorrow_appointment(patient['name'])
+    # Buscar cita de mañana (Iterar sobre cada perfil asociado al número)
+    appointment = None
+    patient = None
+    for p in patients:
+        apt = find_tomorrow_appointment(p['name'])
+        if apt:
+            appointment = apt
+            patient = p
+            break
     
     if not appointment:
-        print(f"   📅 No se encontró cita de mañana para {patient['name']}")
-        resp.message(f"Hola {patient['name'].split()[0]}, no encontramos una cita tuya para mañana.")
+        first_name = patients[0]['name'].split()[0]
+        print(f"   📅 No se encontró cita de mañana para ninguno de los pacientes")
+        resp.message(f"Hola {first_name}, no encontramos una cita tuya para mañana.")
         return str(resp), 200
     
     # Procesar respuesta

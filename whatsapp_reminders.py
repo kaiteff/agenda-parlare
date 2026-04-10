@@ -106,10 +106,11 @@ def get_patient_phones():
 
 
 def format_time(date_str):
-    """Extrae hora legible de un ISO string"""
+    """Extrae hora legible de un ISO string convirtiendo a hora local"""
     try:
-        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        return dt.strftime('%I:%M %p').lstrip('0')  # "3:00 PM"
+        dt_utc = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        dt_local = dt_utc.astimezone()  # Convierte automáticamente al horario local de la PC (Ej: México UTC-6)
+        return dt_local.strftime('%I:%M %p').lstrip('0')  # "3:00 PM"
     except:
         return date_str
 
