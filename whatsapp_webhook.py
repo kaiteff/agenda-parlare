@@ -18,8 +18,8 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8')
 
 app = Flask(__name__)
-# Configuración base de CORS
-CORS(app)
+# Configuración robusta de CORS para evitar bloqueos
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ── Config ───────────────────────────────────────────────────────────
 IS_RENDER = os.environ.get('RENDER', False)
@@ -125,96 +125,10 @@ def format_time(date_str):
 @app.route('/index')
 def home():
     return """
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Parláre - Centro de Atención</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-        <style>
-            body { 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                background: #f8fafc; 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                min-height: 100vh; 
-                margin: 0;
-                overflow: hidden;
-                position: relative;
-            }
-            body::before {
-                content: "";
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: 120%;
-                height: 120%;
-                background: url('/static/images/logo.png') no-repeat center;
-                background-size: contain;
-                opacity: 0.05;
-                transform: translate(-50%, -50%) rotate(-15deg);
-                z-index: -1;
-            }
-            .card { 
-                background: rgba(255, 255, 255, 0.95); 
-                padding: 4rem 3rem; 
-                border-radius: 2.5rem; 
-                box-shadow: 0 40px 60px -15px rgba(0,0,0,0.1); 
-                text-align: center; 
-                max-width: 500px; 
-                width: 90%; 
-                border: 1px solid rgba(255,255,255,0.3);
-                backdrop-filter: blur(10px);
-            }
-            .logo { width: 180px; height: auto; margin-bottom: 1.5rem; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
-            h1 { color: #000; margin: 0; font-size: 3rem; font-weight: 800; letter-spacing: -1px; }
-            .accent { color: #e11d48; }
-            p { color: #334155; font-size: 1.2rem; line-height: 1.6; margin-top: 1rem; }
-            .social-links { margin-top: 2rem; display: flex; justify-content: center; gap: 1.5rem; }
-            .social-links a { 
-                color: #64748b; 
-                font-size: 2rem; 
-                transition: all 0.3s ease;
-                text-decoration: none;
-            }
-            .social-links a:hover { transform: translateY(-5px); }
-            .fa-instagram:hover { color: #e1306c; }
-            .fa-facebook:hover { color: #1877f2; }
-            .status { 
-                margin-top: 2.5rem; 
-                display: inline-flex; 
-                align-items: center; 
-                gap: 0.7rem; 
-                padding: 0.8rem 2rem; 
-                background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); 
-                color: #166534; 
-                border-radius: 9999px; 
-                font-weight: 700; 
-                font-size: 1rem; 
-                border: 1px solid #bbf7d0;
-            }
-            .dot { width: 12px; height: 12px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 10px #22c55e; }
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <img src="/static/images/logo.png" alt="Parlare Logo" class="logo">
-            <h1>Parl<span class="accent">á</span>re</h1>
-            <p><strong>Centro de atención en problemas de lenguaje y habla.</strong></p>
-            
-            <div class="social-links">
-                <a href="https://www.facebook.com/parlarehablaylenguaje" target="_blank" title="Facebook"><i class="fab fa-facebook"></i></a>
-                <a href="https://www.instagram.com/centrodeatencionparlare/" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
-            </div>
-
-            <div class="status">
-                <div class="dot"></div>
-                Sistema de Notificaciones Activo V7
-            </div>
-        </div>
-    </body>
-    </html>
+    <html><body style="font-family:sans-serif; text-align:center; padding-top:50px;">
+    <h1>Parlare Webhook Activo V7.1</h1>
+    <p>Servidor de WhatsApp funcionando correctamente.</p>
+    </body></html>
     """, 200
 
 @app.route('/health')
@@ -262,7 +176,7 @@ def webhook():
         create_notification(patient['name'], 'whatsapp_cancel', f"{patient['name']} canceló su cita por WhatsApp", appointment.get('date', ''), appointment['id'], {'therapist': appointment.get('therapist')})
         resp.message(f"Tu cita de mañana ha sido cancelada. Si deseas reagendar, por favor contáctanos. 📞")
     elif incoming_msg in YARI_KEYWORDS:
-        recepcion_phone = "523324955791" # Daniel: actualiza este número después
+        recepcion_phone = "523324955791"
         resp.message(f"Con gusto. Puedes enviarnos un mensaje directo haciendo clic aquí: https://wa.me/{recepcion_phone}")
     else:
         resp.message(f"Hola {patient['name'].split()[0]}, no entendimos tu respuesta. Responde:\n• *1* para confirmar\n• *2* para cancelar\n• *3* para ayuda")
@@ -272,9 +186,7 @@ def webhook():
 @app.route('/cron/reminders', methods=['GET', 'OPTIONS'])
 @cross_origin()
 def run_reminders():
-    # Soporte para pre-vuelo de CORS
-    if request.method == 'OPTIONS':
-        return '', 204
+    if request.method == 'OPTIONS': return '', 204
         
     auth_key = request.args.get('key')
     if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
@@ -291,57 +203,49 @@ def run_reminders():
     patient_phones = {p.to_dict().get('name', '').lower(): p.to_dict() for p in profiles if p.to_dict().get('phone')}
 
     results_log = []
-    tomorrow_str = tomorrow.strftime('%d/%m/%Y')
-
     for apt in appointments:
         p_name = apt.get('name', 'Paciente')
         p_info = patient_phones.get(p_name.lower())
-        if not p_info or p_info.get('wantsWhatsapp') is False: continue
-
+        if not p_info: continue
+        
         phone = p_info['phone']
-        dest = f"whatsapp:+52{phone}" if not phone.startswith('whatsapp:') else phone
+        dest = f"whatsapp:+52{normalize_phone(phone)}"
         apt_time = format_time(apt.get('date', ''))
-        therapist = apt.get('therapist', 'diana').title()
-
-        msg = (f"🏥 Parlare - Recordatorio\n\n¡Hola! Te recordamos tu cita mañana {tomorrow_str} a las {apt_time}.\n\n"
-               f"Responde:\n1️⃣ *OK* para confirmar\n2️⃣ *CANCELAR* para cancelar\n3️⃣ *RECEPCIÓN* para hablar con alguien\n\n¡Te esperamos! 😊")
         
         try:
-            twilio_client.messages.create(body=msg, from_=config['twilio_whatsapp_from'], to=dest)
+            twilio_client.messages.create(
+                from_=config['twilio_whatsapp_from'],
+                to=dest,
+                content_sid='HXa1dc17f5edd3b774ef3ab3b92088035b',
+                content_variables=json.dumps({"1": tomorrow.strftime('%d/%m/%Y'), "2": apt_time})
+            )
             results_log.append(f"SUCCESS: {p_name}")
         except Exception as e:
             results_log.append(f"ERROR: {p_name} - {str(e)}")
 
     return jsonify({'status': 'done', 'results': results_log}), 200
 
-@app.route('/api/send-message', methods=['POST'])
+@app.route('/api/send-message', methods=['POST', 'OPTIONS'])
 @cross_origin()
 def send_individual_message():
+    if request.method == 'OPTIONS': return '', 204
+        
     data = request.json
     phone = data.get('phone')
     message = data.get('message')
     auth_key = data.get('key')
     
-    # Seguridad básica
     if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
         return jsonify({'error': 'Unauthorized'}), 401
     
-    if not phone or not message:
-        return jsonify({'error': 'Faltan datos (phone o message)'}), 400
+    if not phone: return jsonify({'error': 'Falta teléfono'}), 400
         
-    # Normalizar destino para Twilio
-    digits = re.sub(r'\D', '', phone)
-    if digits.startswith('521'): digits = digits[3:]
-    elif digits.startswith('52'): digits = digits[2:]
-    dest = f"whatsapp:+52{digits}"
-    
-    # Extraer variables si vienen, o usar el mensaje plano (retrocompatibilidad)
+    dest = f"whatsapp:+52{normalize_phone(phone)}"
     template_sid = data.get('template_sid', 'HXa1dc17f5edd3b774ef3ab3b92088035b')
     variables = data.get('variables', {}) 
     
     try:
         if variables:
-            # Enviar usando PLANTILLA OFICIAL (Recomendado para Producción)
             twilio_client.messages.create(
                 from_=config['twilio_whatsapp_from'],
                 to=dest,
@@ -349,10 +253,8 @@ def send_individual_message():
                 content_variables=json.dumps(variables)
             )
         else:
-            # Enviar como texto plano (Manual/Sandbox)
             twilio_client.messages.create(body=message, from_=config['twilio_whatsapp_from'], to=dest)
-            
-        return jsonify({'status': 'success', 'message': 'WhatsApp enviado correctamente vía Twilio'}), 200
+        return jsonify({'status': 'success'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
