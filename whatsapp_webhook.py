@@ -1,10 +1,6 @@
 """
 whatsapp_webhook.py
-Versión Final Premium Parlare - V7.4
-- Inteligencia de respuestas (1, 2, 3) 🧠
-- Conexión con Firestore 🔥
-- Diseño Web Premium 🎨
-- CORS Manual Blindado 🛡️
+Versión Final Premium Parlare - V7.5 (Multi-Confirm + TZ Fix)
 """
 
 import json
@@ -13,20 +9,21 @@ import sys
 import re
 import base64
 from datetime import datetime, timedelta
+import pytz
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# CORS MANUAL BLINDADO
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, PUT, DELETE'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
 # ── Config ───────────────────────────────────────────────────────────
 IS_RENDER = os.environ.get('RENDER', False)
+MX_TZ = pytz.timezone('America/Mexico_City')
 
 if IS_RENDER:
     config = {
@@ -35,10 +32,8 @@ if IS_RENDER:
         'twilio_whatsapp_from': os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+16066451055')
     }
 else:
-    CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'whatsapp_config.json')
-    if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'r') as f: config = json.load(f)
-    else: config = {'test_mode': True}
+    with open(os.path.join(os.path.dirname(__file__), 'whatsapp_config.json'), 'r') as f:
+        config = json.load(f)
 
 # ── Firebase ─────────────────────────────────────────────────────────
 import firebase_admin
@@ -46,8 +41,7 @@ from firebase_admin import credentials, firestore
 
 if not firebase_admin._apps:
     if IS_RENDER:
-        key_b64 = os.environ.get('FIREBASE_SERVICE_KEY_B64')
-        key_json = json.loads(base64.b64decode(key_b64).decode('utf-8'))
+        key_json = json.loads(base64.b64decode(os.environ.get('FIREBASE_SERVICE_KEY_B64')).decode('utf-8'))
         cred = credentials.Certificate(key_json)
     else:
         cred = credentials.Certificate(os.path.join(os.path.dirname(__file__), 'firebase_service_key.json'))
@@ -62,7 +56,6 @@ twilio_client = Client(config.get('twilio_sid'), config.get('twilio_token'))
 
 # ── Helpers ──────────────────────────────────────────────────────────
 def normalize_phone(phone):
-    if not phone: return ""
     digits = re.sub(r'\D', '', str(phone))
     if digits.startswith('521'): digits = digits[3:]
     elif digits.startswith('52'): digits = digits[2:]
@@ -71,91 +64,64 @@ def normalize_phone(phone):
 def find_patients_by_phone(phone):
     norm = normalize_phone(phone)
     profiles = db.collection('patientProfiles').stream()
-    found = []
-    for doc in profiles:
-        p = doc.to_dict()
-        if normalize_phone(p.get('phone', '')) == norm:
-            found.append({'id': doc.id, 'name': p.get('name', '')})
-    return found
+    return [{'id': doc.id, 'name': doc.to_dict().get('name', '')} 
+            for doc in profiles if normalize_phone(doc.to_dict().get('phone', '')) == norm]
 
-def find_tomorrow_appointment(patient_name):
-    tomorrow = datetime.now() + timedelta(days=1)
-    start = tomorrow.replace(hour=0, minute=0, second=0).isoformat()
-    end = tomorrow.replace(hour=23, minute=59, second=59).isoformat()
+def find_tomorrow_appointments(patient_names):
+    # Usar hora de México para calcular "mañana"
+    mx_now = datetime.now(MX_TZ)
+    tomorrow = mx_now + timedelta(days=1)
+    day_str = tomorrow.strftime('%Y-%m-%d')
+    start = f"{day_str}T00:00:00"
+    end = f"{day_str}T23:59:59"
+    
+    names_lower = [n.lower() for n in patient_names]
     results = db.collection('appointments').where('date', '>=', start).where('date', '<=', end).stream()
+    
+    found_apts = []
     for doc in results:
-        apt = doc.to_dict()
-        if not apt.get('isCancelled') and apt.get('name', '').lower() == patient_name.lower():
-            return {'id': doc.id, **apt}
-    return None
-
-def create_notification(p_name, n_type, msg, apt_date, apt_id, therapist):
-    try:
-        db.collection('artifacts/taconotaco-d94fc/public/data/notifications').add({
-            'patientName': p_name, 'type': n_type, 'message': msg,
-            'appointmentDate': apt_date, 'appointmentId': apt_id,
-            'therapist': therapist, 'isRead': False, 'timestamp': firestore.SERVER_TIMESTAMP
-        })
-    except: pass
+        a = doc.to_dict()
+        if not a.get('isCancelled') and a.get('name', '').lower() in names_lower:
+            found_apts.append({'id': doc.id, **a})
+    return found_apts
 
 # ── Routes ───────────────────────────────────────────────────────────
 
 @app.route('/')
 def home():
-    return """
-    <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parláre Webhook</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; font-family: 'Outfit', sans-serif; }
-        .card { background: white; padding: 40px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); text-align: center; max-width: 400px; width: 90%; }
-        .logo { width: 150px; margin-bottom: 20px; }
-        h1 { color: #1e293b; font-size: 28px; margin: 0 0 10px; }
-        p { color: #64748b; font-size: 16px; margin-bottom: 30px; }
-        .status-pill { background: #ecfdf5; color: #059669; padding: 12px 24px; border-radius: 99px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #d1fae5; }
-        .status-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-    </style></head><body>
-    <div class="card">
-        <img src="https://firebasestorage.googleapis.com/v0/b/taconotaco-d94fc.appspot.com/o/WhatsApp%20Image%202025-02-05%20at%2018.41.31.jpeg?alt=media&token=737229a8-8e68-45ec-9ec5-b69c4c776a3b" class="logo">
-        <h1>Parláre Webhook</h1>
-        <p>Sistema de Automatización de Mensajería V7.4</p>
-        <div class="status-pill"><div class="status-dot"></div> Servidor Operativo</div>
-    </div></body></html>
-    """, 200
+    return "<h1>Parlare Webhook V7.5 (Multi-Confirm + Mexico TZ)</h1>", 200
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    msg = request.form.get('Body', '').strip().lower()
-    num = request.form.get('From', '')
+    msg_body = request.form.get('Body', '').strip().lower()
+    from_num = request.form.get('From', '')
     resp = MessagingResponse()
     
-    patients = find_patients_by_phone(num)
+    patients = find_patients_by_phone(from_num)
     if not patients:
-        resp.message("Tu número no está registrado. Contacta a Parláre.")
+        resp.message("Tu número no está registrado.")
         return str(resp), 200
 
-    apt = None
-    patient = None
-    for p in patients:
-        a = find_tomorrow_appointment(p['name'])
-        if a: apt = a; patient = p; break
+    # Buscar todas las citas de mañana para todos los perfiles asociados al celular
+    apts = find_tomorrow_appointments([p['name'] for p in patients])
 
-    if not apt:
-        resp.message(f"Hola {patients[0]['name'].split()[0]}, no encontré una cita tuya para mañana.")
+    if not apts:
+        name = patients[0]['name'].split()[0]
+        resp.message(f"Hola {name}, no encontré una cita tuya para mañana.")
         return str(resp), 200
 
-    if msg in ['1', 'ok', 'si', 'sí', 'confirmar']:
-        db.collection('appointments').document(apt['id']).update({'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP})
-        create_notification(patient['name'], 'whatsapp_confirm', f"{patient['name']} confirmó vía WhatsApp", apt.get('date'), apt['id'], apt.get('therapist'))
-        resp.message(f"✅ ¡Gracias {patient['name'].split()[0]}! Cita confirmada. ¡Nos vemos!")
-    elif msg in ['2', 'cancelar', 'no']:
-        db.collection('appointments').document(apt['id']).update({'isCancelled': True})
-        create_notification(patient['name'], 'whatsapp_cancel', f"{patient['name']} canceló vía WhatsApp", apt.get('date'), apt['id'], apt.get('therapist'))
-        resp.message("Cita cancelada. Contáctanos si deseas reagendar. 📞")
-    elif msg in ['3', 'recepcion', 'yari']:
-        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523324955791")
+    if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
+        for a in apts:
+            db.collection('appointments').document(a['id']).update({'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP})
+            # Notificación silenciada por ahora para no saturar, o puedes activarla
+        names = ", ".join([a['name'].split()[0] for a in apts])
+        resp.message(f"✅ ¡Gracias! Se han confirmado las citas de: {names}. ¡Nos vemos!")
+    elif msg_body in ['2', 'cancelar', 'no']:
+        for a in apts:
+            db.collection('appointments').document(a['id']).update({'isCancelled': True})
+        resp.message("Citas canceladas. Contáctanos para reagendar. 📞")
     else:
-        resp.message(f"Hola {patient['name'].split()[0]}, responde 1 para CONFIRMAR o 2 para CANCELAR.")
+        resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
     
     return str(resp), 200
 
@@ -165,17 +131,14 @@ def send_individual_message():
     data = request.json
     if data.get('key') != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
         return jsonify({'error': 'Unauthorized'}), 401
-    
-    phone = data.get('phone')
-    dest = f"whatsapp:+52{normalize_phone(phone)}"
-    template_sid = data.get('template_sid', 'HXa1dc17f5edd3b774ef3ab3b92088035b')
-    variables = data.get('variables', {}) 
-    
+    dest = f"whatsapp:+52{normalize_phone(data.get('phone'))}"
     try:
-        if variables:
-            twilio_client.messages.create(from_=config.get('twilio_whatsapp_from'), to=dest, content_sid=template_sid, content_variables=json.dumps(variables))
+        tw_args = {'from_': config.get('twilio_whatsapp_from'), 'to': dest}
+        if data.get('variables'):
+            tw_args.update({'content_sid': data.get('template_sid'), 'content_variables': json.dumps(data.get('variables'))})
         else:
-            twilio_client.messages.create(body=data.get('message'), from_=config.get('twilio_whatsapp_from'), to=dest)
+            tw_args.update({'body': data.get('message')})
+        twilio_client.messages.create(**tw_args)
         return jsonify({'status': 'success'}), 200
     except Exception as e: return jsonify({'error': str(e)}), 500
 
