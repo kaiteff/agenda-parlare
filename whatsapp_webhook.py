@@ -1,6 +1,6 @@
 """
 whatsapp_webhook.py
-Versión Final Premium Parlare - V7.5 (Multi-Confirm + TZ Fix)
+Versión Final Premium Parlare - V7.6 (Estética Final)
 """
 
 import json
@@ -68,61 +68,76 @@ def find_patients_by_phone(phone):
             for doc in profiles if normalize_phone(doc.to_dict().get('phone', '')) == norm]
 
 def find_tomorrow_appointments(patient_names):
-    # Usar hora de México para calcular "mañana"
     mx_now = datetime.now(MX_TZ)
     tomorrow = mx_now + timedelta(days=1)
     day_str = tomorrow.strftime('%Y-%m-%d')
-    start = f"{day_str}T00:00:00"
-    end = f"{day_str}T23:59:59"
-    
+    start, end = f"{day_str}T00:00:00", f"{day_str}T23:59:59"
     names_lower = [n.lower() for n in patient_names]
     results = db.collection('appointments').where('date', '>=', start).where('date', '<=', end).stream()
-    
-    found_apts = []
-    for doc in results:
-        a = doc.to_dict()
-        if not a.get('isCancelled') and a.get('name', '').lower() in names_lower:
-            found_apts.append({'id': doc.id, **a})
-    return found_apts
+    return [{'id': doc.id, **doc.to_dict()} for doc in results if not doc.to_dict().get('isCancelled') and doc.to_dict().get('name', '').lower() in names_lower]
 
 # ── Routes ───────────────────────────────────────────────────────────
 
 @app.route('/')
 def home():
-    return "<h1>Parlare Webhook V7.5 (Multi-Confirm + Mexico TZ)</h1>", 200
+    return """
+    <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parláre Messaging</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #ffffff; font-family: 'Outfit', sans-serif; color: #1e293b; overflow: hidden; }
+        .container { text-align: center; max-width: 450px; padding: 20px; transition: all 0.5s ease; }
+        .logo-container { margin-bottom: 2rem; }
+        .logo-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #FF6B6B, #4ECDC4); border-radius: 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(78, 205, 196, 0.2); margin-bottom: 20px; }
+        .logo-icon svg { width: 40px; height: 40px; color: white; }
+        h1 { font-size: 32px; font-weight: 600; margin: 0; letter-spacing: -1px; background: linear-gradient(to right, #1e293b, #64748b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #94a3b8; font-size: 18px; margin: 10px 0 30px; }
+        .status { display: inline-flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 12px 24px; border-radius: 99px; font-weight: 500; font-size: 14px; color: #475569; }
+        .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); animation: pulse 2s infinite; }
+        .version { position: absolute; bottom: 20px; left: 20px; font-size: 10px; color: #cbd5e1; font-weight: 300; letter-spacing: 1px; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+    </style></head><body>
+    <div class="container">
+        <div class="logo-container">
+            <div class="logo-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+            </div>
+            <h1>Parláre</h1>
+            <p>Messaging Service</p>
+        </div>
+        <div class="status"><div class="status-dot"></div> Servidor Activo</div>
+    </div>
+    <div class="version">V7.6.0-MASTER</div>
+    </body></html>
+    """, 200
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     msg_body = request.form.get('Body', '').strip().lower()
     from_num = request.form.get('From', '')
     resp = MessagingResponse()
-    
     patients = find_patients_by_phone(from_num)
     if not patients:
-        resp.message("Tu número no está registrado.")
+        resp.message("Tu número no está registrado. Por favor contacta a la clínica.")
         return str(resp), 200
 
-    # Buscar todas las citas de mañana para todos los perfiles asociados al celular
     apts = find_tomorrow_appointments([p['name'] for p in patients])
-
     if not apts:
-        name = patients[0]['name'].split()[0]
-        resp.message(f"Hola {name}, no encontré una cita tuya para mañana.")
+        resp.message(f"Hola {patients[0]['name'].split()[0]}, no encontramos citas para mañana ligadas a este número.")
         return str(resp), 200
 
     if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
         for a in apts:
             db.collection('appointments').document(a['id']).update({'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP})
-            # Notificación silenciada por ahora para no saturar, o puedes activarla
         names = ", ".join([a['name'].split()[0] for a in apts])
         resp.message(f"✅ ¡Gracias! Se han confirmado las citas de: {names}. ¡Nos vemos!")
     elif msg_body in ['2', 'cancelar', 'no']:
         for a in apts:
             db.collection('appointments').document(a['id']).update({'isCancelled': True})
-        resp.message("Citas canceladas. Contáctanos para reagendar. 📞")
+        resp.message("Citas canceladas correctamente. Si fue un error, contáctanos. 📞")
+    elif msg_body in ['3', 'recepcion', 'yari']:
+        resp.message("Con gusto. Puedes hablarnos directo aquí: https://wa.me/523324955791")
     else:
         resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
-    
     return str(resp), 200
 
 @app.route('/api/send-message', methods=['POST', 'OPTIONS'])
