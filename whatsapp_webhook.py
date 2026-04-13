@@ -10,6 +10,7 @@ import re
 import base64
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 # Fix encoding
 if sys.platform == 'win32':
@@ -17,6 +18,7 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8')
 
 app = Flask(__name__)
+CORS(app) # Habilitar CORS para permitir llamadas desde el dashboard
 
 # ── Config ───────────────────────────────────────────────────────────
 IS_RENDER = os.environ.get('RENDER', False)
