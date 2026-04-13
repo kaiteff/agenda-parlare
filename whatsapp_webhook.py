@@ -18,8 +18,15 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8')
 
 app = Flask(__name__)
-# Configuración robusta de CORS para evitar bloqueos
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Configuración base de CORS
+CORS(app)
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # ── Config ───────────────────────────────────────────────────────────
 IS_RENDER = os.environ.get('RENDER', False)
