@@ -1,36 +1,29 @@
-# Instrucciones para Retomar el Proyecto
+# 🚀 Guía Maestra: Agenda Parlare
 
-Este archivo sirve como guía rápida para iniciar el desarrollo cada día.
+Este documento es el punto de partida para cada sesión. Aquí vive el estado real del proyecto.
 
-## 1. Iniciar el Servidor
+## 📍 ¿En qué nos quedamos hoy? (13/Abril/2026)
+- **Agendado Express**: Implementada multiselección de slots (puedes elegir varios días a la vez).
+- **Auto-3 Meses**: Citas semanales ahora se agendan por 13 sesiones (3 meses) automáticamente.
+- **Alertas de Recurrencia**: Sistema visual "RECURRENCIA POR AGOTARSE" activado para pacientes con <14 días de citas.
+- **WhatsApp Estabilizado**: 
+    - CORS y IDs de pacientes corregidos.
+    - Plantilla oficial `recordatorio_cita` enviada a revisión en Meta/Twilio.
 
-Para que la aplicación funcione correctamente (especialmente la autenticación de Google), debes iniciar el servidor local en el puerto **8081**.
+## 🛠️ Cómo Iniciar
+1. **Servidor**: Ejecutar `python serve.py` (Debe ser puerto **8081**).
+2. **Navegador**: Refrescar con **Ctrl + F5** para cargar los nuevos módulos de agendado.
+3. **Adblocker**: Mantener apagado para `localhost` y `render.com`.
 
-Ejecuta el siguiente comando en la terminal:
+## 🛰️ Estado de la Infraestructura
+- **Backend**: Python Flask en Render (Activo).
+- **Base de Datos**: Firestore (Citas y Perfiles sincronizados).
+- **WhatsApp**: Pendiente aprobación de plantilla en Twilio Content Builder.
 
-```powershell
-python serve.py
-```
+## 📋 Próximos Pasos (ROADMAP)
+1. **Activar Plantilla**: En cuanto Meta apruebe `recordatorio_cita`, actualizar `whatsapp_webhook.py` para usar el SID de la plantilla.
+2. **Bot de Bienvenida**: Implementar el mensaje amable para números desconocidos (Gratis).
+3. **Modo Móvil**: Optimizar la visualización de la agenda en celulares para las terapeutas.
 
-El script buscará automáticamente el puerto **8081**. Si ese puerto está ocupado, intentará otro, pero **PARA QUE FUNCIONE GOOGLE AUTH, DEBE SER EL 8081**.
-Si ves que inicia en otro puerto, cierra lo que esté ocupando el 8081 e intenta de nuevo.
-
-O simplemente abre el archivo `serve.py` si tienes Python asociado.
-
-> **Nota**: No uses `server-hot.ps1` ni otros métodos antiguos. `serve.py` es el script oficial actual.
-
-## 2. Estado Actual (Resumen)
-
-- **Última Actualización**: Implementación de Manejo de Errores de Red y Validación de Datos.
-- **Funcionalidades Clave**:
-  - Sincronización con Google Sheets (Diana/Sam).
-  - Indicadores visuales de estado (Nube/Check/Offline).
-  - Validación de formularios (pagos $0, nombres vacíos).
-- **Pendiente Inmediato**: Revisar Roadmap (`roadmap_next_steps.md`) para siguientes mejoras (Modo Móvil, WhatsApp).
-
-## 3. Antes de Cerrar (Protocolo Diario)
-
-Siempre ejecutar estos pasos al finalizar la sesión:
-
-1. **Backup**: Crear copia de la carpeta en `_backups/`.
-2. **Git**: Guardar cambios (`git add .`, `git commit -m "Resumen del día"`).
+---
+*Si cerramos sesión, recuerda siempre hacer Git Push para guardar esta bitácora.*

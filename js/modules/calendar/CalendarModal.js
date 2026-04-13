@@ -15,6 +15,7 @@ import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSund
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
+import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 
 
 export const CalendarModal = {
@@ -33,7 +34,7 @@ export const CalendarModal = {
         if (dom.waBtn) dom.waBtn.onclick = (e) => {
             e.preventDefault();
             const evt = CalendarState.appointments.find(a => a.id === CalendarState.selectedEventId);
-            if (evt) this.openWhatsAppReminder(evt, dom);
+            if (evt) WhatsAppMessaging.sendMessage(evt, 'reminder');
         };
         if (dom.patientSearchInput) dom.patientSearchInput.oninput = (e) => this.populatePatientSuggestions(e.target.value);
         if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.onchange = () => {
@@ -110,6 +111,12 @@ export const CalendarModal = {
         const localISOTime = this._getLocalISOStringFormat(date);
         dom.appointmentDateInput.value = localISOTime;
 
+        // SEGURIDAD: Solo Diana y Yari pueden inhabilitar horas
+        const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');
+        if (blockOption) {
+            blockOption.style.display = AuthManager.can('manage_blocks') ? 'flex' : 'none';
+        }
+
         CalendarUI.renderBusySlots(dateStr);
         // NEW: Render Custom Grid for Create Mode
         this.renderDailySlots(date);
@@ -161,15 +168,22 @@ export const CalendarModal = {
             typeRadio.dispatchEvent(new Event('change'));
         }
 
-        // Buttons
-        dom.saveBtn.classList.remove('hidden');
-        dom.deleteBtn.classList.remove('hidden');
-        dom.payBtn.classList.remove('hidden');
-        dom.confirmBtn.classList.remove('hidden');
-        dom.cancelBtn.classList.remove('hidden');
+        // SEGURIDAD: Si el terapeuta no es el dueño, ocultar botones de edición
+        const canEdit = AuthManager.canEditItem(ev);
+        dom.saveBtn.classList.toggle('hidden', !canEdit);
+        dom.deleteBtn.classList.toggle('hidden', !canEdit);
+        dom.payBtn.classList.toggle('hidden', !canEdit);
+        dom.confirmBtn.classList.toggle('hidden', !canEdit);
+        dom.cancelBtn.classList.toggle('hidden', !canEdit);
+
+        // Bloquear opción de Inhabilitar si no tiene permiso
+        const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');
+        if (blockOption) {
+            blockOption.style.display = AuthManager.can('manage_blocks') ? 'flex' : 'none';
+        }
 
         if (dom.waBtn) {
-            dom.waBtn.classList.toggle('hidden', isSchool);
+            dom.waBtn.classList.toggle('hidden', isSchool || !canEdit);
         }
 
         // Confirm button state
@@ -391,9 +405,25 @@ export const CalendarModal = {
             }
 
             if (CalendarState.selectedEventId) {
+                const dateChanged = CalendarState.originalEventDate !== dateStrArray[0];
+
                 // Update el primero
                 await CalendarData.updateEvent(CalendarState.selectedEventId, { ...appointmentData, date: dateStrArray[0] });
                 
+                // Si cambió la fecha/hora, ofrecer avisar por WhatsApp
+                if (dateChanged) {
+                    const sendWA = await ModalService.confirm(
+                        "Cita Reagendada",
+                        "¿Deseas enviar un mensaje automático de confirmación del nuevo horario por WhatsApp?",
+                        "Enviar WhatsApp",
+                        "No, gracias"
+                    );
+                    if (sendWA) {
+                        const updatedInfo = { ...appointmentData, date: dateStrArray[0], id: CalendarState.selectedEventId };
+                        WhatsAppMessaging.sendMessage(updatedInfo, 'reschedule');
+                    }
+                }
+
                 // Si seleccionó una segunda hora durante la edición, la creamos
                 if (dateStrArray.length > 1) {
                     await CalendarData.createEvent({ ...appointmentData, date: dateStrArray[1] });
@@ -448,8 +478,22 @@ export const CalendarModal = {
         if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
 
         const eventId = CalendarState.selectedEventId;
-        // Logic moved to CalendarData
+        
+        // 1. Ejecutar cancelación en base de datos
         await CalendarData.cancelEvent(eventId);
+
+        // 2. Preguntar si quiere avisar por WhatsApp
+        const sendWA = await ModalService.confirm(
+            "Aviso por WhatsApp",
+            "¿Deseas enviar un mensaje automático de cancelación al responsable?",
+            "Enviar WhatsApp",
+            "No, solo cancelar"
+        );
+
+        if (sendWA) {
+            const appointment = CalendarState.appointments.find(a => a.id === eventId);
+            if (appointment) WhatsAppMessaging.sendMessage(appointment, 'cancel');
+        }
 
         const reschedule = await ModalService.confirm(
             "Reagendar",

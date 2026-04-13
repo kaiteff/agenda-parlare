@@ -93,6 +93,7 @@ export const PatientActions = {
         const defaultCost = dom.newPatientDefaultCost ? parseFloat(dom.newPatientDefaultCost.value) : 0;
         const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 250;
         const phone = document.getElementById('newPatientPhone')?.value.trim() || '';
+        const parentName = document.getElementById('newPatientParentName')?.value.trim() || '';
         const wantsWhatsapp = document.getElementById('newPatientWantsWhatsapp')?.checked !== false;
 
         // Validación
@@ -112,7 +113,13 @@ export const PatientActions = {
             }
 
             // Crear perfil (con datos extra)
-            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { defaultCost, clinicFee, phone, wantsWhatsapp });
+            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { 
+                defaultCost, 
+                clinicFee, 
+                phone, 
+                parentName, 
+                wantsWhatsapp 
+            });
 
             if (result.success) {
                 // Cerrar modal de nuevo paciente
@@ -590,6 +597,7 @@ export const PatientActions = {
             if (updates.defaultCost !== undefined) profileUpdates.defaultCost = updates.defaultCost;
             if (updates.clinicFee !== undefined) profileUpdates.clinicFee = updates.clinicFee;
             if (updates.phone !== undefined) profileUpdates.phone = updates.phone;
+            if (updates.parentName !== undefined) profileUpdates.parentName = updates.parentName;
             if (updates.wantsWhatsapp !== undefined) profileUpdates.wantsWhatsapp = updates.wantsWhatsapp;
 
             await updateDoc(doc(db, 'patientProfiles', profileId), profileUpdates);
@@ -622,6 +630,23 @@ export const PatientActions = {
                 if (updateCount > 0) {
                     await batch.commit();
                     console.log(`✅ Updated ${updateCount} future appointments with 0 cost to ${updates.defaultCost}`);
+                }
+            }
+
+            // 3. Sincronizar cambios en Google Calendar para citas futuras
+            const { GoogleCalendarService } = await import('../../services/google/GoogleCalendarService.js');
+            const { CalendarState } = await import('../../modules/calendar/CalendarState.js');
+            
+            const futureApts = (CalendarState.appointments || []).filter(apt => 
+                apt.name === patientName && 
+                !apt.isCancelled && 
+                new Date(apt.date) >= new Date()
+            );
+
+            if (futureApts.length > 0) {
+                console.log(`📅 PatientActions: Sincronizando ${futureApts.length} citas con info actualizada de perfil...`);
+                for (const apt of futureApts) {
+                    await GoogleCalendarService.updateEvent(apt);
                 }
             }
 

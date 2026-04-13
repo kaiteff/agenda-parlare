@@ -1,0 +1,121 @@
+/**
+ * WhatsAppMessaging.js
+ * Servicio centralizado para generación de mensajes rápidos de WhatsApp
+ */
+
+import { AuthManager } from '../managers/AuthManager.js';
+import { PatientState } from '../managers/patient/PatientState.js';
+
+export const WhatsAppMessaging = {
+
+    /**
+     * Genera y abre un link de WhatsApp con un mensaje predefinido
+     * @param {Object} appointment - Los datos de la cita
+     * @param {string} type - 'cancel', 'reschedule', 'reminder'
+     */
+    async sendMessage(appointment, type = 'reminder') {
+        if (!appointment) return;
+
+        // 1. Obtener datos del paciente
+        const profile = PatientState.patients.find(p => p.id === appointment.patientId || p.name === appointment.name);
+        const nameParts = appointment.name.split(' ');
+        const patientName = nameParts[0] || 'el paciente';
+        const parentName = profile?.parentName || 'Mamá/Papá';
+        
+        // 2. Obtener datos de la cita
+        const aptDate = new Date(appointment.date);
+        const dateStr = aptDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+        const timeStr = aptDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        // 3. Obtener terapeuta
+        const tKey = (appointment.therapist || 'diana').toLowerCase();
+        const therapistName = tKey.charAt(0).toUpperCase() + tKey.slice(1);
+
+        // 4. Seleccionar Plantilla
+        let template = "";
+        const intro = `Hola ${parentName}, te saluda Yari de Parláre. `;
+
+        switch (type) {
+            case 'cancel':
+                template = `${intro}Te informo que la sesión de ${patientName} programada para hoy ${dateStr} a las ${timeStr} con ${therapistName} ha sido CANCELADA. Quedamos a tus órdenes para cualquier duda.`;
+                break;
+            case 'reschedule':
+                template = `${intro}Te confirmo que hemos REAGENDADO la cita de ${patientName} con ${therapistName} para el día ${dateStr} a las ${timeStr}. ¡Nos vemos pronto!`;
+                break;
+            default: // reminder
+                template = `${intro}Te recuerdo la cita de ${patientName} programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
+                break;
+        }
+
+        // 5. Preparar Teléfono
+        let phoneDigits = profile?.phone || '';
+        if (phoneDigits) {
+            phoneDigits = phoneDigits.replace(/\D/g, '');
+        }
+
+        // 6. Preguntar al usuario cómo enviar
+        const { ModalService } = await import('../utils/ModalService.js');
+        const mode = await ModalService.confirmCustom({
+            title: 'Enviar WhatsApp',
+            message: `¿Cómo deseas enviar el recordatorio para **${patientName}**?`,
+            confirmText: '🤖 Clínica (Auto)',
+            cancelText: '📱 Mi WhatsApp (Manual)',
+            type: 'info'
+        });
+
+        if (mode === true) {
+            // AUTOMÁTICO (Twilio)
+            this._sendViaTwilio(phoneDigits, template);
+        } else if (mode === false) {
+            // MANUAL (wa.me)
+            this._sendViaManual(phoneDigits, template);
+        }
+    },
+
+    async _sendViaTwilio(phone, message) {
+        if (!phone) {
+            const { ToastService } = await import('../utils/ToastService.js');
+            ToastService.error('El paciente no tiene teléfono registrado.');
+            return;
+        }
+
+        const { ToastService } = await import('../utils/ToastService.js');
+        ToastService.info('Enviando vía Twilio...');
+
+        try {
+            const response = await fetch('https://parlare-webhook.onrender.com/api/send-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phone,
+                    message: message,
+                    key: 'parlare_secret_2026'
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                ToastService.success('¡Mensaje enviado por la Clínica!');
+            } else {
+                throw new Error(result.error || 'Error desconocido');
+            }
+        } catch (error) {
+            console.error('Twilio Error:', error);
+            ToastService.error('No se pudo enviar. Intenta el modo manual.');
+        }
+    },
+
+    _sendViaManual(phone, template) {
+        let phoneDigits = phone;
+        if (phoneDigits && !phoneDigits.startsWith('52') && phoneDigits.length === 10) {
+            phoneDigits = '52' + phoneDigits;
+        }
+
+        const encodedMsg = encodeURIComponent(template);
+        const url = phoneDigits 
+            ? `https://wa.me/${phoneDigits}?text=${encodedMsg}`
+            : `https://wa.me/?text=${encodedMsg}`;
+            
+        window.open(url, '_blank');
+    }
+};

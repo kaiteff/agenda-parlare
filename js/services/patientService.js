@@ -42,6 +42,7 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             lastSessionDate: null,
             defaultCost: options.defaultCost || 0,
             clinicFee: options.clinicFee !== undefined ? options.clinicFee : 250,
+            parentName: options.parentName || '',
             wantsWhatsapp: options.wantsWhatsapp !== false
         };
 

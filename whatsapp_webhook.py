@@ -314,6 +314,33 @@ def run_reminders():
 
     return jsonify({'status': 'done', 'results': results_log}), 200
 
+@app.route('/api/send-message', methods=['POST'])
+@cross_origin()
+def send_individual_message():
+    data = request.json
+    phone = data.get('phone')
+    message = data.get('message')
+    auth_key = data.get('key')
+    
+    # Seguridad básica
+    if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if not phone or not message:
+        return jsonify({'error': 'Faltan datos (phone o message)'}), 400
+        
+    # Normalizar destino para Twilio
+    digits = re.sub(r'\D', '', phone)
+    if digits.startswith('521'): digits = digits[3:]
+    elif digits.startswith('52'): digits = digits[2:]
+    dest = f"whatsapp:+52{digits}"
+    
+    try:
+        twilio_client.messages.create(body=message, from_=config['twilio_whatsapp_from'], to=dest)
+        return jsonify({'status': 'success', 'message': 'WhatsApp enviado correctamente via Twilio'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

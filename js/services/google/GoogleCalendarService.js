@@ -13,6 +13,7 @@
 import { GoogleAuthService } from './GoogleAuthService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { Logger } from '../../utils/Logger.js';
+import { PatientState } from '../../managers/patient/PatientState.js';
 
 const log = Logger.create('GCalService');
 
@@ -191,11 +192,27 @@ export const GoogleCalendarService = {
         const tKey = (appointment.therapist || 'diana').toLowerCase();
         const therapist = tKey.charAt(0).toUpperCase() + tKey.slice(1);
 
+        // Intentar obtener datos adicionales del perfil del paciente
+        let parentInfo = '';
+        let phoneInfo = '';
+        
+        const profiles = PatientState.patients || [];
+        const profile = profiles.find(p => p.id === appointment.patientId || p.name === appointment.name);
+        
+        if (profile) {
+            if (profile.parentName) parentInfo = `(Papá/Mamá: ${profile.parentName})`;
+            if (profile.phone) phoneInfo = `Tel: ${profile.phone}`;
+        }
+
+        const summary = appointment.name || '(Sin nombre)';
+
         return {
-            summary: appointment.name || '(Sin nombre)',
+            summary: summary,
             description: [
                 'Terapeuta: ' + therapist,
                 appointment.cost ? 'Costo: $' + appointment.cost : '',
+                parentInfo ? 'Responsable: ' + parentInfo.replace(/[()]/g, '') : '',
+                phoneInfo ? 'Teléfono: ' + phoneInfo.replace('Tel: ', '') : '',
                 appointment.confirmed ? '✅ Asistencia confirmada' : '',
                 appointment.isPaid ? '💰 Pagado' : '',
                 '📱 Agenda Parlare'

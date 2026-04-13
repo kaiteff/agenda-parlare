@@ -138,48 +138,71 @@ export const PatientManager = {
     },
 
     /**
-     * Configura listener de Firestore en tiempo real
-     * Escucha la colección de CITAS y genera los perfiles de pacientes en el cliente
+     * Configura listeners de Firestore en tiempo real
+     * Escucha tanto CITAS como PERFILES para sincronización total
      */
     _setupRealtimeListener() {
-        // Obtenemos todas las citas ordenadas por fecha reciente
-        const q = query(collection(db, collectionPath), orderBy("date", "desc"));
-
-        onSnapshot(q, (snapshot) => {
+        // 1. Listen to Appointments
+        const qApts = query(collection(db, collectionPath), orderBy("date", "desc"));
+        onSnapshot(qApts, (snapshot) => {
             const appointments = [];
             snapshot.forEach((doc) => {
                 appointments.push({ id: doc.id, ...doc.data() });
             });
+            PatientState.updateAppointments(appointments);
+            this._processData();
+        });
 
-            this._processData(appointments);
-        }, (error) => {
-            log.error("Error al obtener citas en tiempo real:", error);
+        // 2. Listen to Patient Profiles (El "Maestro" de datos)
+        const qProfiles = query(collection(db, 'patientProfiles'));
+        onSnapshot(qProfiles, (snapshot) => {
+            const profiles = [];
+            snapshot.forEach((doc) => {
+                profiles.push({ id: doc.id, ...doc.data() });
+            });
+            PatientState.updatePatients(profiles);
+            this._processData();
         });
     },
 
     /**
-     * Procesa los datos crudos de citas para generar perfiles abstractos de pacientes
-     * @param {Array} appointments 
+     * Procesa y cruza los datos de citas y perfiles
      */
-    _processData(appointments) {
+    _processData() {
+        const appointments = PatientState.appointments;
+        const profiles = PatientState.patients;
+
         log.time('Procesamiento de datos', () => {
             const patientMap = new Map();
 
-            // 1. Agrupar citas por paciente (normalizar nombres)
+            // 1. Primero cargar datos desde PERFILES oficiales (si existen)
+            profiles.forEach(profile => {
+                const normalizedName = profile.name.trim().toLowerCase();
+                patientMap.set(normalizedName, {
+                    ...profile,
+                    appointments: [],
+                    totalPaid: 0,
+                    totalPending: 0,
+                    lastVisit: null
+                });
+            });
+
+            // 2. Agregar/Cruzar datos desde CITAS
             appointments.forEach(app => {
                 const normalizedName = app.name.trim().toLowerCase();
 
                 if (!patientMap.has(normalizedName)) {
+                    // Si no tiene perfil, creamos uno temporal para que aparezca en la lista
                     patientMap.set(normalizedName, {
-                        id: normalizedName, // ID temporal basado en nombre normalizado
-                        name: app.name.trim(), // Nombre display (el primero encontrado)
+                        id: normalizedName, // ID temporal
+                        name: app.name.trim(),
                         normalizedName: normalizedName,
                         appointments: [],
                         totalPaid: 0,
                         totalPending: 0,
                         lastVisit: null,
                         isActive: true,
-                        therapist: app.therapist || 'diana' // Default
+                        therapist: app.therapist || 'diana'
                     });
                 }
 
@@ -203,8 +226,8 @@ export const PatientManager = {
 
                 if (p.appointments.length > 0) {
                     p.lastVisit = p.appointments[0].date;
-                    // Usar el terapeuta de la cita más reciente como el "actual"
-                    if (p.appointments[0].therapist) {
+                    // Solo sobreescribir si el perfil NO tiene terapeuta asignado (caso paciente nuevo sin perfil)
+                    if (!p.hasProfile && p.appointments[0].therapist) {
                         p.therapist = p.appointments[0].therapist;
                     }
                 }

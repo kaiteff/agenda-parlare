@@ -1,12 +1,6 @@
 /**
  * ScheduleManager.js
- * Maneja la lógica del modal de "Agendar Primera Cita"
- * 
- * Responsabilidades:
- * - Mostrar horarios disponibles por día
- * - Manejar la selección de slots
- * - Gestionar la recurrencia (semanal/quincenal)
- * - Crear las citas correspondientes
+ * Maneja la lógica del modal de "Agendar Primera Cita" con soporte Multiselección y Recurrencia Automática
  */
 
 import { PatientState } from './patient/PatientState.js';
@@ -14,7 +8,7 @@ import { AuthManager } from './AuthManager.js';
 import { isSlotFree } from '../utils/validators.js';
 import { GoogleAuthService } from '../services/google/GoogleAuthService.js';
 import { createAppointment } from '../services/appointmentService.js';
-import { getStartOfWeek, addDays, formatDateLocal } from '../utils/dateUtils.js';
+import { getStartOfWeek } from '../utils/dateUtils.js';
 import { ModalService } from '../utils/ModalService.js';
 import { ToastService } from '../utils/ToastService.js';
 import { Logger } from '../utils/Logger.js';
@@ -28,12 +22,11 @@ export const ScheduleManager = {
         patientName: null,
         therapist: null,
         currentWeekStart: null,
-        selectedSlot: null,
+        selectedSlots: [], // ARRAY para multiselección
         recurrenceType: 'none', // 'none', 'weekly', 'biweekly'
-        sessionsCount: 4
+        sessionsCount: 1 // Por defecto 1 (si no es recurrente)
     },
 
-    // Referencias DOM
     // Referencias DOM
     dom: {},
 
@@ -44,7 +37,6 @@ export const ScheduleManager = {
         this._initDOM();
         this._setupListeners();
         log.info('Inicializado');
-        // Exponer globalmente para onclicks en HTML
         window.ScheduleManager = this;
     },
 
@@ -71,25 +63,13 @@ export const ScheduleManager = {
      * Configura los event listeners
      */
     _setupListeners() {
-        if (this.dom.prevBtn) {
-            this.dom.prevBtn.onclick = () => this._changeWeek(-1);
-        }
-        if (this.dom.nextBtn) {
-            this.dom.nextBtn.onclick = () => this._changeWeek(1);
-        }
-        if (this.dom.confirmBtn) {
-            this.dom.confirmBtn.onclick = () => this._confirmSchedule();
-        }
+        if (this.dom.prevBtn) this.dom.prevBtn.onclick = () => this._changeWeek(-1);
+        if (this.dom.nextBtn) this.dom.nextBtn.onclick = () => this._changeWeek(1);
+        if (this.dom.confirmBtn) this.dom.confirmBtn.onclick = () => this._confirmSchedule();
 
-        // Listener para cerrar modal
         const closeBtn = document.getElementById('closeScheduleNewPatientModalBtn');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                this.closeModal();
-            };
-        }
+        if (closeBtn) closeBtn.onclick = () => this.closeModal();
 
-        // Listeners para recurrencia
         if (this.dom.recurrenceInputs) {
             Array.from(this.dom.recurrenceInputs).forEach(input => {
                 input.addEventListener('change', (e) => {
@@ -101,31 +81,29 @@ export const ScheduleManager = {
 
         if (this.dom.sessionsCountInput) {
             this.dom.sessionsCountInput.addEventListener('change', (e) => {
-                this.state.sessionsCount = parseInt(e.target.value) || 4;
+                this.state.sessionsCount = parseInt(e.target.value) || 1;
             });
         }
     },
 
     /**
-     * Abre el modal para un paciente específico
-     * @param {string} patientId - ID del paciente
-     * @param {string} patientName - Nombre del paciente
-     * @param {string} therapist - Terapeuta asignado
+     * Abre el modal
      */
     openModal(patientId, patientName, therapist, defaultCost = 0) {
-        console.log(`OpenModal llamado con cost: ${defaultCost}`);
         this.state.patientId = patientId;
         this.state.patientName = patientName;
         this.state.therapist = therapist || 'diana';
         this.state.currentWeekStart = getStartOfWeek(new Date());
-        this.state.selectedSlot = null;
+        this.state.selectedSlots = [];
         this.state.recurrenceType = 'none';
+        this.state.sessionsCount = 1;
 
-        // Reset UI
         if (this.dom.patientName) this.dom.patientName.textContent = `Paciente: ${patientName}`;
-        if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = true;
-        
-        // CORRECCIÓN: Si el costo es 0 o null, buscar en el perfil o usar 800
+        if (this.dom.confirmBtn) {
+            this.dom.confirmBtn.disabled = true;
+            this.dom.confirmBtn.textContent = 'Seleccione Horario';
+        }
+
         let finalCost = defaultCost;
         if (!finalCost || finalCost === 0) {
             const profile = PatientState.patients.find(p => p.id === patientId || p.name === patientName);
@@ -133,7 +111,6 @@ export const ScheduleManager = {
         }
         if (this.dom.costInput) this.dom.costInput.value = finalCost;
 
-        // Reset radio buttons
         if (this.dom.recurrenceInputs) {
             Array.from(this.dom.recurrenceInputs).forEach(input => {
                 if (input.value === 'none') input.checked = true;
@@ -141,100 +118,73 @@ export const ScheduleManager = {
         }
         this._updateRecurrenceUI();
 
-        // Mostrar modal
-        const modal = document.getElementById('scheduleNewPatientModal');
-        if (modal) {
-            this.dom.modal = modal;
-
-            // Mover al body para evitar problemas de stacking context
-            if (modal.parentNode !== document.body) {
-                document.body.appendChild(modal);
-            }
-
+        if (this.dom.modal) {
+            if (this.dom.modal.parentNode !== document.body) document.body.appendChild(this.dom.modal);
             requestAnimationFrame(() => {
                 this._renderSlots();
-
-                modal.classList.remove('hidden');
-                modal.style.display = 'flex';
-                modal.style.zIndex = '9999';
-
-                log.info("Modal abierto para", patientName);
+                this.dom.modal.classList.remove('hidden');
+                this.dom.modal.style.display = 'flex';
+                this.dom.modal.style.zIndex = '9999';
             });
-        } else {
-            log.error("No se encontró el modal 'scheduleNewPatientModal'");
         }
     },
 
-    /**
-     * Cierra el modal
-     */
     closeModal() {
-        log.debug('closeModal() llamado');
-        const modal = document.getElementById('scheduleNewPatientModal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
+        if (this.dom.modal) {
+            this.dom.modal.classList.add('hidden');
+            this.dom.modal.style.display = 'none';
         }
     },
 
-    /**
-     * Cambia la semana visualizada
-     * @param {number} offset - Semanas a mover (+1 o -1)
-     */
     _changeWeek(offset) {
         const newDate = new Date(this.state.currentWeekStart);
         newDate.setDate(newDate.getDate() + (offset * 7));
-
-        // No permitir ir al pasado (semana anterior a la actual)
-        const today = new Date();
-        const startOfCurrentWeek = getStartOfWeek(today);
-
-        if (newDate < startOfCurrentWeek) return;
-
+        if (newDate < getStartOfWeek(new Date())) return;
         this.state.currentWeekStart = newDate;
         this._renderSlots();
     },
 
-    /**
-     * Actualiza la UI de recurrencia
-     */
     _updateRecurrenceUI() {
-        const isRecurrent = this.state.recurrenceType !== 'none';
-        if (this.dom.sessionsCountContainer) {
-            if (isRecurrent) {
-                this.dom.sessionsCountContainer.classList.remove('hidden');
-            } else {
-                this.dom.sessionsCountContainer.classList.add('hidden');
+        const type = this.state.recurrenceType;
+        
+        if (type === 'weekly') {
+            this.state.sessionsCount = 13; // Automático 3 meses (13 semanas)
+            if (this.dom.sessionsCountInput) {
+                this.dom.sessionsCountInput.value = 13;
+                this.dom.sessionsCountInput.disabled = true; // Bloqueado por regla de negocio
+            }
+        } else if (type === 'biweekly') {
+            this.state.sessionsCount = 6; // Automático 3 meses (6 quincenas)
+            if (this.dom.sessionsCountInput) {
+                this.dom.sessionsCountInput.value = 6;
+                this.dom.sessionsCountInput.disabled = true;
+            }
+        } else {
+            this.state.sessionsCount = 1;
+            if (this.dom.sessionsCountInput) {
+                this.dom.sessionsCountInput.disabled = false;
             }
         }
+
+        if (this.dom.sessionsCountContainer) {
+            this.state.recurrenceType !== 'none' 
+                ? this.dom.sessionsCountContainer.classList.remove('hidden')
+                : this.dom.sessionsCountContainer.classList.add('hidden');
+        }
+        
+        this._updateConfirmButton();
     },
 
-    /**
-     * Renderiza los slots disponibles
-     */
     _renderSlots() {
-        console.log('🎰 _renderSlots() llamado');
-        console.log('   - slotsGrid existe?', !!this.dom.slotsGrid);
-        console.log('   - weekLabel existe?', !!this.dom.weekLabel);
-
-        if (!this.dom.slotsGrid || !this.dom.weekLabel) {
-            console.error('❌ _renderSlots: Faltan elementos DOM necesarios');
-            return;
-        }
+        if (!this.dom.slotsGrid || !this.dom.weekLabel) return;
 
         const startOfWeek = this.state.currentWeekStart;
         const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setDate(endOfWeek.getDate() + 5); // Hasta Sábado
 
-        // Actualizar label de semana
-        const startStr = startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-        const endStr = endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-        this.dom.weekLabel.textContent = `${startStr} - ${endStr}`;
-
-        // Limpiar grid
+        this.dom.weekLabel.textContent = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`;
         this.dom.slotsGrid.innerHTML = '';
 
-        // Generar columnas por día (Lunes a Sábado)
         const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
         for (let i = 0; i < 6; i++) {
@@ -244,240 +194,140 @@ export const ScheduleManager = {
             const dayColumn = document.createElement('div');
             dayColumn.className = 'flex flex-col gap-2';
 
-            // Header del día
             const dayHeader = document.createElement('div');
             dayHeader.className = 'text-center p-2 bg-gray-50 rounded-lg border border-gray-100 mb-2';
-            dayHeader.innerHTML = `
-                <div class="font-bold text-gray-700">${days[i]}</div>
-                <div class="text-xs text-gray-500">${currentDayDate.getDate()}</div>
-            `;
+            dayHeader.innerHTML = `<div class="font-bold text-gray-700 text-xs">${days[i]}</div><div class="text-[10px] text-gray-500">${currentDayDate.getDate()}</div>`;
             dayColumn.appendChild(dayHeader);
 
-            // Slots
             const slots = this._getDailySlots(currentDayDate);
 
             if (slots.length === 0) {
                 const noSlots = document.createElement('div');
-                noSlots.className = 'text-xs text-gray-400 text-center py-4 italic';
-                noSlots.textContent = 'Sin disponibilidad';
+                noSlots.className = 'text-[10px] text-gray-400 text-center py-4 italic';
+                noSlots.textContent = 'N/A';
                 dayColumn.appendChild(noSlots);
             } else {
                 slots.forEach(slot => {
                     const slotBtn = document.createElement('button');
-                    const isSelected = this.state.selectedSlot &&
-                        this.state.selectedSlot.getTime() === slot.date.getTime();
+                    // Verificar si está en la lista de seleccionados
+                    const isSelected = this.state.selectedSlots.some(s => s.getTime() === slot.date.getTime());
 
                     if (!slot.isFree) {
-                        // Estilo para slot ocupado
-                        slotBtn.className = `
-                            w-full py-2 px-1 rounded text-sm font-medium
-                            bg-gray-100 text-gray-400 border border-gray-100 cursor-not-allowed
-                        `;
+                        slotBtn.className = 'w-full py-2 rounded text-[10px] font-medium bg-gray-100 text-gray-400 border border-gray-100 cursor-not-allowed';
                         slotBtn.textContent = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                         slotBtn.disabled = true;
-                        slotBtn.title = "Horario ocupado";
                     } else {
-                        // Estilo para slot libre
-                        slotBtn.className = `
-                            w-full py-2 px-1 rounded text-sm font-medium transition-all
-                            ${isSelected
-                                ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                                : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50'}
-                        `;
+                        slotBtn.className = `w-full py-2 rounded text-[10px] font-bold transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-300 scale-105' : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-400 hover:bg-indigo-50'}`;
                         slotBtn.textContent = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-                        slotBtn.onclick = () => this._selectSlot(slot.date);
+                        slotBtn.onclick = () => this._toggleSlot(slot.date);
                     }
-
                     dayColumn.appendChild(slotBtn);
                 });
             }
-
             this.dom.slotsGrid.appendChild(dayColumn);
         }
     },
 
-    /**
-     * Obtiene slots para un día específico con su estado
-     * @param {Date} date - Fecha a consultar
-     * @returns {Array<{date: Date, isFree: boolean}>} Lista de slots con estado
-     */
     _getDailySlots(date) {
         const slots = [];
-        const startHour = 8; // 8:00 AM
-        const endHour = 21;  // 8:00 PM (end of slot)
+        const startHour = 8;
+        const endHour = 21;
         const now = new Date();
-
-        // Si es hoy, no mostrar horas pasadas
-        const isToday = date.getDate() === now.getDate() &&
-            date.getMonth() === now.getMonth() &&
-            date.getFullYear() === now.getFullYear();
-
-        const currentHour = now.getHours();
+        const isToday = date.toDateString() === now.toDateString();
 
         for (let hour = startHour; hour < endHour; hour++) {
-            // Si es hoy y la hora ya pasó, saltar
-            if (isToday && hour <= currentHour) continue;
-
+            if (isToday && hour <= now.getHours()) continue;
             const slotDate = new Date(date);
             slotDate.setHours(hour, 0, 0, 0);
-
-            // Verificar disponibilidad
-            const appointments = PatientState.appointments || [];
-            const isFree = isSlotFree(slotDate, appointments, null, this.state.therapist);
-
-            slots.push({
-                date: slotDate,
-                isFree: isFree
-            });
+            const isFree = isSlotFree(slotDate, PatientState.appointments || [], null, this.state.therapist);
+            slots.push({ date: slotDate, isFree });
         }
-
         return slots;
     },
 
-    /**
-     * Maneja la selección de un slot
-     * @param {Date} slotDate - Fecha seleccionada
-     */
-    _selectSlot(slotDate) {
-        this.state.selectedSlot = slotDate;
-        this._renderSlots(); // Re-render para actualizar estilos
-
-        if (this.dom.confirmBtn) {
-            this.dom.confirmBtn.disabled = false;
-            this.dom.confirmBtn.textContent = `Agendar ${slotDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })} ${slotDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    _toggleSlot(slotDate) {
+        const index = this.state.selectedSlots.findIndex(s => s.getTime() === slotDate.getTime());
+        if (index > -1) {
+            this.state.selectedSlots.splice(index, 1);
+        } else {
+            this.state.selectedSlots.push(slotDate);
         }
+        this._renderSlots();
+        this._updateConfirmButton();
     },
 
-    /**
-     * Confirma y crea las citas
-     */
-    async _confirmSchedule() {
-        if (!this.state.selectedSlot || !this.state.patientName) return;
-
-        // 1. Validar costo con feedback visual
-        const costInput = this.dom.costInput;
-        const cost = costInput ? parseFloat(costInput.value) || 0 : 0;
-
-        if (cost <= 0) {
-            await ModalService.alert("Costo Inválido", "Por favor, ingrese un costo por sesión válido (mayor a 0) antes de agendar.", "warning");
-            if (costInput) {
-                costInput.focus();
-                costInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-                // Remover clase al escribir
-                costInput.oninput = () => {
-                    costInput.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
-                };
-            }
+    _updateConfirmButton() {
+        if (!this.dom.confirmBtn) return;
+        
+        const count = this.state.selectedSlots.length;
+        if (count === 0) {
+            this.dom.confirmBtn.disabled = true;
+            this.dom.confirmBtn.textContent = 'Seleccione Horario';
             return;
         }
 
-        let baseDate = new Date(this.state.selectedSlot);
-        const now = new Date();
+        this.dom.confirmBtn.disabled = false;
+        const recText = this.state.recurrenceType === 'weekly' ? ' semanales' : this.state.recurrenceType === 'biweekly' ? ' quincenales' : '';
+        this.dom.confirmBtn.textContent = `Agendar ${count} cita${count > 1 ? 's' : ''}${recText}`;
+    },
 
-        // 2. Validar fecha pasada
-        if (baseDate < now) {
-            const nextWeekDate = new Date(baseDate);
-            nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    async _confirmSchedule() {
+        if (this.state.selectedSlots.length === 0 || !this.state.patientName) return;
 
-            const dateStr = baseDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-            const nextDateStr = nextWeekDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-
-            const msg = `La fecha seleccionada (<strong>${dateStr}</strong>) ya pasó.<br><br>¿Desea agendar a partir de la próxima semana (<strong>${nextDateStr}</strong>)?`;
-
-            const confirmed = await ModalService.confirm(
-                "Fecha Pasada",
-                msg,
-                "Usar Próxima Semana",
-                "Cancelar"
-            );
-
-            if (confirmed) {
-                baseDate = nextWeekDate;
-            } else {
-                return; // Cancelar si el usuario no quiere cambiar
-            }
+        const cost = this.dom.costInput ? parseFloat(this.dom.costInput.value) || 0 : 0;
+        if (cost <= 0) {
+            await ModalService.alert("Costo Inválido", "Por favor, ingrese un costo válido.", "warning");
+            return;
         }
 
         try {
-            if (this.dom.confirmBtn.textContent === 'Agendando...') return; // Prevent double click
-
-            // Ensure Google Token (Popup)
-            try {
-                await GoogleAuthService.ensureToken(false);
-            } catch (authErr) {
-                console.warn("Google Auth pre-check failed:", authErr);
-                // Continue saving locally even if auth fails
-            }
-
             this.dom.confirmBtn.disabled = true;
             this.dom.confirmBtn.textContent = 'Agendando...';
 
-            const appointmentsToCreate = [];
-            // baseDate ya está definido arriba
-            const count = this.state.recurrenceType === 'none' ? 1 : this.state.sessionsCount;
+            let createdTotal = 0;
+            const patientData = PatientState.patients.find(p => p.id === this.state.patientId);
+            const clinicFee = patientData?.clinicFee || (this.state.therapist === 'vero' ? 400 : 250);
 
-            // Generar fechas
-            for (let i = 0; i < count; i++) {
-                const aptDate = new Date(baseDate);
+            // Bucle por cada horario seleccionado (Multidía)
+            for (const baseDate of this.state.selectedSlots) {
+                const count = this.state.sessionsCount;
 
-                if (this.state.recurrenceType === 'weekly') {
-                    aptDate.setDate(aptDate.getDate() + (i * 7));
-                } else if (this.state.recurrenceType === 'biweekly') {
-                    aptDate.setDate(aptDate.getDate() + (i * 14));
-                }
+                for (let i = 0; i < count; i++) {
+                    const aptDate = new Date(baseDate);
+                    if (this.state.recurrenceType === 'weekly') aptDate.setDate(aptDate.getDate() + (i * 7));
+                    else if (this.state.recurrenceType === 'biweekly') aptDate.setDate(aptDate.getDate() + (i * 14));
 
-                // Verificar disponibilidad de cada slot futuro
-                const appointments = PatientState.appointments || [];
-                if (!isSlotFree(aptDate, appointments, null, this.state.therapist)) {
-                    const dateStr = aptDate.toLocaleDateString('es-ES');
-                    const continueBooking = await ModalService.confirm(
-                        "Horario Ocupado",
-                        `El horario del <strong>${dateStr}</strong> está ocupado.<br>¿Desea continuar agendando las demás citas?`,
-                        "Continuar",
-                        "Cancelar"
-                    );
-
-                    if (!continueBooking) {
-                        this.dom.confirmBtn.disabled = false;
-                        this.dom.confirmBtn.textContent = 'Agendar Cita';
-                        return;
+                    // Verificar disponibilidad futura
+                    if (!isSlotFree(aptDate, PatientState.appointments || [], null, this.state.therapist)) {
+                         console.warn(`Slot ocupado saltado: ${aptDate.toISOString()}`);
+                         continue; 
                     }
-                    continue; // Saltar esta fecha ocupada
+
+                    const appointmentData = {
+                        name: this.state.patientName,
+                        patientId: this.state.patientId,
+                        date: aptDate.toISOString(),
+                        cost: cost,
+                        therapist: this.state.therapist,
+                        clinicFee: clinicFee,
+                        confirmed: false,
+                        isPaid: false,
+                        isCancelled: false
+                    };
+
+                    const result = await createAppointment(appointmentData, PatientState.appointments);
+                    if (result.success) createdTotal++;
                 }
-
-                appointmentsToCreate.push(aptDate);
             }
 
-            // Crear citas
-            let createdCount = 0;
-            const cost = this.dom.costInput ? parseFloat(this.dom.costInput.value) || 0 : 0;
-
-            for (const aptDate of appointmentsToCreate) {
-                const appointmentData = {
-                    name: this.state.patientName,
-                    patientId: this.state.patientId,
-                    date: aptDate.toISOString(),
-                    cost: cost,
-                    therapist: this.state.therapist,
-                    clinicFee: PatientState.patients.find(p => p.id === this.state.patientId)?.clinicFee || (this.state.therapist === 'vero' ? 400 : 250),
-                    confirmed: false,
-                    isPaid: false,
-                    isCancelled: false
-                };
-
-                const result = await createAppointment(appointmentData, PatientState.appointments);
-                if (result.success) createdCount++;
-            }
-
-            log.success(`Se agendaron ${createdCount} citas exitosamente.`);
-            await ToastService.success(`Se agendaron ${createdCount} citas exitosamente.`, 4000);
+            await ToastService.success(`¡Éxito! Se agendaron ${createdTotal} citas en total.`);
             this.closeModal();
 
         } catch (error) {
-            log.error('Error al agendar citas:', error);
-            await ModalService.alert("Error", 'Error al agendar citas: ' + error.message, "error");
+            log.error('Error al agendar:', error);
+            await ModalService.alert("Error", error.message, "error");
             this.dom.confirmBtn.disabled = false;
-            this.dom.confirmBtn.textContent = 'Agendar Cita';
+            this._updateConfirmButton();
         }
     }
 };

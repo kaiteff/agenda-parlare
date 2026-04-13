@@ -20,7 +20,7 @@ import {
 const ROLES = {
     admin: {
         label: 'Administrador',
-        permissions: ['manage_users', 'manage_schedule', 'view_reports', 'manage_patients', 'view_all_patients', 'delete_records', 'switch_therapist_view']
+        permissions: ['manage_users', 'manage_schedule', 'view_reports', 'manage_patients', 'view_all_patients', 'delete_records', 'switch_therapist_view', 'manage_blocks']
     },
     therapist: {
         label: 'Terapeuta',
@@ -28,7 +28,7 @@ const ROLES = {
     },
     receptionist: {
         label: 'Recepción',
-        permissions: ['view_schedule', 'create_appointment', 'manage_payments', 'manage_schedule', 'view_all_patients', 'edit_own_records']
+        permissions: ['view_schedule', 'create_appointment', 'manage_payments', 'manage_schedule', 'view_all_patients', 'edit_own_records', 'manage_blocks']
     }
 };
 
@@ -135,11 +135,13 @@ export const AuthManager = {
                 };
             }
 
-            // Inicializar filtro de terapeuta
-            if (this.currentUser.therapist) {
-                this.selectedTherapist = this.currentUser.therapist;
-            } else if (this.can('switch_therapist_view')) {
+            // Inicializar filtro de terapeuta: PRIORIDAD AL SUYO
+            if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
+                // Recepción y Admin ven todas por defecto
                 this.selectedTherapist = 'all';
+            } else if (this.currentUser.therapist) {
+                // Terapeutas ven la suya
+                this.selectedTherapist = this.currentUser.therapist;
             } else {
                 this.selectedTherapist = 'diana';
             }
@@ -248,7 +250,8 @@ export const AuthManager = {
      */
     canViewDetails(item) {
         if (!item) return false;
-        if (this.isAdmin()) return true;
+        // Admin y Recepción pueden ver detalles de todos
+        if (this.isAdmin() || this.currentUser?.role === 'receptionist') return true;
 
         const itemTherapist = item.therapist || 'diana'; // Default legacy
         const userTherapist = this.currentUser?.therapist;

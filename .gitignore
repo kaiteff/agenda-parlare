@@ -28,8 +28,8 @@ firebase_service_key.json
 # Exclude Google Drive synced folders
 Diana/
 
-# Generated backups
-_backups/
+# ZIP backups
+*.zip
 
 # Python
 venv/

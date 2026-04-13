@@ -9,6 +9,7 @@ import { PatientState } from '../../managers/patient/PatientState.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { GoogleCalendarService } from '../../services/google/GoogleCalendarService.js';
+import { AuthManager } from '../../managers/AuthManager.js';
 
 export const SupportVault = {
     isInitialized: false,
@@ -17,8 +18,24 @@ export const SupportVault = {
         if (this.isInitialized) return;
         this.injectHTML();
         this.bindEvents();
-        const btn = document.getElementById('openSupportVaultBtn');
-        if (btn) btn.style.display = 'flex';
+        const headerBtn = document.getElementById('openSupportVaultBtn');
+        const sidebarBtn = document.getElementById('sidebarSupportVaultBtn');
+        const isAdmin = AuthManager.isAdmin();
+
+        if (!isAdmin) {
+            // SEGURIDAD: Ocultar si no es admin (Usamos !important para asegurar)
+            if (headerBtn) headerBtn.style.setProperty('display', 'none', 'important');
+            if (sidebarBtn) sidebarBtn.style.setProperty('display', 'none', 'important');
+        } else {
+            // Admin: Mostrar en Sidebar siempre
+            if (sidebarBtn) {
+                sidebarBtn.classList.remove('hidden');
+                sidebarBtn.style.display = 'flex'; 
+            }
+            
+            // Para el Header: NO tocamos el 'hidden' en JS para que el CSS (md:flex) 
+            // del HTML se encargue de ocultarlo en móviles automáticamente.
+        }
         this.isInitialized = true;
     },
 
@@ -76,6 +93,14 @@ export const SupportVault = {
 
         const openBtn = document.getElementById('openSupportVaultBtn');
         if (openBtn) openBtn.addEventListener('click', () => this.open());
+
+        const sidebarOpenBtn = document.getElementById('sidebarSupportVaultBtn');
+        if (sidebarOpenBtn) sidebarOpenBtn.addEventListener('click', () => {
+             // Cerrar sidebar primero si estamos en móvil
+             document.getElementById('mainSidebar')?.classList.add('-translate-x-full');
+             document.getElementById('sidebarOverlay')?.classList.add('hidden');
+             this.open();
+        });
     },
 
     open() {

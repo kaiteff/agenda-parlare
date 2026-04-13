@@ -56,11 +56,13 @@ export const PatientModals = {
         const therapistInput = document.getElementById('newPatientTherapist');
         const costInput = document.getElementById('newPatientDefaultCost');
         const clinicFeeInput = document.getElementById('newPatientClinicFee');
+        const parentNameInput = document.getElementById('newPatientParentName');
 
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
         if (costInput) costInput.value = '800';
         if (clinicFeeInput) clinicFeeInput.value = '250.00';
+        if (parentNameInput) parentNameInput.value = '';
 
         // Configurar terapeuta
         if (therapistInput) {
@@ -136,8 +138,10 @@ export const PatientModals = {
         // Guardar paciente seleccionado
         PatientState.setSelectedPatient(patient);
 
-        // DETERMINAR PERMISOS FINANCIEROS
-        const canViewFinancials = AuthManager.isAdmin() || (patient.therapist === AuthManager.currentUser.therapist);
+        // DETERMINAR PERMISOS FINANCIEROS (Admin y Recepción ven todo, Terapeutas solo lo propio)
+        const canViewFinancials = AuthManager.isAdmin() || 
+                                AuthManager.currentUser?.role === 'receptionist' || 
+                                (patient.therapist === AuthManager.currentUser.therapist);
 
         // Ocultar/Mostrar tarjeta de finanzas
         const financeCard = document.getElementById('patientFinanceCard');
@@ -164,21 +168,44 @@ export const PatientModals = {
 
         const { totalPaid, totalPending } = PatientFilters.calculatePaymentTotals(appointments);
 
-        // Actualizar título
+        // Actualizar título con alerta de recurrencia
         if (dom.patientHistoryTitle) {
+            // Lógica de alerta de citas por agotarse (menos de 14 días para la última cita)
+            const futureApts = appointments.filter(a => !a.isCancelled && new Date(a.date) >= now);
+            futureApts.sort((a,b) => new Date(b.date) - new Date(a.date));
+            const lastAptDate = futureApts.length > 0 ? new Date(futureApts[0].date) : null;
+            
+            const fourteenDaysFromNow = new Date();
+            fourteenDaysFromNow.setDate(fourteenDaysFromNow.getDate() + 14);
+            
+            const isEndingSoon = lastAptDate && lastAptDate < fourteenDaysFromNow;
+            const hasNoFuture = !lastAptDate;
+
+            const recurrenceAlert = (isEndingSoon || hasNoFuture) ? `
+                <div class="mt-1 flex items-center gap-1.5 py-1 px-2 bg-red-50 border border-red-100 rounded-md animate-pulse">
+                    <span class="flex h-2 w-2 rounded-full bg-red-600"></span>
+                    <span class="text-[10px] font-black text-red-600 uppercase tracking-tighter">
+                        ${hasNoFuture ? 'SIN CITAS PROGRAMADAS' : 'RECURRENCIA POR AGOTARSE'}
+                    </span>
+                </div>
+            ` : '';
+
             const therapistName = patient.therapist === 'diana' ? 'Diana' : patient.therapist === 'sam' ? 'Sam' : patient.therapist || 'No asignado';
             dom.patientHistoryTitle.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl shadow-sm border border-white">
-                        ${patient.name.charAt(0)}
-                    </div>
-                    <div>
-                        <div class="text-lg font-extrabold text-gray-900 leading-tight">${patient.name}</div>
-                        <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full ${patient.isActive !== false ? 'bg-green-500' : 'bg-gray-400'}"></span>
-                            Terapeuta: ${therapistName.toUpperCase()}
+                <div class="flex flex-col gap-1 w-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl shadow-sm border border-white">
+                            ${patient.name.charAt(0)}
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-lg font-extrabold text-gray-900 leading-tight">${patient.name}</div>
+                            <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full ${patient.isActive !== false ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                                Terapeuta: ${therapistName.toUpperCase()}
+                            </div>
                         </div>
                     </div>
+                    ${recurrenceAlert}
                 </div>
             `;
         }
@@ -512,13 +539,22 @@ export const PatientModals = {
         if (dom.deletePatientBtn) dom.deletePatientBtn.classList.add('hidden');
         if (dom.patientEditSection) dom.patientEditSection.classList.add('hidden');
 
-        // Botón de editar
+        // Solo Admin y Yari pueden editar perfiles (o el terapeuta dueño)
+        const canEditProfile = AuthManager.isAdmin() || 
+                              AuthManager.currentUser?.role === 'receptionist' || 
+                              (patient.therapist === AuthManager.currentUser?.therapist);
+
         if (dom.editPatientBtn) {
-            dom.editPatientBtn.onclick = () => {
-                dom.deactivatePatientBtn?.classList.toggle('hidden');
-                dom.deletePatientBtn?.classList.toggle('hidden');
-                dom.patientEditSection?.classList.toggle('hidden');
-            };
+            if (canEditProfile) {
+                dom.editPatientBtn.classList.remove('hidden');
+                dom.editPatientBtn.onclick = () => {
+                    dom.deactivatePatientBtn?.classList.toggle('hidden');
+                    dom.deletePatientBtn?.classList.toggle('hidden');
+                    dom.patientEditSection?.classList.toggle('hidden');
+                };
+            } else {
+                dom.editPatientBtn.classList.add('hidden');
+            }
         }
 
         // Selector de terapeuta
@@ -539,6 +575,9 @@ export const PatientModals = {
         if (document.getElementById('editPatientWantsWhatsapp')) {
             document.getElementById('editPatientWantsWhatsapp').checked = patient.wantsWhatsapp !== false;
         }
+        if (document.getElementById('editPatientParentName')) {
+            document.getElementById('editPatientParentName').value = patient.parentName || '';
+        }
 
         // Botón de guardar cambios
         if (dom.savePatientEditBtn) {
@@ -547,6 +586,7 @@ export const PatientModals = {
                 const newCost = dom.editPatientCost ? parseFloat(dom.editPatientCost.value) : 0;
                 const newClinicFee = document.getElementById('editPatientClinicFee') ? parseFloat(document.getElementById('editPatientClinicFee').value) : 250;
                 const newPhone = document.getElementById('editPatientPhone')?.value.trim() || '';
+                const newParentName = document.getElementById('editPatientParentName')?.value.trim() || '';
                 const wantsWhatsapp = document.getElementById('editPatientWantsWhatsapp')?.checked !== false;
 
                 const success = await PatientActions.updatePatientProfile(
@@ -556,6 +596,7 @@ export const PatientModals = {
                         defaultCost: newCost,
                         clinicFee: newClinicFee,
                         phone: newPhone,
+                        parentName: newParentName,
                         wantsWhatsapp: wantsWhatsapp
                     },
                     patient.name

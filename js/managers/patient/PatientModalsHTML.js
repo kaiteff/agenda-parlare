@@ -62,6 +62,14 @@ export const PatientModalsHTML = {
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre Mamá / Papá (Opcional)</label>
+                             <input type="text" id="newPatientParentName" placeholder="Ej: María Elena (Mamá)"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Terapeuta Asignado</label>
                             <select id="newPatientTherapist"
@@ -161,6 +169,11 @@ export const PatientModalsHTML = {
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Cuota Parlare</label>
                                 <input type="number" id="editPatientClinicFee"
                                     class="w-full border rounded px-3 py-2 text-sm bg-blue-50" placeholder="250.00">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Nombre Mamá / Papá</label>
+                                <input type="text" id="editPatientParentName"
+                                    class="w-full border rounded px-3 py-2 text-sm" placeholder="Opcional">
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">📱 WhatsApp</label>

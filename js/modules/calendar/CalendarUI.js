@@ -8,6 +8,7 @@ import { AuthManager } from '../../managers/AuthManager.js';
 import { addDays, formatDateLocal, formatTime12h } from '../../utils/dateUtils.js';
 import { CalendarData } from './CalendarData.js';
 import { ModalService } from '../../utils/ModalService.js';
+import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 
 export const CalendarUI = {
     /**
@@ -174,16 +175,23 @@ export const CalendarUI = {
                                 }
 
                                 const chip = document.createElement('div');
-                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} cursor-pointer hover:brightness-95 truncate px-1 gap-1`;
+                                const canEdit = AuthManager.canEditItem(evt) || 
+                                                AuthManager.isAdmin() || 
+                                                AuthManager.currentUser?.role === 'receptionist';
 
-                                chip.draggable = true;
-                                chip.ondragstart = (e) => {
-                                    e.dataTransfer.setData("text/plain", evt.id);
-                                    chip.style.opacity = '0.5';
-                                };
-                                chip.ondragend = (e) => {
-                                    chip.style.opacity = '1';
-                                };
+                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} transition-all truncate px-1 gap-1 
+                                    ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}`;
+
+                                if (canEdit) {
+                                    chip.draggable = true;
+                                    chip.ondragstart = (e) => {
+                                        e.dataTransfer.setData("text/plain", evt.id);
+                                        chip.style.opacity = '0.5';
+                                    };
+                                    chip.ondragend = (e) => {
+                                        chip.style.opacity = '1';
+                                    };
+                                }
 
                                 // Content: Name + Checkmark if confirmed
                                 let content = evt.isPaid ? 'Pagado' : `${therapistName}`;
@@ -192,11 +200,11 @@ export const CalendarUI = {
                                 }
 
                                 chip.innerHTML = content;
-                                chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})${evt.confirmed ? ' - CONFIRMADO' : ''}`;
+                                chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})${evt.confirmed ? ' - CONFIRMADO' : ''} ${!canEdit ? '(Solo Lectura)' : ''}`;
 
                                 chip.onclick = (e) => {
                                     e.stopPropagation();
-                                    if (onEventClick) onEventClick(evt);
+                                    if (canEdit && onEventClick) onEventClick(evt);
                                 };
                                 container.appendChild(chip);
                             });
@@ -236,14 +244,32 @@ export const CalendarUI = {
 
                                 eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses}`;
 
-                                if (canView) {
-                                    eventCard.draggable = true;
-                                    eventCard.ondragstart = (e) => {
-                                        e.dataTransfer.setData("text/plain", evt.id);
-                                        eventCard.style.opacity = '0.5';
+                                // 2. Bloqueo Visual/Funcional para No-Dueños
+                                const canEdit = AuthManager.canEditItem(evt) || 
+                                                AuthManager.isAdmin() || 
+                                                AuthManager.currentUser?.role === 'receptionist';
+                                
+                                if (!canEdit) {
+                                    eventCard.classList.add('opacity-70', 'grayscale', 'cursor-default');
+                                    eventCard.classList.remove('cursor-pointer');
+                                    eventCard.onclick = (e) => {
+                                        e.stopPropagation();
+                                        ToastService.info("Solo lectura: Esta cita pertenece a otra terapeuta.");
                                     };
-                                    eventCard.ondragend = (e) => {
-                                        eventCard.style.opacity = '1';
+                                } else {
+                                    if (canView) {
+                                        eventCard.draggable = true;
+                                        eventCard.ondragstart = (e) => {
+                                            e.dataTransfer.setData("text/plain", evt.id);
+                                            eventCard.style.opacity = '0.5';
+                                        };
+                                        eventCard.ondragend = (e) => {
+                                            eventCard.style.opacity = '1';
+                                        };
+                                    }
+                                    eventCard.onclick = (e) => {
+                                        e.stopPropagation();
+                                        if (canView && onEventClick) onEventClick(evt);
                                     };
                                 }
 
@@ -254,11 +280,6 @@ export const CalendarUI = {
                                     </div>
                                     ${matchingEvents.length === 1 && canView ? `<div class="text-[10px] opacity-90 leading-tight font-light mt-0.5">$${evt.cost || '0'}</div>` : ''}
                                 `;
-
-                                eventCard.onclick = (e) => {
-                                    e.stopPropagation();
-                                    if (canView && onEventClick) onEventClick(evt);
-                                };
 
                                 container.appendChild(eventCard);
                             });
@@ -288,6 +309,17 @@ export const CalendarUI = {
                         const evt = CalendarState.appointments.find(a => a.id === evtId);
                         if (!evt) return;
 
+                        // Bloqueo de Seguridad: Solo permitir mover si eres dueño, Admin o Recepción
+                        const canEdit = AuthManager.canEditItem(evt) || 
+                                        AuthManager.isAdmin() || 
+                                        AuthManager.currentUser?.role === 'receptionist';
+
+                        if (!canEdit) {
+                            console.warn('🚫 CalendarUI: Intento de mover cita sin permiso:', evt.name);
+                            ToastService.warning("No tienes permiso para mover citas de otros terapeutas.");
+                            return;
+                        }
+
                         const [year, month, day] = dateStr.split('-');
                         const newDateObj = new Date(year, month - 1, day, hour, 0, 0);
 
@@ -305,8 +337,20 @@ export const CalendarUI = {
 
                         if (confirmed) {
                             CalendarUI.updateStatus("Moviendo cita...");
-                            await CalendarData.updateEvent(evt.id, { date: newDateObj.toISOString() });
+                            const updatedData = { ...evt, date: newDateObj.toISOString() };
+                            await CalendarData.updateEvent(evt.id, updatedData);
                             CalendarUI.updateStatus("Cita movida exitosamente.");
+
+                            // Preguntar si quiere avisar por WhatsApp
+                            const sendWA = await ModalService.confirm(
+                                "Cita Reagendada",
+                                "¿Deseas enviar un mensaje automático de confirmación del nuevo horario por WhatsApp?",
+                                "Enviar WhatsApp",
+                                "No, gracias"
+                            );
+                            if (sendWA) {
+                                WhatsAppMessaging.sendMessage(updatedData, 'reschedule');
+                            }
                         }
                     };
 

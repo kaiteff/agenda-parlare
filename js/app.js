@@ -13,6 +13,7 @@ import { Header } from './components/Header.js?v=2';
 import { GoogleAuthService } from './services/google/GoogleAuthService.js';
 import { SupportVault } from './modules/support/SupportVault.js';
 import { WhatsAppDashboard } from './components/WhatsAppDashboard.js';
+import { ReceptionControl } from './modules/reception/ReceptionControl.js';
 
 const log = Logger.create('App');
 
@@ -79,6 +80,9 @@ async function initializeModules() {
 
         // Support Vault - siempre init, controla visibilidad internamente
         await initModule('SupportVault', () => SupportVault.init());
+        
+        // Control de Recepción - Maestro
+        await initModule('ReceptionControl', () => ReceptionControl.init());
 
         // Google Auth (async pero no bloqueante)
         GoogleAuthService.init()

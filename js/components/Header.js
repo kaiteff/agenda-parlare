@@ -322,11 +322,16 @@ export const Header = {
                 return; // Importante
             }
 
-            // 1b. Botón de Corte de Caja
-            const corteBtn = e.target.closest('#openCorteBtn');
+            // 1b. Botón de Corte de Caja (Header & Sidebar)
+            const corteBtn = e.target.closest('#openCorteBtn') || e.target.closest('#sidebarCorteBtn');
             if (corteBtn) {
                 e.preventDefault();
                 e.stopPropagation();
+                // Si es del sidebar, lo cerramos
+                if (corteBtn.id === 'sidebarCorteBtn') {
+                    document.getElementById('mainSidebar')?.classList.add('-translate-x-full');
+                    document.getElementById('sidebarOverlay')?.classList.add('hidden');
+                }
                 try {
                     const { CorteDeCaja } = await import('../modules/reports/CorteDeCaja.js');
                     CorteDeCaja.open();
@@ -349,8 +354,8 @@ export const Header = {
                 return;
             }
 
-            // 2. Botón de Logout
-            const logoutBtn = e.target.closest('#logoutBtn');
+            // 2. Botón de Logout (Header & Sidebar)
+            const logoutBtn = e.target.closest('#logoutBtn') || e.target.closest('#sidebarLogoutBtn');
             if (logoutBtn) {
                 e.preventDefault();
                 if (await ModalService.confirm("Cerrar Sesión", "¿Estás seguro que deseas salir?", "Cerrar Sesión", "Cancelar")) {

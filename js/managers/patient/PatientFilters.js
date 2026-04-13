@@ -46,19 +46,27 @@ export const PatientFilters = {
         const todayAppointments = (PatientState.appointments || []).filter(apt => {
             const aptDate = new Date(apt.date);
 
-            // Verificar filtro de terapeuta seleccionado
+            // Buscar el dueño real (Perfil) con normalización extrema (espacios, mayúsculas y ACENTOS)
+            const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normalizedAptName = normalize(apt.name);
+            const patientProfile = (PatientState.patients || []).find(p => 
+                normalize(p.name) === normalizedAptName
+            );
+            const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
+
+            // SEGURIDAD: Verificar filtro de terapeuta con permisos reales
             let matchesTherapist = true;
-            if (selectedTherapist && selectedTherapist !== 'all') {
-                matchesTherapist = (apt.therapist === selectedTherapist);
-            } else {
-                // Modo "Todos":
-                // Si tienes permiso 'view_all_patients', ves todo.
-                // Si no, solo ves lo tuyo.
-                if (AuthManager.can('view_all_patients')) {
-                    matchesTherapist = true;
-                } else {
-                    matchesTherapist = (apt.therapist === AuthManager.currentUser?.therapist);
+            const canSeeAll = AuthManager.can('view_all_patients');
+            const userTherapist = AuthManager.currentUser?.therapist;
+
+            if (canSeeAll) {
+                // Si es admin o recepción, respetamos el selector
+                if (selectedTherapist && selectedTherapist !== 'all') {
+                    matchesTherapist = (ownerTherapist === selectedTherapist);
                 }
+            } else {
+                // Si es terapeuta (Sam/Vero), FORZAMOS que solo vea los suyos
+                matchesTherapist = (ownerTherapist === userTherapist);
             }
 
             return aptDate >= today &&
@@ -89,16 +97,25 @@ export const PatientFilters = {
         const tomorrowAppointments = (PatientState.appointments || []).filter(apt => {
             const aptDate = new Date(apt.date);
 
-            // Verificar filtro de terapeuta seleccionado
+            // Buscar el dueño real (Perfil) con normalización extrema (espacios, mayúsculas y ACENTOS)
+            const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normalizedAptName = normalize(apt.name);
+            const patientProfile = (PatientState.patients || []).find(p => 
+                normalize(p.name) === normalizedAptName
+            );
+            const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
+
+            // SEGURIDAD: Verificar filtro de terapeuta con permisos reales
             let matchesTherapist = true;
-            if (selectedTherapist && selectedTherapist !== 'all') {
-                matchesTherapist = (apt.therapist === selectedTherapist);
-            } else {
-                if (AuthManager.can('view_all_patients')) {
-                    matchesTherapist = true;
-                } else {
-                    matchesTherapist = (apt.therapist === AuthManager.currentUser?.therapist);
+            const canSeeAll = AuthManager.can('view_all_patients');
+            const userTherapist = AuthManager.currentUser?.therapist;
+
+            if (canSeeAll) {
+                if (selectedTherapist && selectedTherapist !== 'all') {
+                    matchesTherapist = (ownerTherapist === selectedTherapist);
                 }
+            } else {
+                matchesTherapist = (ownerTherapist === userTherapist);
             }
 
             return aptDate >= tomorrow &&
@@ -242,7 +259,7 @@ export const PatientFilters = {
                     name: apt.name,
                     appointmentTime: aptTime,
                     confirmed: apt.confirmed || false,
-                    therapist: apt.therapist,
+                    therapist: patientProfile ? patientProfile.therapist : apt.therapist, // Prioridad al dueño
                     id: realPatientId,
                     hasProfile: !!patientProfile
                 });
