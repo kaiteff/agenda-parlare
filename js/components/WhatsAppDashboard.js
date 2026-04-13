@@ -71,10 +71,10 @@ export const WhatsAppDashboard = {
                     btn.textContent = "Enviando...";
                     
                     try {
-                        // En entorno de desarrollo usamos localhost:5000 o la ruta configurada en el servidor
-                        const response = await fetch('http://localhost:5000/cron/reminders?key=parlare_debug_key');
+                        // Conectar con el servidor oficial en Render
+                        const response = await fetch('https://parlare-webhook.onrender.com/cron/reminders?key=parlare_secret_2026');
                         const result = await response.json();
-                        alert(`Resultado: ${result.results.length} recordatorios procesados.`);
+                        alert(`Resultado: Se procesaron ${result.results.length} citas.`);
                     } catch (err) {
                         console.error("Error enviando recordatorios:", err);
                         alert("Error al conectar con el servidor de WhatsApp.");
