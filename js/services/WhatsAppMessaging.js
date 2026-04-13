@@ -65,14 +65,17 @@ export const WhatsAppMessaging = {
 
         if (mode === true) {
             // AUTOMÁTICO (Twilio)
-            this._sendViaTwilio(phoneDigits, template);
+            this._sendViaTwilio(phoneDigits, template, {
+                "1": dateStr,
+                "2": timeStr
+            });
         } else if (mode === false) {
             // MANUAL (wa.me)
             this._sendViaManual(phoneDigits, template);
         }
     },
 
-    async _sendViaTwilio(phone, message) {
+    async _sendViaTwilio(phone, message, variables = null) {
         if (!phone) {
             const { ToastService } = await import('../utils/ToastService.js');
             ToastService.error('El paciente no tiene teléfono registrado.');
@@ -83,14 +86,21 @@ export const WhatsAppMessaging = {
         ToastService.info('Enviando vía Twilio...');
 
         try {
+            const payload = {
+                phone: phone,
+                message: message, // Fallback
+                key: 'parlare_secret_2026'
+            };
+
+            if (variables) {
+                payload.variables = variables;
+                payload.template_sid = 'HXa1dc17f5edd3b774ef3ab3b92088035b'; // Tu SID de plantilla
+            }
+
             const response = await fetch('https://parlare-webhook.onrender.com/api/send-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    phone: phone,
-                    message: message,
-                    key: 'parlare_secret_2026'
-                })
+                body: JSON.stringify(payload)
             });
 
             const result = await response.json();

@@ -335,9 +335,24 @@ def send_individual_message():
     elif digits.startswith('52'): digits = digits[2:]
     dest = f"whatsapp:+52{digits}"
     
+    # Extraer variables si vienen, o usar el mensaje plano (retrocompatibilidad)
+    template_sid = data.get('template_sid', 'HXa1dc17f5edd3b774ef3ab3b92088035b')
+    variables = data.get('variables', {}) 
+    
     try:
-        twilio_client.messages.create(body=message, from_=config['twilio_whatsapp_from'], to=dest)
-        return jsonify({'status': 'success', 'message': 'WhatsApp enviado correctamente via Twilio'}), 200
+        if variables:
+            # Enviar usando PLANTILLA OFICIAL (Recomendado para Producción)
+            twilio_client.messages.create(
+                from_=config['twilio_whatsapp_from'],
+                to=dest,
+                content_sid=template_sid,
+                content_variables=json.dumps(variables)
+            )
+        else:
+            # Enviar como texto plano (Manual/Sandbox)
+            twilio_client.messages.create(body=message, from_=config['twilio_whatsapp_from'], to=dest)
+            
+        return jsonify({'status': 'success', 'message': 'WhatsApp enviado correctamente vía Twilio'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

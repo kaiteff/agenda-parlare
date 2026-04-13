@@ -78,6 +78,15 @@ export const ModalService = {
      * @returns {Promise<boolean>} true si el usuario aceptó
      */
     confirm(title, message, confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'warning') {
+        return this.confirmCustom({ title, message, confirmText, cancelText, type });
+    },
+
+    /**
+     * Muestra una confirmación personalizada con opciones configurables
+     * @param {Object} options - {title, message, confirmText, cancelText, type}
+     * @returns {Promise<boolean>}
+     */
+    confirmCustom({ title, message, confirmText = 'Aceptar', cancelText = 'Cancelar', type = 'info' }) {
         if (!this.dom.modal) this.init();
         if (!this.dom.modal) {
             return Promise.resolve(window.confirm(`${title}\n\n${message}`));
