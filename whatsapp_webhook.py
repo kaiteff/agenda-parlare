@@ -10,7 +10,7 @@ import re
 import base64
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 # Fix encoding
 if sys.platform == 'win32':
@@ -18,15 +18,8 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8')
 
 app = Flask(__name__)
-# Configuración ultra-abierta de CORS
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
-@app.after_request
-def after_request(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, x-requested-with'
-    return response
+# Configuración base de CORS
+CORS(app)
 
 # ── Config ───────────────────────────────────────────────────────────
 IS_RENDER = os.environ.get('RENDER', False)
@@ -277,6 +270,7 @@ def webhook():
     return str(resp), 200
 
 @app.route('/cron/reminders', methods=['GET', 'OPTIONS'])
+@cross_origin()
 def run_reminders():
     # Soporte para pre-vuelo de CORS
     if request.method == 'OPTIONS':
