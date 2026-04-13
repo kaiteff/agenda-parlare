@@ -9,6 +9,7 @@ import { CalendarUI } from './CalendarUI.js';
 import { CalendarModal } from './CalendarModal.js';
 import { MiniCalendar } from '../../components/MiniCalendar.js';
 import { getStartOfWeek, addDays } from '../../utils/dateUtils.js';
+import { WhatsAppDashboard } from '../../components/WhatsAppDashboard.js';
 
 export const CalendarEvents = {
     miniCalendar: null,
@@ -26,6 +27,7 @@ export const CalendarEvents = {
             CalendarUI.updateStatus(`${data.length} citas (${source})`);
             this.render();
             if (this.miniCalendar) this.miniCalendar.render();
+            WhatsAppDashboard.render();
         });
 
         // Render inicial

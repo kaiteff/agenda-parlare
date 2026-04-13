@@ -106,11 +106,20 @@ export const CalendarData = {
     },
 
     async deleteEvent(id) {
-        return await deleteAppointment(id);
+        const appointment = CalendarState.appointments.find(a => a.id === id);
+        return await deleteAppointment(id, appointment?.googleEventId);
     },
 
     async togglePayment(id, currentStatus) {
-        const result = await togglePaymentStatus(id, currentStatus, CalendarState.appointments);
+        // 1. Obtener clinicFee primero para guardarlo en la DB
+        const appointment = CalendarState.appointments.find(a => a.id === id);
+        let clinicFee = 250;
+        if (appointment) {
+            clinicFee = await getClinicFee(appointment.name);
+        }
+
+        // 2. Ejecutar cambio de estado
+        const result = await togglePaymentStatus(id, currentStatus, CalendarState.appointments, clinicFee);
 
         // Si se marcó como pagado exitosamente, registrar en Sheets
         if (result.success) {
@@ -129,6 +138,10 @@ export const CalendarData = {
                             status: "Pagado",
                             therapist: appointment.therapist,
                             clinicFee: clinicFee
+                        }).then(success => {
+                            if (success) {
+                                updateAppointment(id, { sheetSynced: true }, CalendarState.appointments);
+                            }
                         }).catch(err => console.error("Error sheet logging:", err));
                     } else {
                         // PAGO NEGATIVO (ANULACIÓN)
@@ -140,6 +153,10 @@ export const CalendarData = {
                             status: "ANULADO",
                             therapist: appointment.therapist,
                             clinicFee: clinicFee
+                        }).then(success => {
+                            if (success) {
+                                updateAppointment(id, { sheetSynced: true }, CalendarState.appointments);
+                            }
                         }).catch(err => console.error("Error sheet logging (reversal):", err));
                     }
                 }).catch(err => console.error("Error obteniendo clinicFee para Sheets:", err));
@@ -158,7 +175,7 @@ export const CalendarData = {
         // Get event before cancelling to have data for log
         const evt = CalendarState.appointments.find(a => a.id === id);
         
-        const result = await cancelAppointment(id);
+        const result = await cancelAppointment(id, CalendarState.appointments);
         
         if (result.success && evt) {
              SheetService.logAttendance({
@@ -166,6 +183,11 @@ export const CalendarData = {
                 patientName: evt.name,
                 status: "CANCELADO",
                 therapist: evt.therapist
+            }).then(success => {
+                if (success) {
+                    // Update the doc in Firestore (using the service)
+                    updateAppointment(id, { sheetSynced: true }, CalendarState.appointments);
+                }
             }).catch(e => console.error("Error logging cancellation:", e));
         }
 

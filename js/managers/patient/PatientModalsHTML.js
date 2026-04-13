@@ -129,47 +129,6 @@ export const PatientModalsHTML = {
                 <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 scroller">
                     <div class="stats-container"></div>
 
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <!-- Finance -->
-                        <div id="patientFinanceCard" class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <div class="text-xs font-bold text-gray-400 uppercase mb-2">Balance Financiero</div>
-                            <div class="flex justify-between items-end">
-                                <div>
-                                    <div class="text-2xl font-bold text-gray-800" id="patientTotalPaid">$0</div>
-                                    <div class="text-xs text-green-600 font-medium">Pagado</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-2xl font-bold text-red-500" id="patientTotalPending">$0</div>
-                                    <div class="text-xs text-red-600 font-medium">Pendiente</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Attendance -->
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <div class="text-xs font-bold text-gray-400 uppercase mb-2">Asistencia</div>
-                            <div class="flex justify-between items-end">
-                                <div>
-                                    <div class="text-2xl font-bold text-gray-800" id="patientCompletedAppointments">0
-                                    </div>
-                                    <div class="text-xs text-gray-500">Completadas</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-2xl font-bold text-blue-600" id="patientTotalAppointments">0</div>
-                                    <div class="text-xs text-blue-600 font-medium">Total Citas</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Next -->
-                        <div
-                            class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center items-center text-center">
-                            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Próximas</div>
-                            <div class="text-3xl font-bold text-indigo-600" id="patientUpcomingAppointments">0</div>
-                            <div class="text-xs text-indigo-600 font-medium">Agendadas</div>
-                        </div>
-                    </div>
 
                     <!-- Edit Section (Hidden by default) -->
                     <div id="patientEditSection"

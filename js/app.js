@@ -12,6 +12,7 @@ import { NetworkMonitor } from './services/NetworkMonitor.js';
 import { Header } from './components/Header.js?v=2';
 import { GoogleAuthService } from './services/google/GoogleAuthService.js';
 import { SupportVault } from './modules/support/SupportVault.js';
+import { WhatsAppDashboard } from './components/WhatsAppDashboard.js';
 
 const log = Logger.create('App');
 
@@ -71,6 +72,7 @@ async function initializeModules() {
             initModule('Calendar', () => CalendarManager.initCalendar()),
             initModule('Notifications', () => initNotifications()),
             initModule('ScheduleManager', () => ScheduleManager.init()),
+            initModule('WhatsAppDashboard', () => WhatsAppDashboard.render()),
             initModule('ToastService', () => ToastService.init()),
             initModule('NetworkMonitor', () => NetworkMonitor.init())
         ]);

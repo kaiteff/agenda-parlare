@@ -239,6 +239,8 @@ export const PatientActions = {
                     status: "ANULADO",
                     therapist: aptData.therapist || 'diana',
                     clinicFee: clinicFee
+                }).then(success => {
+                    if (success) updateDoc(aptRef, { sheetSynced: true });
                 }).catch(err => console.error("Error logging reversal:", err));
 
                 // C. Feedback UI
@@ -269,6 +271,8 @@ export const PatientActions = {
                     status: "Pagado",
                     therapist: aptData.therapist || 'diana',
                     clinicFee: clinicFee
+                }).then(success => {
+                    if (success) updateDoc(aptRef, { sheetSynced: true });
                 }).catch(err => console.error("Error logging payment:", err));
 
                 ToastService.success("Pago registrado correctamente");

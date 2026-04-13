@@ -124,7 +124,14 @@ export const ScheduleManager = {
         // Reset UI
         if (this.dom.patientName) this.dom.patientName.textContent = `Paciente: ${patientName}`;
         if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = true;
-        if (this.dom.costInput) this.dom.costInput.value = defaultCost;
+        
+        // CORRECCIÓN: Si el costo es 0 o null, buscar en el perfil o usar 800
+        let finalCost = defaultCost;
+        if (!finalCost || finalCost === 0) {
+            const profile = PatientState.patients.find(p => p.id === patientId || p.name === patientName);
+            finalCost = profile?.defaultCost || 800;
+        }
+        if (this.dom.costInput) this.dom.costInput.value = finalCost;
 
         // Reset radio buttons
         if (this.dom.recurrenceInputs) {
@@ -448,9 +455,11 @@ export const ScheduleManager = {
             for (const aptDate of appointmentsToCreate) {
                 const appointmentData = {
                     name: this.state.patientName,
+                    patientId: this.state.patientId,
                     date: aptDate.toISOString(),
                     cost: cost,
                     therapist: this.state.therapist,
+                    clinicFee: PatientState.patients.find(p => p.id === this.state.patientId)?.clinicFee || (this.state.therapist === 'vero' ? 400 : 250),
                     confirmed: false,
                     isPaid: false,
                     isCancelled: false

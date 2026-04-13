@@ -236,12 +236,13 @@ export const GoogleCalendarService = {
                 resource: event
             }));
 
-            this._setMapping(appointment.id, response.result.id);
-            log.success(`Evento creado [${response.result.id}]`);
-            return true;
+            const googleEventId = response.result.id;
+            this._setMapping(appointment.id, googleEventId);
+            log.success(`Evento creado [${googleEventId}]`);
+            return { success: true, googleEventId }; // Regresar el ID para guardarlo en DB
         } catch (err) {
             log.error('Error creando evento', err);
-            return false;
+            return { success: false };
         }
     },
 
@@ -251,7 +252,8 @@ export const GoogleCalendarService = {
     async updateEvent(appointment) {
         if (!(await this._ensureReady())) return false;
 
-        const googleEventId = this._getMappings()[appointment.id];
+        // Intentar obtener ID desde el objeto de cita (DB) o desde mapping local (fallback)
+        const googleEventId = appointment.googleEventId || this._getMappings()[appointment.id];
 
         if (!googleEventId) {
             return this.createEvent(appointment);
@@ -268,25 +270,29 @@ export const GoogleCalendarService = {
             }));
 
             log.info(`Evento actualizado [${googleEventId}]`);
-            return true;
+            return { success: true, googleEventId };
         } catch (err) {
             if (err.status === 404) {
                 this._removeMapping(appointment.id);
                 return this.createEvent(appointment);
             }
             log.error('Error actualizando evento', err);
-            return false;
+            return { success: false };
         }
     },
 
     /**
      * Elimina un evento (al cancelar cita)
      */
-    async deleteEvent(appointmentId) {
+    async deleteEvent(appointmentId, googleEventIdParam = null) {
         if (!(await this._ensureReady())) return false;
 
-        const googleEventId = this._getMappings()[appointmentId];
-        if (!googleEventId) return true;
+        // Intentar obtener ID por parámetro o por mapping
+        const googleEventId = googleEventIdParam || this._getMappings()[appointmentId];
+        if (!googleEventId) {
+            log.debug(`No se encontró googleEventId para borrar cita ${appointmentId}`);
+            return true;
+        }
 
         try {
             const calendarId = await this._ensureCalendar();

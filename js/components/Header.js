@@ -6,8 +6,9 @@
 import { SyncStatus } from '../services/SyncStatus.js';
 import { AuthManager } from '../managers/AuthManager.js';
 import { ModalService } from '../utils/ModalService.js';
-import { logoutUser } from '../firebase.js';
+import { logoutUser, db, collectionPath, collection, query, where, onSnapshot } from '../firebase.js';
 import { CalendarState } from '../modules/calendar/CalendarState.js';
+import { SyncService } from '../services/SyncService.js';
 
 export const Header = {
 
@@ -26,6 +27,7 @@ export const Header = {
     render() {
         this._renderUserInfo();
         this._renderSyncStatus(); // Nuevo indicador
+        this._renderBatchSyncButton(); // Botón de sincronización manual
         this._renderTherapistSelector();
         this._setupReportButton();
     },
@@ -127,6 +129,71 @@ export const Header = {
 
         container.innerHTML = html;
         container.className = className;
+    },
+
+    /**
+     * Renderiza el botón de sincronización manual (Batch)
+     */
+    _renderBatchSyncButton() {
+        const userInfoEl = document.getElementById('userInfo');
+        if (!userInfoEl) return;
+
+        // Crear contenedor si no existe
+        let batchSyncBtn = document.getElementById('batchSyncBtn');
+        if (!batchSyncBtn) {
+            batchSyncBtn = document.createElement('button');
+            batchSyncBtn.id = 'batchSyncBtn';
+            batchSyncBtn.className = 'ml-2 hidden items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 transition-all shadow-sm active:scale-95';
+            batchSyncBtn.title = "Sincronizar pagos pendientes con Excel";
+            
+            userInfoEl.parentElement.insertBefore(batchSyncBtn, userInfoEl.nextSibling);
+
+            // Listener de click
+            batchSyncBtn.onclick = async (e) => {
+                e.preventDefault();
+                batchSyncBtn.disabled = true;
+                batchSyncBtn.classList.add('opacity-50', 'animate-pulse');
+                
+                await SyncService.syncAllPending();
+                
+                batchSyncBtn.disabled = false;
+                batchSyncBtn.classList.remove('opacity-50', 'animate-pulse');
+            };
+
+            // Suscribirse a cambios en Firestore para actualizar el contador en tiempo real
+            const q = query(
+                collection(db, collectionPath),
+                where('sheetSynced', '==', false),
+                where('isPaid', '==', true)
+            );
+
+            onSnapshot(q, (snapshot) => {
+                this._updateBatchSyncUI(snapshot.size);
+            });
+        }
+    },
+
+    /**
+     * Actualiza el contador del botón de sincronización manual
+     * @param {number} count 
+     */
+    _updateBatchSyncUI(count) {
+        const btn = document.getElementById('batchSyncBtn');
+        if (!btn) return;
+
+        if (count > 0) {
+            btn.classList.remove('hidden');
+            btn.classList.add('flex');
+            btn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span class="text-xs font-bold">${count} pendiente${count > 1 ? 's' : ''}</span>
+            `;
+        } else {
+            btn.classList.add('hidden');
+            btn.classList.remove('flex');
+        }
     },
 
     /**

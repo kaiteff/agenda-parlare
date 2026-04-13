@@ -8,14 +8,26 @@ const log = Logger.create('AptService');
 // Helper para crear notificaciones internas
 async function _createNotification(title, message, type = 'info', metadata = {}) {
     try {
-        await addDoc(collection(db, notificationsPath), {
+        const notifData = {
             title,
             message,
             type,
             timestamp: serverTimestamp(),
             isRead: false,
             ...metadata
-        });
+        };
+
+        // Si no se especifica destinatario, intentamos deducirlo
+        // 'manager' = Yari, 'therapist' = Sam/Diana/Vero
+        if (!notifData.recipient) {
+            if (['whatsapp_confirm', 'whatsapp_cancel', 'new_appointment', 'reschedule'].includes(type) || title.includes('Cita')) {
+                notifData.recipient = 'therapist';
+            } else if (type === 'payment' || title.includes('Pago')) {
+                notifData.recipient = 'manager';
+            }
+        }
+
+        await addDoc(collection(db, notificationsPath), notifData);
     } catch (error) {
         log.warn('Error creando notificación interna:', error);
     }
@@ -26,17 +38,18 @@ async function _syncToCalendar(action, data) {
     try {
         const { GoogleCalendarService } = await import('./google/GoogleCalendarService.js');
 
-        const success = await (async () => {
+        const result = await (async () => {
             if (action === 'create') return await GoogleCalendarService.createEvent(data);
             if (action === 'update') return await GoogleCalendarService.updateEvent(data);
-            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data);
-            return false;
+            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data.id, data.googleEventId);
+            return { success: false };
         })();
 
-        if (success) {
-            log.debug(`Calendar sync (${action}) exitoso`);
-        } else {
-            log.warn(`Calendar sync (${action}) falló o no estaba habilitado`);
+        // Si se creó un evento y devolvió un ID de Google, lo guardamos en el documento
+        if (result.success && result.googleEventId && (action === 'create' || action === 'update')) {
+            const docRef = doc(db, collectionPath, data.id);
+            await updateDoc(docRef, { googleEventId: result.googleEventId });
+            log.debug(`googleEventId [${result.googleEventId}] guardado en Firestore.`);
         }
     } catch (err) {
         log.warn('Calendar sync error (non-blocking):', err.message);
@@ -67,6 +80,7 @@ export async function createAppointment(appointmentData, existingAppointments) {
             isPaid: false,
             confirmed: false,
             isCancelled: false,
+            sheetSynced: true, // Por defecto sincronizado hasta que ocurra un evento (pago/cancelación)
             createdAt: serverTimestamp()
         });
 
@@ -78,7 +92,7 @@ export async function createAppointment(appointmentData, existingAppointments) {
             'Nueva Cita',
             `Se agendó cita para ${appointmentData.name} el ${new Date(appointmentData.date).toLocaleString()}`,
             'success',
-            { appointmentId: newId, patientName: appointmentData.name }
+            { appointmentId: newId, patientName: appointmentData.name, therapist: appointmentData.therapist }
         );
 
         // Sync a Google Calendar (no bloquea)
@@ -126,7 +140,7 @@ export async function updateAppointment(id, updateData, existingAppointments) {
             'Cita Actualizada',
             `Se actualizó la cita de ${patientName}`,
             'info',
-            { appointmentId: id, patientName: updateData.name || null }
+            { appointmentId: id, patientName: updateData.name || null, therapist: mergedData.therapist }
         );
 
         // Sync a Google Calendar con datos COMPLETOS (no solo el delta)
@@ -144,14 +158,14 @@ export async function updateAppointment(id, updateData, existingAppointments) {
  * @param {string} id - ID de la cita
  * @returns {Promise<Object>} - Resultado { success, error }
  */
-export async function deleteAppointment(id) {
+export async function deleteAppointment(id, googleEventId = null) {
     try {
         await deleteDoc(doc(db, collectionPath, id));
         log.info(`Cita eliminada permanentemente [${id}]`);
 
         _createNotification('Cita Eliminada', 'Se ha eliminado una cita permanentemente', 'warning');
 
-        _syncToCalendar('delete', id);
+        _syncToCalendar('delete', { id, googleEventId });
         return { success: true };
     } catch (error) {
         log.error("Error eliminando cita:", error);
@@ -164,8 +178,9 @@ export async function deleteAppointment(id) {
  * @param {string} id - ID de la cita
  * @returns {Promise<Object>} - Resultado { success, error }
  */
-export async function cancelAppointment(id) {
+export async function cancelAppointment(id, existingAppointments = []) {
     try {
+        const appointment = existingAppointments.find(a => a.id === id) || {};
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, {
             isCancelled: true,
@@ -177,10 +192,10 @@ export async function cancelAppointment(id) {
             'Cita Cancelada',
             'Se ha cancelado una cita',
             'warning',
-            { appointmentId: id }
+            { appointmentId: id, therapist: appointment.therapist }
         );
 
-        _syncToCalendar('delete', id);
+        _syncToCalendar('delete', { id, googleEventId: appointment.googleEventId });
         return { success: true };
     } catch (error) {
         log.error("Error cancelando cita:", error);
@@ -194,12 +209,34 @@ export async function cancelAppointment(id) {
  * @param {boolean} currentStatus - Estado actual
  * @returns {Promise<Object>} - Resultado { success, newState, error }
  */
-export async function togglePaymentStatus(id, currentStatus, existingAppointments = []) {
+export async function togglePaymentStatus(id, currentStatus, existingAppointments = [], clinicFee = null) {
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
-        await updateDoc(docRef, { isPaid: newStatus });
-        log.debug(`Cita [${id}] pago: ${newStatus}`);
+        
+        const updateData = { 
+            isPaid: newStatus,
+            sheetSynced: false // Marcar como pendiente de sincronización
+        };
+
+        // Si se está marcando como pagado, guardar el clinicFee actual como snapshot
+        if (newStatus && clinicFee !== null) {
+            updateData.clinicFee = clinicFee;
+        }
+
+        await updateDoc(docRef, updateData);
+        log.debug(`Cita [${id}] pago: ${newStatus} (Pendiente de Sync)`);
+
+        // Notificar a Yari (Manager) sobre el pago
+        if (newStatus) {
+            const appointment = existingAppointments.find(a => a.id === id);
+            _createNotification(
+                '💰 Pago Registrado',
+                `Se registró pago de $${appointment?.cost || 0} para ${appointment?.name}`,
+                'payment',
+                { appointmentId: id, patientName: appointment?.name, recipient: 'manager' }
+            );
+        }
 
         // Re-sync Google Calendar con estado actualizado
         const existing = existingAppointments.find(a => a.id === id);

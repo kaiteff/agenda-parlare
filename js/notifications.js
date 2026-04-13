@@ -5,6 +5,7 @@ import { ModalService } from './utils/ModalService.js';
 import { Logger } from './utils/Logger.js';
 import { CalendarModal } from './modules/calendar/CalendarModal.js'; // Import CalendarModal
 import { CalendarState } from './modules/calendar/CalendarState.js'; // Import CalendarState
+import { AuthManager } from './managers/AuthManager.js';
 
 const log = Logger.create('Notifications');
 
@@ -34,10 +35,36 @@ function setupNotificationsListener() {
 
             notificationList.innerHTML = '';
             let unreadCounter = 0;
+            const currentUser = AuthManager.currentUser;
+            const userRole = currentUser?.role || 'therapist';
+            const userTherapist = currentUser?.therapist || 'diana';
 
             const notifications = [];
             snapshot.forEach((doc) => {
-                notifications.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                
+                // --- LÓGICA DE FILTRADO ---
+                // Yari (Admin/Manager): Ve notificaciones de tipo 'manager'
+                if (userRole === 'admin' || userRole === 'receptionist') {
+                    if (data.recipient === 'manager') {
+                        notifications.push({ id: doc.id, ...data });
+                    }
+                }
+                
+                // Terapeutas (Sam, Diana, Vero): Ven notificaciones de tipo 'therapist'
+                // pero filtradas por SU ID de terapeuta.
+                if (userRole === 'therapist' || userRole === 'admin') {
+                    if (data.recipient === 'therapist') {
+                        // Si la notificación trae un ID de terapeuta, debe coincidir
+                        if (data.therapist && data.therapist === userTherapist) {
+                            notifications.push({ id: doc.id, ...data });
+                        } 
+                        // Si no trae terapeuta (fallback), la ignoramos o la mostramos si es admin
+                        else if (!data.therapist && userRole === 'admin') {
+                             notifications.push({ id: doc.id, ...data });
+                        }
+                    }
+                }
             });
 
             // Ordenar por fecha desc
@@ -59,7 +86,7 @@ function setupNotificationsListener() {
             });
 
             updateNotificationBadge(unreadCounter);
-            log.debug(`Cargadas ${notifications.length} notificaciones (${unreadCounter} sin leer)`);
+            log.debug(`Cargadas ${notifications.length} notificaciones filtradas para ${userRole} (${unreadCounter} sin leer)`);
         }, (error) => {
             log.error("Error en listener:", error);
         });

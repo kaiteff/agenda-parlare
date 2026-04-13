@@ -60,7 +60,7 @@ twilio_client = Client(config['twilio_sid'], config['twilio_token'])
 # ── Helpers ──────────────────────────────────────────────────────────
 NOTIFICATIONS_PATH = 'artifacts/taconotaco-d94fc/public/data/notifications'
 
-def create_notification(patient_name, notif_type, message, appointment_date='', appointment_id=''):
+def create_notification(patient_name, notif_type, message, appointment_date='', appointment_id='', metadata={}):
     try:
         notif_data = {
             'patientName': patient_name,
@@ -69,6 +69,8 @@ def create_notification(patient_name, notif_type, message, appointment_date='', 
             'appointmentDate': appointment_date,
             'appointmentId': appointment_id,
             'isRead': False,
+            'recipient': 'therapist' if notif_type.startswith('whatsapp_') else 'manager',
+            'therapist': metadata.get('therapist'),
             'timestamp': firestore.SERVER_TIMESTAMP,
             'source': 'whatsapp'
         }
@@ -250,15 +252,15 @@ def webhook():
             'confirmed': True,
             'confirmedAt': firestore.SERVER_TIMESTAMP
         })
-        create_notification(patient['name'], 'whatsapp_confirm', f"{patient['name']} confirmó su cita por WhatsApp", appointment.get('date', ''))
+        create_notification(patient['name'], 'whatsapp_confirm', f"{patient['name']} confirmó su cita por WhatsApp", appointment.get('date', ''), appointment['id'], {'therapist': appointment.get('therapist')})
         resp.message(f"✅ ¡Perfecto {patient['name'].split()[0]}! Tu cita de mañana está confirmada. ¡Te esperamos!")
     elif incoming_msg in CANCEL_KEYWORDS:
         db.collection('appointments').document(appointment['id']).update({'isCancelled': True})
-        create_notification(patient['name'], 'whatsapp_cancel', f"{patient['name']} canceló su cita por WhatsApp", appointment.get('date', ''), appointment['id'])
+        create_notification(patient['name'], 'whatsapp_cancel', f"{patient['name']} canceló su cita por WhatsApp", appointment.get('date', ''), appointment['id'], {'therapist': appointment.get('therapist')})
         resp.message(f"Tu cita de mañana ha sido cancelada. Si deseas reagendar, por favor contáctanos. 📞")
     elif incoming_msg in YARI_KEYWORDS:
-        yari_phone = "523324955791"
-        resp.message(f"Con gusto. Puedes enviarle un mensaje directo a Recepción haciendo clic aquí: https://wa.me/{yari_phone}")
+        recepcion_phone = "523324955791" # Daniel: actualiza este número después
+        resp.message(f"Con gusto. Puedes enviarnos un mensaje directo haciendo clic aquí: https://wa.me/{recepcion_phone}")
     else:
         resp.message(f"Hola {patient['name'].split()[0]}, no entendimos tu respuesta. Responde:\n• *1* para confirmar\n• *2* para cancelar\n• *3* para ayuda")
     
@@ -267,7 +269,7 @@ def webhook():
 @app.route('/cron/reminders', methods=['GET'])
 def run_reminders():
     auth_key = request.args.get('key')
-    if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_debug_key'):
+    if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
         return jsonify({'error': 'Unauthorized'}), 401
 
     tomorrow = datetime.now() + timedelta(days=1)
@@ -293,8 +295,8 @@ def run_reminders():
         apt_time = format_time(apt.get('date', ''))
         therapist = apt.get('therapist', 'diana').title()
 
-        msg = (f"🏥 Parlare - Recordatorio\n\nHola {p_name}, te recordamos tu cita mañana {tomorrow_str} a las {apt_time} con {therapist}.\n\n"
-               f"Responde:\n1️⃣ *OK* para confirmar\n2️⃣ *CANCELAR* para cancelar\n3️⃣ *AYUDA* para recepción\n\n¡Te esperamos! 😊")
+        msg = (f"🏥 Parlare - Recordatorio\n\n¡Hola! Te recordamos tu cita mañana {tomorrow_str} a las {apt_time}.\n\n"
+               f"Responde:\n1️⃣ *OK* para confirmar\n2️⃣ *CANCELAR* para cancelar\n3️⃣ *RECEPCIÓN* para hablar con alguien\n\n¡Te esperamos! 😊")
         
         try:
             twilio_client.messages.create(body=msg, from_=config['twilio_whatsapp_from'], to=dest)

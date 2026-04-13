@@ -138,7 +138,13 @@ export const CalendarModal = {
         const localISOTime = this._getLocalISOStringFormat(date);
         dom.appointmentDateInput.value = localISOTime;
 
-        dom.costInput.value = ev.cost || 0;
+        // CORRECCIÓN: Si el costo es 0, intentar jalar del perfil
+        let displayCost = ev.cost || 0;
+        if (displayCost === 0) {
+            const profile = PatientState.patients.find(p => p.id === ev.patientId || p.name === ev.name);
+            displayCost = profile?.defaultCost || 800;
+        }
+        dom.costInput.value = displayCost;
 
         // Set Therapist and Type
         if (dom.appointmentTherapistInput) {
@@ -381,6 +387,7 @@ export const CalendarModal = {
                 );
                 appointmentData.name = profile.name;
                 appointmentData.patientId = profile.id;
+                appointmentData.clinicFee = profile.clinicFee || (therapist === 'vero' ? 400 : 250);
             }
 
             if (CalendarState.selectedEventId) {

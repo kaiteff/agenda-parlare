@@ -23,6 +23,7 @@ import { PatientActions } from './PatientActions.js';
 import { patientsData, patientProfiles } from '../../firebase.js';
 import { AuthManager } from '../AuthManager.js';
 import { ModalService } from '../../utils/ModalService.js';
+import { ScheduleManager } from '../ScheduleManager.js';
 
 /**
  * Gestión de modales
@@ -185,24 +186,75 @@ export const PatientModals = {
         // Inyectar bloque de Analítica Visual
         const statsContainer = dom.patientHistoryModal.querySelector('.stats-container');
         if (statsContainer) {
+            // Encontrar última cita real (no cancelada y ya pasada)
+            const pastAttended = appointments
+                .filter(a => new Date(a.date) < now && !a.isCancelled)
+                .sort((a,b) => new Date(b.date) - new Date(a.date));
+            const lastSession = pastAttended.length > 0 ? new Date(pastAttended[0].date).toLocaleDateString() : 'N/A';
+
             statsContainer.innerHTML = `
-                <div class="grid grid-cols-2 gap-3 mb-6">
-                    <!-- Tarjeta engagement -->
-                    <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Asistencia</div>
-                        <div class="flex items-end gap-2 mb-1">
-                            <span class="text-2xl font-black text-gray-800">${engagementRate}%</span>
-                            <span class="text-[10px] text-gray-400 mb-1">de eficacia</span>
-                        </div>
-                        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div class="${engagementColor} h-full transition-all duration-1000" style="width: ${engagementRate}%"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <!-- Engagement Premium -->
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+                        <div class="relative z-10">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Engagement</div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-3xl font-black text-gray-900">${engagementRate}%</span>
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center ${engagementColor.replace('bg-', 'text-')} bg-opacity-10 border border-current">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                </div>
+                            </div>
+                            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="${engagementColor} h-full transition-all duration-1000" style="width: ${engagementRate}%"></div>
+                            </div>
+                            <div class="mt-3 flex justify-between text-[10px] font-bold">
+                                <span class="text-green-600">✓ ${attended} Éxito</span>
+                                <span class="text-red-400">✗ ${cancelled} Canc.</span>
+                            </div>
                         </div>
                     </div>
-                    <!-- Tarjeta Financiera Rapida -->
-                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100">
-                        <div class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Total Pagado</div>
-                        <div class="text-2xl font-black text-blue-700">$${totalPaid}</div>
-                        <div class="text-[10px] text-blue-500 font-medium mt-1">Citas totales: ${appointments.length}</div>
+
+                    <!-- Financial Status -->
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group ${totalPending > 0 ? 'ring-2 ring-red-100' : ''}">
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Balance</div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-semibold text-gray-500 uppercase">Pagado</span>
+                                <span class="text-xl font-black text-green-600">$${totalPaid}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-semibold text-gray-500 uppercase">Pendiente</span>
+                                <span class="text-xl font-black ${totalPending > 0 ? 'text-red-500 animate-pulse' : 'text-gray-300'}">$${totalPending}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Last Activity -->
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Actividad</div>
+                        <div class="text-xs font-semibold text-gray-500 mb-1">Última sesión:</div>
+                        <div class="text-lg font-black text-gray-800 mb-3">${lastSession}</div>
+                        <div class="flex items-center gap-2">
+                             <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase border border-indigo-100">
+                                Total: ${appointments.length} citas
+                             </span>
+                        </div>
+                    </div>
+
+                    <!-- Next Step -->
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-5 rounded-2xl shadow-lg shadow-blue-200 text-white">
+                        <div class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mb-3">Próximo Paso</div>
+                        ${appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).length > 0 ? `
+                            <div class="text-xs font-medium text-blue-100 mb-1">Siguiente cita:</div>
+                            <div class="text-lg font-bold leading-tight">
+                                ${new Date(appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date).toLocaleDateString('es-ES', {day:'numeric', month:'short'})} 
+                                <span class="opacity-75 font-normal">@ ${new Date(appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date).getHours()}:00</span>
+                            </div>
+                        ` : `
+                            <div class="text-xs font-medium text-blue-100 mb-1">Sin cita próxima</div>
+                            <button id="scheduleFromHistoryBtn" class="mt-2 w-full py-2 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">Agendar Ahora</button>
+                        `}
                     </div>
                 </div>
             `;
@@ -527,6 +579,20 @@ export const PatientModals = {
         if (dom.deletePatientBtn) {
             dom.deletePatientBtn.onclick = async () => {
                 await PatientActions.deletePatient(patient.id, patient.name);
+            };
+        }
+
+        // Botón de agendar desde analítica
+        const scheduleBtn = document.getElementById('scheduleFromHistoryBtn');
+        if (scheduleBtn) {
+            scheduleBtn.onclick = () => {
+                this.closeHistory();
+                ScheduleManager.openModal(
+                    patient.id, 
+                    patient.name, 
+                    patient.therapist, 
+                    patient.defaultCost
+                );
             };
         }
     },
