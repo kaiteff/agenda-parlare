@@ -71,8 +71,15 @@ export const WhatsAppDashboard = {
                     btn.textContent = "Enviando...";
                     
                     try {
-                        // Conectar con el servidor oficial en Render
-                        const response = await fetch('https://parlare-webhook.onrender.com/cron/reminders?key=parlare_secret_2026');
+                        // Conectar con el servidor oficial en Render con parámetros de compatibilidad
+                        const response = await fetch('https://parlare-webhook.onrender.com/cron/reminders?key=parlare_secret_2026', {
+                            method: 'GET',
+                            mode: 'cors',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        });
                         const result = await response.json();
                         alert(`Resultado: Se procesaron ${result.results.length} citas.`);
                     } catch (err) {
