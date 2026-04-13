@@ -1,6 +1,6 @@
 """
 whatsapp_webhook.py
-Versión Final Premium Parlare - V7.6 (Estética Final)
+Versión Final Premium Parlare - V7.8 (Identidad Digital Completa)
 """
 
 import json
@@ -18,7 +18,7 @@ app = Flask(__name__)
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
     return response
 
 # ── Config ───────────────────────────────────────────────────────────
@@ -82,31 +82,39 @@ def find_tomorrow_appointments(patient_names):
 def home():
     return """
     <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parláre Messaging</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Parláre Inbox</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #ffffff; font-family: 'Outfit', sans-serif; color: #1e293b; overflow: hidden; }
-        .container { text-align: center; max-width: 450px; padding: 20px; transition: all 0.5s ease; }
-        .logo-container { margin-bottom: 2rem; }
-        .logo-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #FF6B6B, #4ECDC4); border-radius: 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(78, 205, 196, 0.2); margin-bottom: 20px; }
-        .logo-icon svg { width: 40px; height: 40px; color: white; }
-        h1 { font-size: 32px; font-weight: 600; margin: 0; letter-spacing: -1px; background: linear-gradient(to right, #1e293b, #64748b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        p { color: #94a3b8; font-size: 18px; margin: 10px 0 30px; }
-        .status { display: inline-flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 12px 24px; border-radius: 99px; font-weight: 500; font-size: 14px; color: #475569; }
-        .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); animation: pulse 2s infinite; }
-        .version { position: absolute; bottom: 20px; left: 20px; font-size: 10px; color: #cbd5e1; font-weight: 300; letter-spacing: 1px; }
+        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #ffffff; font-family: 'Outfit', sans-serif; color: #1e293b; }
+        .container { text-align: center; max-width: 450px; padding: 40px; }
+        .logo-img { width: 200px; height: auto; margin-bottom: 20px; }
+        h1 { font-size: 24px; font-weight: 600; margin: 0; color: #334155; }
+        p { color: #94a3b8; font-size: 16px; margin: 5px 0 30px; }
+        .status { display: inline-flex; align-items: center; gap: 10px; background: #f8fafc; padding: 10px 20px; border-radius: 99px; font-weight: 500; font-size: 13px; color: #64748b; border: 1px solid #f1f5f9; }
+        .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+        .social-container { margin-top: 40px; display: flex; gap: 20px; justify-content: center; }
+        .social-link { text-decoration: none; color: #64748b; font-weight: 600; font-size: 14px; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+        .social-link:hover { color: #FF4B7D; transform: translateY(-2px); }
+        .social-link.fb:hover { color: #1877F2; }
+        .version { position: absolute; bottom: 20px; left: 20px; font-size: 9px; color: #e2e8f0; letter-spacing: 1px; }
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
     </style></head><body>
     <div class="container">
-        <div class="logo-container">
-            <div class="logo-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-            </div>
-            <h1>Parláre</h1>
-            <p>Messaging Service</p>
+        <img src="https://firebasestorage.googleapis.com/v0/b/taconotaco-d94fc.appspot.com/o/WhatsApp%20Image%202025-02-05%20at%2018.41.31.jpeg?alt=media&token=737229a8-8e68-45ec-9ec5-b69c4c776a3b" class="logo-img" alt="Parláre Logo">
+        <h1>Centro de Atención</h1>
+        <p>Messaging & Notifications</p>
+        <div class="status"><div class="status-dot"></div> Sistema Operativo</div>
+        <div class="social-container">
+            <a href="https://www.instagram.com/centrodeatencionparlare/" target="_blank" class="social-link">
+                <svg style="width:20px;height:20px" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                Instagram
+            </a>
+            <a href="https://www.facebook.com/parlarehablaylenguaje" target="_blank" class="social-link fb">
+                <svg style="width:20px;height:20px" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
+                Facebook
+            </a>
         </div>
-        <div class="status"><div class="status-dot"></div> Servidor Activo</div>
     </div>
-    <div class="version">V7.6.0-MASTER</div>
+    <div class="version">V7.8.0-MASTER</div>
     </body></html>
     """, 200
 
@@ -117,14 +125,12 @@ def webhook():
     resp = MessagingResponse()
     patients = find_patients_by_phone(from_num)
     if not patients:
-        resp.message("Tu número no está registrado. Por favor contacta a la clínica.")
+        resp.message("Tu número no está registrado. Contacta a Parláre.")
         return str(resp), 200
-
     apts = find_tomorrow_appointments([p['name'] for p in patients])
     if not apts:
-        resp.message(f"Hola {patients[0]['name'].split()[0]}, no encontramos citas para mañana ligadas a este número.")
+        resp.message(f"Hola {patients[0]['name'].split()[0]}, no encontramos citas para mañana.")
         return str(resp), 200
-
     if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
         for a in apts:
             db.collection('appointments').document(a['id']).update({'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP})
@@ -133,9 +139,9 @@ def webhook():
     elif msg_body in ['2', 'cancelar', 'no']:
         for a in apts:
             db.collection('appointments').document(a['id']).update({'isCancelled': True})
-        resp.message("Citas canceladas correctamente. Si fue un error, contáctanos. 📞")
+        resp.message("Citas canceladas correctamente. 📞")
     elif msg_body in ['3', 'recepcion', 'yari']:
-        resp.message("Con gusto. Puedes hablarnos directo aquí: https://wa.me/523324955791")
+        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523324955791")
     else:
         resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
     return str(resp), 200
