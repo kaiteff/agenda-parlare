@@ -1,29 +1,18 @@
-# 🚀 Guía Maestra: Agenda Parlare
+# Instrucciones Maestras de Inicio (Contexto Permanente)
 
-Este documento es el punto de partida para cada sesión. Aquí vive el estado real del proyecto.
+## 🏁 Estado del Proyecto
+- **Frontend (UI)**: GitHub Pages (`https://kaiteff.github.io/agenda-parlare/`)
+- **Backend (WhatsApp/API)**: Render (`https://parlare-webhook.onrender.com/`)
+- **Base de Datos**: Firebase Firestore (taconotaco-d94fc)
+- **Repositorio**: `kaiteff/agenda-parlare` (Rama: `main`)
 
-## 📍 ¿En qué nos quedamos hoy? (13/Abril/2026)
-- **Agendado Express**: Implementada multiselección de slots (puedes elegir varios días a la vez).
-- **Auto-3 Meses**: Citas semanales ahora se agendan por 13 sesiones (3 meses) automáticamente.
-- **Alertas de Recurrencia**: Sistema visual "RECURRENCIA POR AGOTARSE" activado para pacientes con <14 días de citas.
-- **WhatsApp Estabilizado**: 
-    - CORS y IDs de pacientes corregidos.
-    - Plantilla oficial `recordatorio_cita` enviada a revisión en Meta/Twilio.
+## 🧠 Comportamiento Esperado al "Iniciar"
+Cuando el usuario diga "Iniciar", "Server ON", o palabras similares de arranque diario, el asistente debe:
+1.  **Reconocer el Entorno**: Saber que el código base está en `G:\My Drive\AG`.
+2.  **Validar Estado**: No preguntar "¿en qué nos quedamos?", sino revisar el `PLAN_MANANA.md` y proponer la continuación inmediata de las tareas pendientes.
+3.  **Deploy Automático**: Recordar que cualquier cambio en JS/HTML requiere `git push` para actualizar la web de las terapeutas y cualquier cambio en Python requiere el mismo `git push` para Render.
 
-## 🛠️ Cómo Iniciar
-1. **Servidor**: Ejecutar `python serve.py` (Debe ser puerto **8081**).
-2. **Navegador**: Refrescar con **Ctrl + F5** para cargar los nuevos módulos de agendado.
-3. **Adblocker**: Mantener apagado para `localhost` y `render.com`.
-
-## 🛰️ Estado de la Infraestructura
-- **Backend**: Python Flask en Render (Activo).
-- **Base de Datos**: Firestore (Citas y Perfiles sincronizados).
-- **WhatsApp**: Pendiente aprobación de plantilla en Twilio Content Builder.
-
-## 📋 Próximos Pasos (ROADMAP)
-1. **Activar Plantilla**: En cuanto Meta apruebe `recordatorio_cita`, actualizar `whatsapp_webhook.py` para usar el SID de la plantilla.
-2. **Bot de Bienvenida**: Implementar el mensaje amable para números desconocidos (Gratis).
-3. **Modo Móvil**: Optimizar la visualización de la agenda en celulares para las terapeutas.
-
----
-*Si cerramos sesión, recuerda siempre hacer Git Push para guardar esta bitácora.*
+## 👥 Roles y Seguridad
+- **Admin**: Daniel (Acceso total)
+- **Profesionales**: Sam, Vero (Solo ven sus propias citas y pacientes activos)
+- **Notificaciones**: El bot de WhatsApp (V7.8) gestiona confirmaciones automáticas basadas en palabras clave (1, 2, 3).

@@ -42,10 +42,16 @@ function getAuthInstance() {
 }
 
 function getDbInstance() {
-    // Simplificado: Usar siempre la instancia importada de firebase.js
-    // Esto evita incompatibilidades entre versiones/instancias de SDK
     return db;
 }
+
+// Mapeo manual de seguridad (Fallback)
+const AUTHORIZED_USERS = {
+    'diana.aguilar.p@gmail.com': { role: 'therapist', therapist: 'diana', displayName: 'Diana Aguilar' },
+    'sam.terapeuta@gmail.com': { role: 'therapist', therapist: 'sam', displayName: 'Sam' },
+    'vero.terapeuta@gmail.com': { role: 'therapist', therapist: 'vero', displayName: 'Vero' },
+    'yari.recepcion@gmail.com': { role: 'receptionist', therapist: 'all', displayName: 'Yari' }
+};
 
 export const AuthManager = {
     currentUser: null,
@@ -118,17 +124,23 @@ export const AuthManager = {
     async initUser(firebaseUser) {
         try {
             console.log("👤 AuthManager: Inicializando usuario...", firebaseUser.uid);
-            const userData = await this.getUserData(firebaseUser.uid);
+            let userData = await this.getUserData(firebaseUser.uid);
+
+            // Si no hay datos en Firestore, buscar en nuestro mapeo manual por Email
+            if (!userData && firebaseUser.email) {
+                console.log("🔍 Buscando en mapeo manual para:", firebaseUser.email);
+                userData = AUTHORIZED_USERS[firebaseUser.email.toLowerCase()];
+            }
 
             if (userData) {
                 console.log("✅ Perfil encontrado/cargado correctamente.");
                 this.currentUser = { ...firebaseUser, ...userData };
             } else {
                 console.warn('⚠️ Usuario sin perfil extendido (o error de lectura), usando fallback seguro.');
-                // Fallback robusto para asegurar que el usuario pueda entrar aunque falle Firestore
+                // Fallback RESTRICTIVO por seguridad
                 this.currentUser = {
                     ...firebaseUser,
-                    role: 'admin', // Asumir rol básico o admin por defecto en dev
+                    role: 'therapist', // Por seguridad, si no lo conocemos, es rol básico
                     therapist: 'diana',
                     displayName: firebaseUser.displayName || 'Usuario',
                     isFallback: true
@@ -139,11 +151,9 @@ export const AuthManager = {
             if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
                 // Recepción y Admin ven todas por defecto
                 this.selectedTherapist = 'all';
-            } else if (this.currentUser.therapist) {
-                // Terapeutas ven la suya
-                this.selectedTherapist = this.currentUser.therapist;
             } else {
-                this.selectedTherapist = 'diana';
+                // Terapeutas ven la suya
+                this.selectedTherapist = this.currentUser.therapist || 'diana';
             }
 
             return this.currentUser;
