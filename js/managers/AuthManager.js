@@ -47,10 +47,11 @@ function getDbInstance() {
 
 // Mapeo manual de seguridad (Fallback)
 const AUTHORIZED_USERS = {
-    'diana.aguilar.p@gmail.com': { role: 'therapist', therapist: 'diana', displayName: 'Diana Aguilar' },
-    'sam.terapeuta@gmail.com': { role: 'therapist', therapist: 'sam', displayName: 'Sam' },
-    'vero.terapeuta@gmail.com': { role: 'therapist', therapist: 'vero', displayName: 'Vero' },
-    'yari.recepcion@gmail.com': { role: 'receptionist', therapist: 'all', displayName: 'Yari' }
+    'lopezcarpio7@gmail.com': { role: 'therapist', therapist: 'diana', displayName: 'Diana Aguilar' },
+    'sammygtz90@gmail.com': { role: 'therapist', therapist: 'sam', displayName: 'Sam' },
+    'sanchezverooo21@gmail.com': { role: 'therapist', therapist: 'vero', displayName: 'Vero' },
+    'yaritzajocgo@gmail.com': { role: 'receptionist', therapist: 'all', displayName: 'Yari' },
+    'rodriguezd.danielrob@gmail.com': { role: 'admin', therapist: 'all', displayName: 'Daniel (Admin)' }
 };
 
 export const AuthManager = {

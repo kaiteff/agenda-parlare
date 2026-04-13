@@ -12,7 +12,11 @@ Cuando el usuario diga "Iniciar", "Server ON", o palabras similares de arranque 
 2.  **Validar Estado**: No preguntar "¿en qué nos quedamos?", sino revisar el `PLAN_MANANA.md` y proponer la continuación inmediata de las tareas pendientes.
 3.  **Deploy Automático**: Recordar que cualquier cambio en JS/HTML requiere `git push` para actualizar la web de las terapeutas y cualquier cambio en Python requiere el mismo `git push` para Render.
 
-## 👥 Roles y Seguridad
-- **Admin**: Daniel (Acceso total)
-- **Profesionales**: Sam, Vero (Solo ven sus propias citas y pacientes activos)
+## 👥 Equipo y Accesos
+- **Admin**: Daniel (`rodriguezd.danielrob@gmail.com`)
+- **Terapeutas**: 
+  - Diana (`lopezcarpio7@gmail.com`)
+  - Sam (`sammygtz90@gmail.com`)
+  - Vero (`sanchezverooo21@gmail.com`)
+- **Recepción**: Yari (`yaritzajocgo@gmail.com`)
 - **Notificaciones**: El bot de WhatsApp (V7.8) gestiona confirmaciones automáticas basadas en palabras clave (1, 2, 3).
