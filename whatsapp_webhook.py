@@ -276,8 +276,12 @@ def webhook():
     
     return str(resp), 200
 
-@app.route('/cron/reminders', methods=['GET'])
+@app.route('/cron/reminders', methods=['GET', 'OPTIONS'])
 def run_reminders():
+    # Soporte para pre-vuelo de CORS
+    if request.method == 'OPTIONS':
+        return '', 204
+        
     auth_key = request.args.get('key')
     if auth_key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
         return jsonify({'error': 'Unauthorized'}), 401
