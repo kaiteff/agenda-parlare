@@ -301,6 +301,51 @@ export const GoogleCalendarService = {
     },
 
     /**
+     * Descarga todos los eventos de los 3 calendarios para un rango de tiempo
+     */
+    async _fetchGoogleEventsMap() {
+        if (!(await this._ensureReady())) return {};
+        
+        const now = new Date();
+        const timeMin = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString(); // 1 mes atrás
+        const timeMax = new Date(now.getFullYear(), now.getMonth() + 6, 1).toISOString(); // 6 meses adelante
+        
+        const eventMap = {}; // Key: "therapist_ISOtime_name" -> Value: googleEventId
+
+        log.info("🔍 Escaneando Google Calendar para evitar duplicados...");
+
+        for (const tKey in this.THERAPIST_CALENDARS) {
+            try {
+                const calendarId = this.THERAPIST_CALENDARS[tKey];
+                const response = await this._callGapi(() => window.gapi.client.calendar.events.list({
+                    calendarId,
+                    timeMin,
+                    timeMax,
+                    singleEvents: true,
+                    maxResults: 2500
+                }));
+
+                const items = response.result.items || [];
+                items.forEach(item => {
+                    const start = item.start.dateTime || item.start.date;
+                    if (!start) return;
+
+                    // Normalizar para match: ISO(minutos) + Nombre
+                    const isoKey = new Date(start).toISOString().slice(0, 16);
+                    const nameNorm = (item.summary || '').toLowerCase().trim().replace(/\s+/g, '');
+                    const key = `${tKey}_${isoKey}_${nameNorm}`;
+                    
+                    eventMap[key] = item.id;
+                });
+            } catch (err) {
+                log.warn(`Error escaneando calendario de ${tKey}:`, err);
+            }
+        }
+
+        return eventMap;
+    },
+
+    /**
      * Sync masivo: envía todas las citas activas a Google Calendar
      */
     async syncWeek(appointments) {
@@ -309,23 +354,49 @@ export const GoogleCalendarService = {
             return { created: 0, updated: 0, errors: 0 };
         }
 
-        const mappings = this._getMappings();
-        let created = 0, updated = 0, errors = 0;
-
         const active = appointments.filter(a => !a.isCancelled);
         ToastService.info(`Sincronizando ${active.length} citas...`);
 
+        // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google
+        const googleMap = await this._fetchGoogleEventsMap();
+        const mappings = this._getMappings();
+        let created = 0, updated = 0, errors = 0, linked = 0;
+
         for (const apt of active) {
             try {
-                // Pausa técnica para evitar "User Rate Limit Exceeded" de Google
+                // Pausa técnica para evitar "User Rate Limit Exceeded"
                 await new Promise(resolve => setTimeout(resolve, 300));
 
                 let result;
+                
+                // --- ESCUDO DE DUPLICADOS ---
+                // Si la cita no tiene ID en la App, revisamos si YA existe en Google por nombre/hora/terapeuta
+                if (!apt.googleEventId && !mappings[apt.id]) {
+                    const isoKey = new Date(apt.date).toISOString().slice(0, 16);
+                    const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
+                    const therapist = (apt.therapist || 'diana').toLowerCase();
+                    const key = `${therapist}_${isoKey}_${nameNorm}`;
+
+                    if (googleMap[key]) {
+                        const foundId = googleMap[key];
+                        log.info(`🔗 Enlace automático: Cita de ${apt.name} ya existe en Google [${foundId}].`);
+                        
+                        // Guardar el enlace en Firestore para el futuro
+                        try {
+                            const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                            await updateDoc(doc(db, collectionPath, apt.id), { googleEventId: foundId });
+                        } catch (e) {}
+
+                        apt.googleEventId = foundId; // Lo "emparchamos" en memoria para que el siguiente paso sea UPDATE
+                        linked++;
+                    }
+                }
+                // -----------------------------
+
                 if (apt.googleEventId || mappings[apt.id]) {
                     result = await this.updateEvent(apt);
                     if (result && result.success) updated++;
                     else {
-                        // Si falló el update (posible 404), intentamos crearla
                         result = await this.createEvent(apt);
                         if (result && result.success) created++;
                         else errors++;
@@ -334,7 +405,6 @@ export const GoogleCalendarService = {
                     result = await this.createEvent(apt);
                     if (result && result.success) {
                         created++;
-                        // Guardar en Firestore
                         if (result.googleEventId) {
                             try {
                                 const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
@@ -354,7 +424,7 @@ export const GoogleCalendarService = {
             }
         }
 
-        const msg = `📅 Sync: ${created} creadas, ${updated} actualizadas${errors ? `, ${errors} errores` : ''}`;
+        const msg = `📅 Sync: ${created} nuevas, ${updated} actualizadas, ${linked} enlazadas${errors ? `, ${errors} errores` : ''}`;
         ToastService.success(msg);
         return { created, updated, errors };
     }
