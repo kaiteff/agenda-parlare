@@ -47,7 +47,7 @@ function getDbInstance() {
 
 // Mapeo manual de seguridad (Fallback)
 const AUTHORIZED_USERS = {
-    'lopezcarpio7@gmail.com': { role: 'therapist', therapist: 'diana', displayName: 'Diana Aguilar' },
+    'lopezcarpio7@gmail.com': { role: 'therapist', therapist: 'diana', displayName: 'Diana' },
     'sammygtz90@gmail.com': { role: 'therapist', therapist: 'sam', displayName: 'Sam' },
     'sanchezverooo21@gmail.com': { role: 'therapist', therapist: 'vero', displayName: 'Vero' },
     'yaritzajocgo@gmail.com': { role: 'receptionist', therapist: 'all', displayName: 'Yari' },
