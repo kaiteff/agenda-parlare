@@ -18,7 +18,7 @@
 
 import { PatientState } from './patient/PatientState.js';
 import { PatientFilters } from './patient/PatientFilters.js';
-import { Sidebar } from '../components/Sidebar.js?v=1404';
+import { Sidebar } from '../components/Sidebar.js';
 import { PatientActions } from './patient/PatientActions.js';
 import { PatientModals } from './patient/PatientModals.js';
 import { PatientModalsHTML } from './patient/PatientModalsHTML.js';

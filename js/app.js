@@ -9,12 +9,12 @@ import { ScheduleManager } from './managers/ScheduleManager.js';
 import { ModalService } from './utils/ModalService.js';
 import { ToastService } from './utils/ToastService.js';
 import { NetworkMonitor } from './services/NetworkMonitor.js';
-import { Header } from './components/Header.js?v=1404';
-import { GoogleAuthService } from './services/google/GoogleAuthService.js?v=1404';
-import { SupportVault } from './modules/support/SupportVault.js?v=1404';
-import { WhatsAppDashboard } from './components/WhatsAppDashboard.js?v=1404';
-import { ReceptionControl } from './modules/reception/ReceptionControl.js?v=1404';
-import { ComponentManager } from './components/ComponentManager.js?v=1404';
+import { Header } from './components/Header.js';
+import { GoogleAuthService } from './services/google/GoogleAuthService.js';
+import { SupportVault } from './modules/support/SupportVault.js';
+import { WhatsAppDashboard } from './components/WhatsAppDashboard.js';
+import { ReceptionControl } from './modules/reception/ReceptionControl.js';
+import { ComponentManager } from './components/ComponentManager.js';
 
 const log = Logger.create('App');
 

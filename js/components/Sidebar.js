@@ -75,8 +75,8 @@ export const Sidebar = {
         try {
             // Importar dependencias en paralelo
             const [ { PatientState }, { PatientFilters } ] = await Promise.all([
-                import('../managers/patient/PatientState.js?v=1404'),
-                import('../managers/patient/PatientFilters.js?v=1404')
+                import('../managers/patient/PatientState.js'),
+                import('../managers/patient/PatientFilters.js')
             ]);
 
             const query = searchInput ? searchInput.value : '';
