@@ -177,6 +177,14 @@ export const PatientManager = {
 
             // 1. Primero cargar datos desde PERFILES oficiales (si existen)
             profiles.forEach(profile => {
+                // EXCLUIR BLOQUES (No son pacientes reales)
+                const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const normName = normalize(profile.name);
+
+                if (profile.name?.startsWith('⛔') || normName.includes('dia inhabil') || normName.includes('hora inhabil')) {
+                    return;
+                }
+
                 const normalizedName = profile.name.trim().toLowerCase();
                 patientMap.set(normalizedName, {
                     ...profile,
@@ -189,6 +197,18 @@ export const PatientManager = {
 
             // 2. Agregar/Cruzar datos desde CITAS
             appointments.forEach(app => {
+                // EXCLUIR BLOQUES (No son pacientes reales)
+                const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const normName = normalize(app.name);
+
+                if (app.name?.startsWith('⛔') || 
+                    normName.includes('dia inhabil') || 
+                    normName.includes('hora inhabil') ||
+                    app.isFullDayBlock || 
+                    app.isHourlyBlock) {
+                    return;
+                }
+
                 const normalizedName = app.name.trim().toLowerCase();
 
                 if (!patientMap.has(normalizedName)) {

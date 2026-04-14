@@ -141,6 +141,12 @@ export const PatientFilters = {
         const selectedTherapist = AuthManager.getSelectedTherapist();
 
         return patients.filter(p => {
+            const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normName = normalize(p.name);
+            
+            if (p.name?.startsWith('⛔') || normName.includes('dia inhabil') || normName.includes('hora inhabil')) {
+                return false;
+            }
             // REMOVED: if (p.isActive === false) return false;
             // La UI se encarga de filtrar activos/inactivos según el modo de vista.
             // Si filtramos aquí, la vista de "Papelera" (inactivos) quedaría vacía siempre.
@@ -237,6 +243,18 @@ export const PatientFilters = {
         const allPatients = PatientState.patients || [];
 
         appointments.forEach(apt => {
+            // EXCLUIR BLOQUES Y DÍAS INHÁBILES (No son pacientes reales)
+            const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normName = normalize(apt.name);
+
+            if (apt.name?.startsWith('⛔') || 
+                normName.includes('dia inhabil') || 
+                normName.includes('hora inhabil') ||
+                apt.isFullDayBlock || 
+                apt.isHourlyBlock) {
+                return;
+            }
+
             const existing = patientsMap.get(apt.name);
             const aptTime = new Date(apt.date);
 

@@ -70,6 +70,19 @@ async function _getClinicFeeForPatient(patientName) {
 }
 
 /**
+ * Formatea un nombre a "Proper Case" (Primera letra mayúscula, el resto minúscula)
+ * @param {string} str 
+ * @returns {string}
+ */
+function _toProperCase(str) {
+    if (!str) return '';
+    return str.split(' ').map(word => {
+        if (!word) return '';
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join(' ');
+}
+
+/**
  * Acciones del usuario sobre pacientes
  */
 export const PatientActions = {
@@ -102,7 +115,19 @@ export const PatientActions = {
             return false;
         }
 
-        const fullName = `${firstName} ${lastName}`.trim();
+        // Formatear a Proper Case
+        const formattedFirstName = _toProperCase(firstName);
+        const formattedLastName = _toProperCase(lastName);
+        const fullName = `${formattedFirstName} ${formattedLastName}`.trim();
+
+        // Obtener teléfono con país
+        const countryCode = document.getElementById('newPatientCountryCode')?.value || '52';
+        let phoneDigits = phone.replace(/\D/g, '');
+        if (phoneDigits.length === 10 && countryCode === '52' && !phoneDigits.startsWith('52')) {
+            phoneDigits = '52' + phoneDigits; // Legacy compatibility
+        } else if (phoneDigits.length > 0 && !phoneDigits.startsWith(countryCode)) {
+            phoneDigits = countryCode + phoneDigits;
+        }
 
         try {
             // Deshabilitar botón mientras guarda
@@ -113,11 +138,11 @@ export const PatientActions = {
             }
 
             // Crear perfil (con datos extra)
-            const result = await createPatientProfile(fullName, firstName, lastName, therapist, { 
+            const result = await createPatientProfile(fullName, formattedFirstName, formattedLastName, therapist, { 
                 defaultCost, 
                 clinicFee, 
-                phone, 
-                parentName, 
+                phone: phoneDigits, 
+                parentName: _toProperCase(parentName), 
                 wantsWhatsapp 
             });
 
@@ -596,9 +621,18 @@ export const PatientActions = {
             if (updates.therapist) profileUpdates.therapist = updates.therapist;
             if (updates.defaultCost !== undefined) profileUpdates.defaultCost = updates.defaultCost;
             if (updates.clinicFee !== undefined) profileUpdates.clinicFee = updates.clinicFee;
-            if (updates.phone !== undefined) profileUpdates.phone = updates.phone;
-            if (updates.parentName !== undefined) profileUpdates.parentName = updates.parentName;
+            if (updates.parentName !== undefined) profileUpdates.parentName = _toProperCase(updates.parentName);
             if (updates.wantsWhatsapp !== undefined) profileUpdates.wantsWhatsapp = updates.wantsWhatsapp;
+
+            // Handle phone with country code
+            if (updates.phone !== undefined) {
+                const countryCode = document.getElementById('editPatientCountryCode')?.value || '52';
+                let phoneDigits = updates.phone.replace(/\D/g, '');
+                if (phoneDigits.length > 0 && !phoneDigits.startsWith(countryCode)) {
+                    phoneDigits = countryCode + phoneDigits;
+                }
+                profileUpdates.phone = phoneDigits;
+            }
 
             await updateDoc(doc(db, 'patientProfiles', profileId), profileUpdates);
 

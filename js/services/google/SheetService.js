@@ -203,5 +203,66 @@ export const SheetService = {
             status: eventData.status,
             therapist: eventData.therapist
         });
+    },
+
+    /**
+     * Elimina del Sheet todos los registros de pacientes que NO están activos
+     * @param {string} therapist - El terapeuta cuya hoja limpiar
+     * @param {Array<string>} activePatientNames - Lista de nombres de pacientes activos
+     */
+    async cleanSheet(therapist, activePatientNames) {
+        if (!activePatientNames || activePatientNames.length === 0) return false;
+        
+        const therapistKey = therapist?.toLowerCase() || 'diana';
+        const spreadsheetId = this.config.spreadsheets[therapistKey];
+        if (!spreadsheetId) return false;
+
+        try {
+            await GoogleAuthService.ensureToken();
+            
+            // 1. Obtener todos los datos actuales
+            const response = await window.gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: spreadsheetId,
+                range: `${this.config.targetSheetName}!A:I`
+            });
+
+            const rows = response.result.values;
+            if (!rows || rows.length <= 1) return true; // Nada que limpiar (o solo cabecera)
+
+            const header = rows[0];
+            // Identificar columna de nombre de paciente (Col C -> index 2)
+            const filteredRows = rows.filter((row, index) => {
+                if (index === 0) return true; // Mantener cabecera
+                const patientName = row[2];
+                if (!patientName) return true; // Mantener filas vacías o raras
+                return activePatientNames.includes(patientName);
+            });
+
+            if (filteredRows.length === rows.length) {
+                console.log(`✅ SheetService: No hay nada que limpiar en la hoja de ${therapistKey}`);
+                return true;
+            }
+
+            // 2. Limpiar la hoja y escribir los nuevos datos
+            // Primero borramos todo el contenido
+            await window.gapi.client.sheets.spreadsheets.values.clear({
+                spreadsheetId: spreadsheetId,
+                range: `${this.config.targetSheetName}!A:Z`
+            });
+
+            // Luego escribimos los filtrados
+            await window.gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: spreadsheetId,
+                range: `${this.config.targetSheetName}!A1`,
+                valueInputOption: 'USER_ENTERED',
+                resource: { values: filteredRows }
+            });
+
+            console.log(`✅ SheetService: Hoja de ${therapistKey} limpiada. Filas eliminadas: ${rows.length - filteredRows.length}`);
+            return true;
+        } catch (error) {
+            console.error('❌ SheetService: Error limpiando hoja:', error);
+            return false;
+        }
     }
 };

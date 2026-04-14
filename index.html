@@ -624,6 +624,27 @@
                             class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 mt-1">
                         </div>
 
+                        <!-- Phone and WhatsApp -->
+                        <div class="mt-4">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono (WhatsApp)</label>
+                            <div class="flex gap-2">
+                                <select id="patientCountryCode" class="w-24 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50">
+                                    <option value="52">🇲🇽 +52</option>
+                                    <option value="1">🇺🇸 +1</option>
+                                    <option value="34">🇪🇸 +34</option>
+                                    <option value="54">🇦🇷 +54</option>
+                                    <option value="55">🇧🇷 +55</option>
+                                    <option value="56">🇨🇱 +56</option>
+                                    <option value="57">🇨🇴 +57</option>
+                                    <option value="502">🇬🇹 +502</option>
+                                    <option value="51">🇵🇪 +51</option>
+                                    <option value="custom">Otro</option>
+                                </select>
+                                <input type="tel" id="patientCustomPhone" placeholder="Número de celular..."
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            </div>
+                        </div>
+
                         <!-- Auto-fill Name Fields (Hidden/Disabled usually) -->
                         <div class="grid grid-cols-2 gap-2 mt-2" id="patientNameFields">
                             <input type="text" id="patientFirstName" placeholder="Nombre"
@@ -637,7 +658,7 @@
                     <!-- Date & Time -->
                     <!-- Date & Time (Custom Grid UI) -->
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora (Hora de México)</label>
 
                         <!-- Hidden input for backward compatibility with logic -->
                         <input type="hidden" id="appointmentDate">
@@ -709,6 +730,16 @@
                                 class="bg-white border border-blue-200 text-sm rounded px-2 py-1 focus:outline-none">
                                 <option value="weekly">Semanal (x4)</option>
                                 <option value="biweekly">Quincenal (x4)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-4 mb-2">
+                            <label class="text-sm font-semibold text-blue-800">Duración:</label>
+                            <select id="recurringDuration"
+                                class="bg-white border border-blue-200 text-sm rounded px-2 py-1 focus:outline-none">
+                                <option value="1">1 Mes</option>
+                                <option value="2">2 Meses</option>
+                                <option value="3" selected>3 Meses</option>
+                                <option value="6">6 Meses</option>
                             </select>
                         </div>
                         <ul id="recurringDatesList" class="space-y-1 max-h-32 overflow-y-auto"></ul>

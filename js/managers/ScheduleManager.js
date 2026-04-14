@@ -148,16 +148,16 @@ export const ScheduleManager = {
         const type = this.state.recurrenceType;
         
         if (type === 'weekly') {
-            this.state.sessionsCount = 13; // Automático 3 meses (13 semanas)
+            this.state.sessionsCount = 13; // 3 meses (13 semanas aprox)
             if (this.dom.sessionsCountInput) {
                 this.dom.sessionsCountInput.value = 13;
-                this.dom.sessionsCountInput.disabled = true; // Bloqueado por regla de negocio
+                this.dom.sessionsCountInput.disabled = false; // Permitir cambiar si quiere más de 3 meses
             }
         } else if (type === 'biweekly') {
-            this.state.sessionsCount = 6; // Automático 3 meses (6 quincenas)
+            this.state.sessionsCount = 6; // 3 meses (6 quincenas aprox)
             if (this.dom.sessionsCountInput) {
                 this.dom.sessionsCountInput.value = 6;
-                this.dom.sessionsCountInput.disabled = true;
+                this.dom.sessionsCountInput.disabled = false;
             }
         } else {
             this.state.sessionsCount = 1;

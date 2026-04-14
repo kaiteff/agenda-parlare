@@ -111,8 +111,8 @@ export const CalendarUI = {
             });
 
             // Time Slots
-            // UPDATE: Iniciar a las 8 AM por solicitud del usuario
-            for (let hour = 8; hour <= 20; hour++) {
+            // UPDATE: Iniciar a las 7 AM para permitir ver hacia arriba
+            for (let hour = 7; hour <= 20; hour++) {
                 const row = document.createElement('div');
                 const rowColor = hour % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
                 row.className = `grid grid-cols-7 ${rowColor}`;
@@ -363,6 +363,17 @@ export const CalendarUI = {
             console.error("Error Render:", e);
             this.updateStatus("Error Render: " + e.message);
         }
+
+        // AUTO-SCROLL to 10 AM por default (Solicitud de Usuario)
+        setTimeout(() => {
+            const container = CalendarState.dom.calendarGrid?.closest('.scroller');
+            if (container) {
+                // Cada fila h-16 (64px). Empezamos en 7 am.
+                // Para ver 10 am al tope, saltamos 7 am, 8 am y 9 am (3 filas).
+                // 3 * 64 = 192px
+                container.scrollTop = 192;
+            }
+        }, 100);
     },
 
     renderEmptySlot(cell, dateStr, hour, onClick) {

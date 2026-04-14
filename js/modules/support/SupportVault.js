@@ -66,6 +66,10 @@ export const SupportVault = {
                     <div class="text-gray-400 text-sm font-medium pr-2">
                         Total: <span id="vaultTotalCount" class="text-white font-bold">0</span> pacientes
                     </div>
+                    <button id="vaultCleanSheetsBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Limpiar Excel (Bajas)
+                    </button>
                 </div>
 
                 <div class="flex-1 overflow-y-auto bg-gray-900 scroller">
@@ -99,8 +103,10 @@ export const SupportVault = {
              // Cerrar sidebar primero si estamos en móvil
              document.getElementById('mainSidebar')?.classList.add('-translate-x-full');
              document.getElementById('sidebarOverlay')?.classList.add('hidden');
-             this.open();
-        });
+              this.open();
+         });
+
+        document.getElementById('vaultCleanSheetsBtn')?.addEventListener('click', () => this.handleCleanSheets());
     },
 
     open() {
@@ -269,6 +275,40 @@ export const SupportVault = {
         } catch (err) {
             console.error('Error en edición profunda:', err);
             ModalService.alert('Error', 'Falló: ' + err.message, 'error');
+        }
+    },
+
+    async handleCleanSheets() {
+        const ok = await ModalService.confirm(
+            'Limpiar Hojas de Google',
+            'Esto comparará el Excel con la base de datos y <b>ELIMINARÁ</b> del Excel todas las filas de pacientes que actualmente están dados de baja o eliminados.<br><br>¿Continuar? (Este proceso toma tiempo)',
+            'SÍ, LIMPIAR', 'Cancelar'
+        );
+        if (!ok) return;
+
+        const { SheetService } = await import('../../services/google/SheetService.js');
+        const activePatients = (PatientState.patients || []).filter(p => p.isActive !== false).map(p => p.name);
+
+        if (activePatients.length === 0) {
+            ToastService.warning('No se encontraron pacientes activos para sincronizar.');
+            return;
+        }
+
+        ToastService.info('Iniciando limpieza masiva de Sheets...');
+        
+        try {
+            const therapists = ['diana', 'sam', 'vero'];
+            let cleanedCount = 0;
+
+            for (const t of therapists) {
+                const success = await SheetService.cleanSheet(t, activePatients);
+                if (success) cleanedCount++;
+            }
+
+            ToastService.success(`Limpieza completada en ${cleanedCount} archivos.`);
+        } catch (err) {
+            console.error('Error limpiando sheets:', err);
+            ToastService.error('Error: ' + err.message);
         }
     }
 };

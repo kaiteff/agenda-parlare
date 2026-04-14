@@ -217,11 +217,15 @@ export const GoogleCalendarService = {
                 appointment.isPaid ? '💰 Pagado' : '',
                 '📱 Agenda Parlare'
             ].filter(Boolean).join('\n'),
-            start: {
+            start: appointment.isFullDayBlock ? {
+                date: startDate.toISOString().split('T')[0]
+            } : {
                 dateTime: startDate.toISOString(),
                 timeZone: 'America/Mexico_City'
             },
-            end: {
+            end: appointment.isFullDayBlock ? {
+                date: new Date(startDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            } : {
                 dateTime: endDate.toISOString(),
                 timeZone: 'America/Mexico_City'
             },
@@ -232,7 +236,10 @@ export const GoogleCalendarService = {
                 ]
             },
             // Colores: Diana = Rosa (4), Sam = Azul (7), Vero = Morado (3)
-            colorId: tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3'
+            colorId: tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3',
+            // Si es un bloque de "Hora Inhábil", hacerlo recurrente de Lunes a Sábado por 4 semanas
+            // para que cubra la semana laboral y persista un mes.
+            recurrence: appointment.isHourlyBlock ? ['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA;COUNT=24'] : []
         };
     },
 

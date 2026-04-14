@@ -57,12 +57,16 @@ export const PatientModals = {
         const costInput = document.getElementById('newPatientDefaultCost');
         const clinicFeeInput = document.getElementById('newPatientClinicFee');
         const parentNameInput = document.getElementById('newPatientParentName');
+        const phoneInput = document.getElementById('newPatientPhone');
+        const countryCodeInput = document.getElementById('newPatientCountryCode');
 
         if (firstNameInput) firstNameInput.value = '';
         if (lastNameInput) lastNameInput.value = '';
         if (costInput) costInput.value = '800';
         if (clinicFeeInput) clinicFeeInput.value = '250.00';
         if (parentNameInput) parentNameInput.value = '';
+        if (phoneInput) phoneInput.value = '';
+        if (countryCodeInput) countryCodeInput.value = '52'; // Default Mexico
 
         // Configurar terapeuta
         if (therapistInput) {
@@ -586,6 +590,7 @@ export const PatientModals = {
                 const newCost = dom.editPatientCost ? parseFloat(dom.editPatientCost.value) : 0;
                 const newClinicFee = document.getElementById('editPatientClinicFee') ? parseFloat(document.getElementById('editPatientClinicFee').value) : 250;
                 const newPhone = document.getElementById('editPatientPhone')?.value.trim() || '';
+                const countryCode = document.getElementById('editPatientCountryCode')?.value || '52';
                 const newParentName = document.getElementById('editPatientParentName')?.value.trim() || '';
                 const wantsWhatsapp = document.getElementById('editPatientWantsWhatsapp')?.checked !== false;
 
@@ -596,6 +601,7 @@ export const PatientModals = {
                         defaultCost: newCost,
                         clinicFee: newClinicFee,
                         phone: newPhone,
+                        countryCode: countryCode,
                         parentName: newParentName,
                         wantsWhatsapp: wantsWhatsapp
                     },

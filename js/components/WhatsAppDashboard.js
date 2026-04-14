@@ -105,7 +105,17 @@ export const WhatsAppDashboard = {
             const dateStr = a.date.split('T')[0];
             const isTomorrow = dateStr === tomorrowStr;
             const matchesTherapist = currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist;
-            return isTomorrow && matchesTherapist && !a.isCancelled;
+            
+            // EXCLUIR BLOQUES (No son pacientes reales)
+            const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normName = normalize(a.name);
+            const isBlock = a.name?.startsWith('⛔') || 
+                            normName.includes('dia inhabil') || 
+                            normName.includes('hora inhabil') ||
+                            a.isFullDayBlock || 
+                            a.isHourlyBlock;
+
+            return isTomorrow && matchesTherapist && !a.isCancelled && !isBlock;
         });
 
         // Contar canceladas de mañana específicamente (aunque las filtramos arriba para el total activo)

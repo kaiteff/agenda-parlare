@@ -42,6 +42,9 @@ export const CalendarModal = {
             if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
         };
         if (dom.recurringOptions) dom.recurringOptions.onchange = () => CalendarSuggestions.generateRecurringDates();
+        if (document.getElementById('recurringDuration')) {
+            document.getElementById('recurringDuration').onchange = () => CalendarSuggestions.generateRecurringDates();
+        }
         if (dom.appointmentDateInput) dom.appointmentDateInput.onchange = (e) => {
             if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
             CalendarUI.renderBusySlots(e.target.value.split('T')[0]);
@@ -229,9 +232,11 @@ export const CalendarModal = {
         // Smart Suggestion (Best Pattern)
         CalendarSuggestions.analyzeAndSuggest(ev.name);
 
-        // Recurrence (hide for edit)
+        // Recurrence (Allow in edit)
         dom.isRecurringCheckbox.checked = false;
         dom.recurringSection.classList.add('hidden');
+        if (dom.recurringOptions) dom.recurringOptions.value = 'weekly';
+        if (document.getElementById('recurringDuration')) document.getElementById('recurringDuration').value = '3';
 
         CalendarUI.renderBusySlots(localISOTime.split('T')[0]); // Mantiene compatibilidad si algo lo usa
 
@@ -361,7 +366,7 @@ export const CalendarModal = {
             for (const dateStr of dateStrArray) {
                 const dateObj = new Date(dateStr);
                 if (!isWithinWorkingHours(dateObj)) {
-                    await ModalService.alert("Horario Inválido", "La cita debe estar entre las 8:00 y las 20:00", "warning");
+                    await ModalService.alert("Horario Inválido", "La cita debe estar entre las 7:00 y las 20:00", "warning");
                     return;
                 }
                 if (!isNotSunday(dateObj)) {

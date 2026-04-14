@@ -127,11 +127,17 @@ export const CalendarSuggestions = {
      */
     generateRecurringDates() {
         const { appointmentDateInput, recurringOptions, recurringDatesList } = CalendarState.dom;
+        const durationSelect = document.getElementById('recurringDuration');
         if (!appointmentDateInput.value) return [];
 
         const baseDate = new Date(appointmentDateInput.value);
         const frequency = recurringOptions.value; // 'weekly' or 'biweekly'
-        const count = 4;
+        const months = durationSelect ? parseInt(durationSelect.value) : 3;
+        
+        // Calculate total sessions: approx 4.3 weeks per month
+        const sessionsPerMonth = frequency === 'weekly' ? 4.3 : 2.15;
+        const count = Math.ceil(months * sessionsPerMonth);
+        
         const dates = [];
 
         recurringDatesList.innerHTML = '';

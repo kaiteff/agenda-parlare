@@ -81,8 +81,21 @@ export const PatientModalsHTML = {
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📱 WhatsApp</label>
-                            <input type="tel" id="newPatientPhone" placeholder="33 2495 5791"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                            <div class="flex gap-1.5">
+                                <select id="newPatientCountryCode" class="w-20 px-1 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 outline-none">
+                                    <option value="52">🇲🇽 +52</option>
+                                    <option value="1">🇺🇸 +1</option>
+                                    <option value="34">🇪🇸 +34</option>
+                                    <option value="54">🇦🇷 +54</option>
+                                    <option value="55">🇧🇷 +55</option>
+                                    <option value="56">🇨🇱 +56</option>
+                                    <option value="57">🇨🇴 +57</option>
+                                    <option value="502">🇬🇹 +502</option>
+                                    <option value="51">🇵🇪 +51</option>
+                                </select>
+                                <input type="tel" id="newPatientPhone" placeholder="33 2495 5791"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm">
+                            </div>
                             <label class="flex items-center gap-2 mt-2 cursor-pointer">
                                 <input type="checkbox" id="newPatientWantsWhatsapp" checked
                                     class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
@@ -177,8 +190,21 @@ export const PatientModalsHTML = {
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">📱 WhatsApp</label>
-                                <input type="tel" id="editPatientPhone"
-                                    class="w-full border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
+                                <div class="flex gap-1.5">
+                                    <select id="editPatientCountryCode" class="w-20 px-1 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 outline-none">
+                                        <option value="52">🇲🇽 +52</option>
+                                        <option value="1">🇺🇸 +1</option>
+                                        <option value="34">🇪🇸 +34</option>
+                                        <option value="54">🇦🇷 +54</option>
+                                        <option value="55">🇧🇷 +55</option>
+                                        <option value="56">🇨🇱 +56</option>
+                                        <option value="57">🇨🇴 +57</option>
+                                        <option value="502">🇬🇹 +502</option>
+                                        <option value="51">🇵🇪 +51</option>
+                                    </select>
+                                    <input type="tel" id="editPatientPhone"
+                                        class="flex-1 border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
+                                </div>
                                 <label class="flex items-center gap-2 mt-2 cursor-pointer">
                                     <input type="checkbox" id="editPatientWantsWhatsapp" checked
                                         class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
