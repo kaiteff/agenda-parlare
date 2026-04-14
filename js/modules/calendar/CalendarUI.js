@@ -167,7 +167,7 @@ export const CalendarUI = {
                                 if (evt.isPaid) {
                                     bgColor = 'bg-green-100 text-green-800 border-green-200';
                                 } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
-                                    bgColor = 'bg-red-600 text-white border-red-700 shadow-red-100 shadow-sm';
+                                    bgColor = 'bg-gray-900 text-white border-gray-950 shadow-md';
                                 } else {
                                     if (tKey === 'diana') bgColor = 'bg-pink-100 text-pink-800 border-pink-200';
                                     else if (tKey === 'sam') bgColor = 'bg-blue-100 text-blue-800 border-blue-200';
@@ -237,7 +237,7 @@ export const CalendarUI = {
                                     // Gris, cursor normal (no mano), pero legible
                                     cardClasses = 'bg-gray-100 text-gray-700 border border-gray-200 cursor-default';
                                 } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
-                                    cardClasses = 'bg-red-600 text-white shadow-red-200 shadow-md border-red-700 cursor-pointer uppercase tracking-widest text-[10px] hover:bg-red-700 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200';
+                                    cardClasses = 'bg-gray-900 text-white shadow-lg border-gray-950 cursor-pointer uppercase tracking-widest text-[10px] hover:bg-black hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200';
                                 } else {
                                     cardClasses = `${isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-green-200 shadow-md' : 'bg-white border-l-4 border-l-red-500 text-gray-700 shadow-sm border-gray-100'} cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md transition-all duration-200`;
                                 }

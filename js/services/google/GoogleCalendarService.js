@@ -239,7 +239,8 @@ export const GoogleCalendarService = {
                 ]
             },
             // Colores: Diana = Rosa (4), Sam = Azul (7), Vero = Morado (3)
-            colorId: tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3',
+            // Bloqueos = Gris Grafito (8)
+            colorId: (appointment.isFullDayBlock || appointment.isHourlyBlock) ? '8' : (tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3'),
             // Si es un bloque de "Hora Inhábil", hacerlo recurrente de Lunes a Sábado por 4 semanas
             // para que cubra la semana laboral y persista un mes.
             recurrence: appointment.isHourlyBlock ? ['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA;COUNT=24'] : []
