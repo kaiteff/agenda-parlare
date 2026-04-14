@@ -9,6 +9,7 @@ import { ModalService } from '../utils/ModalService.js';
 import { logoutUser, db, collectionPath, collection, query, where, onSnapshot } from '../firebase.js';
 import { CalendarState } from '../modules/calendar/CalendarState.js';
 import { SyncService } from '../services/SyncService.js';
+import { ToastService } from '../utils/ToastService.js';
 
 export const Header = {
 
