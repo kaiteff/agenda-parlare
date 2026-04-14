@@ -206,23 +206,17 @@ export const CalendarData = {
         console.log(`🧹 Iniciando limpieza PROFUNDA entre ${appointments.length} citas...`);
 
         appointments.forEach(apt => {
-            // Normalizar Nombre: Sin espacios, minúsculas, sin acentos básicos
-            const nameNorm = (apt.name || '').toLowerCase()
-                .trim()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
-                .replace(/\s+/g, ''); // Quitar todos los espacios internos
-
             // Normalizar Tiempo: Redondeado al minuto exacto
             const dateObj = new Date(apt.date);
-            const timeKey = Math.floor(dateObj.getTime() / 60000); // Timestamp por minuto
+            const timeKey = Math.floor(dateObj.getTime() / 60000); 
 
             // Normalizar Terapeuta
             const therapist = (apt.therapist || 'diana').toLowerCase();
 
-            const key = `${nameNorm}_${timeKey}_${therapist}`;
+            // CLAVE MAESTRA: Si el terapeuta está ocupado en ese minuto, es un conflicto/duplicado
+            const key = `${therapist}_${timeKey}`;
 
             if (seen.has(key)) {
-                // Es un duplicado. Guardamos el ID que tiene más información o simplemente el más nuevo
                 duplicates.push(apt);
             } else {
                 seen.set(key, apt.id);
@@ -230,11 +224,11 @@ export const CalendarData = {
         });
 
         if (duplicates.length === 0) {
-            console.log("✅ No se encontraron duplicados exactos ni aproximados.");
+            console.log("✅ No se encontraron traslapes de horario.");
             return { total: 0 };
         }
 
-        console.warn(`🚨 Se encontraron ${duplicates.length} duplicados aproximados. Borrando...`);
+        console.warn(`🚨 Se encontraron ${duplicates.length} traslapes. Eliminando excedentes...`);
 
         let deleted = 0;
         for (const duo of duplicates) {
