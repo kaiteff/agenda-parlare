@@ -134,14 +134,12 @@ export const CalendarUI = {
                         dateStr = "";
                     }
 
-                    // FILTRADO INTELIGENTE: Aseguramos que las fechas se lean como locales 
-                    // para evitar saltos de día por zona horaria de celulares (UTC).
+                    // FILTRADO: Usar el objeto Date directamente para que el navegador maneje
+                    // la conversión de UTC (de Google) a hora local automáticamente.
                     const slotEvents = CalendarState.appointments.filter(p => {
                         if (p.isCancelled) return false;
                         
-                        // Normalizamos: quitamos 'Z' o desfases para leerlo como hora local pura
-                        const cleanDate = typeof p.date === 'string' ? p.date.replace('Z', '') : p.date;
-                        const pDate = new Date(cleanDate);
+                        const pDate = new Date(p.date);
                         
                         let pDateStr;
                         try { 
