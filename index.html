@@ -390,6 +390,16 @@
 
                     <div class="h-6 w-px bg-gray-300 mx-1 hidden lg:block"></div>
 
+                    <!-- Google Sync Status (Manual Trigger for Mobile) -->
+                    <button id="googleSyncBtn"
+                        class="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border"
+                        title="Estado de Google Sync">
+                        <div id="syncIndicator" class="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                        <span id="syncStatusText" class="text-gray-500">Google Sync</span>
+                    </button>
+
+                    <div class="h-6 w-px bg-gray-300 mx-1 hidden lg:block"></div>
+
                     <!-- Logout -->
                     <button id="logoutBtn"
                         class="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"

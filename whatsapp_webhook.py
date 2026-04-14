@@ -129,10 +129,21 @@ def update_google_calendar(appointment, status_text):
     try:
         # 1. Encontrar el calendario "Parlare Citas"
         cal_list = calendar_service.calendarList().list().execute()
-        parlare_cal = next((c for c in cal_list.get('items', []) if c.get('summary') == 'Parlare Citas'), None)
+        calendars = cal_list.get('items', [])
         
-        target_cal_id = parlare_cal['id'] if parlare_cal else 'primary'
-        print(f"📡 Sync Calendar: Usando calendario {target_cal_id}")
+        # Log available calendars for debugging
+        print(f"📊 Calendarios disponibles: {[c.get('summary') for c in calendars]}")
+        
+        parlare_cal = next((c for c in calendars if c.get('summary') == 'Parlare Citas'), None)
+        
+        if not parlare_cal:
+            print("⚠️ Calendario 'Parlare Citas' no encontrado en la cuenta de servicio.")
+            # Si no existe, usamos 'primary', pero probablemente no sea lo que buscamos
+            target_cal_id = 'primary'
+        else:
+            target_cal_id = parlare_cal['id']
+            
+        print(f"📡 Sync Calendar: Usando calendario ID: {target_cal_id}")
 
         # 2. Obtener el evento
         event = calendar_service.events().get(

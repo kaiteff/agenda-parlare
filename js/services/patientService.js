@@ -1,7 +1,7 @@
 // patientService.js - Servicio para gestión de perfiles de pacientes
 import { db, patientProfilesPath, collectionPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
 import { query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { validatePatientName } from '../utils/validators.js';
+import { validatePatientName, normalizeName } from '../utils/validators.js';
 import { ModalService } from '../utils/ModalService.js';
 
 /**
@@ -31,9 +31,9 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
         }
 
         const profileData = {
-            name: name.trim(),
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
+            name: normalizeName(name),
+            firstName: normalizeName(firstName),
+            lastName: normalizeName(lastName),
             therapist: therapist,
             phone: options.phone || '',
             isActive: true,
@@ -211,7 +211,7 @@ export async function ensurePatientProfile(patientName, firstName = '', lastName
     }
 
     // Crear nuevo perfil usando servicio
-    const result = await createPatientProfile(patientName, firstName, lastName);
+    const result = await createPatientProfile(normalizeName(patientName), normalizeName(firstName), normalizeName(lastName));
     if (!result.success) throw new Error(result.error);
     return { id: result.id, ...result.data };
 }

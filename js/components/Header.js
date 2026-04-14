@@ -28,6 +28,7 @@ export const Header = {
         this._renderUserInfo();
         this._renderSyncStatus(); // Nuevo indicador
         this._renderBatchSyncButton(); // Botón de sincronización manual
+        this._renderGoogleSyncStatus(); // Estado de Google Auth
         this._renderTherapistSelector();
         this._setupReportButton();
     },
@@ -129,6 +130,40 @@ export const Header = {
 
         container.innerHTML = html;
         container.className = className;
+    },
+
+    /**
+     * Renderiza y monitorea el estado de Google Auth Sync
+     */
+    _renderGoogleSyncStatus() {
+        const btn = document.getElementById('googleSyncBtn');
+        const indicator = document.getElementById('syncIndicator');
+        const statusText = document.getElementById('syncStatusText');
+        if (!btn || !indicator || !statusText) return;
+
+        const updateUI = () => {
+            const { GoogleAuthService } = SyncService; // Oops, better use the service directly
+            import('../services/google/GoogleAuthService.js').then(m => {
+                const health = m.GoogleAuthService.getTokenHealth();
+                if (health.isValid) {
+                    indicator.className = "w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
+                    statusText.textContent = "Google OK";
+                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-green-200 bg-green-50 text-green-700";
+                } else if (health.hasToken) {
+                    indicator.className = "w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse";
+                    statusText.textContent = "Reconectar Google";
+                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-yellow-200 bg-yellow-50 text-yellow-700";
+                } else {
+                    indicator.className = "w-1.5 h-1.5 rounded-full bg-red-400";
+                    statusText.textContent = "Google Off";
+                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-gray-200 bg-white text-gray-400";
+                }
+            });
+        };
+
+        // Poll every 30 seconds
+        updateUI();
+        setInterval(updateUI, 30000);
     },
 
     /**
@@ -386,6 +421,21 @@ export const Header = {
                 const sidebar = document.getElementById('mainSidebar');
                 if (sidebar) sidebar.classList.add('-translate-x-full');
                 e.target.classList.add('hidden');
+            }
+
+            // 5. Botón Google Sync (Manual)
+            const googleSyncBtn = e.target.closest('#googleSyncBtn');
+            if (googleSyncBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    const { GoogleAuthService } = await import('../services/google/GoogleAuthService.js');
+                    await GoogleAuthService.ensureToken(true); // Forzar consentimiento para asegurar popup limpio
+                    this._renderGoogleSyncStatus(); // Forzar update UI
+                } catch (err) {
+                    console.error("Manual Google Login failed:", err);
+                }
+                return;
             }
         });
     }

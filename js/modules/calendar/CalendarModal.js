@@ -36,7 +36,15 @@ export const CalendarModal = {
             const evt = CalendarState.appointments.find(a => a.id === CalendarState.selectedEventId);
             if (evt) WhatsAppMessaging.sendMessage(evt, 'reminder');
         };
-        if (dom.patientSearchInput) dom.patientSearchInput.oninput = (e) => this.populatePatientSuggestions(e.target.value);
+        if (dom.patientSearchInput) {
+            dom.patientSearchInput.oninput = (e) => this.populatePatientSuggestions(e.target.value);
+            dom.patientSearchInput.onblur = (e) => {
+                const normalized = normalizeName(e.target.value);
+                if (normalized !== e.target.value) {
+                    e.target.value = normalized;
+                }
+            };
+        }
         if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.onchange = () => {
             dom.recurringSection.classList.toggle('hidden', !dom.isRecurringCheckbox.checked);
             if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();

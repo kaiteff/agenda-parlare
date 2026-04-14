@@ -134,6 +134,20 @@ export function validatePatientName(name) {
 }
 
 /**
+ * Normaliza un nombre a Formato De Título (Primera letra mayúscula, resto minúscula)
+ * @param {string} name 
+ * @returns {string}
+ */
+export function normalizeName(name) {
+    if (!name) return "";
+    return name.trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+/**
  * Valida que una fecha no sea en el pasado
  * @param {string|Date} date - Fecha a validar
  * @returns {boolean} - true si la fecha es futura o hoy
