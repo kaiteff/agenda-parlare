@@ -22,6 +22,7 @@ export const ReceptionControl = {
 
         // Solo inyectar si el usuario tiene permiso (Admin o Recepción)
         const canAccess = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        console.log(`🛡️ ReceptionControl Check: Role=${AuthManager.currentUser?.role}, Access=${canAccess}`);
         
         if (canAccess) {
             this.injectHTML();

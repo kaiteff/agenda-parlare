@@ -118,17 +118,20 @@ export const PatientModalsHTML = {
 
         <!-- 4. PATIENT HISTORY MODAL -->
         <div id="patientHistoryModal"
-            class="hidden fixed inset-0 z-[9500] flex items-center justify-center bg-black bg-opacity-50">
+            class="hidden fixed inset-0 z-[9500] flex items-center justify-center bg-black bg-opacity-50 p-0 md:p-4">
             <div
-                class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col modal-panel overflow-hidden">
+                class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90svh] md:h-[85vh] flex flex-col modal-panel overflow-hidden mx-2 md:mx-0">
                 <!-- Header -->
-                <div class="p-5 border-b border-gray-200 flex justify-between items-start bg-gray-50 flex-shrink-0">
-                    <div class="flex items-center gap-4" id="patientHistoryTitle">
+                <div class="p-4 md:p-5 border-b border-gray-200 flex justify-between items-start bg-white flex-shrink-0">
+                    <div class="flex items-center gap-3" id="patientHistoryTitle">
                         <!-- Injected -->
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1">
+                        <!-- Debug Info (Solo visible si algo falla) -->
+                        <div id="authDebugInfo" class="hidden text-[8px] text-gray-300 mr-2 flex-col text-right"></div>
+                        
                         <button id="editPatientBtn"
-                            class="text-gray-500 hover:text-blue-600 p-2 rounded hover:bg-blue-50 transition-colors"
+                            class="text-gray-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors"
                             title="Editar Perfil">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -137,7 +140,7 @@ export const PatientModalsHTML = {
                             </svg>
                         </button>
                         <button onclick="document.getElementById('patientHistoryModal').classList.add('hidden')"
-                            class="text-gray-400 hover:text-gray-600 p-2">
+                            class="text-gray-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M6 18L18 6M6 6l12 12"></path>
@@ -147,7 +150,7 @@ export const PatientModalsHTML = {
                 </div>
 
                 <!-- Scrollable Content -->
-                <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 scroller">
+                <div class="flex-1 overflow-y-auto min-h-0 p-6 bg-gray-50/50 scroller">
                     <div class="stats-container"></div>
 
 

@@ -502,7 +502,7 @@
                 </div>
 
                 <!-- Calendar Content -->
-                <div class="flex-1 overflow-y-auto p-4 flex gap-6 scroller">
+                <div class="flex-1 overflow-y-auto min-h-0 p-4 flex gap-6 scroller">
                     <!-- Main Calendar Grid -->
                     <!-- Added overflow-x-auto wrapper for mobile scrolling -->
                     <div class="flex-1 overflow-x-auto pb-2">
@@ -582,22 +582,22 @@
 
         <!-- 3. APPOINTMENT / EVENT MODAL -->
         <div id="eventModal"
-            class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50 sm:p-4">
-            <div class="bg-white w-full h-full sm:h-auto sm:rounded-xl shadow-2xl sm:max-w-lg p-6 modal-panel relative overflow-y-auto scroller">
+            class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div class="bg-white w-full max-w-lg h-[85vh] rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
+                
+                <!-- HEADER (FIJO) -->
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+                    <h3 id="modalTitle" class="text-xl font-bold tracking-tight">Detalles de Cita</h3>
+                    <button onclick="document.getElementById('eventModal').classList.add('hidden')"
+                        class="p-2 -mr-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
 
-                <!-- Close X -->
-                <button onclick="document.getElementById('eventModal').classList.add('hidden')"
-                    class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-
-                <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-6">Detalles de Cita</h3>
-
-                <div class="space-y-5">
-                    <!-- Appointment Type Selection -->
+                <!-- CUERPO (CON SCROLL INTERNO) -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-6 scroller min-h-0 bg-white">
                     <div class="flex gap-4">
                         <label class="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-700">
                             <input type="radio" name="appointmentType" value="patient" checked class="text-blue-600 focus:ring-blue-500 w-4 h-4">
@@ -655,32 +655,27 @@
                     </div>
 
                     <!-- Date & Time -->
-                    <!-- Date & Time -->
-                    <!-- Date & Time (Custom Grid UI) -->
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha y Hora (Hora de México)</label>
-
-                        <!-- Hidden input for backward compatibility with logic -->
                         <input type="hidden" id="appointmentDate">
 
-                        <div class="border border-gray-300 rounded-lg overflow-hidden">
-                            <!-- Date Nav -->
+                        <div class="border border-gray-300 rounded-xl overflow-hidden shadow-sm">
                             <div class="flex items-center justify-between bg-gray-50 p-2 border-b border-gray-200">
-                                <button id="prevDayBtn"
-                                    class="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-gray-600">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15 19l-7-7 7-7"></path>
-                                    </svg>
+                                <button id="prevDayBtn" class="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                                 </button>
+                                <input type="date" id="dateNavPicker" class="bg-transparent font-bold text-gray-800 text-sm text-center focus:outline-none cursor-pointer">
+                                <button id="nextDayBtn" class="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
 
-                                <div class="relative">
-                                    <input type="date" id="dateNavPicker"
-                                        class="bg-transparent font-bold text-gray-800 text-sm text-center focus:outline-none cursor-pointer">
-                                </div>
-
-                                <button id="nextDayBtn"
-                                    class="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-gray-600">
+                            <!-- Slots Grid - REDUCIDO para dar espacio -->
+                            <div id="dailySlotsGrid" class="grid grid-cols-4 gap-2 p-3 max-h-36 overflow-y-auto bg-white scroller">
+                                <!-- Slots injected by JS -->
+                            </div>
+                        </div>
+                    </div> rounded transition-all text-gray-600">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M9 5l7 7-7 7"></path>
@@ -754,8 +749,11 @@
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="grid grid-cols-2 gap-3 pt-2">
+                </div> <!-- CIERRA CUERPO (SCROLL) -->
+
+                <!-- FOOTER (FIJO) -->
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-3xl">
+                    <div class="grid grid-cols-2 gap-3">
 
                         <div class="col-span-2">
                             <button id="confirmBtn"

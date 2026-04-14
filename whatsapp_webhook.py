@@ -52,7 +52,119 @@ db = firestore.client()
 # ── Twilio ───────────────────────────────────────────────────────────
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+# ── Google APIs ──────────────────────────────────────────────────────
+SHEET_CONFIG = {
+    'spreadsheets': {
+        'diana': '1KUoPue_fekBpXVzdo9MxguqV5Cvl85AVEizX-SpmSZ4',
+        'sam': '1XKpgEE59wZ3BdbMfhcoJnyDJ064nFJRO7VhUvAb2Mjg',
+        'vero': '1o84rt6ZfGm0eb8URNGgadClVaeJGgna0dzBhdAjx6pc'
+    },
+    'targetSheetName': 'App_Data'
+}
+
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/calendar'
+]
+
+def get_google_services():
+    try:
+        if IS_RENDER:
+            key_json = json.loads(base64.b64decode(os.environ.get('FIREBASE_SERVICE_KEY_B64')).decode('utf-8'))
+        else:
+            with open(os.path.join(os.path.dirname(__file__), 'firebase_service_key.json'), 'r') as f:
+                key_json = json.load(f)
+        
+        creds = service_account.Credentials.from_service_account_info(key_json, scopes=SCOPES)
+        sheets_service = build('sheets', 'v4', credentials=creds)
+        calendar_service = build('calendar', 'v3', credentials=creds)
+        return sheets_service, calendar_service
+    except Exception as e:
+        print(f"Error initializing Google services: {e}")
+        return None, None
+
+sheets_service, calendar_service = get_google_services()
 twilio_client = Client(config.get('twilio_sid'), config.get('twilio_token'))
+
+# ── Google Sync Helpers ─────────────────────────────────────────────
+def update_google_sheet(appointment, status):
+    if not sheets_service: return
+    try:
+        therapist = appointment.get('therapist', 'diana').lower()
+        spreadsheet_id = SHEET_CONFIG['spreadsheets'].get(therapist)
+        if not spreadsheet_id: return
+
+        dt = datetime.fromisoformat(appointment['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+        date_str = dt.strftime('%d/%m/%Y')
+        time_str = dt.strftime('%I:%M %p')
+
+        values = [[
+            date_str,
+            time_str,
+            appointment.get('name', 'Paciente'),
+            0, # Amount 0 for attendance logs
+            status,
+            datetime.now(MX_TZ).isoformat(),
+            dt.hour,
+            0, # Clinic Fee
+            0  # Therapist Income
+        ]]
+        
+        range_name = f"{SHEET_CONFIG['targetSheetName']}!A:I"
+        sheets_service.spreadsheets().values().append(
+            spreadsheetId=spreadsheet_id,
+            range=range_name,
+            valueInputOption='USER_ENTERED',
+            body={'values': values}
+        ).execute()
+        print(f"✅ Sync Sheet OK: {appointment.get('name')} -> {status}")
+    except Exception as e:
+        print(f"❌ Error Sync Sheet: {e}")
+
+def update_google_calendar(appointment, status_text):
+    if not calendar_service or not appointment.get('googleEventId'): return
+    try:
+        # 1. Encontrar el calendario "Parlare Citas"
+        cal_list = calendar_service.calendarList().list().execute()
+        parlare_cal = next((c for c in cal_list.get('items', []) if c.get('summary') == 'Parlare Citas'), None)
+        
+        target_cal_id = parlare_cal['id'] if parlare_cal else 'primary'
+        print(f"📡 Sync Calendar: Usando calendario {target_cal_id}")
+
+        # 2. Obtener el evento
+        event = calendar_service.events().get(
+            calendarId=target_cal_id,
+            eventId=appointment['googleEventId']
+        ).execute()
+
+        # 3. Actualizar descripción
+        desc = event.get('description', '')
+        
+        # Limpiar menciones previas de confirmación/cancelación para evitar duplicados
+        desc = desc.replace("\n✅ Asistencia confirmada vía WhatsApp", "")
+        desc = desc.replace("\n❌ CANCELADO vía WhatsApp", "")
+
+        if status_text == "CONFIRMADO":
+            desc += "\n✅ Asistencia confirmada vía WhatsApp"
+            # Opcional: Cambiar color a Verde (Basil = 10)
+            event['colorId'] = '10'
+        elif status_text == "CANCELADO":
+            desc += "\n❌ CANCELADO vía WhatsApp"
+            # Opcional: Cambiar color a Gris (Graphite = 8)
+            event['colorId'] = '8'
+        
+        event['description'] = desc
+        calendar_service.events().update(
+            calendarId=target_cal_id, 
+            eventId=appointment['googleEventId'],
+            body=event
+        ).execute()
+        print(f"✅ Sync Calendar OK: {appointment.get('name')}")
+    except Exception as e:
+        print(f"❌ Error Sync Calendar: {e}")
 
 # ── Helpers ──────────────────────────────────────────────────────────
 def normalize_phone(phone):
@@ -133,12 +245,27 @@ def webhook():
         return str(resp), 200
     if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
         for a in apts:
-            db.collection('appointments').document(a['id']).update({'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP})
+            db.collection('appointments').document(a['id']).update({
+                'confirmed': True, 
+                'confirmedAt': firestore.SERVER_TIMESTAMP,
+                'lastBotUpdate': 'WhatsApp-Confirm'
+            })
+            # Sync to Google
+            update_google_sheet(a, "CONFIRMADO")
+            update_google_calendar(a, "CONFIRMADO")
+            
         names = ", ".join([a['name'].split()[0] for a in apts])
         resp.message(f"✅ ¡Gracias! Se han confirmado las citas de: {names}. ¡Nos vemos!")
     elif msg_body in ['2', 'cancelar', 'no']:
         for a in apts:
-            db.collection('appointments').document(a['id']).update({'isCancelled': True})
+            db.collection('appointments').document(a['id']).update({
+                'isCancelled': True,
+                'lastBotUpdate': 'WhatsApp-Cancel'
+            })
+            # Sync to Google
+            update_google_sheet(a, "CANCELADO")
+            update_google_calendar(a, "CANCELADO")
+            
         resp.message("Citas canceladas correctamente. 📞")
     elif msg_body in ['3', 'recepcion', 'yari']:
         resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523324955791")
@@ -162,6 +289,95 @@ def send_individual_message():
         twilio_client.messages.create(**tw_args)
         return jsonify({'status': 'success'}), 200
     except Exception as e: return jsonify({'error': str(e)}), 500
+
+@app.route('/health')
+def health():
+    return jsonify({'status': 'healthy', 'timestamp': datetime.now(MX_TZ).isoformat()}), 200
+
+@app.route('/cron/reminders', methods=['GET', 'POST'])
+def send_reminders():
+    # 1. Verificar llave de seguridad
+    key = request.args.get('key') or (request.json.get('key') if request.is_json else None)
+    if key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        # 2. Obtener teléfonos de pacientes (Maestro)
+        profiles = db.collection('patientProfiles').stream()
+        phone_map = {}
+        for doc in profiles:
+            p = doc.to_dict()
+            name_norm = p.get('name', '').strip().lower()
+            if name_norm and p.get('phone') and p.get('wantsWhatsapp', True) is not False:
+                phone_map[name_norm] = {
+                    'phone': normalize_phone(p.get('phone')),
+                    'name': p.get('name')
+                }
+
+        # 3. Obtener citas de mañana
+        mx_now = datetime.now(MX_TZ)
+        tomorrow = mx_now + timedelta(days=1)
+        day_str = tomorrow.strftime('%Y-%m-%d')
+        start_iso = f"{day_str}T00:00:00"
+        end_iso = f"{day_str}T23:59:59"
+
+        apts_ref = db.collection('appointments')
+        query = apts_ref.where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+        
+        sent_count = 0
+        skipped_count = 0
+        errors = []
+
+        # 4. Procesar y enviar
+        for doc in query:
+            apt = doc.to_dict()
+            if apt.get('isCancelled') or apt.get('confirmed'):
+                continue
+            
+            patient_name = apt.get('name', '')
+            patient_info = phone_map.get(patient_name.strip().lower())
+            
+            if not patient_info:
+                skipped_count += 1
+                continue
+            
+            # Formatear hora (asumiendo ISO string)
+            try:
+                # Extraer hora de "2024-05-20T15:00:00Z" -> "3:00 PM"
+                dt = datetime.fromisoformat(apt['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                hour_str = dt.strftime('%I:%M %p').lstrip('0')
+            except:
+                hour_str = "horario pendiente"
+
+            dest = f"whatsapp:+52{patient_info['phone']}"
+            therapist = apt.get('therapist', 'Diana').title()
+            
+            msg_body = (
+                f"🏥 *Parláre - Recordatorio de Cita*\n\n"
+                f"Hola {patient_name.split()[0]}, te recordamos tu cita para mañana "
+                f"*{tomorrow.strftime('%d/%b')}* a las *{hour_str}* con *{therapist}*.\n\n"
+                f"Responde:\n"
+                f"1️⃣ *OK* para confirmar\n"
+                f"2️⃣ *NO* para cancelar\n"
+                f"3️⃣ *RECEPTION* para dudas\n\n"
+                f"¡Te esperamos! 😊"
+            )
+
+            try:
+                twilio_client.messages.create(body=msg_body, from_=config.get('twilio_whatsapp_from'), to=dest)
+                sent_count += 1
+            except Exception as e:
+                errors.append(f"Error {patient_name}: {str(e)}")
+
+        return jsonify({
+            'sent': sent_count,
+            'skipped': skipped_count,
+            'errors': errors,
+            'date': day_str
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

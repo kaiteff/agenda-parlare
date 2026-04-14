@@ -110,9 +110,8 @@ export const CalendarUI = {
                 }
             });
 
-            // Time Slots
-            // UPDATE: Iniciar a las 7 AM para permitir ver hacia arriba
-            for (let hour = 7; hour <= 20; hour++) {
+            // Time Slots starting at 8 AM
+            for (let hour = 8; hour <= 20; hour++) {
                 const row = document.createElement('div');
                 const rowColor = hour % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
                 row.className = `grid grid-cols-7 ${rowColor}`;

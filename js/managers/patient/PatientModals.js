@@ -304,6 +304,16 @@ export const PatientModals = {
         // Mostrar modal
         dom.patientHistoryModal.classList.remove('hidden');
 
+        // INFO DE DEBUG (Solo para ayudarte a ver por qué fallan los permisos)
+        const debugEl = document.getElementById('authDebugInfo');
+        if (debugEl && AuthManager.currentUser) {
+            debugEl.innerHTML = `
+                <span>UID: ${AuthManager.currentUser.uid.substring(0,6)}...</span>
+                <span>ROLE: ${AuthManager.currentUser.role}</span>
+            `;
+            debugEl.classList.remove('hidden');
+        }
+
         console.log('✅ PatientModals: Modal de historial abierto para', patient.name);
     },
 

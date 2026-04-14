@@ -156,7 +156,7 @@ export function isFutureOrToday(date) {
 export function isWithinWorkingHours(date) {
     const checkDate = new Date(date);
     const hour = checkDate.getHours();
-    return hour >= 7 && hour <= 20;
+    return hour >= 8 && hour <= 20;
 }
 
 /**
@@ -196,7 +196,7 @@ export function validateAppointment(appointmentData, existingAppointments, thera
 
         // Validar horario laboral
         if (!isWithinWorkingHours(appointmentDate)) {
-            errors.push('La cita debe estar entre las 7:00 y las 20:00');
+            errors.push('La cita debe estar entre las 8:00 y las 20:00');
         }
 
         // Validar conflictos

@@ -18,7 +18,7 @@
  * @module PatientActions
  */
 
-import { db, updateDoc, doc, collectionPath, patientProfilesPath } from '../../firebase.js';
+import { db, updateDoc, doc, collectionPath, patientProfilesPath, collection, query, where, getDocs, getDoc } from '../../firebase.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
@@ -29,7 +29,7 @@ import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { SheetService } from '../../services/google/SheetService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
-import { getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// Redundant CDN imports removed for consistency
 
 /**
  * Obtiene el clinicFee de un paciente consultando Firestore directamente.
@@ -610,8 +610,7 @@ export const PatientActions = {
      */
     async updatePatientProfile(profileId, updates, patientName) {
         try {
-            const { updateDoc, doc } = await import('../../firebase.js');
-            const { collection, query, where, getDocs, writeBatch, getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+            const { writeBatch } = await import('../../firebase.js');
 
             // 1. Update Profile
             const profileUpdates = {
