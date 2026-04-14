@@ -4,7 +4,8 @@
  */
 import { MainModals } from './MainModals.js';
 import { PatientModalsHTML } from '../managers/patient/PatientModalsHTML.js';
-import { SidebarModalsHTML } from '../managers/patient/SidebarModalsHTML.js'; // Asumiendo que existe o lo crearé
+import { Sidebar } from './Sidebar.js';
+import { Header } from './Header.js';
 
 export const ComponentManager = {
     async init() {
@@ -12,10 +13,16 @@ export const ComponentManager = {
         
         const root = document.body;
 
-        // 1. Inyectar Modales de Paciente (Historial, Nuevo Paciente, Inactivos)
+        // 1. Inyectar Header
+        Header.inject(root);
+
+        // 2. Inyectar Sidebar
+        Sidebar.inject(root);
+
+        // 3. Inyectar Modales de Paciente (Historial, Nuevo Paciente, Inactivos)
         PatientModalsHTML.inject(root);
 
-        // 2. Inyectar Modales Principales (Calendario, Reportes, Corte)
+        // 4. Inyectar Modales Principales (Calendario, Reportes, Corte)
         MainModals.inject(root);
 
         // 3. Inyectar Overlay de Sidebar para Mobile (si no está en el HTML)

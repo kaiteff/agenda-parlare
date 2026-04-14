@@ -13,12 +13,85 @@ import { SyncService } from '../services/SyncService.js';
 export const Header = {
 
     /**
-     * Inicializa el componente Header
+     * Inyecta el HTML base del Header
      */
+    inject(container = document.getElementById('appContent')) {
+        if (!container || document.querySelector('header')) return;
+        
+        const header = document.createElement('header');
+        header.className = 'bg-white border-b border-gray-200 h-16 flex-shrink-0 z-30 shadow-sm relative';
+        header.innerHTML = `
+            <div class="h-full px-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="mobileMenuBtn" class="md:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div id="userInfo" class="flex items-center gap-3"></div>
+                </div>
+
+                <div class="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-2 pointer-events-none">
+                    <span class="text-lg font-bold text-gray-800 tracking-tight">Agenda Parlare</span>
+                </div>
+
+                <div class="flex items-center gap-2 md:gap-3">
+                    <!-- Notification Bell -->
+                    <div class="relative">
+                        <button id="notificationBell" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="notificationBadge" class="hidden absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm">0</span>
+                        </button>
+                        <div id="notificationList" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 transform origin-top-right transition-all">
+                            <div class="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                                <h3 class="text-sm font-bold text-gray-700">Notificaciones</h3>
+                                <button id="markAllReadBtn" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Marcar todo leído</button>
+                            </div>
+                            <div id="notificationItems" class="max-h-64 overflow-y-auto"></div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <button id="openCorteBtn" class="hidden md:flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 rounded-lg transition-colors" title="Corte de Caja">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </button>
+
+                    <button id="openReportsBtn" class="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 rounded-lg transition-colors" title="Reportes">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </button>
+
+                    <button id="openSupportVaultBtn" class="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-lg shadow-sm" title="Soporte">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </button>
+
+                    <div id="therapistSelectorContainer" class="hidden md:flex items-center bg-gray-100 rounded-lg p-1">
+                        <select id="therapistFilter" class="bg-transparent text-sm font-medium text-gray-700 outline-none border-none py-1 cursor-pointer">
+                            <option value="diana">Diana</option>
+                            <option value="sam">Sam</option>
+                            <option value="vero">Vero</option>
+                            <option value="all">Todas</option>
+                        </select>
+                    </div>
+
+                    <button id="googleSyncBtn" class="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border">
+                        <div id="syncIndicator" class="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                        <span id="syncStatusText">Google Sync</span>
+                    </button>
+
+                    <button id="logoutBtn" class="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.prepend(header);
+        console.log('✅ Header: Inyectado estructuralmente');
+    },
+
     init() {
-        console.log('📌 Inicializando Header...');
+        console.group('📌 Inicializando Header');
+        this.inject();
         this.render();
         this._setupListeners();
+        console.groupEnd();
     },
 
     /**
