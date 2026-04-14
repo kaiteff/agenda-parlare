@@ -193,5 +193,53 @@ export const CalendarData = {
         }
 
         return result;
+    },
+
+    /**
+     * Limpia citas duplicadas en Firestore
+     */
+    async cleanupDuplicates() {
+        const appointments = CalendarState.appointments;
+        const seen = new Map();
+        const duplicates = [];
+
+        console.log(`🧹 Iniciando limpieza de duplicados entre ${appointments.length} citas...`);
+
+        appointments.forEach(apt => {
+            if (apt.isCancelled) return; // No limpiar cancelados por ahora
+
+            // Clave única: Nombre + Fecha + Hora + Terapeuta
+            // Normalizamos la fecha para ignorar milisegundos si varían
+            const dateStr = new Date(apt.date).toISOString().slice(0, 16); 
+            const key = `${apt.name.toLowerCase().trim()}_${dateStr}_${(apt.therapist || 'diana').toLowerCase()}`;
+
+            if (seen.has(key)) {
+                duplicates.push(apt);
+            } else {
+                seen.set(key, apt.id);
+            }
+        });
+
+        if (duplicates.length === 0) {
+            console.log("✅ No se encontraron duplicados.");
+            return { total: 0 };
+        }
+
+        console.warn(`🚨 Se encontraron ${duplicates.length} duplicados. Procediendo a borrar...`);
+
+        let deleted = 0;
+        for (const duo of duplicates) {
+            try {
+                // Borrar de Firestore (usamos deleteAppointment sin sync de GCal para ir rápido)
+                const { deleteDoc, doc, db, collectionPath } = await import('../../firebase.js');
+                await deleteDoc(doc(db, collectionPath, duo.id));
+                deleted++;
+            } catch (err) {
+                console.error(`Error borrando duplicado ${duo.id}:`, err);
+            }
+        }
+
+        console.log(`✅ Limpieza completada: ${deleted} duplicados eliminados.`);
+        return { total: deleted };
     }
 };

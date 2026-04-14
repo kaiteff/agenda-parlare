@@ -66,6 +66,10 @@ export const SupportVault = {
                     <div class="text-gray-400 text-sm font-medium pr-2">
                         Total: <span id="vaultTotalCount" class="text-white font-bold">0</span> pacientes
                     </div>
+                    <button id="vaultCleanupDuplicatesBtn" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-purple-500/20 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Limpiar Duplicados
+                    </button>
                     <button id="vaultCleanSheetsBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         Limpiar Excel (Bajas)
@@ -107,6 +111,7 @@ export const SupportVault = {
          });
 
         document.getElementById('vaultCleanSheetsBtn')?.addEventListener('click', () => this.handleCleanSheets());
+        document.getElementById('vaultCleanupDuplicatesBtn')?.addEventListener('click', () => this.handleCleanupDuplicates());
     },
 
     open() {
@@ -309,6 +314,25 @@ export const SupportVault = {
         } catch (err) {
             console.error('Error limpiando sheets:', err);
             ToastService.error('Error: ' + err.message);
+        }
+    },
+
+    async handleCleanupDuplicates() {
+        const ok = await ModalService.confirm(
+            'Limpieza de Citas Encomadas',
+            'Esta función buscará y ELIMINARÁ citas duplicadas (mismo paciente, misma hora).<br><br>¿Quieres proceder?',
+            'Sí, Limpiar Agenda', 'Cancelar'
+        );
+        if (!ok) return;
+
+        ToastService.info('Iniciando limpieza profunda de citas...');
+        const { CalendarData } = await import('../calendar/CalendarData.js');
+        const result = await CalendarData.cleanupDuplicates();
+
+        if (result.total > 0) {
+            ToastService.success(`Limpieza exitosa: Se eliminaron ${result.total} duplicados.`);
+        } else {
+            ToastService.info('No se encontraron citas duplicadas.');
         }
     }
 };
