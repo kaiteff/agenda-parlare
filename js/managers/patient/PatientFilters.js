@@ -144,7 +144,10 @@ export const PatientFilters = {
             const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const normName = normalize(p.name);
             
-            if (p.name?.startsWith('⛔') || normName.includes('dia inhabil') || normName.includes('hora inhabil')) {
+            if (p.name?.startsWith('⛔') || 
+                normName.includes('inhabil') || 
+                normName.includes('vacaciones') || 
+                normName.includes('bloqueo')) {
                 return false;
             }
             // REMOVED: if (p.isActive === false) return false;
@@ -248,8 +251,9 @@ export const PatientFilters = {
             const normName = normalize(apt.name);
 
             if (apt.name?.startsWith('⛔') || 
-                normName.includes('dia inhabil') || 
-                normName.includes('hora inhabil') ||
+                normName.includes('inhabil') || 
+                normName.includes('vacaciones') || 
+                normName.includes('bloqueo') ||
                 apt.isFullDayBlock || 
                 apt.isHourlyBlock) {
                 return;

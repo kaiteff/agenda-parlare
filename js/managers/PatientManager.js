@@ -181,7 +181,10 @@ export const PatientManager = {
                 const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 const normName = normalize(profile.name);
 
-                if (profile.name?.startsWith('⛔') || normName.includes('dia inhabil') || normName.includes('hora inhabil')) {
+                if (profile.name?.startsWith('⛔') || 
+                    normName.includes('inhabil') || 
+                    normName.includes('vacaciones') || 
+                    normName.includes('bloqueo')) {
                     return;
                 }
 
@@ -202,8 +205,9 @@ export const PatientManager = {
                 const normName = normalize(app.name);
 
                 if (app.name?.startsWith('⛔') || 
-                    normName.includes('dia inhabil') || 
-                    normName.includes('hora inhabil') ||
+                    normName.includes('inhabil') || 
+                    normName.includes('vacaciones') || 
+                    normName.includes('bloqueo') ||
                     app.isFullDayBlock || 
                     app.isHourlyBlock) {
                     return;
