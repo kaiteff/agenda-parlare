@@ -108,7 +108,7 @@ export const CalendarData = {
 
     async deleteEvent(id) {
         const appointment = CalendarState.appointments.find(a => a.id === id);
-        return await deleteAppointment(id, appointment?.googleEventId);
+        return await deleteAppointment(id, appointment?.googleEventId, appointment?.therapist);
     },
 
     async togglePayment(id, currentStatus) {

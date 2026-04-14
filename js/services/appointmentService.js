@@ -41,7 +41,7 @@ async function _syncToCalendar(action, data) {
         const result = await (async () => {
             if (action === 'create') return await GoogleCalendarService.createEvent(data);
             if (action === 'update') return await GoogleCalendarService.updateEvent(data);
-            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data.id, data.googleEventId);
+            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data.id, data.googleEventId, data.therapist);
             return { success: false };
         })();
 
@@ -158,14 +158,15 @@ export async function updateAppointment(id, updateData, existingAppointments) {
  * @param {string} id - ID de la cita
  * @returns {Promise<Object>} - Resultado { success, error }
  */
-export async function deleteAppointment(id, googleEventId = null) {
+export async function deleteAppointment(id, googleEventId = null, therapist = 'all') {
     try {
-        await deleteDoc(doc(db, collectionPath, id));
+        const docRef = doc(db, collectionPath, id);
+        await deleteDoc(docRef);
         log.info(`Cita eliminada permanentemente [${id}]`);
 
         _createNotification('Cita Eliminada', 'Se ha eliminado una cita permanentemente', 'warning');
 
-        _syncToCalendar('delete', { id, googleEventId });
+        _syncToCalendar('delete', { id, googleEventId, therapist }); 
         return { success: true };
     } catch (error) {
         log.error("Error eliminando cita:", error);
@@ -195,7 +196,7 @@ export async function cancelAppointment(id, existingAppointments = []) {
             { appointmentId: id, therapist: appointment.therapist }
         );
 
-        _syncToCalendar('delete', { id, googleEventId: appointment.googleEventId });
+        _syncToCalendar('delete', { id, googleEventId: appointment.googleEventId, therapist: appointment.therapist });
         return { success: true };
     } catch (error) {
         log.error("Error cancelando cita:", error);

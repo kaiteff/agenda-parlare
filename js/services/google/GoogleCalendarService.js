@@ -18,11 +18,15 @@ import { PatientState } from '../../managers/patient/PatientState.js';
 const log = Logger.create('GCalService');
 
 export const GoogleCalendarService = {
-    // Almacenamiento local
-    _storageKey: 'parlare_gcal_mappings',
-    _calIdKey: 'parlare_gcal_calendar_id',
+    // Mapeo de calendarios individuales por terapeuta
+    THERAPIST_CALENDARS: {
+        diana: '3c4ab8fa048916ce6ce6d2891926a646a4728d1a9ad3edf43ef56f478680c958@group.calendar.google.com',
+        vero: 'b66fd1b4b55d6fe42ee578696e79aaaa6445b2d744050e8fc90b81c395bd291e@group.calendar.google.com',
+        sam: '6ff316ac3643f346833cc816cb0fc4020ea89ec923a4ca6681a39550f814daa5@group.calendar.google.com'
+    },
+
     _enabled: false,
-    _calendarId: null, // ID del calendario "Parlare Citas"
+    _calendarId: null, // Legacy, kept for compatibility if needed
 
     // Configuración del calendario dedicado
     CALENDAR_NAME: 'Parlare Citas',
@@ -88,77 +92,18 @@ export const GoogleCalendarService = {
     // ── Calendario dedicado ─────────────────────────────────────
 
     /**
-     * Obtiene o crea el calendario "Parlare Citas".
-     * Busca primero en localStorage, luego en la lista de calendarios.
-     * Si no existe, lo crea automáticamente.
-     * @returns {string} calendarId
+     * Obtiene el ID del calendario correcto basado en el terapeuta
      */
-    async _ensureCalendar() {
-        // 1. Ya lo tenemos en memoria
-        if (this._calendarId) {
-            return this._calendarId;
-        }
+    getCalendarId(therapist) {
+        const t = (therapist || 'diana').toLowerCase();
+        return this.THERAPIST_CALENDARS[t] || this.THERAPIST_CALENDARS.diana;
+    },
 
-        await GoogleAuthService.ensureToken();
-
-        // 2. Buscar en la lista de calendarios del usuario
-        try {
-            const listResponse = await this._callGapi(() => window.gapi.client.calendar.calendarList.list());
-            const calendars = listResponse.result.items || [];
-
-            const existing = calendars.find(c => c.summary === this.CALENDAR_NAME);
-            if (existing) {
-                this._calendarId = existing.id;
-                localStorage.setItem(this._calIdKey, existing.id);
-                log.info(`Calendario "${this.CALENDAR_NAME}" encontrado [${existing.id}]`);
-                return this._calendarId;
-            }
-        } catch (err) {
-            log.warn('Error buscando calendarios', err);
-        }
-
-        // 3. No existe — crearlo
-        try {
-            const createResponse = await this._callGapi(() => window.gapi.client.calendar.calendars.insert({
-                resource: {
-                    summary: this.CALENDAR_NAME,
-                    description: 'Calendario automático de citas - Agenda Parlare',
-                    timeZone: 'America/Mexico_City'
-                }
-            }));
-
-            const newCalId = createResponse.result.id;
-
-            // Configurar color del calendario en la lista del usuario
-            try {
-                await this._callGapi(() => window.gapi.client.calendar.calendarList.patch({
-                    calendarId: newCalId,
-                    resource: {
-                        backgroundColor: this.CALENDAR_COLOR,
-                        foregroundColor: '#ffffff',
-                        defaultReminders: [
-                            { method: 'popup', minutes: 30 },
-                            { method: 'popup', minutes: 10 }
-                        ]
-                    }
-                }));
-            } catch (colorErr) {
-                // No es crítico si falla el color
-                log.warn('No se pudo configurar color', colorErr);
-            }
-
-            this._calendarId = newCalId;
-            localStorage.setItem(this._calIdKey, newCalId);
-            log.success(`Calendario "${this.CALENDAR_NAME}" creado [${newCalId}]`);
-            ToastService.success(`📅 Calendario "${this.CALENDAR_NAME}" creado en tu Google Calendar`);
-            return this._calendarId;
-
-        } catch (err) {
-            log.error('Error creando calendario', err);
-            // Fallback: usar calendario primario
-            this._calendarId = 'primary';
-            return 'primary';
-        }
+    /**
+     * Antiguo método _ensureCalendar - Simplificado para devolver el de Diana como base
+     */
+    async _ensureCalendar(therapist = 'diana') {
+        return this.getCalendarId(therapist);
     },
 
     // ── Mapeos appointmentId → googleEventId ────────────────────
@@ -250,13 +195,13 @@ export const GoogleCalendarService = {
     // ── CRUD de eventos ─────────────────────────────────────────
 
     /**
-     * Crea un evento en el calendario Parlare Citas
+     * Crea un evento en el calendario correspondiente
      */
     async createEvent(appointment) {
         if (!(await this._ensureReady())) return false;
 
         try {
-            const calendarId = await this._ensureCalendar();
+            const calendarId = this.getCalendarId(appointment.therapist);
             const event = this._toGoogleEvent(appointment);
 
             const response = await this._callGapi(() => window.gapi.client.calendar.events.insert({
@@ -266,8 +211,8 @@ export const GoogleCalendarService = {
 
             const googleEventId = response.result.id;
             this._setMapping(appointment.id, googleEventId);
-            log.success(`Evento creado [${googleEventId}]`);
-            return { success: true, googleEventId }; // Regresar el ID para guardarlo en DB
+            log.success(`Evento creado [${googleEventId}] en calendario ${appointment.therapist}`);
+            return { success: true, googleEventId };
         } catch (err) {
             log.error('Error creando evento', err);
             return { success: false };
@@ -280,7 +225,6 @@ export const GoogleCalendarService = {
     async updateEvent(appointment) {
         if (!(await this._ensureReady())) return false;
 
-        // Intentar obtener ID desde el objeto de cita (DB) o desde mapping local (fallback)
         const googleEventId = appointment.googleEventId || this._getMappings()[appointment.id];
 
         if (!googleEventId) {
@@ -288,9 +232,15 @@ export const GoogleCalendarService = {
         }
 
         try {
-            const calendarId = await this._ensureCalendar();
+            // Obtener datos actuales de la app para ver si cambió el terapeuta
+            // (Ya vienen en el objeto appointment que recibe esta función)
+            const calendarId = this.getCalendarId(appointment.therapist);
             const event = this._toGoogleEvent(appointment);
 
+            // IMPORTANTE: Si googleEventId viene de Firestore, no sabemos en qué calendario está
+            // si el terapeuta cambió. Por ahora asumimos que el terapeuta del objeto es el dueño del ID.
+            // Si falla con 404, reintentamos creando uno nuevo.
+            
             await this._callGapi(() => window.gapi.client.calendar.events.update({
                 calendarId,
                 eventId: googleEventId,
@@ -301,6 +251,7 @@ export const GoogleCalendarService = {
             return { success: true, googleEventId };
         } catch (err) {
             if (err.status === 404) {
+                log.warn('Evento no encontrado para actualizar. Re-creando...');
                 this._removeMapping(appointment.id);
                 return this.createEvent(appointment);
             }
@@ -312,18 +263,14 @@ export const GoogleCalendarService = {
     /**
      * Elimina un evento (al cancelar cita)
      */
-    async deleteEvent(appointmentId, googleEventIdParam = null) {
+    async deleteEvent(appointmentId, googleEventIdParam = null, therapist = 'diana') {
         if (!(await this._ensureReady())) return false;
 
-        // Intentar obtener ID por parámetro o por mapping
         const googleEventId = googleEventIdParam || this._getMappings()[appointmentId];
-        if (!googleEventId) {
-            log.debug(`No se encontró googleEventId para borrar cita ${appointmentId}`);
-            return true;
-        }
+        if (!googleEventId) return true;
 
         try {
-            const calendarId = await this._ensureCalendar();
+            const calendarId = this.getCalendarId(therapist);
 
             await this._callGapi(() => window.gapi.client.calendar.events.delete({
                 calendarId,
@@ -331,10 +278,20 @@ export const GoogleCalendarService = {
             }));
 
             this._removeMapping(appointmentId);
-            log.info(`Evento eliminado [${googleEventId}]`);
             return true;
         } catch (err) {
             if (err.status === 404) {
+                // Intentar en los otros calendarios si no está en el del terapeuta actual (reparación)
+                for (const tKey in this.THERAPIST_CALENDARS) {
+                    try {
+                        await this._callGapi(() => window.gapi.client.calendar.events.delete({
+                            calendarId: this.THERAPIST_CALENDARS[tKey],
+                            eventId: googleEventId
+                        }));
+                        this._removeMapping(appointmentId);
+                        return true;
+                    } catch (e) {}
+                }
                 this._removeMapping(appointmentId);
                 return true;
             }
