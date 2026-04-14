@@ -1,0 +1,29 @@
+{
+  "hosting": {
+    "public": "./",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "_backups/**",
+      "backup_*/**",
+      "backups/**",
+      "Diana/**",
+      "old/**",
+      "*.zip",
+      "*.rar",
+      "*.pdf",
+      "*.docx",
+      "whats_app_webhook.py",
+      "requirements.txt",
+      "render.yaml",
+      "serve.py"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

@@ -14,7 +14,6 @@ import { GoogleAuthService } from './services/google/GoogleAuthService.js';
 import { SupportVault } from './modules/support/SupportVault.js';
 import { WhatsAppDashboard } from './components/WhatsAppDashboard.js';
 import { ReceptionControl } from './modules/reception/ReceptionControl.js';
-import { ComponentManager } from './components/ComponentManager.js';
 
 const log = Logger.create('App');
 
@@ -65,9 +64,6 @@ let modulesInitialized = false;
 async function initializeModules() {
     if (modulesInitialized) return;
     modulesInitialized = true;
-
-    // Inyectar toda la UI dinámica (Modales, Overlays, etc)
-    await ComponentManager.init();
 
     log.group('Inicializando Módulos', { timestamp: new Date() });
 
