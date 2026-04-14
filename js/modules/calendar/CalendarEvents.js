@@ -44,7 +44,8 @@ export const CalendarEvents = {
             'eventModal', 'modalTitle', 'patientSearch', 'patientFirstName', 'patientLastName',
             'appointmentDate', 'cost', 'appointmentTherapist', 'saveBtn', 'waBtn', 'deleteBtn', 'payBtn', 'confirmBtn', 'confirmedAtLabel', 'cancelBtn',
             'rescheduleSection', 'rescheduleOptions', 'busySlotsContainer', 'busySlotsList',
-            'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList'
+            'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList',
+            'patientCustomPhone', 'patientCountryCode'
         ];
 
         ids.forEach(id => {
@@ -56,6 +57,8 @@ export const CalendarEvents = {
             else if (id === 'appointmentDate') dom.appointmentDateInput = el;
             else if (id === 'cost') dom.costInput = el;
             else if (id === 'appointmentTherapist') dom.appointmentTherapistInput = el;
+            else if (id === 'patientCustomPhone') dom.phoneInput = el;
+            else if (id === 'patientCountryCode') dom.countryCodeInput = el;
             else if (id === 'isRecurring') dom.isRecurringCheckbox = el;
             else dom[id] = el;
         });

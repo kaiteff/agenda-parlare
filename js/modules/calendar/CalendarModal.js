@@ -84,6 +84,16 @@ export const CalendarModal = {
         dom.patientLastNameInput.disabled = false;
         dom.costInput.value = '800';
 
+        // Reset Phone (Enabled for new appointments)
+        if (dom.phoneInput) {
+            dom.phoneInput.value = '';
+            dom.phoneInput.disabled = false;
+        }
+        if (dom.countryCodeInput) {
+            dom.countryCodeInput.value = '52';
+            dom.countryCodeInput.disabled = false;
+        }
+
         // Reset Therapist and Type
         if (dom.appointmentTherapistInput) {
             dom.appointmentTherapistInput.value = AuthManager.currentUser?.therapist || 'diana';
@@ -159,6 +169,17 @@ export const CalendarModal = {
         // Set Therapist and Type
         if (dom.appointmentTherapistInput) {
             dom.appointmentTherapistInput.value = ev.therapist || 'diana';
+        }
+
+        // Phone Reference (Read-only if exists)
+        const profile = PatientState.patients.find(p => p.id === ev.patientId || p.name === ev.name);
+        if (dom.phoneInput && profile) {
+            dom.phoneInput.value = profile.phone || '';
+            dom.phoneInput.disabled = true;
+        }
+        if (dom.countryCodeInput && profile) {
+            dom.countryCodeInput.value = profile.countryCode || '52';
+            dom.countryCodeInput.disabled = true;
         }
         const isSchool = ev.isSchoolVisit === true || ev.name.toLowerCase().startsWith('escuela:');
         let radioValue = 'patient';
@@ -294,9 +315,18 @@ export const CalendarModal = {
                         appointmentTherapistInput.value = p.therapist || 'diana';
                     }
 
-                    // Set Cost - usar defaultCost del paciente o 800 si no tiene
                     if (CalendarState.dom.costInput) {
                         CalendarState.dom.costInput.value = p.defaultCost || 800;
+                    }
+
+                    // Auto-fill phone as reference
+                    if (CalendarState.dom.phoneInput) {
+                        CalendarState.dom.phoneInput.value = p.phone || '';
+                        CalendarState.dom.phoneInput.disabled = true;
+                    }
+                    if (CalendarState.dom.countryCodeInput) {
+                        CalendarState.dom.countryCodeInput.value = p.countryCode || '52';
+                        CalendarState.dom.countryCodeInput.disabled = true;
                     }
 
                     patientSuggestions.classList.add('hidden');
