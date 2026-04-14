@@ -48,17 +48,8 @@ export const Sidebar = {
         const viewInactiveBtn = document.getElementById('viewInactivePatientsBtn');
 
         if (searchInput) {
-            searchInput.oninput = (e) => {
-                const query = e.target.value;
-                // PatientFilters ya está en PatientManager
-                import('../managers/patient/PatientFilters.js').then(m => {
-                    const { PatientState } = m.PatientFilters; // Wait, better use proper imports
-                    // ... 
-                });
-                // Pero más fácil: disparar el render del manager
-                if (window.PatientManager) {
-                    window.PatientManager.render();
-                }
+            searchInput.oninput = () => {
+                this.render(); // El render leerá el valor del input
             };
         }
 
@@ -74,64 +65,68 @@ export const Sidebar = {
     /**
      * Renderiza la lista de pacientes filtrada
      */
-    render() {
+    async render() {
         const listContainer = document.getElementById('patientsList');
         const headerContainer = document.getElementById('patientsHeader');
+        const searchInput = document.getElementById('searchInput');
         
         if (!listContainer || !headerContainer) return;
 
-        // Importar dependencias para el renderizado
-        import('../managers/patient/PatientState.js').then(({ PatientState }) => {
-            import('../managers/patient/PatientFilters.js').then(({ PatientFilters }) => {
-                const filtered = PatientFilters.applyAll(PatientState.patients);
-                const activeCount = filtered.filter(p => p.isActive !== false).length;
+        try {
+            // Importar dependencias en paralelo
+            const [ { PatientState }, { PatientFilters } ] = await Promise.all([
+                import('../managers/patient/PatientState.js?v=1404'),
+                import('../managers/patient/PatientFilters.js?v=1404')
+            ]);
 
-                // 1. Renderizar Header del Sidebar
-                headerContainer.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-800">Pacientes</h2>
-                            <p class="text-xs text-gray-500 font-medium">${activeCount} activos</p>
-                        </div>
-                        <button id="addNewPatientBtn" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all active:scale-95" title="Nuevo Paciente">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
-                        </button>
+            const query = searchInput ? searchInput.value : '';
+            const filtered = PatientFilters.applyAll(PatientState.patients, query);
+            const activeCount = filtered.filter(p => p.isActive !== false).length;
+
+            // 1. Renderizar Header del Sidebar
+            headerContainer.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Pacientes</h2>
+                        <p class="text-xs text-gray-500 font-medium">${activeCount} activos</p>
+                    </div>
+                    <button id="addNewPatientBtn" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all active:scale-95" title="Nuevo Paciente">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                </div>
+            `;
+
+            // Asignar evento al botón de nuevo paciente
+            const addBtn = document.getElementById('addNewPatientBtn');
+            if (addBtn) {
+                addBtn.onclick = () => {
+                    import('../managers/patient/PatientModals.js').then(m => m.PatientModals.openNewPatient());
+                };
+            }
+
+            // 2. Renderizar Lista
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 text-center text-gray-400">
+                        <svg class="w-8 h-8 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <p class="text-xs font-medium">No se encontraron pacientes</p>
                     </div>
                 `;
+                return;
+            }
 
-                // Asignar evento al botón de nuevo paciente
-                const addBtn = document.getElementById('addNewPatientBtn');
-                if (addBtn) {
-                    addBtn.onclick = () => {
-                        import('../managers/patient/PatientModals.js').then(m => m.PatientModals.openNewPatient());
-                    };
-                }
+            const html = filtered.map(patient => this._generatePatientCard(patient)).join('');
+            listContainer.innerHTML = html;
 
-                // 2. Renderizar Lista
-                if (filtered.length === 0) {
-                    listContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-12 text-center">
-                            <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                                <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            </div>
-                            <p class="text-sm font-medium text-gray-400">No se encontraron pacientes</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                const html = filtered.map(patient => this._generatePatientCard(patient)).join('');
-                listContainer.innerHTML = html;
-            });
-        });
+        } catch (err) {
+            console.error("❌ Sidebar Render Error:", err);
+        }
     },
 
     /**
      * Genera el HTML para una tarjeta de paciente
-     * @private
      */
     _generatePatientCard(p) {
-        const isSelected = false; // Implementar lógica de selección si es necesario
         const statusColor = p.totalPending > 0 ? 'bg-orange-500' : 'bg-green-500';
         
         return `

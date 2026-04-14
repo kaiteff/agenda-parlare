@@ -24,6 +24,26 @@ import { AuthManager } from '../AuthManager.js';
  * Funciones de filtrado para pacientes
  */
 export const PatientFilters = {
+    /**
+     * Aplica todos los filtros activos (Búsqueda + Terapeuta)
+     * @param {Array<Object>} patients - Lista de pacientes del estado
+     * @param {string} query - Texto de búsqueda
+     * @returns {Array<Object>} Pacientes filtrados
+     */
+    applyAll(patients, query = '') {
+        let filtered = this.filterBySelectedTherapist(patients || []);
+        
+        if (query && query.trim() !== '') {
+            const q = query.toLowerCase().trim();
+            filtered = filtered.filter(p => 
+                p.name.toLowerCase().includes(q) || 
+                (p.phone && p.phone.includes(q))
+            );
+        }
+        
+        return filtered;
+    },
+
 
     // ==========================================
     // FILTROS POR FECHA

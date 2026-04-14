@@ -11,22 +11,28 @@ export const ComponentManager = {
     async init() {
         console.group('🏗️ ComponentManager: Cargando UI...');
         
-        const root = document.body;
+        const appContent = document.getElementById('appContent');
+        const mainLayout = appContent ? appContent.querySelector('.flex-1.flex.overflow-hidden.relative') : null;
 
-        // 1. Inyectar Header
-        Header.inject(root);
+        if (!appContent || !mainLayout) {
+            console.error('❌ No se encontraron los contenedores base en el DOM');
+            return;
+        }
 
-        // 2. Inyectar Sidebar
-        Sidebar.inject(root);
+        // 1. Inyectar Header (Al principio del appContent, arriba de todo)
+        Header.inject(appContent);
 
-        // 3. Inyectar Modales de Paciente (Historial, Nuevo Paciente, Inactivos)
-        PatientModalsHTML.inject(root);
+        // 2. Inyectar Sidebar (Dentro del mainLayout, antes del <main>)
+        Sidebar.inject(mainLayout);
 
-        // 4. Inyectar Modales Principales (Calendario, Reportes, Corte)
-        MainModals.inject(root);
+        // 3. Inyectar Modales de Paciente (En la raíz de la App)
+        PatientModalsHTML.inject(appContent);
 
-        // 3. Inyectar Overlay de Sidebar para Mobile (si no está en el HTML)
-        this.injectMobileOverlay(root);
+        // 4. Inyectar Modales Principales (En la raíz de la App)
+        MainModals.inject(appContent);
+
+        // 5. Inyectar Overlay de Sidebar para Mobile
+        this.injectMobileOverlay(appContent);
 
         console.log('✅ UI Dinámica lista.');
         console.groupEnd();
