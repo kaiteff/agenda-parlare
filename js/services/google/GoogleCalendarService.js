@@ -360,14 +360,26 @@ export const GoogleCalendarService = {
 
         for (const apt of active) {
             try {
-                if (mappings[apt.id]) {
-                    await this.updateEvent(apt);
+                let result;
+                if (apt.googleEventId || mappings[apt.id]) {
+                    result = await this.updateEvent(apt);
                     updated++;
                 } else {
-                    await this.createEvent(apt);
+                    result = await this.createEvent(apt);
+                    // Si se creó con éxito, guardar el ID en Firestore para que todos lo vean
+                    if (result && result.success && result.googleEventId) {
+                        try {
+                            const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                            const docRef = doc(db, collectionPath, apt.id);
+                            await updateDoc(docRef, { googleEventId: result.googleEventId });
+                        } catch (dbErr) {
+                            log.warn('No se pudo guardar googleEventId en Firestore durante el sync masivo', dbErr);
+                        }
+                    }
                     created++;
                 }
             } catch (err) {
+                log.error('Error en sync masivo para cita:', apt.id, err);
                 errors++;
             }
         }

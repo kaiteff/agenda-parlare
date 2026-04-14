@@ -496,17 +496,44 @@ export const Header = {
                 e.target.classList.add('hidden');
             }
 
-            // 5. Botón Google Sync (Manual)
+            // 5. Botón Google Sync (Manual / Sincronización activa)
             const googleSyncBtn = e.target.closest('#googleSyncBtn');
             if (googleSyncBtn) {
                 e.preventDefault();
                 e.stopPropagation();
                 try {
                     const { GoogleAuthService } = await import('../services/google/GoogleAuthService.js');
-                    await GoogleAuthService.ensureToken(true); // Forzar consentimiento para asegurar popup limpio
-                    this._renderGoogleSyncStatus(); // Forzar update UI
+                    const { GoogleCalendarService } = await import('../services/google/GoogleCalendarService.js');
+                    
+                    const health = GoogleAuthService.getTokenHealth();
+                    
+                    if (health.isValid) {
+                        // SI YA ESTÁ CONECTADO: Sincronizar citas actuales
+                        const confirmed = await ModalService.confirm(
+                            "Sincronización Total",
+                            "¿Deseas sincronizar todas las citas visibles en esta pantalla con tu Google Calendar?<br><small>(Esto creará los eventos que falten)</small>",
+                            "Sí, Sincronizar",
+                            "Cancelar"
+                        );
+                        
+                        if (confirmed) {
+                            googleSyncBtn.disabled = true;
+                            googleSyncBtn.classList.add('opacity-50', 'animate-pulse');
+                            
+                            await GoogleCalendarService.syncWeek(CalendarState.appointments);
+                            
+                            googleSyncBtn.disabled = false;
+                            googleSyncBtn.classList.remove('opacity-50', 'animate-pulse');
+                        }
+                    } else {
+                        // SI NO ESTÁ CONECTADO: Iniciar sesión
+                        await GoogleAuthService.ensureToken(true);
+                        this._renderGoogleSyncStatus();
+                        ToastService.success("Google Calendar conectado. Ahora puedes hacer clic de nuevo para sincronizar.");
+                    }
                 } catch (err) {
-                    console.error("Manual Google Login failed:", err);
+                    console.error("Manual Google Sync/Login failed:", err);
+                    ToastService.error("Error en la sincronización con Google.");
                 }
                 return;
             }
