@@ -23,6 +23,13 @@ export const Sidebar = {
                     </svg>
                     <input type="text" id="searchInput" placeholder="Buscar paciente..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
                 </div>
+                
+                <!-- Pestañas de Tiempo -->
+                <div class="flex p-1 bg-gray-100 rounded-lg mt-3" id="sidebarTabs">
+                    <button data-tab="today" class="flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all bg-white shadow-sm text-blue-600">Hoy</button>
+                    <button data-tab="tomorrow" class="flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50">Mañana</button>
+                    <button data-tab="all" class="flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50">Todos</button>
+                </div>
             </div>
 
             <div id="patientsList" class="flex-1 overflow-y-auto p-2 space-y-2 scroller">
@@ -46,10 +53,29 @@ export const Sidebar = {
         console.log('👂 Sidebar: Configurando listeners...');
         const searchInput = document.getElementById('searchInput');
         const viewInactiveBtn = document.getElementById('viewInactivePatientsBtn');
+        const sidebarTabs = document.getElementById('sidebarTabs');
 
         if (searchInput) {
             searchInput.oninput = () => {
-                this.render(); // El render leerá el valor del input
+                this.render();
+            };
+        }
+
+        if (sidebarTabs) {
+            sidebarTabs.onclick = (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                
+                const tab = btn.dataset.tab;
+                this.activeTab = tab;
+                
+                // Actualizar UI de pestañas
+                sidebarTabs.querySelectorAll('button').forEach(b => {
+                    b.className = "flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50";
+                });
+                btn.className = "flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all bg-white shadow-sm text-blue-600";
+                
+                this.render();
             };
         }
 
@@ -60,6 +86,8 @@ export const Sidebar = {
                 });
             };
         }
+        
+        this.activeTab = 'today'; // Default
     },
 
     /**
@@ -80,8 +108,26 @@ export const Sidebar = {
             ]);
 
             const query = searchInput ? searchInput.value : '';
-            const filtered = PatientFilters.applyAll(PatientState.patients, query);
-            const activeCount = filtered.filter(p => p.isActive !== false).length;
+            const tab = this.activeTab || 'today';
+            
+            let filtered = [];
+            let activeCount = 0;
+
+            if (tab === 'today') {
+                filtered = PatientFilters.getToday();
+            } else if (tab === 'tomorrow') {
+                filtered = PatientFilters.getTomorrow();
+            } else {
+                filtered = PatientFilters.applyAll(PatientState.patients, query);
+            }
+
+            // Aplicar búsqueda incluso sobre hoy/mañana si hay query
+            if (query && (tab === 'today' || tab === 'tomorrow')) {
+                const q = query.toLowerCase();
+                filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
+            }
+
+            activeCount = filtered.length;
 
             // 1. Renderizar Header del Sidebar
             headerContainer.innerHTML = `
@@ -129,6 +175,17 @@ export const Sidebar = {
     _generatePatientCard(p) {
         const statusColor = p.totalPending > 0 ? 'bg-orange-500' : 'bg-green-500';
         
+        // Formatear hora si existe (para vista Hoy/Mañana)
+        let timeLabel = '';
+        if (p.appointmentTime) {
+            const time = new Date(p.appointmentTime);
+            timeLabel = time.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+        } else if (p.lastVisit) {
+            timeLabel = new Date(p.lastVisit).toLocaleDateString('es-MX', {day:'numeric', month:'short'});
+        } else {
+            timeLabel = 'Sin citas';
+        }
+
         return `
             <div onclick="window.openPatientHistoryById('${p.id}')" 
                  class="group p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-200">
@@ -141,9 +198,9 @@ export const Sidebar = {
                             <h3 class="font-bold text-gray-800 truncate pr-2">${p.name}</h3>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
-                        <div class="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                        <div class="flex items-center gap-2 text-[10px] ${p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium'}">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            ${p.lastVisit ? new Date(p.lastVisit).toLocaleDateString('es-MX', {day:'numeric', month:'short'}) : 'Sin citas'}
+                            ${timeLabel}
                         </div>
                     </div>
                 </div>
