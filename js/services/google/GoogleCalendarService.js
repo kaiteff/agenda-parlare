@@ -229,7 +229,10 @@ export const GoogleCalendarService = {
                 dateTime: endDate.toISOString(),
                 timeZone: 'America/Mexico_City'
             },
-            reminders: {
+            reminders: (appointment.isFullDayBlock || appointment.isHourlyBlock) ? {
+                useDefault: false,
+                overrides: []
+            } : {
                 useDefault: false,
                 overrides: [
                     { method: 'popup', minutes: 5 }
