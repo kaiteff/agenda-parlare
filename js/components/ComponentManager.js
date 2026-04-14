@@ -4,8 +4,8 @@
  */
 import { MainModals } from './MainModals.js';
 import { PatientModalsHTML } from '../managers/patient/PatientModalsHTML.js';
-import { Sidebar } from './Sidebar.js';
-import { Header } from './Header.js';
+import { Sidebar } from './Sidebar.js?v=1404';
+import { Header } from './Header.js?v=1404';
 
 export const ComponentManager = {
     async init() {
