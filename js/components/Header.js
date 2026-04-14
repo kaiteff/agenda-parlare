@@ -76,7 +76,7 @@ export const Header = {
                         <span id="syncStatusText">Google Sync</span>
                     </button>
 
-                    <button id="forceSyncAllBtn" class="hidden flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all" title="Sincronizar todo con Google">
+                    <button id="forceSyncAllBtn" class="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all font-bold" title="Sincronizar todo con Google">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         <span>Sync Total</span>
                     </button>
