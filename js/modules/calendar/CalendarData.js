@@ -205,22 +205,23 @@ export const CalendarData = {
 
         console.log(`🧹 Iniciando limpieza PROFUNDA entre ${appointments.length} citas...`);
 
+        const { formatDateLocal } = await import('../../utils/dateUtils.js');
+        
         appointments.forEach(apt => {
-            if (apt.isFullDayBlock || apt.isSchoolVisit) return; // Protegemos bloques especiales
+            if (apt.isFullDayBlock || apt.isSchoolVisit) return; 
 
-            // Normalizar Nombre para doble chequeo
-            const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
-            
-            // Normalizar Tiempo: Solo por DÍA y HORA (ej: 2026-04-14T10)
-            const dateObj = new Date(apt.date);
-            const dateStr = dateObj.toISOString();
-            const hourKey = dateStr.slice(0, 13); // Toma hasta la hora
+            const pDate = new Date(apt.date);
+            let pDateStr = "";
+            try { 
+                pDateStr = formatDateLocal(pDate); 
+            } catch (e) { return; }
 
-            // Normalizar Terapeuta
+            const hour = pDate.getHours();
             const therapist = (apt.therapist || 'diana').toLowerCase();
+            const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
 
-            // CLAVE MAESTRA: Terapeuta + Día + Hora (No puede haber dos citas en la misma hora)
-            const key = `${therapist}_${hourKey}_${nameNorm}`;
+            // CLAVE ESPEJO (Igual a como se filtra en CalendarUI.js línea 154)
+            const key = `${pDateStr}_${hour}_${therapist}_${nameNorm}`;
 
             if (seen.has(key)) {
                 duplicates.push(apt);
@@ -230,11 +231,11 @@ export const CalendarData = {
         });
 
         if (duplicates.length === 0) {
-            console.log("✅ No se encontraron traslapes por hora/nombre.");
+            console.log("✅ No se encontraron traslapes usando la lógica de la UI.");
             return { total: 0 };
         }
 
-        console.warn(`🚨 Se encontraron ${duplicates.length} traslapes por hora. Eliminando...`);
+        console.warn(`🚨 Se encontraron ${duplicates.length} traslapes visuales. Eliminando...`);
 
         let deleted = 0;
         for (const duo of duplicates) {
