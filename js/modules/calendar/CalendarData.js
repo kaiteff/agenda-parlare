@@ -206,15 +206,21 @@ export const CalendarData = {
         console.log(`🧹 Iniciando limpieza PROFUNDA entre ${appointments.length} citas...`);
 
         appointments.forEach(apt => {
-            // Normalizar Tiempo: Redondeado al minuto exacto
+            if (apt.isFullDayBlock || apt.isSchoolVisit) return; // Protegemos bloques especiales
+
+            // Normalizar Nombre para doble chequeo
+            const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
+            
+            // Normalizar Tiempo: Solo por DÍA y HORA (ej: 2026-04-14T10)
             const dateObj = new Date(apt.date);
-            const timeKey = Math.floor(dateObj.getTime() / 60000); 
+            const dateStr = dateObj.toISOString();
+            const hourKey = dateStr.slice(0, 13); // Toma hasta la hora
 
             // Normalizar Terapeuta
             const therapist = (apt.therapist || 'diana').toLowerCase();
 
-            // CLAVE MAESTRA: Si el terapeuta está ocupado en ese minuto, es un conflicto/duplicado
-            const key = `${therapist}_${timeKey}`;
+            // CLAVE MAESTRA: Terapeuta + Día + Hora (No puede haber dos citas en la misma hora)
+            const key = `${therapist}_${hourKey}_${nameNorm}`;
 
             if (seen.has(key)) {
                 duplicates.push(apt);
@@ -224,11 +230,11 @@ export const CalendarData = {
         });
 
         if (duplicates.length === 0) {
-            console.log("✅ No se encontraron traslapes de horario.");
+            console.log("✅ No se encontraron traslapes por hora/nombre.");
             return { total: 0 };
         }
 
-        console.warn(`🚨 Se encontraron ${duplicates.length} traslapes. Eliminando excedentes...`);
+        console.warn(`🚨 Se encontraron ${duplicates.length} traslapes por hora. Eliminando...`);
 
         let deleted = 0;
         for (const duo of duplicates) {
