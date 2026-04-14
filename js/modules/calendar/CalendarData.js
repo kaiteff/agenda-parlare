@@ -196,24 +196,33 @@ export const CalendarData = {
     },
 
     /**
-     * Limpia citas duplicadas en Firestore
+     * Limpia citas duplicadas en Firestore (Versión Ultra-Agresiva)
      */
     async cleanupDuplicates() {
         const appointments = CalendarState.appointments;
         const seen = new Map();
         const duplicates = [];
 
-        console.log(`🧹 Iniciando limpieza de duplicados entre ${appointments.length} citas...`);
+        console.log(`🧹 Iniciando limpieza PROFUNDA entre ${appointments.length} citas...`);
 
         appointments.forEach(apt => {
-            if (apt.isCancelled) return; // No limpiar cancelados por ahora
+            // Normalizar Nombre: Sin espacios, minúsculas, sin acentos básicos
+            const nameNorm = (apt.name || '').toLowerCase()
+                .trim()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+                .replace(/\s+/g, ''); // Quitar todos los espacios internos
 
-            // Clave única: Nombre + Fecha + Hora + Terapeuta
-            // Normalizamos la fecha para ignorar milisegundos si varían
-            const dateStr = new Date(apt.date).toISOString().slice(0, 16); 
-            const key = `${apt.name.toLowerCase().trim()}_${dateStr}_${(apt.therapist || 'diana').toLowerCase()}`;
+            // Normalizar Tiempo: Redondeado al minuto exacto
+            const dateObj = new Date(apt.date);
+            const timeKey = Math.floor(dateObj.getTime() / 60000); // Timestamp por minuto
+
+            // Normalizar Terapeuta
+            const therapist = (apt.therapist || 'diana').toLowerCase();
+
+            const key = `${nameNorm}_${timeKey}_${therapist}`;
 
             if (seen.has(key)) {
+                // Es un duplicado. Guardamos el ID que tiene más información o simplemente el más nuevo
                 duplicates.push(apt);
             } else {
                 seen.set(key, apt.id);
@@ -221,11 +230,11 @@ export const CalendarData = {
         });
 
         if (duplicates.length === 0) {
-            console.log("✅ No se encontraron duplicados.");
+            console.log("✅ No se encontraron duplicados exactos ni aproximados.");
             return { total: 0 };
         }
 
-        console.warn(`🚨 Se encontraron ${duplicates.length} duplicados. Procediendo a borrar...`);
+        console.warn(`🚨 Se encontraron ${duplicates.length} duplicados aproximados. Borrando...`);
 
         let deleted = 0;
         for (const duo of duplicates) {
