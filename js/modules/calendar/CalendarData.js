@@ -49,6 +49,7 @@ export const CalendarData = {
                 data.push({ id: doc.id, ...doc.data() });
             });
 
+            console.log(`📡 CalendarData: Recibidas ${data.length} citas de Firebase.`);
             CalendarState.setAppointments(data);
 
             if (onUpdate) onUpdate(data, snapshot.metadata);

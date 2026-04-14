@@ -134,17 +134,25 @@ export const CalendarUI = {
                         dateStr = "";
                     }
 
-                    // Filtrar eventos
+                    // FILTRADO INTELIGENTE: Aseguramos que las fechas se lean como locales 
+                    // para evitar saltos de día por zona horaria de celulares (UTC).
                     const slotEvents = CalendarState.appointments.filter(p => {
                         if (p.isCancelled) return false;
-                        const pDate = new Date(p.date);
+                        
+                        // Normalizamos: quitamos 'Z' o desfases para leerlo como hora local pura
+                        const cleanDate = typeof p.date === 'string' ? p.date.replace('Z', '') : p.date;
+                        const pDate = new Date(cleanDate);
+                        
                         let pDateStr;
-                        try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
+                        try { 
+                            pDateStr = formatDateLocal(pDate); 
+                        } catch (e) { return false; }
                         
                         if (p.isFullDayBlock) {
                             return pDateStr === dateStr;
                         }
                         
+                        // Comparación: mismo día y misma hora
                         return pDateStr === dateStr && pDate.getHours() === hour;
                     });
 
