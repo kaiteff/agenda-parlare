@@ -76,6 +76,11 @@ export const Header = {
                         <span id="syncStatusText">Google Sync</span>
                     </button>
 
+                    <button id="forceSyncAllBtn" class="hidden flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all" title="Sincronizar todo con Google">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span>Sync Total</span>
+                    </button>
+
                     <button id="logoutBtn" class="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                     </button>
@@ -230,6 +235,16 @@ export const Header = {
                     indicator.className = "w-1.5 h-1.5 rounded-full bg-red-400";
                     statusText.textContent = "Google Off";
                     btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-gray-200 bg-white text-gray-400";
+                }
+
+                // Mostrar/Ocultar botón de Sincronización Total
+                const forceSyncBtn = document.getElementById('forceSyncAllBtn');
+                if (forceSyncBtn) {
+                    if (health.isValid) {
+                        forceSyncBtn.classList.remove('hidden');
+                    } else {
+                        forceSyncBtn.classList.add('hidden');
+                    }
                 }
             });
         };
@@ -534,6 +549,37 @@ export const Header = {
                 } catch (err) {
                     console.error("Manual Google Sync/Login failed:", err);
                     ToastService.error("Error en la sincronización con Google.");
+                }
+                return;
+            }
+
+            // 6. Botón de Sincronización Total Dedicado
+            const forceSyncAllBtn = e.target.closest('#forceSyncAllBtn');
+            if (forceSyncAllBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    const { GoogleCalendarService } = await import('../services/google/GoogleCalendarService.js');
+                    
+                    const confirmed = await ModalService.confirm(
+                        "Sincronización Total",
+                        "¿Deseas sincronizar todas las citas visibles con tu Google Calendar?<br><small>(Esto enviará lo que Diana creó a tu calendario)</small>",
+                        "Sí, Sincronizar",
+                        "Cancelar"
+                    );
+                    
+                    if (confirmed) {
+                        forceSyncAllBtn.disabled = true;
+                        forceSyncAllBtn.classList.add('opacity-50', 'animate-pulse');
+                        
+                        await GoogleCalendarService.syncWeek(CalendarState.appointments);
+                        
+                        forceSyncAllBtn.disabled = false;
+                        forceSyncAllBtn.classList.remove('opacity-50', 'animate-pulse');
+                    }
+                } catch (err) {
+                    console.error("Force Sync failed:", err);
+                    ToastService.error("Error al sincronizar.");
                 }
                 return;
             }
