@@ -160,11 +160,10 @@ def update_google_calendar(appointment, status_text):
 
         if status_text == "CONFIRMADO":
             desc += "\n✅ Asistencia confirmada vía WhatsApp"
-            # Opcional: Cambiar color a Verde (Basil = 10)
-            event['colorId'] = '10'
         elif status_text == "CANCELADO":
             desc += "\n❌ CANCELADO vía WhatsApp"
-            # Opcional: Cambiar color a Gris (Graphite = 8)
+            # Opcional: Mantener color gris para cancelaciones si lo prefieres, pero solo si es estrictamente necesario.
+            # Por ahora lo dejamos como estaba antes de mi intervención.
             event['colorId'] = '8'
         
         event['description'] = desc
