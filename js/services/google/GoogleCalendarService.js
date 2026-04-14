@@ -317,26 +317,39 @@ export const GoogleCalendarService = {
 
         for (const apt of active) {
             try {
+                // Pausa técnica para evitar "User Rate Limit Exceeded" de Google
+                await new Promise(resolve => setTimeout(resolve, 300));
+
                 let result;
                 if (apt.googleEventId || mappings[apt.id]) {
                     result = await this.updateEvent(apt);
-                    updated++;
+                    if (result && result.success) updated++;
+                    else {
+                        // Si falló el update (posible 404), intentamos crearla
+                        result = await this.createEvent(apt);
+                        if (result && result.success) created++;
+                        else errors++;
+                    }
                 } else {
                     result = await this.createEvent(apt);
-                    // Si se creó con éxito, guardar el ID en Firestore para que todos lo vean
-                    if (result && result.success && result.googleEventId) {
-                        try {
-                            const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
-                            const docRef = doc(db, collectionPath, apt.id);
-                            await updateDoc(docRef, { googleEventId: result.googleEventId });
-                        } catch (dbErr) {
-                            log.warn('No se pudo guardar googleEventId en Firestore durante el sync masivo', dbErr);
+                    if (result && result.success) {
+                        created++;
+                        // Guardar en Firestore
+                        if (result.googleEventId) {
+                            try {
+                                const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                                const docRef = doc(db, collectionPath, apt.id);
+                                await updateDoc(docRef, { googleEventId: result.googleEventId });
+                            } catch (dbErr) {
+                                log.warn('No se pudo guardar googleEventId en Firestore', dbErr);
+                            }
                         }
+                    } else {
+                        errors++;
                     }
-                    created++;
                 }
             } catch (err) {
-                log.error('Error en sync masivo para cita:', apt.id, err);
+                log.error(`Error en sync para cita ${apt.id}:`, err);
                 errors++;
             }
         }
