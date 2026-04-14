@@ -148,10 +148,10 @@ export const ScheduleManager = {
         const type = this.state.recurrenceType;
         
         if (type === 'weekly') {
-            this.state.sessionsCount = 13; // 3 meses (13 semanas aprox)
+            this.state.sessionsCount = 30; // ~7 meses
             if (this.dom.sessionsCountInput) {
-                this.dom.sessionsCountInput.value = 13;
-                this.dom.sessionsCountInput.disabled = false; // Permitir cambiar si quiere más de 3 meses
+                this.dom.sessionsCountInput.value = 30;
+                this.dom.sessionsCountInput.disabled = false; // Permitir cambiar si quiere más de 30 sesiones
             }
         } else if (type === 'biweekly') {
             this.state.sessionsCount = 6; // 3 meses (6 quincenas aprox)
