@@ -24,7 +24,7 @@ const ROLES = {
     },
     therapist: {
         label: 'Terapeuta',
-        permissions: ['manage_own_schedule', 'view_own_patients', 'edit_own_records', 'view_schedule', 'switch_therapist_view', 'view_all_patients']
+        permissions: ['manage_own_schedule', 'view_own_patients', 'edit_own_records', 'view_schedule']
     },
     receptionist: {
         label: 'Recepción',
