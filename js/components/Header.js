@@ -498,9 +498,11 @@ export const Header = {
                 const isClosed = sidebar.classList.contains('-translate-x-full');
                 if (isClosed) {
                     sidebar.classList.remove('-translate-x-full');
+                    sidebar.classList.add('translate-x-0');
                     overlay.classList.remove('hidden');
                 } else {
                     sidebar.classList.add('-translate-x-full');
+                    sidebar.classList.remove('translate-x-0');
                     overlay.classList.add('hidden');
                 }
             }
@@ -508,7 +510,10 @@ export const Header = {
             // 4. Click en Overlay para cerrar sidebar
             if (e.target.id === 'sidebarOverlay') {
                 const sidebar = document.getElementById('mainSidebar');
-                if (sidebar) sidebar.classList.add('-translate-x-full');
+                if (sidebar) {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebar.classList.remove('translate-x-0');
+                }
                 e.target.classList.add('hidden');
             }
 

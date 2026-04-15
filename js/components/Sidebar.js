@@ -12,7 +12,7 @@ export const Sidebar = {
         
         const aside = document.createElement('aside');
         aside.id = 'mainSidebar';
-        aside.className = 'absolute md:relative z-50 w-80 md:w-96 h-full bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.05)] transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out';
+        aside.className = 'fixed inset-y-0 left-0 md:relative z-[60] w-80 md:w-96 h-full bg-white border-r border-gray-200 flex flex-col shadow-[20px_0_50px_rgba(0,0,0,0.1)] transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out';
         
         aside.innerHTML = `
             <div class="p-4 border-b border-gray-100 bg-white sticky top-0 z-10">
