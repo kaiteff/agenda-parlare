@@ -1,7 +1,8 @@
-/**
  * Sidebar.js
  * Gestiona la estructura de la lista de pacientes y sus acciones.
  */
+
+import { AuthManager } from '../managers/AuthManager.js';
 
 export const Sidebar = {
     /**
@@ -86,6 +87,13 @@ export const Sidebar = {
                 });
             };
         }
+
+        const auditBtn = document.getElementById('viewAuditLogBtn');
+        if (auditBtn) {
+            auditBtn.onclick = () => {
+                import('../modules/admin/AuditPanel.js').then(m => m.AuditPanel.open());
+            };
+        }
         
         this.activeTab = 'today'; // Default
     },
@@ -136,9 +144,16 @@ export const Sidebar = {
                         <h2 class="text-xl font-bold text-gray-800">Pacientes</h2>
                         <p class="text-xs text-gray-500 font-medium">${activeCount} activos</p>
                     </div>
-                    <button id="addNewPatientBtn" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all active:scale-95" title="Nuevo Paciente">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
-                    </button>
+                    <div class="flex gap-2">
+                        ${AuthManager.isAdmin() ? `
+                            <button id="viewAuditLogBtn" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-all" title="Ver Bitácora de Auditoría">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                            </button>
+                        ` : ''}
+                        <button id="addNewPatientBtn" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all active:scale-95" title="Nuevo Paciente">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
                 </div>
             `;
 

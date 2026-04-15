@@ -2,6 +2,7 @@
 import { db, collectionPath, notificationsPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
 import { validateAppointment } from '../utils/validators.js';
 import { Logger } from '../utils/Logger.js';
+import { AuditService } from './AuditService.js';
 import { AuthManager } from '../managers/AuthManager.js';
 
 const log = Logger.create('AptService');
@@ -90,6 +91,13 @@ export async function createAppointment(appointmentData, existingAppointments) {
         const newId = docRef.id;
         log.success(`Cita creada [${newId}] para ${appointmentData.name}`);
 
+        // Bitácora de Auditoría
+        await AuditService.log('CREATE', 'APPOINTMENT', newId, { 
+            patientName: appointmentData.name, 
+            date: appointmentData.date,
+            therapist: appointmentData.therapist 
+        });
+
         // Crear notificación interna
         _createNotification(
             'Nueva Cita',
@@ -138,6 +146,14 @@ export async function updateAppointment(id, updateData, existingAppointments) {
 
         log.info(`Cita actualizada [${id}]`);
 
+        // Bitácora de Auditoría
+        await AuditService.log('UPDATE', 'APPOINTMENT', id, { 
+            patientName: mergedData.name, 
+            date: mergedData.date,
+            therapist: mergedData.therapist,
+            changes: Object.keys(updateData) 
+        });
+
         // Crear notificación interna
         const patientName = updateData.name ? updateData.name : 'un paciente';
         _createNotification(
@@ -168,6 +184,11 @@ export async function deleteAppointment(id, googleEventId = null, therapist = 'a
         await deleteDoc(docRef);
         log.info(`Cita eliminada permanentemente [${id}]`);
 
+        // Bitácora de Auditoría
+        await AuditService.log('DELETE_PERMANENT', 'APPOINTMENT', id, { 
+            therapist: therapist 
+        });
+
         _createNotification('Cita Eliminada', 'Se ha eliminado una cita permanentemente', 'warning');
 
         _syncToCalendar('delete', { id, googleEventId, therapist }); 
@@ -193,6 +214,12 @@ export async function cancelAppointment(id, existingAppointments = []) {
             updatedBy: AuthManager.currentUser?.email || 'unknown'
         });
         log.info(`Cita cancelada [${id}]`);
+
+        // Bitácora de Auditoría
+        await AuditService.log('CANCEL', 'APPOINTMENT', id, { 
+            patientName: appointment.name,
+            therapist: appointment.therapist 
+        });
 
         _createNotification(
             'Cita Cancelada',
@@ -232,6 +259,12 @@ export async function togglePaymentStatus(id, currentStatus, existingAppointment
 
         await updateDoc(docRef, updateData);
         log.debug(`Cita [${id}] pago: ${newStatus} (Pendiente de Sync)`);
+
+        // Bitácora de Auditoría
+        await AuditService.log('PAYMENT', 'APPOINTMENT', id, { 
+            isPaid: newStatus,
+            amount: existing?.cost || 0
+        });
 
         // Notificar a Yari (Manager) sobre el pago
         if (newStatus) {

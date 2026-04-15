@@ -276,6 +276,10 @@ export const CalendarModal = {
         const canEdit = AuthManager.canEditItem(ev);
         if (canEdit) {
             CalendarSuggestions.analyzeAndSuggest(ev.name);
+            // Generar opciones de reagendamiento si tiene permiso
+            if (dom.rescheduleSection) {
+                CalendarSuggestions.generateRescheduleOptions(date);
+            }
         } else {
             const suggestionBox = document.getElementById('schedulingSuggestion');
             if (suggestionBox) suggestionBox.remove();
@@ -294,7 +298,7 @@ export const CalendarModal = {
 
         console.log('📬 Abriendo modal de edición para:', ev.name);
         
-        // PRIVACIDAD ADICIONAL: Ocultar Reagendar
+        // PRIVACIDAD ADICIONAL: Ocultar Reagendar si no tiene permiso
         if (dom.rescheduleSection) {
             dom.rescheduleSection.classList.toggle('hidden', !canEdit);
         }

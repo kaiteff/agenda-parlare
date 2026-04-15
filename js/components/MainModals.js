@@ -322,6 +322,32 @@ export const MainModals = {
                     </div>
                 </div>
             </div>
+
+            <!-- 6. AUDIT LOG MODAL -->
+            <div id="auditLogModal" class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col modal-panel overflow-hidden">
+                    <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+                        <div>
+                            <h3 class="text-xl font-bold">📋 Bitácora de Auditoría</h3>
+                            <p class="text-slate-400 text-xs mt-0.5">Historial reciente de acciones en el sistema</p>
+                        </div>
+                        <button onclick="document.getElementById('auditLogModal').classList.add('hidden')" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 bg-gray-50 scroller">
+                        <div id="auditLogList" class="space-y-3">
+                            <!-- Dynamically populated -->
+                            <div class="text-center py-10 text-gray-400 italic">Cargando registros...</div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white border-t border-gray-100 flex justify-end">
+                        <button onclick="document.getElementById('auditLogModal').classList.add('hidden')" class="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition-all">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
         `;
     }
 };
