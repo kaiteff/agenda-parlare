@@ -88,13 +88,6 @@ export const Sidebar = {
                 });
             };
         }
-
-        const auditBtn = document.getElementById('viewAuditLogBtn');
-        if (auditBtn) {
-            auditBtn.onclick = () => {
-                import('../modules/admin/AuditPanel.js').then(m => m.AuditPanel.open());
-            };
-        }
         
         this.activeTab = 'today'; // Default
     },
@@ -163,6 +156,14 @@ export const Sidebar = {
             if (addBtn) {
                 addBtn.onclick = () => {
                     import('../managers/patient/PatientModals.js').then(m => m.PatientModals.openNewPatient());
+                };
+            }
+
+            // Asignar evento al botón de bitácora
+            const auditBtn = document.getElementById('viewAuditLogBtn');
+            if (auditBtn) {
+                auditBtn.onclick = () => {
+                    import('../modules/admin/AuditPanel.js').then(m => m.AuditPanel.open());
                 };
             }
 
