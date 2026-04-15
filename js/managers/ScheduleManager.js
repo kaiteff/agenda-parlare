@@ -281,6 +281,16 @@ export const ScheduleManager = {
         }
 
         try {
+            // 0. PRE-AUTH: Solicitar token inmediatamente dentro del contexto del click
+            // Esto evita que el navegador bloquee el popup más tarde durante el proceso
+            try {
+                await GoogleAuthService.ensureToken();
+            } catch (authErr) {
+                console.error("❌ Auth pre-check failed:", authErr);
+                // No detenemos el flujo aquí por si acaso ya tenía token, 
+                // pero si falla más adelante el error será capturado por el catch principal
+            }
+
             this.dom.confirmBtn.disabled = true;
             this.dom.confirmBtn.textContent = 'Agendando...';
 
