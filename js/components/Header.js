@@ -330,6 +330,7 @@ export const Header = {
         if (selectorContainer && selector) {
             if (AuthManager.can('switch_therapist_view')) {
                 selectorContainer.classList.remove('hidden');
+                selectorContainer.classList.add('md:flex');
                 selector.value = AuthManager.getSelectedTherapist();
 
                 // Asignar evento de cambio
@@ -352,6 +353,7 @@ export const Header = {
                 };
             } else {
                 selectorContainer.classList.add('hidden');
+                selectorContainer.classList.remove('md:flex');
             }
         }
     },
