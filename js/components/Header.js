@@ -428,7 +428,7 @@ export const Header = {
                 );
             }
             // 2. Admin (Diana): Filtro visual actual
-            else if (role === 'admin' && AuthManager.can('switch_therapist_view')) {
+            else if ((role === 'admin' || role === 'receptionist') && AuthManager.can('switch_therapist_view')) {
                 const currentView = AuthManager.getSelectedTherapist();
                 if (currentView !== 'all') {
                     appointmentsToProcess = appointmentsToProcess.filter(a =>

@@ -32,7 +32,7 @@ export const CorteDeCaja = {
             todayAppts = todayAppts.filter(a =>
                 (a.therapist || 'diana').toLowerCase() === user.therapist.toLowerCase()
             );
-        } else if (user?.role === 'admin' && AuthManager.can('switch_therapist_view')) {
+        } else if ((user?.role === 'admin' || user?.role === 'receptionist') && AuthManager.can('switch_therapist_view')) {
             const currentView = AuthManager.getSelectedTherapist();
             if (currentView !== 'all') {
                 todayAppts = todayAppts.filter(a =>

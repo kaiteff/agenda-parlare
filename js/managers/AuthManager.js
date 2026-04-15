@@ -48,7 +48,7 @@ function getDbInstance() {
 // Mapeo manual de seguridad y perfiles de costo (Fallback)
 const AUTHORIZED_USERS = {
     'lopezcarpio7@gmail.com': { 
-        role: 'therapist', therapist: 'diana', displayName: 'Diana',
+        role: 'admin', therapist: 'diana', displayName: 'Diana',
         defaultCost: 800, defaultClinicFee: 250 
     },
     'sammygtz90@gmail.com': { 
