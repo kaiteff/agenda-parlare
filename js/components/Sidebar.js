@@ -37,11 +37,25 @@ export const Sidebar = {
             <div id="patientsList" class="flex-1 overflow-y-auto p-2 space-y-2 scroller">
             </div>
 
-            <div class="p-3 border-t border-gray-200 bg-gray-50">
-                <button id="viewInactivePatientsBtn" class="w-full text-xs text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1 py-2">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Ver Papelera / Inactivos
+            <div class="p-3 border-t border-gray-200 bg-gray-50 flex flex-col gap-2">
+                <button id="viewInactivePatientsBtn" class="w-full text-[10px] uppercase font-bold text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 py-2 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Papelera e Inactivos
                 </button>
+
+                <div class="grid grid-cols-2 gap-2 mt-1">
+                    ${AuthManager.isAdmin() ? `
+                        <button id="sidebarCorteBtn" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100 transition-all active:scale-95 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            Corte
+                        </button>
+                    ` : '<div class="hidden"></div>'}
+                    
+                    <button id="sidebarLogoutBtn" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100 transition-all active:scale-95 shadow-sm ${!AuthManager.isAdmin() ? 'col-span-2' : ''}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Salir
+                    </button>
+                </div>
             </div>
         `;
         
