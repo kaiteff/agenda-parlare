@@ -37,6 +37,13 @@ export const GoogleAuthService = {
         try {
             await Promise.all([this.loadGapi(), this.loadGis()]);
             log.success("Librerías cargadas.");
+
+            // Intento de recuperación silenciosa si hay un token residual
+            if (window.gapi?.client?.getToken() && !this.tokenExpiration) {
+                log.info("Token residual detectado. Intentando validar...");
+                this._refreshSilently().catch(e => log.warn("Validación inicial fallida:", e));
+            }
+
             return true;
         } catch (error) {
             log.error("Error al inicializar", error);

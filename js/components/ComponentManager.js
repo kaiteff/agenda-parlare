@@ -39,9 +39,9 @@ export const ComponentManager = {
     },
 
     injectMobileOverlay(root) {
-        if (document.getElementById('sidebarMobileOverlay')) return;
+        if (document.getElementById('sidebarOverlay')) return;
         const overlay = document.createElement('div');
-        overlay.id = 'sidebarMobileOverlay';
+        overlay.id = 'sidebarOverlay';
         overlay.className = 'hidden fixed inset-0 bg-black bg-opacity-50 z-[40] md:hidden transition-opacity duration-300';
         root.appendChild(overlay);
     }
