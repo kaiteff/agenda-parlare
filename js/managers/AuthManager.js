@@ -148,13 +148,13 @@ export const AuthManager = {
                 };
             }
 
-            // Inicializar filtro de terapeuta: PRIORIDAD AL SUYO
-            if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
-                // Recepción y Admin ven todas por defecto
+            // Inicializar filtro de terapeuta: PRIORIDAD AL SUYO (incluso si es Admin)
+            if (this.currentUser.therapist && this.currentUser.therapist !== 'all') {
+                this.selectedTherapist = this.currentUser.therapist;
+            } else if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
                 this.selectedTherapist = 'all';
             } else {
-                // Terapeutas ven la suya
-                this.selectedTherapist = this.currentUser.therapist || 'diana';
+                this.selectedTherapist = 'diana';
             }
 
             return this.currentUser;

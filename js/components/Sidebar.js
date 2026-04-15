@@ -175,6 +175,19 @@ export const Sidebar = {
     _generatePatientCard(p) {
         const statusColor = p.totalPending > 0 ? 'bg-orange-500' : 'bg-green-500';
         
+        // Configuración de Tag de Terapeuta
+        const tKey = (p.therapist || 'diana').toLowerCase();
+        let tLetter = 'D';
+        let tClass = 'bg-pink-100 text-pink-700 border-pink-200';
+        
+        if (tKey === 'sam') {
+            tLetter = 'S';
+            tClass = 'bg-blue-100 text-blue-700 border-blue-200';
+        } else if (tKey === 'vero') {
+            tLetter = 'V';
+            tClass = 'bg-purple-100 text-purple-700 border-purple-200';
+        }
+
         // Formatear hora si existe (para vista Hoy/Mañana)
         let timeLabel = '';
         if (p.appointmentTime) {
@@ -195,7 +208,10 @@ export const Sidebar = {
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <h3 class="font-bold text-gray-800 truncate pr-2">${p.name}</h3>
+                            <div class="flex items-center gap-1.5 truncate">
+                                <h3 class="font-bold text-gray-800 truncate">${p.name}</h3>
+                                <span class="flex-shrink-0 w-4 h-4 rounded text-[9px] font-black border flex items-center justify-center ${tClass}" title="Terapeuta: ${tKey}">${tLetter}</span>
+                            </div>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] ${p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium'}">
