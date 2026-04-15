@@ -20,12 +20,13 @@ export const Header = {
         if (!container || document.querySelector('header')) return;
         
         const header = document.createElement('header');
-        header.className = 'bg-white border-b border-gray-200 h-16 flex-shrink-0 z-50 shadow-sm relative';
+        header.id = 'mainHeader';
+        header.className = 'bg-white border-b border-gray-200 h-16 flex-shrink-0 z-[100] shadow-sm relative';
         header.innerHTML = `
             <div class="h-full px-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <button id="mobileMenuBtn" class="md:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 rounded-lg">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    <button id="mobileMenuBtn" onclick="toggleSidebarMobile()" class="md:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                     </button>
                     <div id="userInfo" class="flex items-center gap-3"></div>
                 </div>
@@ -343,6 +344,10 @@ export const Header = {
                     if (window.PatientManager && window.PatientManager.api) {
                         console.log("🔄 Recargando lista de pacientes...");
                         window.PatientManager.api.refreshList();
+                    }
+
+                    if (typeof window !== 'undefined') {
+                        window.Header = Header;
                     }
 
                     // Recargar calendario

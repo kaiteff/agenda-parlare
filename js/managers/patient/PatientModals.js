@@ -104,12 +104,12 @@ export const PatientModals = {
      * Cierra el modal de nuevo paciente
      */
     closeNewPatient() {
-        const modal = document.getElementById('newPatientModal');
-        if (modal) {
+        const modals = document.querySelectorAll('#newPatientModal');
+        modals.forEach(modal => {
             modal.classList.add('hidden');
-            modal.style.display = 'none';
-        }
-        console.log('✅ PatientModals: Modal de nuevo paciente cerrado');
+            modal.style.setProperty('display', 'none', 'important');
+        });
+        console.log('✅ PatientModals: Modal de nuevo paciente cerrado (' + modals.length + ' instancias)');
     },
 
     // ==========================================

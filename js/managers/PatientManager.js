@@ -95,7 +95,17 @@ export const PatientManager = {
         }
 
         if (dom.saveNewPatientBtn) {
-            dom.saveNewPatientBtn.onclick = async () => {
+            dom.saveNewPatientBtn.onclick = async (e) => {
+                // El submit del form ya lo maneja
+                console.log('🔘 PatientManager: Click en botón Crear');
+            };
+        }
+
+        const newPatientForm = document.getElementById('newPatientForm');
+        if (newPatientForm) {
+            newPatientForm.onsubmit = async (e) => {
+                e.preventDefault();
+                console.log('📝 PatientManager: Procesando submit de formulario...');
                 await PatientActions.saveNewPatient();
             };
         }

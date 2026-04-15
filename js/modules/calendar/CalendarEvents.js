@@ -121,14 +121,22 @@ export const CalendarEvents = {
             // 2. Modal de Nuevo Paciente
             const newPatientModal = document.getElementById('newPatientModal');
             if (event.target === newPatientModal) {
+                console.log('🚪 Cerrando NewPatientModal desde backdrop');
                 newPatientModal.classList.add('hidden');
-                newPatientModal.style.display = 'none';
+                newPatientModal.style.setProperty('display', 'none', 'important');
             }
 
-            // 3. Modal de Historial
-            const historyModal = document.getElementById('patientHistoryModal');
-            if (event.target === historyModal) {
-                historyModal.classList.add('hidden');
+            // 3. Otros modales comunes
+            const patientHistoryModal = document.getElementById('patientHistoryModal');
+            if (event.target === patientHistoryModal) {
+                patientHistoryModal.classList.add('hidden');
+                patientHistoryModal.style.setProperty('display', 'none', 'important');
+            }
+
+            const receptionControlModal = document.getElementById('receptionControlModal');
+            if (event.target === receptionControlModal) {
+                receptionControlModal.classList.add('hidden');
+                receptionControlModal.style.setProperty('display', 'none', 'important');
             }
 
             // 4. Modal de Pacientes Inactivos

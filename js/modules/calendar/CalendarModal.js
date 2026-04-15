@@ -211,11 +211,11 @@ export const CalendarModal = {
 
         // SEGURIDAD: Si el terapeuta no es el dueño, ocultar botones de edición
         const canEdit = AuthManager.canEditItem(ev);
-        dom.saveBtn.classList.toggle('hidden', !canEdit);
-        dom.deleteBtn.classList.toggle('hidden', !canEdit);
-        dom.payBtn.classList.toggle('hidden', !canEdit);
-        dom.confirmBtn.classList.toggle('hidden', !canEdit);
-        dom.cancelBtn.classList.toggle('hidden', !canEdit);
+        if (dom.saveBtn) dom.saveBtn.classList.toggle('hidden', !canEdit);
+        if (dom.deleteBtn) dom.deleteBtn.classList.toggle('hidden', !canEdit);
+        if (dom.payBtn) dom.payBtn.classList.toggle('hidden', !canEdit);
+        if (dom.confirmBtn) dom.confirmBtn.classList.toggle('hidden', !canEdit);
+        if (dom.cancelBtn) dom.cancelBtn.classList.toggle('hidden', !canEdit);
 
         // Bloquear opción de Inhabilitar si no tiene permiso
         const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');
@@ -262,17 +262,17 @@ export const CalendarModal = {
         }
 
         // Reschedule
-        dom.rescheduleSection.classList.remove('hidden');
-        // Reschedule
-        dom.rescheduleSection.classList.remove('hidden');
-        CalendarSuggestions.generateRescheduleOptions(date);
+        if (dom.rescheduleSection) {
+            dom.rescheduleSection.classList.remove('hidden');
+            CalendarSuggestions.generateRescheduleOptions(date);
+        }
 
         // Smart Suggestion (Best Pattern)
         CalendarSuggestions.analyzeAndSuggest(ev.name);
 
         // Recurrence (Allow in edit)
-        dom.isRecurringCheckbox.checked = false;
-        dom.recurringSection.classList.add('hidden');
+        if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.checked = false;
+        if (dom.recurringSection) dom.recurringSection.classList.add('hidden');
         if (dom.recurringOptions) dom.recurringOptions.value = 'weekly';
         if (document.getElementById('recurringDuration')) document.getElementById('recurringDuration').value = '3';
 
@@ -288,8 +288,13 @@ export const CalendarModal = {
     },
 
     closeModal() {
-        CalendarState.dom.eventModal.classList.add('hidden');
+        const dom = CalendarState.dom;
+        if (dom.eventModal) {
+            dom.eventModal.classList.add('hidden');
+            dom.eventModal.style.setProperty('display', 'none', 'important');
+        }
         CalendarState.selectedEventId = null;
+        console.log('🚪 CalendarModal: Modal cerrado correctamente');
     },
 
     populatePatientSuggestions(query) {

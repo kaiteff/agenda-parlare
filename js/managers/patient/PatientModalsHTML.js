@@ -26,7 +26,7 @@ export const PatientModalsHTML = {
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all modal-panel">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-bold text-gray-800">Nuevo Paciente</h3>
-                    <button id="closeNewPatientModalBtn" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <button id="closeNewPatientModalBtn" onclick="[...document.querySelectorAll('#newPatientModal')].forEach(m => { m.classList.add('hidden'); m.style.setProperty('display', 'none', 'important') }); if(window.closeNewPatientModal) window.closeNewPatientModal();" class="text-gray-400 hover:text-gray-600 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12"></path>
@@ -106,7 +106,7 @@ export const PatientModalsHTML = {
 
                     <div class="pt-4 flex gap-3">
                         <button type="button"
-                            onclick="document.getElementById('newPatientModal').classList.add('hidden')"
+                            onclick="[...document.querySelectorAll('#newPatientModal')].forEach(m => { m.classList.add('hidden'); m.style.setProperty('display', 'none', 'important') }); if(window.closeNewPatientModal) window.closeNewPatientModal();"
                             class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
                         <button type="submit" id="saveNewPatientBtn"
                             class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30">Crear

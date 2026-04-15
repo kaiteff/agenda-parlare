@@ -98,6 +98,7 @@ export const PatientActions = {
      * @returns {Promise<boolean>} true si se guardó correctamente
      */
     async saveNewPatient() {
+        console.log('🚀 PatientActions: Iniciando guardado de nuevo paciente...');
         const { dom } = PatientState;
 
         const firstName = dom.newPatientFirstName?.value.trim();

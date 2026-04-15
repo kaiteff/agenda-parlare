@@ -43,7 +43,7 @@ export const MainModals = {
                 <div class="bg-white w-full max-w-lg h-[85vh] rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
                         <h3 id="modalTitle" class="text-xl font-bold tracking-tight">Detalles de Cita</h3>
-                        <button onclick="document.getElementById('eventModal').classList.add('hidden')" class="p-2 -mr-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
+                        <button onclick="import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="p-2 -mr-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -79,14 +79,39 @@ export const MainModals = {
                         <div class="flex items-center gap-2">
                             <input type="checkbox" id="isRecurring" class="w-4 h-4 text-blue-600 rounded border-gray-300"><label for="isRecurring" class="text-sm text-gray-700 select-none">Agendar sesiones recurrentes</label>
                         </div>
-                        <div id="recurringSection" class="hidden bg-blue-50 p-3 rounded-lg border border-blue-100 italic text-xs text-blue-800">Citas recurrentes habilitadas.</div>
+                        <div id="recurringSection" class="hidden bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-blue-800 uppercase">Configuración</span>
+                                <select id="recurringDuration" class="text-xs bg-white border border-blue-200 rounded px-2 py-1">
+                                    <option value="4">4 sesiones</option>
+                                    <option value="8">8 sesiones</option>
+                                    <option value="12">12 sesiones</option>
+                                </select>
+                            </div>
+                            <div id="recurringDatesList" class="text-[10px] text-blue-700 space-y-1"></div>
+                        </div>
+
+                        <!-- Reschedule & Slots -->
+                        <div id="rescheduleSection" class="hidden space-y-3 pt-4 border-t border-gray-100">
+                             <label class="block text-xs font-bold text-gray-500 uppercase">Sugerencias (Hora)</label>
+                             <div id="rescheduleOptions" class="grid grid-cols-4 gap-2"></div>
+                        </div>
+
+                        <!-- Busy Slots (Debug/Info) -->
+                        <div id="busySlotsContainer" class="hidden pt-4 border-t border-gray-100">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Espacios Ocupados</label>
+                            <div id="busySlotsList" class="space-y-1 text-[10px] text-gray-500 italic scroller max-h-24"></div>
+                        </div>
                     </div>
                     <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-3xl">
                         <div class="grid grid-cols-2 gap-3">
                             <button id="confirmBtn" class="col-span-2 bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1">✓ Confirmar Asistencia</button>
                             <button id="saveBtn" class="col-span-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-md">Guardar Cita</button>
-                            <button id="payBtn" class="hidden flex-1 bg-green-100 text-green-700 py-2 rounded-lg hover:bg-green-200 font-semibold">Pagado</button>
-                            <button id="cancelBtn" class="hidden flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 font-semibold">Cancelar</button>
+                            <div class="col-span-2 flex gap-2">
+                                <button id="payBtn" class="hidden flex-1 bg-green-100 text-green-700 py-2 rounded-lg hover:bg-green-200 font-semibold">Pagado</button>
+                                <button id="cancelBtn" onclick="import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="hidden flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 font-semibold">Cerrar</button>
+                                <button id="deleteBtn" class="hidden flex-1 bg-red-100 text-red-700 py-2 rounded-lg hover:bg-red-200 font-semibold">Eliminar</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -218,6 +243,82 @@ export const MainModals = {
                         </div>
 
                         <div id="reportTherapistBody" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. SCHEDULE NEW PATIENT MODAL (Restaurado) -->
+            <div id="scheduleNewPatientModal" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col modal-panel overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                        <div>
+                            <h3 class="text-xl font-bold">Agendar Primera Cita</h3>
+                            <p id="schedulePatientName" class="text-indigo-100 text-xs mt-0.5">Paciente: ...</p>
+                        </div>
+                        <button id="closeScheduleNewPatientModalBtn" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 space-y-6 scroller">
+                        <!-- Week Navigation -->
+                        <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200">
+                            <button id="prevWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <div id="currentScheduleWeekLabel" class="text-sm font-bold text-gray-700 capitalize">...</div>
+                            <button id="nextWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                        </div>
+
+                        <!-- Slots Grid -->
+                        <div id="slotsGrid" class="grid grid-cols-3 md:grid-cols-6 gap-4">
+                            <!-- Generated by JS -->
+                        </div>
+
+                        <!-- Configuration -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Configuración de Cita</h4>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1.5 ml-1">Costo por Sesión ($)</label>
+                                    <input type="number" id="scheduleCostInput" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-bold" value="800">
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Recurrencia Automática</h4>
+                                <div class="flex gap-4">
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="recurrenceType" value="none" class="hidden peer" checked>
+                                        <div class="peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 border border-gray-200 rounded-lg p-3 text-center text-sm font-medium hover:bg-gray-50 transition-all">Solo esta vez</div>
+                                    </label>
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="recurrenceType" value="weekly" class="hidden peer">
+                                        <div class="peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 border border-gray-200 rounded-lg p-3 text-center text-sm font-medium hover:bg-gray-50 transition-all">Semanal</div>
+                                    </label>
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="recurrenceType" value="biweekly" class="hidden peer">
+                                        <div class="peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 border border-gray-200 rounded-lg p-3 text-center text-sm font-medium hover:bg-gray-50 transition-all">Quincenal</div>
+                                    </label>
+                                </div>
+
+                                <div id="sessionsCountContainer" class="hidden">
+                                     <label class="block text-sm text-gray-600 mb-1.5 ml-1">Número de sesiones</label>
+                                     <input type="number" id="sessionsCount" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value="1" min="1">
+                                     <p class="text-[10px] text-gray-400 mt-1 italic">* El sistema agendará automáticamente las citas futuras.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="p-4 bg-white border-t border-gray-100 flex justify-end">
+                        <button id="confirmScheduleBtn" class="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-2">
+                            Seleccione Horario
+                        </button>
                     </div>
                 </div>
             </div>
