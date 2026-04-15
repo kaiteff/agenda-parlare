@@ -1,3 +1,4 @@
+/**
  * Sidebar.js
  * Gestiona la estructura de la lista de pacientes y sus acciones.
  */
