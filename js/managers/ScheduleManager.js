@@ -93,7 +93,14 @@ export const ScheduleManager = {
         this.state.patientId = patientId;
         this.state.patientName = patientName;
         this.state.therapist = therapist || 'diana';
-        this.state.currentWeekStart = getStartOfWeek(new Date());
+        const now = new Date();
+        let weekStart = getStartOfWeek(now);
+        // Si hoy es domingo (0), la semana hábil (Lun-Sab) ya pasó, mostrar la siguiente semana
+        if (now.getDay() === 0) {
+            weekStart.setDate(weekStart.getDate() + 7);
+        }
+        this.state.currentWeekStart = weekStart;
+        
         this.state.selectedSlots = [];
         this.state.recurrenceType = 'none';
         this.state.sessionsCount = 1;
@@ -233,10 +240,22 @@ export const ScheduleManager = {
         const startHour = 8;
         const endHour = 21;
         const now = new Date();
+        
+        // Determinar si la fecha proporcionada ya es un día pasado (ignorando hora)
+        const dateIsPast = new Date(date.getFullYear(), date.getMonth(), date.getDate()) < 
+                           new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                           
         const isToday = date.toDateString() === now.toDateString();
 
+        // Si es un día pasado, no mostramos ningún slot
+        if (dateIsPast) {
+            return slots;
+        }
+
         for (let hour = startHour; hour < endHour; hour++) {
+            // Si es hoy, no mostrar horas que ya pasaron
             if (isToday && hour <= now.getHours()) continue;
+            
             const slotDate = new Date(date);
             slotDate.setHours(hour, 0, 0, 0);
             const isFree = isSlotFree(slotDate, PatientState.appointments || [], null, this.state.therapist);

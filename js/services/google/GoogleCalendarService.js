@@ -311,6 +311,7 @@ export const GoogleCalendarService = {
         const timeMax = new Date(now.getFullYear(), now.getMonth() + 6, 1).toISOString(); // 6 meses adelante
         
         const eventMap = {}; // Key: "therapist_ISOtime_name" -> Value: googleEventId
+        const timeOnlyMap = {}; // Key: "therapist_ISOtime" -> Value: googleEventId
 
         log.info("🔍 Escaneando Google Calendar para evitar duplicados...");
 
@@ -330,19 +331,23 @@ export const GoogleCalendarService = {
                     const start = item.start.dateTime || item.start.date;
                     if (!start) return;
 
-                    // Normalizar para match: ISO(minutos) + Nombre
+                    // Normalizar para match exacto y match parcial
                     const isoKey = new Date(start).toISOString().slice(0, 16);
                     const nameNorm = (item.summary || '').toLowerCase().trim().replace(/\s+/g, '');
-                    const key = `${tKey}_${isoKey}_${nameNorm}`;
                     
-                    eventMap[key] = item.id;
+                    const exactKey = `${tKey}_${isoKey}_${nameNorm}`;
+                    const timeKey = `${tKey}_${isoKey}`;
+                    
+                    eventMap[exactKey] = item.id;
+                    // Solo guardamos el fallback por tiempo si no existe o lo sobrescribimos
+                    timeOnlyMap[timeKey] = item.id;
                 });
             } catch (err) {
                 log.warn(`Error escaneando calendario de ${tKey}:`, err);
             }
         }
 
-        return eventMap;
+        return { exact: eventMap, timeOnly: timeOnlyMap };
     },
 
     /**
@@ -358,7 +363,7 @@ export const GoogleCalendarService = {
         ToastService.info(`Sincronizando ${active.length} citas...`);
 
         // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google
-        const googleMap = await this._fetchGoogleEventsMap();
+        const googleMaps = await this._fetchGoogleEventsMap();
         const mappings = this._getMappings();
         let created = 0, updated = 0, errors = 0, linked = 0;
 
@@ -369,17 +374,26 @@ export const GoogleCalendarService = {
 
                 let result;
                 
-                // --- ESCUDO DE DUPLICADOS ---
-                // Si la cita no tiene ID en la App, revisamos si YA existe en Google por nombre/hora/terapeuta
+                // --- ESCUDO DE DUPLICADOS MEJORADO ---
                 if (!apt.googleEventId && !mappings[apt.id]) {
                     const isoKey = new Date(apt.date).toISOString().slice(0, 16);
                     const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
                     const therapist = (apt.therapist || 'diana').toLowerCase();
-                    const key = `${therapist}_${isoKey}_${nameNorm}`;
+                    
+                    const exactKey = `${therapist}_${isoKey}_${nameNorm}`;
+                    const timeKey = `${therapist}_${isoKey}`;
 
-                    if (googleMap[key]) {
-                        const foundId = googleMap[key];
-                        log.info(`🔗 Enlace automático: Cita de ${apt.name} ya existe en Google [${foundId}].`);
+                    let foundId = googleMaps.exact[exactKey];
+                    let matchType = 'Exacto';
+                    
+                    // Si no hay match exacto, buscamos cualquier evento del MISMO terapeuta a la MISMA hora
+                    if (!foundId && googleMaps.timeOnly[timeKey]) {
+                        foundId = googleMaps.timeOnly[timeKey];
+                        matchType = 'Por Horario';
+                    }
+
+                    if (foundId) {
+                        log.info(`🔗 Enlace automático (${matchType}): Cita de ${apt.name} ya existe en Google [${foundId}].`);
                         
                         // Guardar el enlace en Firestore para el futuro
                         try {
@@ -387,7 +401,7 @@ export const GoogleCalendarService = {
                             await updateDoc(doc(db, collectionPath, apt.id), { googleEventId: foundId });
                         } catch (e) {}
 
-                        apt.googleEventId = foundId; // Lo "emparchamos" en memoria para que el siguiente paso sea UPDATE
+                        apt.googleEventId = foundId; // Emparchamos en memoria para que actualice
                         linked++;
                     }
                 }
@@ -395,11 +409,12 @@ export const GoogleCalendarService = {
 
                 if (apt.googleEventId || mappings[apt.id]) {
                     result = await this.updateEvent(apt);
-                    if (result && result.success) updated++;
-                    else {
-                        result = await this.createEvent(apt);
-                        if (result && result.success) created++;
-                        else errors++;
+                    if (result && result.success) {
+                        updated++;
+                    } else {
+                        // PELIGRO ELIMINADO: Antes, si updateEvent fallaba por timeout/403, creaba uno nuevo ciegamente.
+                        log.warn(`Update falló para ${apt.id}. NO se recreará para evitar duplicidad.`);
+                        errors++;
                     }
                 } else {
                     result = await this.createEvent(apt);
