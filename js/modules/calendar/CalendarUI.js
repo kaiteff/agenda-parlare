@@ -198,17 +198,18 @@ export const CalendarUI = {
                                     };
                                 }
 
-                                // Content: Name + Checkmark if confirmed
+                                // Content: Name + Initial + Checkmark if confirmed
                                 const canViewDetails = AuthManager.canViewDetails(evt);
+                                const tInitial = tKey.charAt(0).toUpperCase();
                                 
                                 let content = '';
                                 if (evt.isPaid) {
-                                    content = 'Pagado';
+                                    content = `[${tInitial}] Pagado`;
                                 } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
-                                    content = 'Bloqueado';
+                                    content = `[${tInitial}] Bloqueado`;
                                 } else {
                                     // Si puede ver detalles (es dueño o admin), ver nombre. Si no, solo 'Ocupado'
-                                    content = canViewDetails ? therapistName : 'Ocupado';
+                                    content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
                                 }
 
                                 if (evt.confirmed && canViewDetails) {
