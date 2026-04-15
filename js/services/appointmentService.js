@@ -146,12 +146,34 @@ export async function updateAppointment(id, updateData, existingAppointments) {
 
         log.info(`Cita actualizada [${id}]`);
 
-        // Bitácora de Auditoría
+        // Bitácora de Auditoría con cambios legibles
+        const fieldMap = {
+            name: 'Nombre',
+            date: 'Fecha/Hora',
+            cost: 'Costo',
+            isPaid: 'Estado de Pago',
+            confirmed: 'Confirmación',
+            therapist: 'Terapeuta',
+            clinicFee: 'Comisión Parláre',
+            isCancelled: 'Estado de Cancelación'
+        };
+
+        const readableChanges = Object.keys(updateData)
+            .filter(key => fieldMap[key]) // Solo campos importantes
+            .map(key => {
+                const label = fieldMap[key];
+                let val = updateData[key];
+                if (key === 'isPaid') val = val ? 'Pagado' : 'Pendiente';
+                if (key === 'confirmed') val = val ? 'Sí' : 'No';
+                if (key === 'date') val = new Date(val).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+                return `${label} a "${val}"`;
+            });
+
         await AuditService.log('UPDATE', 'APPOINTMENT', id, { 
             patientName: mergedData.name, 
             date: mergedData.date,
             therapist: mergedData.therapist,
-            changes: Object.keys(updateData) 
+            changes: readableChanges.length > 0 ? readableChanges : Object.keys(updateData) 
         });
 
         // Crear notificación interna
