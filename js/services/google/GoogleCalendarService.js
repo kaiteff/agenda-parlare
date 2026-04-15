@@ -359,7 +359,20 @@ export const GoogleCalendarService = {
             return { created: 0, updated: 0, errors: 0 };
         }
 
-        const active = appointments.filter(a => !a.isCancelled);
+        // 0. LIMPIEZA AGRESIVA EN FIREBASE PARA EVITAR CIUDAR FANTASMAS
+        let idsAExcluir = [];
+        try {
+            const { CalendarData } = await import('../../modules/calendar/CalendarData.js');
+            const cleanResult = await CalendarData.cleanupDuplicates();
+            if (cleanResult && cleanResult.total > 0) {
+                log.info(`Eliminados ${cleanResult.total} duplicados de Firebase antes de sincronizar.`);
+                idsAExcluir = cleanResult.deletedIds || [];
+            }
+        } catch(e) {
+            log.warn('No se pudo ejecutar limpieza previa', e);
+        }
+
+        const active = appointments.filter(a => !a.isCancelled && !idsAExcluir.includes(a.id));
         ToastService.info(`Sincronizando ${active.length} citas...`);
 
         // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google

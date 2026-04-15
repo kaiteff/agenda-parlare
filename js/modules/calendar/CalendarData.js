@@ -240,9 +240,14 @@ export const CalendarData = {
         let deleted = 0;
         for (const duo of duplicates) {
             try {
-                // Borrar de Firestore (usamos deleteAppointment sin sync de GCal para ir rápido)
+                // Borrar de Firestore
                 const { deleteDoc, doc, db, collectionPath } = await import('../../firebase.js');
                 await deleteDoc(doc(db, collectionPath, duo.id));
+                
+                // Borrar también de Google Calendar para erradicar el "fantasma"
+                const { GoogleCalendarService } = await import('../../services/google/GoogleCalendarService.js');
+                await GoogleCalendarService.deleteEvent(duo.id, duo.googleEventId || null, duo.therapist);
+
                 deleted++;
             } catch (err) {
                 console.error(`Error borrando duplicado ${duo.id}:`, err);
@@ -250,6 +255,6 @@ export const CalendarData = {
         }
 
         console.log(`✅ Limpieza completada: ${deleted} duplicados eliminados.`);
-        return { total: deleted };
+        return { total: deleted, deletedIds: duplicates.map(d => d.id) };
     }
 };
