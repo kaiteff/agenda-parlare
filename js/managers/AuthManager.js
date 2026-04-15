@@ -45,16 +45,45 @@ function getDbInstance() {
     return db;
 }
 
-// Mapeo manual de seguridad (Fallback)
+// Mapeo manual de seguridad y perfiles de costo (Fallback)
 const AUTHORIZED_USERS = {
-    'lopezcarpio7@gmail.com': { role: 'therapist', therapist: 'diana', displayName: 'Diana' },
-    'sammygtz90@gmail.com': { role: 'therapist', therapist: 'sam', displayName: 'Sam' },
-    'sanchezverooo21@gmail.com': { role: 'therapist', therapist: 'vero', displayName: 'Vero' },
-    'yaritzajocgo@gmail.com': { role: 'receptionist', therapist: 'all', displayName: 'Yari' },
-    'rodriguezd.danielrob@gmail.com': { role: 'admin', therapist: 'all', displayName: 'Daniel (Admin)' }
+    'lopezcarpio7@gmail.com': { 
+        role: 'therapist', therapist: 'diana', displayName: 'Diana',
+        defaultCost: 800, defaultClinicFee: 250 
+    },
+    'sammygtz90@gmail.com': { 
+        role: 'therapist', therapist: 'sam', displayName: 'Sam',
+        defaultCost: 800, defaultClinicFee: 250 
+    },
+    'sanchezverooo21@gmail.com': { 
+        role: 'therapist', therapist: 'vero', displayName: 'Vero',
+        defaultCost: 800, defaultClinicFee: 400 
+    },
+    'yaritzajocgo@gmail.com': { 
+        role: 'receptionist', therapist: 'all', displayName: 'Yari',
+        defaultCost: 800, defaultClinicFee: 250 
+    },
+    'rodriguezd.danielrob@gmail.com': { 
+        role: 'admin', therapist: 'all', displayName: 'Daniel (Admin)',
+        defaultCost: 800, defaultClinicFee: 250 
+    }
 };
 
 export const AuthManager = {
+    // ... (anterior)
+    
+    /**
+     * Obtiene los costos por defecto de un terapeuta
+     */
+    getTherapistDefaults(therapistId) {
+        const id = (therapistId || 'diana').toLowerCase();
+        // Buscar en el mapeo de usuarios el que corresponda a ese ID de terapeuta
+        const profile = Object.values(AUTHORIZED_USERS).find(u => u.therapist === id);
+        return {
+            cost: profile?.defaultCost || 800,
+            clinicFee: profile?.defaultClinicFee || 250
+        };
+    },
     currentUser: null,
     selectedTherapist: null, // Para admins: qué calendario están viendo
 

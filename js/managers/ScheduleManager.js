@@ -318,7 +318,8 @@ export const ScheduleManager = {
 
             let createdTotal = 0;
             const patientData = PatientState.patients.find(p => p.id === this.state.patientId);
-            const clinicFee = patientData?.clinicFee || (this.state.therapist === 'vero' ? 400 : 250);
+            const therapistDefaults = AuthManager.getTherapistDefaults(this.state.therapist);
+            const clinicFee = patientData?.clinicFee || therapistDefaults.clinicFee;
 
             // Bucle por cada horario seleccionado (Multidía)
             for (const baseDate of this.state.selectedSlots) {

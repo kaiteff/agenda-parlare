@@ -60,25 +60,28 @@ export const PatientModals = {
         const phoneInput = document.getElementById('newPatientPhone');
         const countryCodeInput = document.getElementById('newPatientCountryCode');
 
-        if (firstNameInput) firstNameInput.value = '';
-        if (lastNameInput) lastNameInput.value = '';
-        if (costInput) costInput.value = '800';
-        if (clinicFeeInput) clinicFeeInput.value = '250.00';
-        if (parentNameInput) parentNameInput.value = '';
-        if (phoneInput) phoneInput.value = '';
-        if (countryCodeInput) countryCodeInput.value = '52'; // Default Mexico
-
-        // Configurar terapeuta
+        // Configurar terapeuta primero para obtener costos
+        let targetTherapist = 'diana';
         if (therapistInput) {
             const selectedTherapist = AuthManager.getSelectedTherapist();
             if (selectedTherapist && selectedTherapist !== 'all') {
-                therapistInput.value = selectedTherapist;
+                targetTherapist = selectedTherapist;
             } else if (AuthManager.isTherapist() && !AuthManager.isAdmin()) {
-                therapistInput.value = AuthManager.currentUser.therapist;
-            } else {
-                therapistInput.value = 'diana';
+                targetTherapist = AuthManager.currentUser.therapist;
             }
+            therapistInput.value = targetTherapist;
         }
+
+        // Obtener costos según terapeuta
+        const defaults = AuthManager.getTherapistDefaults(targetTherapist);
+
+        if (firstNameInput) firstNameInput.value = '';
+        if (lastNameInput) lastNameInput.value = '';
+        if (costInput) costInput.value = defaults.cost;
+        if (clinicFeeInput) clinicFeeInput.value = defaults.clinicFee.toFixed(2);
+        if (parentNameInput) parentNameInput.value = '';
+        if (phoneInput) phoneInput.value = '';
+        if (countryCodeInput) countryCodeInput.value = '52'; // Default Mexico
 
         // Mover al body para evitar problemas de stacking context
         if (modal.parentNode !== document.body) {

@@ -185,11 +185,10 @@ export async function deletePatientProfile(id, patientName) {
  * @param {string} patientProfiles - Lista de perfiles de pacientes
  * @returns {Promise<Object>} - Perfil del paciente
  */
-export async function ensurePatientProfile(patientName, firstName = '', lastName = '', patientProfiles = []) {
+export async function ensurePatientProfile(patientName, firstName = '', lastName = '', patientProfiles = [], options = {}) {
     const existing = patientProfiles.find(p => p.name === patientName);
 
     if (existing) {
-        // Si está inactivo, preguntar si reactivar
         if (existing.isActive === false) {
             const inactivatedDate = existing.dateInactivated?.toDate?.() || new Date(existing.dateInactivated);
             const dateStr = inactivatedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -211,7 +210,13 @@ export async function ensurePatientProfile(patientName, firstName = '', lastName
     }
 
     // Crear nuevo perfil usando servicio
-    const result = await createPatientProfile(normalizeName(patientName), normalizeName(firstName), normalizeName(lastName));
+    const result = await createPatientProfile(
+        normalizeName(patientName), 
+        normalizeName(firstName), 
+        normalizeName(lastName), 
+        options.therapist || 'diana', 
+        options
+    );
     if (!result.success) throw new Error(result.error);
     return { id: result.id, ...result.data };
 }

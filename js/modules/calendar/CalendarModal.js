@@ -90,7 +90,9 @@ export const CalendarModal = {
         dom.patientLastNameInput.value = '';
         dom.patientFirstNameInput.disabled = false;
         dom.patientLastNameInput.disabled = false;
-        dom.costInput.value = '800';
+        const currentTherapist = dom.appointmentTherapistInput?.value || AuthManager.currentUser?.therapist || 'diana';
+        const defaults = AuthManager.getTherapistDefaults(currentTherapist);
+        dom.costInput.value = defaults.cost;
 
         // Reset Phone (Enabled for new appointments)
         if (dom.phoneInput) {
@@ -474,15 +476,17 @@ export const CalendarModal = {
                 appointmentData.patientId = null;
             } else {
                 // Flujo normal de paciente
+                const therapistDefaults = AuthManager.getTherapistDefaults(therapist);
                 const profile = await ensurePatientProfile(
                     name,
                     dom.patientFirstNameInput.value,
                     dom.patientLastNameInput.value,
-                    PatientState.patients
+                    PatientState.patients,
+                    { clinicFee: therapistDefaults.clinicFee } // Pasar fee por defecto según terapeuta
                 );
                 appointmentData.name = profile.name;
                 appointmentData.patientId = profile.id;
-                appointmentData.clinicFee = profile.clinicFee || (therapist === 'vero' ? 400 : 250);
+                appointmentData.clinicFee = profile.clinicFee || therapistDefaults.clinicFee;
             }
 
             if (CalendarState.selectedEventId) {
