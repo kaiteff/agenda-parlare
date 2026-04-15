@@ -130,6 +130,8 @@ export const PatientState = {
         this.dom.newPatientTherapist = document.getElementById('newPatientTherapist');
         this.dom.newPatientDefaultCost = document.getElementById('newPatientDefaultCost');
         this.dom.newPatientClinicFee = document.getElementById('newPatientClinicFee');
+        this.dom.newPatientParentName = document.getElementById('newPatientParentName');
+        this.dom.newPatientPhone = document.getElementById('newPatientPhone');
         this.dom.saveNewPatientBtn = document.getElementById('saveNewPatientBtn');
         this.dom.closeNewPatientModalBtn = document.getElementById('closeNewPatientModalBtn');
 

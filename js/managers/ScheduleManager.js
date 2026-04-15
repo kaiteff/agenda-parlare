@@ -255,6 +255,9 @@ export const ScheduleManager = {
         for (let hour = startHour; hour < endHour; hour++) {
             // Si es hoy, no mostrar horas que ya pasaron
             if (isToday && hour <= now.getHours()) continue;
+
+            // REGLA SÁBADO: No después de las 4 PM (16:00)
+            if (date.getDay() === 6 && hour > 16) continue;
             
             const slotDate = new Date(date);
             slotDate.setHours(hour, 0, 0, 0);

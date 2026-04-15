@@ -106,8 +106,8 @@ export const PatientActions = {
         const therapist = dom.newPatientTherapist?.value || 'diana';
         const defaultCost = dom.newPatientDefaultCost ? parseFloat(dom.newPatientDefaultCost.value) : 0;
         const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 250;
-        const phone = document.getElementById('newPatientPhone')?.value.trim() || '';
-        const parentName = document.getElementById('newPatientParentName')?.value.trim() || '';
+        const phone = dom.newPatientPhone?.value.trim() || '';
+        const parentName = dom.newPatientParentName?.value.trim() || '';
         const wantsWhatsapp = document.getElementById('newPatientWantsWhatsapp')?.checked !== false;
 
         // Validación

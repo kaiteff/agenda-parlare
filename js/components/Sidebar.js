@@ -203,15 +203,13 @@ export const Sidebar = {
             <div onclick="window.openPatientHistoryById('${p.id}')" 
                  class="group p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-200">
                 <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
+                    <div class="relative w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
                         ${p.name.charAt(0)}
+                        <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black border-2 border-white flex items-center justify-center shadow-sm ${tClass}" title="Terapeuta: ${tKey}">${tLetter}</span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <div class="flex items-center gap-1.5 truncate">
-                                <h3 class="font-bold text-gray-800 truncate">${p.name}</h3>
-                                <span class="flex-shrink-0 w-4 h-4 rounded text-[9px] font-black border flex items-center justify-center ${tClass}" title="Terapeuta: ${tKey}">${tLetter}</span>
-                            </div>
+                            <h3 class="font-bold text-gray-800 truncate">${p.name}</h3>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] ${p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium'}">
