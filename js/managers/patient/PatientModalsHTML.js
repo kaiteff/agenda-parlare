@@ -82,7 +82,7 @@ export const PatientModalsHTML = {
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📱 WhatsApp</label>
                             <div class="flex gap-1.5">
-                                <select id="newPatientCountryCode" class="w-20 px-1 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 outline-none">
+                                <select id="newPatientCountryCode" class="w-16 px-1 py-2 border border-gray-300 rounded-lg text-[10px] bg-gray-50 outline-none">
                                     <option value="52">🇲🇽 +52</option>
                                     <option value="1">🇺🇸 +1</option>
                                     <option value="34">🇪🇸 +34</option>
@@ -94,12 +94,12 @@ export const PatientModalsHTML = {
                                     <option value="51">🇵🇪 +51</option>
                                 </select>
                                 <input type="tel" id="newPatientPhone" placeholder="33 2495 5791"
-                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm">
+                                    class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm">
                             </div>
                             <label class="flex items-center gap-2 mt-2 cursor-pointer">
                                 <input type="checkbox" id="newPatientWantsWhatsapp" checked
                                     class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
-                                <span class="text-xs text-gray-600 font-medium">Recibir recordatorios automáticos</span>
+                                <span class="text-[10px] text-gray-600 font-medium">Recibir recordatorios automáticos</span>
                             </label>
                         </div>
                     </div>
@@ -194,7 +194,7 @@ export const PatientModalsHTML = {
                             <div>
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">📱 WhatsApp</label>
                                 <div class="flex gap-1.5">
-                                    <select id="editPatientCountryCode" class="w-20 px-1 py-2 border border-gray-300 rounded-lg text-xs bg-gray-50 outline-none">
+                                    <select id="editPatientCountryCode" class="w-16 px-1 py-2 border border-gray-300 rounded-lg text-[10px] bg-gray-50 outline-none">
                                         <option value="52">🇲🇽 +52</option>
                                         <option value="1">🇺🇸 +1</option>
                                         <option value="34">🇪🇸 +34</option>
@@ -206,12 +206,12 @@ export const PatientModalsHTML = {
                                         <option value="51">🇵🇪 +51</option>
                                     </select>
                                     <input type="tel" id="editPatientPhone"
-                                        class="flex-1 border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
+                                        class="flex-1 min-w-0 border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
                                 </div>
                                 <label class="flex items-center gap-2 mt-2 cursor-pointer">
                                     <input type="checkbox" id="editPatientWantsWhatsapp" checked
                                         class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
-                                    <span class="text-xs text-gray-600 font-medium tracking-tight">Recibir recordatorios automáticos</span>
+                                    <span class="text-[10px] text-gray-600 font-medium tracking-tight">Recibir recordatorios automáticos</span>
                                 </label>
                             </div>
                         </div>

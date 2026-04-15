@@ -209,7 +209,8 @@ export const CalendarUI = {
 
                                 chip.onclick = (e) => {
                                     e.stopPropagation();
-                                    if (canEdit && onEventClick) onEventClick(evt);
+                                    console.log('👆 Chip clicked (All):', evt.name);
+                                    if (onEventClick) onEventClick(evt);
                                 };
                                 container.appendChild(chip);
                             });
@@ -254,29 +255,22 @@ export const CalendarUI = {
                                                 AuthManager.isAdmin() || 
                                                 AuthManager.currentUser?.role === 'receptionist';
                                 
-                                if (!canEdit) {
-                                    eventCard.classList.add('opacity-70', 'grayscale', 'cursor-default');
-                                    eventCard.classList.remove('cursor-pointer');
-                                    eventCard.onclick = (e) => {
-                                        e.stopPropagation();
-                                        ToastService.info("Solo lectura: Esta cita pertenece a otra terapeuta.");
+                                if (canView) {
+                                    eventCard.draggable = true;
+                                    eventCard.ondragstart = (e) => {
+                                        e.dataTransfer.setData("text/plain", evt.id);
+                                        eventCard.style.opacity = '0.5';
                                     };
-                                } else {
-                                    if (canView) {
-                                        eventCard.draggable = true;
-                                        eventCard.ondragstart = (e) => {
-                                            e.dataTransfer.setData("text/plain", evt.id);
-                                            eventCard.style.opacity = '0.5';
-                                        };
-                                        eventCard.ondragend = (e) => {
-                                            eventCard.style.opacity = '1';
-                                        };
-                                    }
-                                    eventCard.onclick = (e) => {
-                                        e.stopPropagation();
-                                        if (canView && onEventClick) onEventClick(evt);
+                                    eventCard.ondragend = (e) => {
+                                        eventCard.style.opacity = '1';
                                     };
                                 }
+                                
+                                eventCard.onclick = (e) => {
+                                    e.stopPropagation();
+                                    console.log('👆 Card clicked (Individual):', evt.name);
+                                    if (onEventClick) onEventClick(evt);
+                                };
 
                                 eventCard.innerHTML = `
                                     <div class="flex items-center justify-between gap-1 w-full">

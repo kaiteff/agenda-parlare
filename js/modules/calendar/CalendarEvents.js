@@ -111,12 +111,32 @@ export const CalendarEvents = {
             }
         };
 
-        // Cerrar modal al hacer click fuera
-        window.onclick = (event) => {
+        // Cerrar modales al hacer click en el backdrop (el área oscura)
+        window.addEventListener('click', (event) => {
+            // 1. Modal de Calendario (Citas)
             if (event.target === CalendarState.dom.eventModal) {
                 CalendarModal.closeModal();
             }
-        };
+            
+            // 2. Modal de Nuevo Paciente
+            const newPatientModal = document.getElementById('newPatientModal');
+            if (event.target === newPatientModal) {
+                newPatientModal.classList.add('hidden');
+                newPatientModal.style.display = 'none';
+            }
+
+            // 3. Modal de Historial
+            const historyModal = document.getElementById('patientHistoryModal');
+            if (event.target === historyModal) {
+                historyModal.classList.add('hidden');
+            }
+
+            // 4. Modal de Pacientes Inactivos
+            const inactiveModal = document.getElementById('inactivePatientsModal');
+            if (event.target === inactiveModal) {
+                inactiveModal.classList.add('hidden');
+            }
+        });
     },
 
     render() {

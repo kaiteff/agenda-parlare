@@ -272,7 +272,10 @@ export const CalendarModal = {
         // NEW: Render Custom Daily Grid
         this.renderDailySlots(date);
 
+        console.log('📬 Abriendo modal de edición para:', ev.name);
         dom.eventModal.classList.remove('hidden');
+        dom.eventModal.style.display = 'flex';
+        dom.eventModal.style.zIndex = '9999';
     },
 
     closeModal() {
