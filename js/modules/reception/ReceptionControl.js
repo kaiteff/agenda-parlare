@@ -113,7 +113,8 @@ export const ReceptionControl = {
                     </div>
                     
                     <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border">
-                        <button id="viewTomorrowBtn" class="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm">🌅 Mañana</button>
+                        <button id="viewTodayBtn" class="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm">☀️ Hoy</button>
+                        <button id="viewTomorrowBtn" class="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-600 hover:bg-gray-200">🌅 Mañana</button>
                         <button id="viewFutureBtn" class="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-600 hover:bg-gray-200">🚀 Próximas</button>
                         <button id="viewAllBtn" class="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-600 hover:bg-gray-200">👥 Todos</button>
                     </div>
@@ -164,10 +165,10 @@ export const ReceptionControl = {
         document.getElementById('receptionSearchInput')?.addEventListener('input', () => this.render());
         
         // Switch de Vistas
-        ['viewTomorrow', 'viewFuture', 'viewAll'].forEach(id => {
+        ['viewToday', 'viewTomorrow', 'viewFuture', 'viewAll'].forEach(id => {
             document.getElementById(id + 'Btn')?.addEventListener('click', (e) => {
                 // UI update
-                ['viewTomorrowBtn', 'viewFutureBtn', 'viewAllBtn'].forEach(btnId => {
+                ['viewTodayBtn', 'viewTomorrowBtn', 'viewFutureBtn', 'viewAllBtn'].forEach(btnId => {
                     const btn = document.getElementById(btnId);
                     if (btnId === id + 'Btn') {
                         btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
@@ -231,7 +232,7 @@ export const ReceptionControl = {
         const showOnlyDebtors = document.getElementById('filterDebtorsBtn').classList.contains('active-filter-red');
         const showOnlyPending = document.getElementById('filterPendingBtn').classList.contains('active-filter-orange');
         const query = searchInput.value.toLowerCase().trim();
-        const activeView = this.currentView || 'tomorrow';
+        const activeView = this.currentView || 'today';
 
         const patients = PatientState.patients || [];
         const appointments = PatientState.appointments || [];
@@ -244,21 +245,31 @@ export const ReceptionControl = {
         const tomorrowEnd = new Date(tomorrowStart);
         tomorrowEnd.setHours(23, 59, 59, 999);
 
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
         let filtered = patients.filter(p => {
-            const matchesSearch = p.name.toLowerCase().includes(query) || 
-                               (p.parentName && p.parentName.toLowerCase().includes(query));
+            const matchesSearch = normalize(p.name).includes(normalize(query)) || 
+                               (p.parentName && normalize(p.parentName).includes(normalize(query)));
             
             if (!matchesSearch) return false;
 
             // Encontrar citas relevantes para este paciente en esta vista
-            const pApts = appointments.filter(a => a.name === p.name && !a.isCancelled);
+            const pApts = appointments.filter(a => normalize(a.name) === normalize(p.name) && !a.isCancelled);
             
-            if (activeView === 'tomorrow') {
-                const hasAptTomorrow = pApts.some(a => {
+            if (activeView === 'today' || activeView === 'tomorrow') {
+                const start = activeView === 'today' ? todayStart : tomorrowStart;
+                const end = activeView === 'today' ? todayEnd : tomorrowEnd;
+                
+                const hasAptInRange = pApts.some(a => {
                     const d = new Date(a.date);
-                    return d >= tomorrowStart && d <= tomorrowEnd;
+                    return d >= start && d <= end;
                 });
-                if (!hasAptTomorrow) return false;
+                if (!hasAptInRange) return false;
             } else if (activeView === 'future') {
                 const hasFutureApt = pApts.some(a => new Date(a.date) > tomorrowEnd);
                 if (!hasFutureApt) return false;

@@ -496,27 +496,32 @@ export const Header = {
             const sidebar = document.getElementById('mainSidebar');
 
             if (mobileMenuBtn && sidebar && overlay) {
+                console.log('📱 Menú móvil clickeado. Estado actual:', sidebar.classList.contains('-translate-x-full') ? 'Cerrado' : 'Abierto');
                 // Toggle sidebar
                 const isClosed = sidebar.classList.contains('-translate-x-full');
                 if (isClosed) {
                     sidebar.classList.remove('-translate-x-full');
                     sidebar.classList.add('translate-x-0');
                     overlay.classList.remove('hidden');
+                    overlay.style.setProperty('display', 'block', 'important');
                 } else {
                     sidebar.classList.add('-translate-x-full');
                     sidebar.classList.remove('translate-x-0');
                     overlay.classList.add('hidden');
+                    overlay.style.setProperty('display', 'none', 'important');
                 }
             }
 
             // 4. Click en Overlay para cerrar sidebar
             if (e.target.id === 'sidebarOverlay') {
+                console.log('🌑 Click en overlay para cerrar sidebar');
                 const sidebar = document.getElementById('mainSidebar');
                 if (sidebar) {
                     sidebar.classList.add('-translate-x-full');
                     sidebar.classList.remove('translate-x-0');
                 }
                 e.target.classList.add('hidden');
+                e.target.style.setProperty('display', 'none', 'important');
             }
 
             // 5. Botón Google Sync (Manual / Sincronización activa)

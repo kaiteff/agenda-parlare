@@ -274,8 +274,8 @@ export const CalendarModal = {
 
         console.log('📬 Abriendo modal de edición para:', ev.name);
         dom.eventModal.classList.remove('hidden');
-        dom.eventModal.style.display = 'flex';
-        dom.eventModal.style.zIndex = '9999';
+        dom.eventModal.style.setProperty('display', 'flex', 'important');
+        dom.eventModal.style.setProperty('z-index', '9999', 'important');
     },
 
     closeModal() {
