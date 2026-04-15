@@ -386,29 +386,49 @@ export const GoogleCalendarService = {
         // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google
         const googleMaps = await this._fetchGoogleEventsMap();
         
-        // --- 1.5 FASE DE EXTERMINIO (Sincronización Espejo Absoluta) ---
+        // --- 1.5 FASE DE EXTERMINIO (Sincronización Espejo Absoluta 1 a 1) ---
         let ghostsDeleted = 0;
-        if (googleMaps.rawEvents && googleMaps.rawEvents.length > 0) {
-            log.info(`🧹 Fase de Espejo Absoluto: Verificando ${googleMaps.rawEvents.length} eventos en Google Calendar...`);
-            
-            // Construir diccionarios rápidos de las citas maestras (Firebase)
-            const validFirebaseIds = new Set(active.map(a => a.googleEventId).filter(Boolean));
-            const validFirebaseTimeKeys = new Set(active.map(a => {
-                const iso = new Date(a.date).toISOString().slice(0, 16);
-                const t = (a.therapist || 'diana').toLowerCase();
-                return `${t}_${iso}`;
-            }));
+        const matchedGoogleIds = new Set();
+        const mappings = this._getMappings();
 
-            for (const gEvent of googleMaps.rawEvents) {
-                const isValidById = validFirebaseIds.has(gEvent.id);
-                const timeKey = `${gEvent.therapist}_${gEvent.isoKey}`;
-                const isValidByTime = validFirebaseTimeKeys.has(timeKey);
+        // Paso A: Emparejar citas de Firebase con Google Calendar (1 a 1)
+        for (const apt of active) {
+            if (apt.googleEventId && googleMaps.rawEvents.some(e => e.id === apt.googleEventId)) {
+                matchedGoogleIds.add(apt.googleEventId);
+            } else if (mappings[apt.id] && googleMaps.rawEvents.some(e => e.id === mappings[apt.id])) {
+                matchedGoogleIds.add(mappings[apt.id]);
+                apt.googleEventId = mappings[apt.id];
+            } else {
+                const isoKey = new Date(apt.date).toISOString().slice(0, 16);
+                const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
+                const therapist = (apt.therapist || 'diana').toLowerCase();
                 
-                if (!isValidById && !isValidByTime) {
+                // Buscar candidato libre por Nombre Exacto
+                let candidate = googleMaps.rawEvents.find(e => !matchedGoogleIds.has(e.id) && 
+                    e.therapist === therapist && e.isoKey === isoKey && e.nameNorm === nameNorm);
+                
+                // Buscar candidato libre por Horario (Fallback)
+                if (!candidate) {
+                    candidate = googleMaps.rawEvents.find(e => !matchedGoogleIds.has(e.id) && 
+                        e.therapist === therapist && e.isoKey === isoKey);
+                }
+
+                if (candidate) {
+                    matchedGoogleIds.add(candidate.id);
+                    apt.googleEventId = candidate.id; // Enlace reparado en memoria
+                }
+            }
+        }
+
+        // Paso B: Exterminar TODO evento de Google que no haya sido reclamado
+        if (googleMaps.rawEvents && googleMaps.rawEvents.length > 0) {
+            log.info(`🧹 Fase de Espejo: Verificando ${googleMaps.rawEvents.length} eventos en Google. Reclamados/Protegidos: ${matchedGoogleIds.size}`);
+            
+            for (const gEvent of googleMaps.rawEvents) {
+                if (!matchedGoogleIds.has(gEvent.id)) {
                     try {
-                        // Rate limit artificial para no bombardear a Google con Deletes
                         await new Promise(resolve => setTimeout(resolve, 150));
-                        log.warn(`👻 Fantasma Exterminado: [${gEvent.summary || 'Sin Titulo'}] el ${gEvent.isoKey} en el calendario de ${gEvent.therapist}`);
+                        log.warn(`👻 Fantasma Exterminado: [${gEvent.summary || 'Sin Titulo'}] el ${gEvent.isoKey} en ${gEvent.therapist}`);
                         
                         await this._callGapi(() => window.gapi.client.calendar.events.delete({
                             calendarId: this.getCalendarId(gEvent.therapist),
@@ -422,49 +442,16 @@ export const GoogleCalendarService = {
             }
         }
 
-        const mappings = this._getMappings();
-        let created = 0, updated = 0, errors = 0, linked = 0;
+        let created = 0, updated = 0, errors = 0, linked = matchedGoogleIds.size;
 
+        // Fase 2: Inyección de actualizaciones
         for (const apt of active) {
             try {
-                // Pausa técnica para evitar "User Rate Limit Exceeded"
                 await new Promise(resolve => setTimeout(resolve, 300));
-
                 let result;
                 
-                // --- ESCUDO DE DUPLICADOS MEJORADO ---
-                if (!apt.googleEventId && !mappings[apt.id]) {
-                    const isoKey = new Date(apt.date).toISOString().slice(0, 16);
-                    const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
-                    const therapist = (apt.therapist || 'diana').toLowerCase();
-                    
-                    const exactKey = `${therapist}_${isoKey}_${nameNorm}`;
-                    const timeKey = `${therapist}_${isoKey}`;
-
-                    let foundId = googleMaps.exact[exactKey];
-                    let matchType = 'Exacto';
-                    
-                    // Si no hay match exacto, buscamos cualquier evento del MISMO terapeuta a la MISMA hora
-                    if (!foundId && googleMaps.timeOnly[timeKey]) {
-                        foundId = googleMaps.timeOnly[timeKey];
-                        matchType = 'Por Horario';
-                    }
-
-                    if (foundId) {
-                        log.info(`🔗 Enlace automático (${matchType}): Cita de ${apt.name} ya existe en Google [${foundId}].`);
-                        
-                        // Guardar el enlace en Firestore para el futuro
-                        try {
-                            const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
-                            await updateDoc(doc(db, collectionPath, apt.id), { googleEventId: foundId });
-                        } catch (e) {}
-
-                        apt.googleEventId = foundId; // Emparchamos en memoria para que actualice
-                        linked++;
-                    }
-                }
-                // -----------------------------
-
+                // Como la fase de exterminio ya enlazó los eventos si fue posible, 
+                // apt.googleEventId estará seteado si existe un match visual en Google.
                 if (apt.googleEventId || mappings[apt.id]) {
                     result = await this.updateEvent(apt);
                     if (result && result.success) {
