@@ -242,7 +242,7 @@ export const Header = {
                 // Mostrar/Ocultar botón de Sincronización Total
                 const forceSyncBtn = document.getElementById('forceSyncAllBtn');
                 if (forceSyncBtn) {
-                    if (health.isValid) {
+                    if (health.isValid && AuthManager.currentUser?.email === 'rodriguezd.danielrob@gmail.com') {
                         forceSyncBtn.classList.remove('hidden');
                     } else {
                         forceSyncBtn.classList.add('hidden');
