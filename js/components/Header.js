@@ -438,6 +438,7 @@ export const Header = {
         console.log("👂 Configurando listeners globales del Header (Delegación)...");
 
         document.addEventListener('click', async (e) => {
+            console.log('🖱️ Click global detectado en:', e.target);
             // 1. Botón de Reportes
             const reportBtn = e.target.closest('#openReportsBtn');
             if (reportBtn) {

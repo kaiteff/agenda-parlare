@@ -148,23 +148,32 @@ export const CalendarModal = {
 
     openEditModal(ev) {
         const dom = CalendarState.dom;
+        if (!dom.eventModal) {
+            console.error('❌ CalendarModal: No se encontró dom.eventModal');
+            return;
+        }
+
         CalendarState.selectedEventId = ev.id;
         CalendarState.originalEventDate = ev.date;
 
-        dom.modalTitle.textContent = 'Detalles de Cita';
-        dom.patientSearchInput.value = ev.name;
+        if (dom.modalTitle) dom.modalTitle.textContent = 'Detalles de Cita';
+        if (dom.patientSearchInput) dom.patientSearchInput.value = ev.name || '';
 
-        // Split name
-        const nameParts = ev.name.split(' ');
-        dom.patientFirstNameInput.value = nameParts[0] || '';
-        dom.patientLastNameInput.value = nameParts.slice(1).join(' ') || '';
-        dom.patientFirstNameInput.disabled = true;
-        dom.patientLastNameInput.disabled = true;
+        // Split name (Safe assignment)
+        const nameParts = (ev.name || '').split(' ');
+        if (dom.patientFirstNameInput) {
+            dom.patientFirstNameInput.value = nameParts[0] || '';
+            dom.patientFirstNameInput.disabled = true;
+        }
+        if (dom.patientLastNameInput) {
+            dom.patientLastNameInput.value = nameParts.slice(1).join(' ') || '';
+            dom.patientLastNameInput.disabled = true;
+        }
 
         // Date
         const date = new Date(ev.date);
         const localISOTime = this._getLocalISOStringFormat(date);
-        dom.appointmentDateInput.value = localISOTime;
+        if (dom.appointmentDateInput) dom.appointmentDateInput.value = localISOTime;
 
         // CORRECCIÓN: Si el costo es 0, intentar jalar del perfil
         let displayCost = ev.cost || 0;
@@ -172,7 +181,7 @@ export const CalendarModal = {
             const profile = PatientState.patients.find(p => p.id === ev.patientId || p.name === ev.name);
             displayCost = profile?.defaultCost || 800;
         }
-        dom.costInput.value = displayCost;
+        if (dom.costInput) dom.costInput.value = displayCost;
 
         // Set Therapist and Type
         if (dom.appointmentTherapistInput) {

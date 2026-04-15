@@ -57,6 +57,13 @@ export const MainModals = {
                             <label id="patientSearchLabel" class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente</label>
                             <input type="text" id="patientSearch" placeholder="Buscar o escribir nombre..." class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none">
                             <div id="patientSuggestions" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 mt-1"></div>
+                            
+                            <!-- Hidden but indexed for naming logic -->
+                            <div class="hidden">
+                                <input type="text" id="patientFirstName">
+                                <input type="text" id="patientLastName">
+                            </div>
+
                             <div class="mt-4">
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp</label>
                                 <div class="flex gap-2">
