@@ -199,13 +199,28 @@ export const CalendarUI = {
                                 }
 
                                 // Content: Name + Checkmark if confirmed
-                                let content = evt.isPaid ? 'Pagado' : `${therapistName}`;
-                                if (evt.confirmed) {
+                                const canViewDetails = AuthManager.canViewDetails(evt);
+                                
+                                let content = '';
+                                if (evt.isPaid) {
+                                    content = 'Pagado';
+                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
+                                    content = 'Bloqueado';
+                                } else {
+                                    // Si puede ver detalles (es dueño o admin), ver nombre. Si no, solo 'Ocupado'
+                                    content = canViewDetails ? therapistName : 'Ocupado';
+                                }
+
+                                if (evt.confirmed && canViewDetails) {
                                     content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
                                 }
 
                                 chip.innerHTML = content;
-                                chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})${evt.confirmed ? ' - CONFIRMADO' : ''} ${!canEdit ? '(Solo Lectura)' : ''}`;
+                                if (canViewDetails) {
+                                    chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})${evt.confirmed ? ' - CONFIRMADO' : ''} ${!canEdit ? '(Solo Lectura)' : ''}`;
+                                } else {
+                                    chip.title = "Horario Ocupado (Privado)";
+                                }
 
                                 chip.onclick = (e) => {
                                     e.stopPropagation();

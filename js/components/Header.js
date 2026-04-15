@@ -332,6 +332,29 @@ export const Header = {
             if (AuthManager.can('switch_therapist_view')) {
                 selectorContainer.classList.remove('hidden');
                 selectorContainer.classList.add('md:flex');
+
+                const currentUser = AuthManager.currentUser;
+                const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'receptionist';
+
+                // RESTRICCIÓN: Si es terapeuta, solo puede verse a sí mismo o 'Todas'
+                if (!isStaff) {
+                    const myId = currentUser?.therapist || 'diana';
+                    const myName = myId.charAt(0).toUpperCase() + myId.slice(1);
+                    
+                    selector.innerHTML = `
+                        <option value="${myId}">${myName}</option>
+                        <option value="all">Todas</option>
+                    `;
+                } else {
+                    // Admins ven todo
+                    selector.innerHTML = `
+                        <option value="diana">Diana</option>
+                        <option value="sam">Sam</option>
+                        <option value="vero">Vero</option>
+                        <option value="all">Todas</option>
+                    `;
+                }
+
                 selector.value = AuthManager.getSelectedTherapist();
 
                 // Asignar evento de cambio
@@ -340,19 +363,12 @@ export const Header = {
                     AuthManager.setSelectedTherapist(newTherapist);
 
                     // Recargar lista de pacientes (Sidebar)
-                    // Usamos window.PatientManager temporalmente hasta refactorizar event bus
                     if (window.PatientManager && window.PatientManager.api) {
-                        console.log("🔄 Recargando lista de pacientes...");
                         window.PatientManager.api.refreshList();
-                    }
-
-                    if (typeof window !== 'undefined') {
-                        window.Header = Header;
                     }
 
                     // Recargar calendario
                     if (typeof window.renderCalendar === 'function') {
-                        console.log("🔄 Recargando calendario...");
                         window.renderCalendar();
                     }
                 };
