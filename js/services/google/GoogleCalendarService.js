@@ -312,6 +312,7 @@ export const GoogleCalendarService = {
         
         const eventMap = {}; // Key: "therapist_ISOtime_name" -> Value: googleEventId
         const timeOnlyMap = {}; // Key: "therapist_ISOtime" -> Value: googleEventId
+        const rawEvents = []; // Lista plana de todos los eventos
 
         log.info("🔍 Escaneando Google Calendar para evitar duplicados...");
 
@@ -341,13 +342,20 @@ export const GoogleCalendarService = {
                     eventMap[exactKey] = item.id;
                     // Solo guardamos el fallback por tiempo si no existe o lo sobrescribimos
                     timeOnlyMap[timeKey] = item.id;
+                    
+                    rawEvents.push({
+                        ...item,
+                        therapist: tKey,
+                        isoKey: isoKey,
+                        nameNorm: nameNorm
+                    });
                 });
             } catch (err) {
                 log.warn(`Error escaneando calendario de ${tKey}:`, err);
             }
         }
 
-        return { exact: eventMap, timeOnly: timeOnlyMap };
+        return { exact: eventMap, timeOnly: timeOnlyMap, rawEvents: rawEvents };
     },
 
     /**
@@ -377,6 +385,43 @@ export const GoogleCalendarService = {
 
         // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google
         const googleMaps = await this._fetchGoogleEventsMap();
+        
+        // --- 1.5 FASE DE EXTERMINIO (Sincronización Espejo Absoluta) ---
+        let ghostsDeleted = 0;
+        if (googleMaps.rawEvents && googleMaps.rawEvents.length > 0) {
+            log.info(`🧹 Fase de Espejo Absoluto: Verificando ${googleMaps.rawEvents.length} eventos en Google Calendar...`);
+            
+            // Construir diccionarios rápidos de las citas maestras (Firebase)
+            const validFirebaseIds = new Set(active.map(a => a.googleEventId).filter(Boolean));
+            const validFirebaseTimeKeys = new Set(active.map(a => {
+                const iso = new Date(a.date).toISOString().slice(0, 16);
+                const t = (a.therapist || 'diana').toLowerCase();
+                return `${t}_${iso}`;
+            }));
+
+            for (const gEvent of googleMaps.rawEvents) {
+                const isValidById = validFirebaseIds.has(gEvent.id);
+                const timeKey = `${gEvent.therapist}_${gEvent.isoKey}`;
+                const isValidByTime = validFirebaseTimeKeys.has(timeKey);
+                
+                if (!isValidById && !isValidByTime) {
+                    try {
+                        // Rate limit artificial para no bombardear a Google con Deletes
+                        await new Promise(resolve => setTimeout(resolve, 150));
+                        log.warn(`👻 Fantasma Exterminado: [${gEvent.summary || 'Sin Titulo'}] el ${gEvent.isoKey} en el calendario de ${gEvent.therapist}`);
+                        
+                        await this._callGapi(() => window.gapi.client.calendar.events.delete({
+                            calendarId: this.getCalendarId(gEvent.therapist),
+                            eventId: gEvent.id
+                        }));
+                        ghostsDeleted++;
+                    } catch(e) {
+                         log.error("Exterminio fallido para " + gEvent.id, e);
+                    }
+                }
+            }
+        }
+
         const mappings = this._getMappings();
         let created = 0, updated = 0, errors = 0, linked = 0;
 
