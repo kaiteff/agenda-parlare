@@ -2,6 +2,7 @@
 import { db, collectionPath, notificationsPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
 import { validateAppointment } from '../utils/validators.js';
 import { Logger } from '../utils/Logger.js';
+import { AuthManager } from '../managers/AuthManager.js';
 
 const log = Logger.create('AptService');
 
@@ -81,7 +82,9 @@ export async function createAppointment(appointmentData, existingAppointments) {
             confirmed: false,
             isCancelled: false,
             sheetSynced: true, // Por defecto sincronizado hasta que ocurra un evento (pago/cancelación)
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            createdBy: AuthManager.currentUser?.email || 'unknown',
+            updatedBy: AuthManager.currentUser?.email || 'unknown'
         });
 
         const newId = docRef.id;
@@ -129,7 +132,8 @@ export async function updateAppointment(id, updateData, existingAppointments) {
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, {
             ...updateData,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
+            updatedBy: AuthManager.currentUser?.email || 'unknown'
         });
 
         log.info(`Cita actualizada [${id}]`);
@@ -185,7 +189,8 @@ export async function cancelAppointment(id, existingAppointments = []) {
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, {
             isCancelled: true,
-            cancelledAt: serverTimestamp()
+            cancelledAt: serverTimestamp(),
+            updatedBy: AuthManager.currentUser?.email || 'unknown'
         });
         log.info(`Cita cancelada [${id}]`);
 

@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar si el usuario inició sesión
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Obtener el email del usuario logueado en la petición
+    function getEmail() {
+       return request.auth.token.email;
+    }
+    
+    // Verificar si es administrador o recepción (Super usuarios)
+    function isSuper() {
+       // Daniel (Admin) o Yari (Recepción)
+       return getEmail() == 'rodriguezd.danielrob@gmail.com' || 
+              getEmail() == 'yaritzajocgo@gmail.com' || 
+              getEmail() == 'kaiteff@gmail.com';
+    }
+    
+    // Verificar si el usuario que hace la petición es dueño del calendario al que intenta afectar
+    function isOwner(therapistKey) {
+       return (getEmail() == 'sammygtz90@gmail.com' && therapistKey == 'sam') ||
+              (getEmail() == 'lopezcarpio7@gmail.com' && therapistKey == 'diana') ||
+              (getEmail() == 'sanchezverooo21@gmail.com' && therapistKey == 'vero') ||
+              isSuper();
+    }
+
+    // Reglas precisas para la colección de citas (appointments)
+    match /appointments/{docId} {
+      // PERMISO DE LECTURA: Todos los terapeutas pueden ver todas las citas
+      // Esto es vital para mostrar los horarios ocupados de las compañeras
+      allow read: if isAuthenticated();
+      
+      // PERMISO DE CREACIÓN: Sólo puedes crear si asignas la cita a tu propio calendario, o si eres Super
+      allow create: if isAuthenticated() && isOwner(request.resource.data.therapist);
+      
+      // PERMISO DE ACTUALIZACIÓN: Sólo puedes actualizar una cita si ésta te pertenecía originalmente, o si eres Super
+      allow update: if isAuthenticated() && isOwner(resource.data.therapist);
+      
+      // PERMISO DE ELIMINACIÓN: Sólo puedes borrar una cita si te pertenece, o si eres Super
+      allow delete: if isAuthenticated() && isOwner(resource.data.therapist);
+    }
+    
+    // Colección de Perfiles de Pacientes (temporalmente abierta a todos los terapeutas)
+    match /patientProfiles/{docId} {
+      allow read, write: if isAuthenticated(); 
+    }
+
+    // Default para las demás colecciones (users, config, tools)
+    // Permite lectura y escritura general mientras se va migrando la seguridad específica
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
