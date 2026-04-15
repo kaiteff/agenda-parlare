@@ -207,24 +207,35 @@ export const CalendarModal = {
         if (typeRadio) {
             typeRadio.checked = true;
             typeRadio.dispatchEvent(new Event('change'));
-        }
+            
+            // SEGURIDAD: Si el terapeuta no es el dueño, ocultar información sensible y botones
+            const canEdit = AuthManager.canEditItem(ev);
+            
+            if (dom.saveBtn) dom.saveBtn.classList.toggle('hidden', !canEdit);
+            if (dom.deleteBtn) dom.deleteBtn.classList.toggle('hidden', !canEdit);
+            if (dom.payBtn) dom.payBtn.classList.toggle('hidden', !canEdit);
+            if (dom.confirmBtn) dom.confirmBtn.classList.toggle('hidden', !canEdit);
+            if (dom.cancelBtn) dom.cancelBtn.classList.toggle('hidden', !canEdit);
 
-        // SEGURIDAD: Si el terapeuta no es el dueño, ocultar botones de edición
-        const canEdit = AuthManager.canEditItem(ev);
-        if (dom.saveBtn) dom.saveBtn.classList.toggle('hidden', !canEdit);
-        if (dom.deleteBtn) dom.deleteBtn.classList.toggle('hidden', !canEdit);
-        if (dom.payBtn) dom.payBtn.classList.toggle('hidden', !canEdit);
-        if (dom.confirmBtn) dom.confirmBtn.classList.toggle('hidden', !canEdit);
-        if (dom.cancelBtn) dom.cancelBtn.classList.toggle('hidden', !canEdit);
+            // PRIVACIDAD: Ocultar Costo y Teléfono si no es dueño
+            if (dom.costInput) {
+                const costContainer = dom.costInput.closest('div');
+                if (costContainer) costContainer.classList.toggle('hidden', !canEdit);
+            }
+            if (dom.phoneInput) {
+                const phoneContainer = dom.phoneInput.closest('.mt-4'); // Contenedor de WhatsApp
+                if (phoneContainer) phoneContainer.classList.toggle('hidden', !canEdit);
+            }
 
-        // Bloquear opción de Inhabilitar si no tiene permiso
-        const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');
-        if (blockOption) {
-            blockOption.style.display = AuthManager.can('manage_blocks') ? 'flex' : 'none';
-        }
+            // Bloquear opción de Inhabilitar si no tiene permiso
+            const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');
+            if (blockOption) {
+                blockOption.style.display = AuthManager.can('manage_blocks') ? 'flex' : 'none';
+            }
 
-        if (dom.waBtn) {
-            dom.waBtn.classList.toggle('hidden', isSchool || !canEdit);
+            if (dom.waBtn) {
+                dom.waBtn.classList.toggle('hidden', isSchool || !canEdit);
+            }
         }
 
         // Confirm button state
@@ -261,14 +272,14 @@ export const CalendarModal = {
             dom.cancelBtn.className = "flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors font-semibold";
         }
 
-        // Reschedule
-        if (dom.rescheduleSection) {
-            dom.rescheduleSection.classList.remove('hidden');
-            CalendarSuggestions.generateRescheduleOptions(date);
-        }
-
         // Smart Suggestion (Best Pattern)
-        CalendarSuggestions.analyzeAndSuggest(ev.name);
+        const canEdit = AuthManager.canEditItem(ev);
+        if (canEdit) {
+            CalendarSuggestions.analyzeAndSuggest(ev.name);
+        } else {
+            const suggestionBox = document.getElementById('schedulingSuggestion');
+            if (suggestionBox) suggestionBox.remove();
+        }
 
         // Recurrence (Allow in edit)
         if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.checked = false;
@@ -282,6 +293,12 @@ export const CalendarModal = {
         this.renderDailySlots(date);
 
         console.log('📬 Abriendo modal de edición para:', ev.name);
+        
+        // PRIVACIDAD ADICIONAL: Ocultar Reagendar
+        if (dom.rescheduleSection) {
+            dom.rescheduleSection.classList.toggle('hidden', !canEdit);
+        }
+
         dom.eventModal.classList.remove('hidden');
         dom.eventModal.style.setProperty('display', 'flex', 'important');
         dom.eventModal.style.setProperty('z-index', '9999', 'important');
