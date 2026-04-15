@@ -24,7 +24,7 @@ const ROLES = {
     },
     therapist: {
         label: 'Terapeuta',
-        permissions: ['manage_own_schedule', 'view_own_patients', 'edit_own_records', 'view_schedule']
+        permissions: ['manage_own_schedule', 'view_own_patients', 'edit_own_records', 'view_schedule', 'switch_therapist_view']
     },
     receptionist: {
         label: 'Recepción',
@@ -240,7 +240,9 @@ export const AuthManager = {
      * Obtiene el terapeuta seleccionado actualmente (para vistas de calendario)
      */
     getSelectedTherapist() {
-        return this.selectedTherapist || this.currentUser?.therapist || 'diana';
+        if (this.selectedTherapist) return this.selectedTherapist;
+        if (this.currentUser?.role === 'admin' || this.currentUser?.role === 'receptionist') return 'all';
+        return this.currentUser?.therapist || 'diana';
     },
 
     /**
