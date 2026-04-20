@@ -85,9 +85,9 @@ export const SettingsManager = {
                 { id: 'tema_soplo', name: 'Ejercicios de Soplo', subthemes: ['Control de aire', 'Potencia', 'Dirección'] }
             ],
             baseCosts: {
-                diana: { cost: 500, fee: 250 },
-                sam: { cost: 500, fee: 250 },
-                vero: { cost: 500, fee: 250 }
+                diana: { cost: 800, fee: 250 },
+                sam: { cost: 800, fee: 250 },
+                vero: { cost: 800, fee: 400 }
             }
         };
         await this.saveConfig(defaults);

@@ -55,7 +55,7 @@ export const AdminSettingsModal = {
                                 <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Control Maestro de la Clínica</p>
                             </div>
                         </div>
-                        <button onclick="document.getElementById('${this.id}').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
+                        <button id="closeAdminSettingsBtn" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -102,7 +102,7 @@ export const AdminSettingsModal = {
 
                     <!-- Footer -->
                     <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
-                        <button onclick="document.getElementById('${this.id}').classList.add('hidden')" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Cancelar</button>
+                        <button id="cancelAdminSettingsBtn" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Cancelar</button>
                         <button id="saveAllSettingsBtn" class="px-8 py-2.5 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
                              <span>Guardar Todos los Cambios</span>
                         </button>
@@ -251,6 +251,17 @@ export const AdminSettingsModal = {
 
         tabThemes.onclick = () => switchTab(tabThemes, tabCosts, contThemes, contCosts);
         tabCosts.onclick = () => switchTab(tabCosts, tabThemes, contCosts, contThemes);
+
+        // Cerrar modal
+        const closeModals = () => this.close();
+        document.getElementById('closeAdminSettingsBtn').onclick = closeModals;
+        document.getElementById('cancelAdminSettingsBtn').onclick = closeModals;
+        
+        // Cerrar al clickear fuera
+        const modalOverlay = document.getElementById(this.id);
+        modalOverlay.onclick = (e) => {
+            if (e.target === modalOverlay) closeModals();
+        };
 
         // Nuevo Tema
         document.getElementById('addThemeBtn').onclick = () => {
