@@ -3,7 +3,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, getDocs, getDoc, orderBy, limit, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, getDocs, getDoc, setDoc, orderBy, limit, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -143,4 +143,4 @@ export async function logoutUser() {
 }
 
 // Exportar funciones de Firestore
-export { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, getDocs, getDoc, orderBy, limit, where, writeBatch };
+export { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, getDocs, getDoc, setDoc, orderBy, limit, where, writeBatch };
