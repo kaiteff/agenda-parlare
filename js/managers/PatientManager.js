@@ -130,6 +130,15 @@ export const PatientManager = {
                     e.stopPropagation();
                     const id = payBtn.dataset.id;
                     await PatientActions.markAsPaid(id, { target: payBtn });
+                } else if (target.closest('.note-btn')) {
+                    e.stopPropagation();
+                    const btn = target.closest('.note-btn');
+                    const aptId = btn.dataset.aptId;
+                    const patient = PatientState.getSelectedPatient();
+                    const appointment = PatientState.appointments.find(a => a.id === aptId);
+                    if (appointment && patient) {
+                        PatientModals.openSessionNote(appointment, patient);
+                    }
                 }
             });
         }

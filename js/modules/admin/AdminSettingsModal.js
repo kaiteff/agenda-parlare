@@ -141,27 +141,50 @@ export const AdminSettingsModal = {
         container.innerHTML = themes.map(theme => `
             <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all group relative">
                 <div class="flex justify-between items-start mb-4">
-                    <input type="text" value="${theme.name}" class="text-base font-black text-gray-800 bg-transparent border-b border-transparent focus:border-blue-300 outline-none w-full mr-8" onchange="window.updateThemeName('${theme.id}', this.value)">
-                    <button class="absolute top-4 right-4 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100" onclick="window.removeTheme('${theme.id}')">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <div class="flex-1">
+                         <input type="text" value="${theme.name}" class="text-lg font-black text-gray-800 bg-transparent border-b-2 border-transparent focus:border-blue-500 outline-none w-full transition-all" onchange="window.updateThemeName('${theme.id}', this.value)">
+                    </div>
+                    <button class="ml-4 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100" onclick="window.removeTheme('${theme.id}')" title="Eliminar Tema Completo">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ">Subtemas / Actividades</label>
-                    <div class="flex flex-wrap gap-2 mb-3">
-                        ${(theme.subthemes || []).map((sub, idx) => `
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg border border-blue-100 group/sub">
-                                ${sub}
-                                <button class="hover:text-red-500" onclick="window.removeSubtheme('${theme.id}', ${idx})">×</button>
-                            </span>
-                        `).join('')}
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="text" placeholder="Agregar subtema..." class="flex-1 bg-gray-50 border-none rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-200" onkeydown="if(event.key==='Enter'){ window.addSubtheme('${theme.id}', this.value); this.value=''; }">
-                        <button class="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-blue-600 hover:text-white transition-all" onclick="const input=this.previousElementSibling; window.addSubtheme('${theme.id}', input.value); input.value='';">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </button>
-                    </div>
+
+                <!-- Subthemes Container -->
+                <div class="space-y-4">
+                    ${(theme.subthemes || []).map((sub, sIdx) => `
+                        <div class="bg-gray-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sección / Subtema</span>
+                                <button class="text-red-300 hover:text-red-500 text-xs" onclick="window.removeSubtheme('${theme.id}', ${sIdx})">Eliminar Sección</button>
+                            </div>
+                            <input type="text" value="${sub.name}" class="text-sm font-bold text-gray-700 bg-transparent border-b border-transparent focus:border-blue-300 outline-none w-full" onchange="window.updateSubthemeName('${theme.id}', ${sIdx}, this.value)">
+                            
+                            <!-- Sub-subthemes (Items) -->
+                            <div class="flex flex-wrap gap-1.5">
+                                ${(sub.items || []).map((item, iIdx) => `
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-1 bg-white text-blue-600 text-[10px] font-bold rounded-lg border border-blue-50 shadow-sm group/item">
+                                        ${item}
+                                        <button class="hover:text-red-500 opacity-50 hover:opacity-100" onclick="window.removeSubSubtheme('${theme.id}', ${sIdx}, ${iIdx})">×</button>
+                                    </span>
+                                `).join('')}
+                            </div>
+
+                            <!-- Add Sub-subtheme -->
+                            <div class="relative">
+                                <input type="text" placeholder="Agregar actividad o detalle..." 
+                                       class="w-full bg-white border-none rounded-lg pl-3 pr-8 py-1.5 text-[10px] font-medium outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                                       onkeydown="if(event.key==='Enter'){ window.addSubSubtheme('${theme.id}', ${sIdx}, this.value); this.value=''; }">
+                                <button class="absolute right-2 top-1.5 text-blue-400 hover:text-blue-600" onclick="const input=this.previousElementSibling; window.addSubSubtheme('${theme.id}', ${sIdx}, input.value); input.value='';">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    <!-- Add New Subtheme Section -->
+                    <button onclick="window.addSubtheme('${theme.id}', 'Nueva Sección')" class="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-[10px] font-bold uppercase tracking-widest hover:border-blue-200 hover:text-blue-500 hover:bg-blue-50/30 transition-all">
+                        + Agregar Nueva Sección
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -179,20 +202,42 @@ export const AdminSettingsModal = {
             }
         };
 
-        window.addSubtheme = (themeId, val) => {
-            if (!val.trim()) return;
+        window.updateSubthemeName = (themeId, sIdx, val) => {
+            const theme = SettingsManager.config.themes.find(t => t.id === themeId);
+            if (theme && theme.subthemes[sIdx]) theme.subthemes[sIdx].name = val;
+        };
+
+        window.addSubtheme = (themeId, name) => {
             const theme = SettingsManager.config.themes.find(t => t.id === themeId);
             if (theme) {
                 if (!theme.subthemes) theme.subthemes = [];
-                theme.subthemes.push(val.trim());
+                theme.subthemes.push({ name: name, items: [] });
                 this._renderThemes(SettingsManager.config.themes);
             }
         };
 
-        window.removeSubtheme = (themeId, idx) => {
+        window.removeSubtheme = (themeId, sIdx) => {
             const theme = SettingsManager.config.themes.find(t => t.id === themeId);
             if (theme) {
-                theme.subthemes.splice(idx, 1);
+                theme.subthemes.splice(sIdx, 1);
+                this._renderThemes(SettingsManager.config.themes);
+            }
+        };
+
+        window.addSubSubtheme = (themeId, sIdx, val) => {
+            if (!val.trim()) return;
+            const theme = SettingsManager.config.themes.find(t => t.id === themeId);
+            if (theme && theme.subthemes[sIdx]) {
+                if (!theme.subthemes[sIdx].items) theme.subthemes[sIdx].items = [];
+                theme.subthemes[sIdx].items.push(val.trim());
+                this._renderThemes(SettingsManager.config.themes);
+            }
+        };
+
+        window.removeSubSubtheme = (themeId, sIdx, iIdx) => {
+            const theme = SettingsManager.config.themes.find(t => t.id === themeId);
+            if (theme && theme.subthemes[sIdx]) {
+                theme.subthemes[sIdx].items.splice(iIdx, 1);
                 this._renderThemes(SettingsManager.config.themes);
             }
         };

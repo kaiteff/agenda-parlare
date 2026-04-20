@@ -25,13 +25,11 @@ export const SettingsManager = {
             if (snapshot.exists()) {
                 this.config = snapshot.data();
 
-                // MIGRATION: Force update if themes are empty, or has old themes, or old costs
-                const hasOldThemes = this.config.themes && this.config.themes.some(t => t.id === 'tema_r' || t.id === 'tema_soplo');
-                const hasNoThemes = !this.config.themes || this.config.themes.length === 0;
-                const hasOldCosts = this.config.baseCosts && this.config.baseCosts.vero && this.config.baseCosts.vero.fee !== 400;
+                // MIGRATION: Force update if themes are still in string-array format
+                const needsMigration = this.config.themes && this.config.themes.some(t => t.subthemes && t.subthemes.length > 0 && typeof t.subthemes[0] === 'string');
 
-                if (hasOldThemes || hasNoThemes || hasOldCosts) {
-                    console.log('⚠️ SettingsManager: Ejecutando migración forzada para nuevos temas...');
+                if (needsMigration) {
+                    console.log('⚠️ SettingsManager: Ejecutando migración forzada para estructura 3D de temas...');
                     this._createDefaultConfig();
                     return;
                 }
@@ -93,11 +91,51 @@ export const SettingsManager = {
     async _createDefaultConfig() {
         const defaults = {
             themes: [
-                { id: 'tema_articulacion', name: 'Articulación', subthemes: ['Punto y modo de articulación', 'Vibración múltiple', 'Discriminación fonética'] },
-                { id: 'tema_memoria', name: 'Memoria Auditiva Verbal', subthemes: ['Retención de dígitos', 'Repetición de pseudopalabras', 'Recuerdo de instrucciones'] },
-                { id: 'tema_comprension', name: 'Comprensión de Lenguaje', subthemes: ['Órdenes simples', 'Órdenes complejas', 'Preguntas WH'] },
-                { id: 'tema_morfosintaxis', name: 'Morfosintaxis', subthemes: ['Estructuración de oraciones', 'Uso de nexos', 'Tiempos verbales'] },
-                { id: 'tema_pragmatica', name: 'Pragmática de Lenguaje', subthemes: ['Toma de turnos', 'Mantenimiento del tópico', 'Contacto visual'] }
+                { 
+                    id: 'tema_articulacion', 
+                    name: 'Articulación', 
+                    subthemes: [
+                        { name: 'Punto y modo de articulación', items: [] },
+                        { name: 'Vibración múltiple', items: [] },
+                        { name: 'Discriminación fonética', items: [] }
+                    ] 
+                },
+                { 
+                    id: 'tema_memoria', 
+                    name: 'Memoria Auditiva Verbal', 
+                    subthemes: [
+                        { name: 'Retención de dígitos', items: [] },
+                        { name: 'Repetición de pseudopalabras', items: [] },
+                        { name: 'Recuerdo de instrucciones', items: [] }
+                    ] 
+                },
+                { 
+                    id: 'tema_comprension', 
+                    name: 'Comprensión de Lenguaje', 
+                    subthemes: [
+                        { name: 'Órdenes simples', items: [] },
+                        { name: 'Órdenes complejas', items: [] },
+                        { name: 'Preguntas WH', items: [] }
+                    ] 
+                },
+                { 
+                    id: 'tema_morfosintaxis', 
+                    name: 'Morfosintaxis', 
+                    subthemes: [
+                        { name: 'Estructuración de oraciones', items: [] },
+                        { name: 'Uso de nexos', items: [] },
+                        { name: 'Tiempos verbales', items: [] }
+                    ] 
+                },
+                { 
+                    id: 'tema_pragmatica', 
+                    name: 'Pragmática de Lenguaje', 
+                    subthemes: [
+                        { name: 'Toma de turnos', items: [] },
+                        { name: 'Mantenimiento del tópico', items: [] },
+                        { name: 'Contacto visual', items: [] }
+                    ] 
+                }
             ],
             baseCosts: {
                 diana: { cost: 800, fee: 250 },

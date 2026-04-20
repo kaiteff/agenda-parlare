@@ -520,13 +520,15 @@ export const PatientModals = {
                 <div class="flex items-center justify-between text-xs mt-2 border-t pt-2 border-gray-400 border-opacity-10">
                     ${costHtml}
                     <div class="flex gap-2">
-                         <button type="button" 
-                                 class="note-btn px-2 py-1 ${hasProgress ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500 border border-gray-200'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors" 
-                                 title="Bitácora de Sesión"
-                                 data-apt-id="${apt.id}">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            ${hasProgress ? 'Bitácora ✔' : 'Bitácora'}
-                         </button>
+                         ${AuthManager.currentUser?.role !== 'receptionist' ? `
+                             <button type="button" 
+                                     class="note-btn px-2 py-1 ${hasProgress ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500 border border-gray-200'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors" 
+                                     title="Bitácora de Sesión"
+                                     data-apt-id="${apt.id}">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                ${hasProgress ? 'Bitácora ✔' : 'Bitácora'}
+                             </button>
+                         ` : ''}
 
                          ${showConfirmBtn ? `
                             <button type="button" 
@@ -732,6 +734,11 @@ export const PatientModals = {
      * Abre el modal de bitácora de sesión
      */
     openSessionNote(appointment, patient) {
+        if (AuthManager.currentUser?.role === 'receptionist') {
+            ToastService.error("No tienes permisos para ver/editar la bitácora clínica.");
+            return;
+        }
+
         const modal = document.getElementById('sessionNoteModal');
         if (!modal) return;
 
@@ -779,31 +786,56 @@ export const PatientModals = {
 
             themesList.innerHTML = themes.map(theme => {
                 const subthemes = theme.subthemes || [];
-                const filteredSubs = subthemes.filter(sub => sub.toLowerCase().includes(searchLower) || theme.name.toLowerCase().includes(searchLower));
                 
-                if (filter && filteredSubs.length === 0) return ''; // Ocultar si no hay matches
+                // Si hay filtro, verificar si el tema o algo adentro coincide
+                const hasThemeMatch = theme.name.toLowerCase().includes(searchLower);
+                const matchingSubs = subthemes.filter(s => 
+                    s.name.toLowerCase().includes(searchLower) || 
+                    (s.items || []).some(i => i.toLowerCase().includes(searchLower))
+                );
+
+                if (filter && !hasThemeMatch && matchingSubs.length === 0) return '';
 
                 return `
-                    <div class="border-b border-gray-50 pb-3 last:border-0">
-                        <div class="flex items-center gap-2 mb-2">
-                             <div class="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
-                             <h5 class="text-sm font-black text-gray-800">${theme.name}</h5>
+                    <div class="space-y-4 mb-6 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+                        <div class="flex items-center gap-2">
+                             <div class="w-1.5 h-5 bg-indigo-500 rounded-full"></div>
+                             <h5 class="text-base font-black text-gray-800">${theme.name}</h5>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-3">
+                        
+                        <div class="space-y-4 pl-3">
                             ${subthemes.map(sub => {
-                                const currentStatus = progress[theme.id]?.[sub] || 'none';
-                                const isMatch = !filter || sub.toLowerCase().includes(searchLower) || theme.name.toLowerCase().includes(searchLower);
+                                const items = sub.items || [];
+                                const hasSubMatch = !filter || sub.name.toLowerCase().includes(searchLower) || hasThemeMatch;
+                                
+                                // Si no hay items, el subtema es el que se marca
+                                if (items.length === 0) {
+                                    const status = progress[theme.id]?.[sub.name] || 'none';
+                                    return `
+                                        <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50 ${hasSubMatch ? '' : 'opacity-30'} transition-all">
+                                            <span class="text-xs font-bold text-gray-700">${sub.name}</span>
+                                            ${this._renderStatusButtons(theme.id, sub.name, status)}
+                                        </div>
+                                    `;
+                                }
+
+                                // Si hay items, mostramos el título del subtema y los items abajo
+                                const filteredItems = items.filter(i => !filter || i.toLowerCase().includes(searchLower) || sub.name.toLowerCase().includes(searchLower) || hasThemeMatch);
                                 
                                 return `
-                                    <div class="flex items-center justify-between p-2 rounded-xl border ${isMatch ? 'border-gray-100 bg-gray-50/50' : 'opacity-30'} transition-all">
-                                        <span class="text-xs font-bold text-gray-600">${sub}</span>
-                                        <div class="flex gap-1">
-                                            <button onclick="window.setSubthemeStatus('${theme.id}', '${sub}', 'done', this)" class="sub-status-btn w-6 h-6 flex items-center justify-center rounded-lg ${currentStatus === 'done' ? 'bg-green-500 text-white' : 'bg-white text-gray-300 hover:text-green-500'} transition-all" title="Hecho">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                            </button>
-                                            <button onclick="window.setSubthemeStatus('${theme.id}', '${sub}', 'progress', this)" class="sub-status-btn w-6 h-6 flex items-center justify-center rounded-lg ${currentStatus === 'progress' ? 'bg-orange-500 text-white' : 'bg-white text-gray-300 hover:text-orange-500'} transition-all" title="En progreso">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                            </button>
+                                    <div class="space-y-2 ${hasSubMatch || filteredItems.length > 0 ? '' : 'opacity-30'}">
+                                        <h6 class="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">${sub.name}</h6>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            ${items.map(item => {
+                                                const status = progress[theme.id]?.[item] || 'none';
+                                                const isItemMatch = !filter || item.toLowerCase().includes(searchLower) || sub.name.toLowerCase().includes(searchLower) || hasThemeMatch;
+                                                return `
+                                                    <div class="flex items-center justify-between p-2 rounded-xl border border-gray-100 bg-white shadow-sm ${isItemMatch ? '' : 'opacity-30'} transition-all">
+                                                        <span class="text-[11px] font-medium text-gray-600">${item}</span>
+                                                        ${this._renderStatusButtons(theme.id, item, status)}
+                                                    </div>
+                                                `;
+                                            }).join('')}
                                         </div>
                                     </div>
                                 `;
@@ -817,16 +849,15 @@ export const PatientModals = {
         // Estado local temporal para los botones
         const currentProgress = JSON.parse(JSON.stringify(appointment.clinicalProgress?.themes || {}));
         
-        window.setSubthemeStatus = (themeId, subName, status, btn) => {
+        window.setSubthemeStatus = (themeId, itemName, status, btn) => {
             if (!currentProgress[themeId]) currentProgress[themeId] = {};
             
-            if (currentProgress[themeId][subName] === status) {
-                delete currentProgress[themeId][subName]; // Toggle off
+            if (currentProgress[themeId][itemName] === status) {
+                delete currentProgress[themeId][itemName]; // Toggle off
             } else {
-                currentProgress[themeId][subName] = status;
+                currentProgress[themeId][itemName] = status;
             }
 
-            // Re-renderizar solo para actualizar colores (u optimizar botones)
             renderThemesList(searchInput.value);
         };
 
@@ -986,5 +1017,23 @@ export const PatientModals = {
         this.closeHistory();
         this.closeInactivePatients();
         console.log('✅ PatientModals: Todos los modales cerrados');
+    },
+
+    /**
+     * Helper para renderizar los botones de status en la bitácora
+     */
+    _renderStatusButtons(themeId, itemName, currentStatus) {
+        // Escapar comillas en itemName por si contienen caracteres especiales
+        const safeName = itemName.replace(/'/g, "\\'");
+        return `
+            <div class="flex gap-1">
+                <button onclick="window.setSubthemeStatus('${themeId}', '${safeName}', 'done', this)" class="sub-status-btn w-6 h-6 flex items-center justify-center rounded-lg ${currentStatus === 'done' ? 'bg-green-500 text-white' : 'bg-white text-gray-300 hover:text-green-500'} transition-all" title="Hecho">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
+                <button onclick="window.setSubthemeStatus('${themeId}', '${safeName}', 'progress', this)" class="sub-status-btn w-6 h-6 flex items-center justify-center rounded-lg ${currentStatus === 'progress' ? 'bg-orange-500 text-white' : 'bg-white text-gray-300 hover:text-orange-500'} transition-all" title="En progreso">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+        `;
     }
 };
