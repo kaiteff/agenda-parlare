@@ -292,7 +292,7 @@ export const PatientModalsHTML = {
                             <p id="sessionNoteDate" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Fecha de la Cita</p>
                         </div>
                     </div>
-                    <button onclick="document.getElementById('sessionNoteModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
+                    <button id="closeSessionNoteBtn" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
@@ -327,7 +327,7 @@ export const PatientModalsHTML = {
 
                 <!-- Footer -->
                 <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
-                    <button onclick="document.getElementById('sessionNoteModal').classList.add('hidden')" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Descartar</button>
+                    <button id="cancelSessionNoteBtn" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Descartar</button>
                     <button id="saveSessionNoteBtn" class="px-8 py-2.5 text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2">
                          <span>Guardar Bitácora</span>
                     </button>

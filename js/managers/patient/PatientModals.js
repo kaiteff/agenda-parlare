@@ -733,6 +733,19 @@ export const PatientModals = {
         const generalNoteInput = document.getElementById('sessionGeneralNote');
         const saveBtn = document.getElementById('saveSessionNoteBtn');
         const searchInput = document.getElementById('themeSearchInput');
+        const closeBtn = document.getElementById('closeSessionNoteBtn');
+        const cancelBtn = document.getElementById('cancelSessionNoteBtn');
+
+        // Logic para cerrar
+        const closeThis = () => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        };
+        if (closeBtn) closeBtn.onclick = closeThis;
+        if (cancelBtn) cancelBtn.onclick = closeThis;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeThis();
+        };
 
         // Reset UI
         if (dateEl) {
