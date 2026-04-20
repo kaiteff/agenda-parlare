@@ -24,6 +24,14 @@ export const SettingsManager = {
         onSnapshot(doc(db, this.docPath), (snapshot) => {
             if (snapshot.exists()) {
                 this.config = snapshot.data();
+
+                // MIGRATION: Force update if it still has the old "tema_r" theme
+                if (this.config.themes && this.config.themes.some(t => t.id === 'tema_r' || t.id === 'tema_soplo')) {
+                    console.log('⚠️ SettingsManager: Ejecutando migración forzada para nuevos temas...');
+                    this._createDefaultConfig();
+                    return;
+                }
+
                 console.log('✅ SettingsManager: Configuración cargada', this.config);
                 this._notify();
             } else {
