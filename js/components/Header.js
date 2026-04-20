@@ -475,7 +475,6 @@ export const Header = {
 
         document.addEventListener('click', async (e) => {
             console.log('🖱️ Click global detectado en:', e.target);
-            // 1. Botón de Reportes
             const reportBtn = e.target.closest('#openReportsBtn');
             if (reportBtn) {
                 console.log("🖱️ Click detectado en botón de reportes (Delegación)");
@@ -638,6 +637,7 @@ export const Header = {
             const adminSettingsBtn = e.target.closest('#adminSettingsBtn');
             if (adminSettingsBtn) {
                 e.preventDefault();
+                e.stopPropagation();
                 try {
                     const { AdminSettingsModal } = await import('../modules/admin/AdminSettingsModal.js');
                     AdminSettingsModal.open();

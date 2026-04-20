@@ -41,7 +41,7 @@ export const AdminSettingsModal = {
         if (document.getElementById(this.id)) return;
 
         const html = `
-            <div id="${this.id}" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+            <div id="${this.id}" onclick="if(event.target===this) { this.classList.add('hidden'); this.style.display='none'; }" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-fade-in-up">
                     
                     <!-- Header -->
@@ -55,7 +55,7 @@ export const AdminSettingsModal = {
                                 <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Control Maestro de la Clínica</p>
                             </div>
                         </div>
-                        <button id="closeAdminSettingsBtn" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
+                        <button id="closeAdminSettingsBtn" onclick="document.getElementById('adminSettingsModal').classList.add('hidden'); document.getElementById('adminSettingsModal').style.display='none';" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -102,7 +102,7 @@ export const AdminSettingsModal = {
 
                     <!-- Footer -->
                     <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
-                        <button id="cancelAdminSettingsBtn" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Cancelar</button>
+                        <button id="cancelAdminSettingsBtn" onclick="document.getElementById('adminSettingsModal').classList.add('hidden'); document.getElementById('adminSettingsModal').style.display='none';" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Cancelar</button>
                         <button id="saveAllSettingsBtn" class="px-8 py-2.5 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
                              <span>Guardar Todos los Cambios</span>
                         </button>
@@ -259,9 +259,9 @@ export const AdminSettingsModal = {
         
         // Cerrar al clickear fuera
         const modalOverlay = document.getElementById(this.id);
-        modalOverlay.onclick = (e) => {
+        modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay) closeModals();
-        };
+        });
 
         // Nuevo Tema
         document.getElementById('addThemeBtn').onclick = () => {

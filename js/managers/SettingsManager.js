@@ -81,8 +81,11 @@ export const SettingsManager = {
     async _createDefaultConfig() {
         const defaults = {
             themes: [
-                { id: 'tema_r', name: 'Lenguaje: R', subthemes: ['Punta de lengua', 'Vibración', 'Palabras directas'] },
-                { id: 'tema_soplo', name: 'Ejercicios de Soplo', subthemes: ['Control de aire', 'Potencia', 'Dirección'] }
+                { id: 'tema_articulacion', name: 'Articulación', subthemes: ['Punto y modo de articulación', 'Vibración múltiple', 'Discriminación fonética'] },
+                { id: 'tema_memoria', name: 'Memoria Auditiva Verbal', subthemes: ['Retención de dígitos', 'Repetición de pseudopalabras', 'Recuerdo de instrucciones'] },
+                { id: 'tema_comprension', name: 'Comprensión de Lenguaje', subthemes: ['Órdenes simples', 'Órdenes complejas', 'Preguntas WH'] },
+                { id: 'tema_morfosintaxis', name: 'Morfosintaxis', subthemes: ['Estructuración de oraciones', 'Uso de nexos', 'Tiempos verbales'] },
+                { id: 'tema_pragmatica', name: 'Pragmática de Lenguaje', subthemes: ['Toma de turnos', 'Mantenimiento del tópico', 'Contacto visual'] }
             ],
             baseCosts: {
                 diana: { cost: 800, fee: 250 },
