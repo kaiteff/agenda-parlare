@@ -38,7 +38,10 @@ export const AdminSettingsModal = {
      * Renderiza el HTML base del modal
      */
     render() {
-        if (document.getElementById(this.id)) return;
+        const existing = document.getElementById(this.id);
+        if (existing) {
+            existing.remove(); // Eliminar versión vieja para asegurar que cargue la nueva lógica
+        }
 
         const html = `
             <div id="${this.id}" onclick="if(event.target===this) { this.classList.add('hidden'); this.style.display='none'; }" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
