@@ -143,6 +143,11 @@ export const PatientModals = {
             return;
         }
 
+        // Forzar visualización
+        dom.patientHistoryModal.classList.remove('hidden');
+        dom.patientHistoryModal.style.display = 'flex';
+        dom.patientHistoryModal.style.zIndex = '9500';
+
         // Guardar paciente seleccionado
         PatientState.setSelectedPatient(patient);
 
@@ -305,6 +310,10 @@ export const PatientModals = {
         // Configurar botones de acción
         this._setupHistoryActions(patient);
 
+        // Botón de cerrar
+        const closeBtn = document.getElementById('closePatientHistoryBtn');
+        if (closeBtn) closeBtn.onclick = () => this.closeHistory();
+
         // Mostrar modal
         dom.patientHistoryModal.classList.remove('hidden');
 
@@ -318,7 +327,7 @@ export const PatientModals = {
             debugEl.classList.remove('hidden');
         }
 
-        console.log('✅ PatientModals: Modal de historial abierto para', patient.name);
+        // console.log('✅ PatientModals: Modal de historial abierto para', patient.name);
     },
 
     /**
@@ -329,6 +338,7 @@ export const PatientModals = {
 
         if (dom.patientHistoryModal) {
             dom.patientHistoryModal.classList.add('hidden');
+            dom.patientHistoryModal.style.display = 'none';
         }
 
         // Ocultar sección de edición si estaba visible

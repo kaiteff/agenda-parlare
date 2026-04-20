@@ -139,7 +139,7 @@ export const PatientModalsHTML = {
                                 </path>
                             </svg>
                         </button>
-                        <button onclick="document.getElementById('patientHistoryModal').classList.add('hidden')"
+                        <button id="closePatientHistoryBtn"
                             class="text-gray-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

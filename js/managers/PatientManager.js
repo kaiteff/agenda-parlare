@@ -301,7 +301,13 @@ export const PatientManager = {
             // Buscar el paciente actualizado en el nuevo estado
             const updatedPatient = PatientState.patients.find(p => p.id === selectedPatient.id);
             if (updatedPatient) {
-                PatientModals.openHistory(updatedPatient);
+                // Actualizar solo los datos internos sin el log masivo de openHistory
+                const canViewFinancials = AuthManager.isAdmin() || 
+                                        AuthManager.currentUser?.role === 'receptionist' || 
+                                        (updatedPatient.therapist === AuthManager.currentUser?.therapist);
+                
+                PatientModals._renderPatientAppointments(updatedPatient.appointments, canViewFinancials);
+                PatientModals._setupHistoryActions(updatedPatient);
             }
         }
     }
