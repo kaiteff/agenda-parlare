@@ -215,6 +215,15 @@ export const PatientModalsHTML = {
                                 </label>
                             </div>
                         </div>
+
+                        <!-- Assigned Themes (Admin Only UI) -->
+                        <div id="adminPatientThemesSection" class="mt-6 pt-4 border-t border-gray-100 hidden">
+                             <h5 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Temas de Trabajo del Paciente (Plan Diana)</h5>
+                             <div id="editPatientThemesList" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                 <!-- Theme checkboxes injected by JS -->
+                             </div>
+                        </div>
+
                         <div class="mt-4 flex justify-end gap-2">
                             <button id="deactivatePatientBtn"
                                 class="hidden px-3 py-1.5 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">Dar
@@ -265,6 +274,63 @@ export const PatientModalsHTML = {
                 <div class="mt-4 pt-3 border-t flex justify-end">
                     <button id="closeInactivePatientsFooterBtn"
                         class="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium">Cerrar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 6. SESSION NOTE / CLINICAL PROGRESS MODAL -->
+        <div id="sessionNoteModal" class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden animate-fade-in-up">
+                <!-- Header -->
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-gray-800">Bitácora de Sesión</h3>
+                            <p id="sessionNoteDate" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Fecha de la Cita</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('sessionNoteModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Content Area -->
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50/30 scroller space-y-6">
+                    
+                    <!-- Search & Checklist Section -->
+                    <div id="sessionThemesSection" class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest">Plan de Trabajo Sugerido</h4>
+                            <!-- Barra de búsqueda -->
+                            <div class="relative flex-1 max-w-xs">
+                                <input type="text" id="themeSearchInput" placeholder="Buscar actividad..." class="w-full pl-8 pr-3 py-1.5 bg-gray-100 border-none rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-100 outline-none">
+                                <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                        </div>
+
+                        <div id="sessionThemesList" class="space-y-4 max-h-[300px] overflow-y-auto scroller pr-2">
+                             <!-- Themes and subthemes injected here -->
+                             <p class="text-xs text-gray-400 italic text-center py-4">No hay temas asignados para este paciente.</p>
+                        </div>
+                    </div>
+
+                    <!-- General Note Section -->
+                    <div class="space-y-2">
+                        <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Observaciones Libres</h4>
+                        <textarea id="sessionGeneralNote" rows="6" class="w-full bg-white border border-gray-200 rounded-2xl p-4 text-sm font-medium text-gray-700 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all outline-none resize-none" placeholder="Escribe aquí cualquier observación adicional de la sesión..."></textarea>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
+                    <button onclick="document.getElementById('sessionNoteModal').classList.add('hidden')" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Descartar</button>
+                    <button id="saveSessionNoteBtn" class="px-8 py-2.5 text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2">
+                         <span>Guardar Bitácora</span>
+                    </button>
                 </div>
             </div>
         </div>

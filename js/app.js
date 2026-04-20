@@ -15,6 +15,7 @@ import { SupportVault } from './modules/support/SupportVault.js';
 import { WhatsAppDashboard } from './components/WhatsAppDashboard.js';
 import { ReceptionControl } from './modules/reception/ReceptionControl.js';
 import { ComponentManager } from './components/ComponentManager.js';
+import { SettingsManager } from './managers/SettingsManager.js';
 
 const log = Logger.create('App');
 
@@ -79,7 +80,8 @@ async function initializeModules() {
             initModule('ScheduleManager', () => ScheduleManager.init()),
             initModule('WhatsAppDashboard', () => WhatsAppDashboard.render()),
             initModule('ToastService', () => ToastService.init()),
-            initModule('NetworkMonitor', () => NetworkMonitor.init())
+            initModule('NetworkMonitor', () => NetworkMonitor.init()),
+            initModule('SettingsManager', () => SettingsManager.init())
         ]);
 
         // Support Vault - siempre init, controla visibilidad internamente

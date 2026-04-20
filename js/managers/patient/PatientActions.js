@@ -715,5 +715,28 @@ export const PatientActions = {
             console.error('❌ PatientActions: Error al toggleconfirm:', error);
             return false;
         }
+    },
+
+    /**
+     * Actualiza la bitácora / progreso clínico de una cita
+     * @param {string} appointmentId 
+     * @param {Object} clinicalProgress 
+     */
+    async updateAppointmentNote(appointmentId, clinicalProgress) {
+        try {
+            const { db, doc, updateDoc } = await import('../../firebase.js');
+            const appointmentRef = doc(db, 'appointments', appointmentId);
+            
+            await updateDoc(appointmentRef, {
+                clinicalProgress: clinicalProgress,
+                updatedAt: new Date().toISOString()
+            });
+            
+            console.log('✅ PatientActions: Bitácora actualizada para', appointmentId);
+            return true;
+        } catch (error) {
+            console.error('❌ PatientActions: Error al actualizar bitácora:', error);
+            return false;
+        }
     }
 };

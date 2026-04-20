@@ -36,6 +36,14 @@ export const Header = {
                 </div>
 
                 <div class="flex items-center gap-2 md:gap-3">
+                    <!-- Admin Settings (Cog) -->
+                    <button id="adminSettingsBtn" class="hidden items-center justify-center p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors ring-1 ring-blue-100" title="Configuración de Clínica">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </button>
+
                     <!-- Notification Bell -->
                     <div class="relative">
                         <button id="notificationBell" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative">
@@ -372,6 +380,13 @@ export const Header = {
                         window.renderCalendar();
                     }
                 };
+
+                // Mostrar botón de configuración si es admin
+                const adminSettingsBtn = document.getElementById('adminSettingsBtn');
+                if (adminSettingsBtn && AuthManager.isAdmin()) {
+                    adminSettingsBtn.classList.remove('hidden');
+                    adminSettingsBtn.classList.add('flex');
+                }
             } else {
                 selectorContainer.classList.add('hidden');
                 selectorContainer.classList.remove('md:flex');
@@ -615,6 +630,19 @@ export const Header = {
                 } catch (err) {
                     console.error("Force Sync failed:", err);
                     ToastService.error("Error al sincronizar.");
+                }
+                return;
+            }
+
+            // 7. Botón Configuración Admin
+            const adminSettingsBtn = e.target.closest('#adminSettingsBtn');
+            if (adminSettingsBtn) {
+                e.preventDefault();
+                try {
+                    const { AdminSettingsModal } = await import('../modules/admin/AdminSettingsModal.js');
+                    AdminSettingsModal.open();
+                } catch (err) {
+                    console.error("Error abriendo Configuración:", err);
                 }
                 return;
             }

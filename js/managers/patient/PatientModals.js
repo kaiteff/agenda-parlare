@@ -24,6 +24,7 @@ import { patientsData, patientProfiles } from '../../firebase.js';
 import { AuthManager } from '../AuthManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ScheduleManager } from '../ScheduleManager.js';
+import { SettingsManager } from '../SettingsManager.js';
 
 /**
  * Gestión de modales
@@ -500,12 +501,23 @@ export const PatientModals = {
             `<div class="text-gray-600 font-medium">Costo: <span class="text-gray-800">$${apt.cost}</span></div>`
             : '<div></div>'; // Spacer
 
+        // INDICADOR DE BITÁCORA: Si ya tiene progreso guardado
+        const hasProgress = apt.clinicalProgress && (apt.clinicalProgress.generalNote || (apt.clinicalProgress.themes && Object.keys(apt.clinicalProgress.themes).length > 0));
+
         let footerHtml = '';
         if (canViewFinancials || showConfirmBtn) {
             footerHtml = `
                 <div class="flex items-center justify-between text-xs mt-2 border-t pt-2 border-gray-400 border-opacity-10">
                     ${costHtml}
                     <div class="flex gap-2">
+                         <button type="button" 
+                                 class="note-btn px-2 py-1 ${hasProgress ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500 border border-gray-200'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors" 
+                                 title="Bitácora de Sesión"
+                                 data-apt-id="${apt.id}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            ${hasProgress ? 'Bitácora ✔' : 'Bitácora'}
+                         </button>
+
                          ${showConfirmBtn ? `
                             <button type="button" 
                                     class="confirm-btn px-2 py-1 ${apt.confirmed ? 'bg-gray-100 text-gray-600 border border-gray-300' : 'bg-blue-600 text-white'} rounded hover:opacity-90 text-xs font-bold shadow-sm flex items-center gap-1 transition-colors" 
@@ -596,6 +608,30 @@ export const PatientModals = {
             document.getElementById('editPatientParentName').value = patient.parentName || '';
         }
 
+        // Renderizar sección de Temas (Solo Admin o si ya tiene temas)
+        const themesSection = document.getElementById('adminPatientThemesSection');
+        const themesList = document.getElementById('editPatientThemesList');
+        if (themesSection && themesList) {
+            if (AuthManager.isAdmin()) {
+                themesSection.classList.remove('hidden');
+                const allThemes = SettingsManager.config.themes || [];
+                const patientThemes = patient.assignedThemes || [];
+                
+                themesList.innerHTML = allThemes.map(theme => `
+                    <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-gray-50">
+                        <input type="checkbox" name="patientTheme" value="${theme.id}" ${patientThemes.includes(theme.id) ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
+                        <span class="text-xs font-bold text-gray-700">${theme.name}</span>
+                    </label>
+                `).join('');
+                
+                if (allThemes.length === 0) {
+                     themesList.innerHTML = '<p class="text-[10px] text-gray-400 italic col-span-2">No hay temas creados en la configuración.</p>';
+                }
+            } else {
+                themesSection.classList.add('hidden');
+            }
+        }
+
         // Botón de guardar cambios
         if (dom.savePatientEditBtn) {
             dom.savePatientEditBtn.onclick = async () => {
@@ -607,6 +643,9 @@ export const PatientModals = {
                 const newParentName = document.getElementById('editPatientParentName')?.value.trim() || '';
                 const wantsWhatsapp = document.getElementById('editPatientWantsWhatsapp')?.checked !== false;
 
+                // Recoger temas seleccionados
+                const selectedThemes = Array.from(document.querySelectorAll('input[name="patientTheme"]:checked')).map(cb => cb.value);
+
                 const success = await PatientActions.updatePatientProfile(
                     patient.id,
                     {
@@ -616,7 +655,8 @@ export const PatientModals = {
                         phone: newPhone,
                         countryCode: countryCode,
                         parentName: newParentName,
-                        wantsWhatsapp: wantsWhatsapp
+                        wantsWhatsapp: wantsWhatsapp,
+                        assignedThemes: selectedThemes
                     },
                     patient.name
                 );
@@ -655,6 +695,148 @@ export const PatientModals = {
                 );
             };
         }
+
+        // Delegación de clicks para botones dentro de las tarjetas (Bitácora, Pagar, Confirmar)
+        if (dom.patientHistoryList) {
+            dom.patientHistoryList.onclick = async (e) => {
+                const noteBtn = e.target.closest('.note-btn');
+                if (noteBtn) {
+                    e.stopPropagation();
+                    const aptId = noteBtn.dataset.aptId;
+                    const appointment = PatientState.appointments.find(a => a.id === aptId);
+                    if (appointment) this.openSessionNote(appointment, patient);
+                    return;
+                }
+
+                const payBtn = e.target.closest('.pay-btn');
+                if (payBtn) {
+                    // Logic already handled in PatientActions or similar, 
+                    // but usually these specific handlers are set up elsewhere.
+                    // For now, let's keep focusing on Bitácora.
+                }
+            };
+        }
+    },
+
+    /**
+     * Abre el modal de bitácora de sesión
+     */
+    openSessionNote(appointment, patient) {
+        const modal = document.getElementById('sessionNoteModal');
+        if (!modal) return;
+
+        console.log('📝 Abriendo bitácora para cita:', appointment.id);
+
+        // Referencias
+        const dateEl = document.getElementById('sessionNoteDate');
+        const themesList = document.getElementById('sessionThemesList');
+        const generalNoteInput = document.getElementById('sessionGeneralNote');
+        const saveBtn = document.getElementById('saveSessionNoteBtn');
+        const searchInput = document.getElementById('themeSearchInput');
+
+        // Reset UI
+        if (dateEl) {
+            const dateStr = new Date(appointment.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+            dateEl.textContent = `${dateStr} @ ${new Date(appointment.date).getHours()}:00`;
+        }
+        if (generalNoteInput) generalNoteInput.value = appointment.clinicalProgress?.generalNote || '';
+        if (searchInput) searchInput.value = '';
+
+        const renderThemesList = (filter = '') => {
+            const assignedIds = patient.assignedThemes || [];
+            const themes = SettingsManager.getThemesByIds(assignedIds);
+            const progress = appointment.clinicalProgress?.themes || {};
+
+            if (themes.length === 0) {
+                themesList.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">No hay temas asignados para este paciente.</p>';
+                return;
+            }
+
+            const searchLower = filter.toLowerCase();
+
+            themesList.innerHTML = themes.map(theme => {
+                const subthemes = theme.subthemes || [];
+                const filteredSubs = subthemes.filter(sub => sub.toLowerCase().includes(searchLower) || theme.name.toLowerCase().includes(searchLower));
+                
+                if (filter && filteredSubs.length === 0) return ''; // Ocultar si no hay matches
+
+                return `
+                    <div class="border-b border-gray-50 pb-3 last:border-0">
+                        <div class="flex items-center gap-2 mb-2">
+                             <div class="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
+                             <h5 class="text-sm font-black text-gray-800">${theme.name}</h5>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-3">
+                            ${subthemes.map(sub => {
+                                const currentStatus = progress[theme.id]?.[sub] || 'none';
+                                const isMatch = !filter || sub.toLowerCase().includes(searchLower) || theme.name.toLowerCase().includes(searchLower);
+                                
+                                return `
+                                    <div class="flex items-center justify-between p-2 rounded-xl border ${isMatch ? 'border-gray-100 bg-gray-50/50' : 'opacity-30'} transition-all">
+                                        <span class="text-xs font-bold text-gray-600">${sub}</span>
+                                        <div class="flex gap-1">
+                                            <button onclick="window.setSubthemeStatus('${theme.id}', '${sub}', 'done', this)" class="sub-status-btn w-6 h-6 flex items-center justify-center rounded-lg ${currentStatus === 'done' ? 'bg-green-500 text-white' : 'bg-white text-gray-300 hover:text-green-500'} transition-all" title="Hecho">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            </button>
+                                            <button onclick="window.setSubthemeStatus('${theme.id}', '${sub}', 'progress', this)" class="sub-status-btn w-6 h-6 flex items-center justify-center rounded-lg ${currentStatus === 'progress' ? 'bg-orange-500 text-white' : 'bg-white text-gray-300 hover:text-orange-500'} transition-all" title="En progreso">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // Estado local temporal para los botones
+        const currentProgress = JSON.parse(JSON.stringify(appointment.clinicalProgress?.themes || {}));
+        
+        window.setSubthemeStatus = (themeId, subName, status, btn) => {
+            if (!currentProgress[themeId]) currentProgress[themeId] = {};
+            
+            if (currentProgress[themeId][subName] === status) {
+                delete currentProgress[themeId][subName]; // Toggle off
+            } else {
+                currentProgress[themeId][subName] = status;
+            }
+
+            // Re-renderizar solo para actualizar colores (u optimizar botones)
+            renderThemesList(searchInput.value);
+        };
+
+        // Buscador
+        searchInput.oninput = (e) => renderThemesList(e.target.value);
+
+        // Guardar
+        saveBtn.onclick = async () => {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            
+            const updatedProgress = {
+                themes: currentProgress,
+                generalNote: generalNoteInput.value.trim()
+            };
+
+            const success = await PatientActions.updateAppointmentNote(appointment.id, updatedProgress);
+
+            if (success) {
+                ToastService.success('Bitácora guardada correctamente');
+                modal.classList.add('hidden');
+                // IMPORTANTE: Actualizar localmente la cita para no tener que refrescar todo
+                appointment.clinicalProgress = updatedProgress;
+                this.openHistory(patient); // Refrescar la vista del historial
+            }
+
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span>Guardar Bitácora</span>';
+        };
+
+        renderThemesList();
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     },
 
     // ==========================================
