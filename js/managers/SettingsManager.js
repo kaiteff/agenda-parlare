@@ -25,8 +25,12 @@ export const SettingsManager = {
             if (snapshot.exists()) {
                 this.config = snapshot.data();
 
-                // MIGRATION: Force update if it still has the old "tema_r" theme
-                if (this.config.themes && this.config.themes.some(t => t.id === 'tema_r' || t.id === 'tema_soplo')) {
+                // MIGRATION: Force update if themes are empty, or has old themes, or old costs
+                const hasOldThemes = this.config.themes && this.config.themes.some(t => t.id === 'tema_r' || t.id === 'tema_soplo');
+                const hasNoThemes = !this.config.themes || this.config.themes.length === 0;
+                const hasOldCosts = this.config.baseCosts && this.config.baseCosts.vero && this.config.baseCosts.vero.fee !== 400;
+
+                if (hasOldThemes || hasNoThemes || hasOldCosts) {
                     console.log('⚠️ SettingsManager: Ejecutando migración forzada para nuevos temas...');
                     this._createDefaultConfig();
                     return;
