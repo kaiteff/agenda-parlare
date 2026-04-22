@@ -234,22 +234,9 @@ export const CalendarUI = {
                     const percent = (now.getMinutes() / 60) * 100;
                     const indicator = document.createElement('div');
                     indicator.className = "live-time-line";
-                    // Estilos elegantes pero visibles
-                    indicator.setAttribute('style', `
-                        position: absolute !important;
-                        top: ${percent}% !important;
-                        left: 0 !important;
-                        width: 5000px !important;
-                        height: 2px !important;
-                        background-color: #ef4444 !important;
-                        z-index: 50 !important;
-                        pointer-events: none !important;
-                        opacity: 0.8 !important;
-                        display: block !important;
-                        visibility: visible !important;
-                    `);
-                    hourCell.style.overflow = 'visible';
-                    hourCell.appendChild(indicator);
+                    // Solo seteamos el top dinámico, el resto viene de index.css (incluyendo width: 100%)
+                    indicator.style.top = `${percent}%`;
+                    row.appendChild(indicator);
                 }
 
                 grid.appendChild(row);
