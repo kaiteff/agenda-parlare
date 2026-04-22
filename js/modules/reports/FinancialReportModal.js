@@ -11,6 +11,14 @@ export const FinancialReportModal = {
      * Inicializa el modal (inyecta HTML si no existe)
      */
     init() {
+        const existing = document.getElementById('financialReportModal');
+        
+        // Si ya existe pero es una versión vieja (sin los nuevos campos), lo borramos para recrearlo
+        if (existing && !document.getElementById('reportTotalClinic')) {
+            existing.remove();
+            this.isInitialized = false;
+        }
+
         if (this.isInitialized || document.getElementById('financialReportModal')) {
             return;
         }

@@ -135,6 +135,15 @@ export const SettingsManager = {
                         { name: 'Mantenimiento del tópico', items: [] },
                         { name: 'Contacto visual', items: [] }
                     ] 
+                },
+                { 
+                    id: 'tema_autismo', 
+                    name: 'Autismo', 
+                    subthemes: [
+                        { name: 'Habilidades Sociales', items: [] },
+                        { name: 'Flexibilidad Cognitiva', items: [] },
+                        { name: 'Comunicación Funcional', items: [] }
+                    ] 
                 }
             ],
             baseCosts: {
