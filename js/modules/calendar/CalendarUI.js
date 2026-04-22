@@ -228,17 +228,16 @@ export const CalendarUI = {
                     row.appendChild(cell);
                 });
 
-                // Línea de tiempo roja AL FINAL con visibilidad forzada (REVISIÓN FINAL)
+                // Línea de tiempo roja con VISIBILIDAD FORZADA ABSOLUTA
                 if (isCurrentHour) {
                     const now = new Date();
                     const percent = (now.getMinutes() / 60) * 100;
                     const indicator = document.createElement('div');
                     indicator.className = "live-time-line";
-                    indicator.style.top = `${percent}%`;
-                    indicator.style.gridColumn = "1 / span 7";
-                    indicator.style.gridRow = "1";
+                    // Forzar estilos por si el CSS falla
+                    indicator.setAttribute('style', `top: ${percent}%; left: 0; width: 100%; grid-column: 1 / span 7; grid-row: 1; z-index: 999; position: absolute !important; display: block !important; background-color: #ff0000 !important; height: 4px !important; pointer-events: none !important; box-shadow: 0 0 10px rgba(255,0,0,0.8) !important;`);
                     row.appendChild(indicator);
-                    console.log("📍 Línea de tiempo inyectada en hora:", hour);
+                    console.log(`🚀 DEBUG: Línea inyectada al ${percent}% de la fila ${hour}`);
                 }
 
                 grid.appendChild(row);
