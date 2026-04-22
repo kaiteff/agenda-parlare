@@ -122,19 +122,6 @@ export const CalendarUI = {
                 hourCell.innerHTML = `<span class="text-xs font-medium ${isCurrentHour ? 'text-blue-600' : 'text-gray-500'}">${formatTime12h(hour)}</span>`;
                 row.appendChild(hourCell);
 
-                // Si es la hora actual, añadir la línea de tiempo roja
-                if (isCurrentHour) {
-                    const now = new Date();
-                    const minutes = now.getMinutes();
-                    const percent = (minutes / 60) * 100;
-                    const indicator = document.createElement('div');
-                    indicator.className = "time-indicator";
-                    indicator.style.top = `${percent}%`;
-                    indicator.style.gridColumn = "1 / span 7";
-                    indicator.style.gridRow = "1";
-                    row.appendChild(indicator);
-                }
-
                 weekDays.forEach((dayDate) => {
                     const isToday = dayDate.getTime() === today.getTime();
                     const cell = document.createElement('div');
@@ -148,23 +135,12 @@ export const CalendarUI = {
                         dateStr = "";
                     }
 
-                    // FILTRADO: Usar el objeto Date directamente para que el navegador maneje
-                    // la conversión de UTC (de Google) a hora local automáticamente.
                     const slotEvents = CalendarState.appointments.filter(p => {
                         if (p.isCancelled) return false;
-                        
                         const pDate = new Date(p.date);
-                        
                         let pDateStr;
-                        try { 
-                            pDateStr = formatDateLocal(pDate); 
-                        } catch (e) { return false; }
-                        
-                        if (p.isFullDayBlock) {
-                            return pDateStr === dateStr;
-                        }
-                        
-                        // Comparación: mismo día y misma hora
+                        try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
+                        if (p.isFullDayBlock) return pDateStr === dateStr;
                         return pDateStr === dateStr && pDate.getHours() === hour;
                     });
 
@@ -172,76 +148,36 @@ export const CalendarUI = {
                     const isViewAll = !selectedTherapist || selectedTherapist === 'all';
 
                     if (isViewAll) {
-                        // VISTA TODOS
                         if (slotEvents.length > 0) {
                             const container = document.createElement('div');
                             container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5";
-
                             slotEvents.forEach(evt => {
                                 const tKey = evt.therapist || 'diana';
                                 const therapistName = tKey.charAt(0).toUpperCase() + tKey.slice(1);
-
-                                // LOGIC FIX: Si está pagado, mostrar en VERDE igual que en la tarjeta individual
                                 let bgColor = '';
-                                if (evt.isPaid) {
-                                    bgColor = 'bg-green-100 text-green-800 border-green-200';
-                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
-                                    bgColor = 'bg-gray-900 text-white border-gray-950 shadow-md';
-                                } else {
+                                if (evt.isPaid) bgColor = 'bg-green-100 text-green-800 border-green-200';
+                                else if (evt.isFullDayBlock || evt.isHourlyBlock) bgColor = 'bg-gray-900 text-white border-gray-950 shadow-md';
+                                else {
                                     if (tKey === 'diana') bgColor = 'bg-pink-100 text-pink-800 border-pink-200';
                                     else if (tKey === 'sam') bgColor = 'bg-blue-100 text-blue-800 border-blue-200';
                                     else bgColor = 'bg-purple-100 text-purple-800 border-purple-200';
                                 }
-
                                 const chip = document.createElement('div');
-                                const canEdit = AuthManager.canEditItem(evt) || 
-                                                AuthManager.isAdmin() || 
-                                                AuthManager.currentUser?.role === 'receptionist';
-
-                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} transition-all truncate px-1 gap-1 
-                                    ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}`;
-
+                                const canEdit = AuthManager.canEditItem(evt) || AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} transition-all truncate px-1 gap-1 ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}`;
                                 if (canEdit) {
                                     chip.draggable = true;
-                                    chip.ondragstart = (e) => {
-                                        e.dataTransfer.setData("text/plain", evt.id);
-                                        chip.style.opacity = '0.5';
-                                    };
-                                    chip.ondragend = (e) => {
-                                        chip.style.opacity = '1';
-                                    };
+                                    chip.ondragstart = (e) => { e.dataTransfer.setData("text/plain", evt.id); chip.style.opacity = '0.5'; };
+                                    chip.ondragend = (e) => { chip.style.opacity = '1'; };
                                 }
-
-                                // Content: Name + Initial + Checkmark if confirmed
                                 const canViewDetails = AuthManager.canViewDetails(evt);
                                 const tInitial = tKey.charAt(0).toUpperCase();
-                                
-                                let content = '';
-                                if (evt.isPaid) {
-                                    content = `[${tInitial}] Pagado`;
-                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
-                                    content = `[${tInitial}] Bloqueado`;
-                                } else {
-                                    // Si puede ver detalles (es dueño o admin), ver nombre. Si no, solo 'Ocupado'
-                                    content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
-                                }
-
-                                if (evt.confirmed && canViewDetails) {
-                                    content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
-                                }
-
+                                let content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
+                                if (evt.isPaid) content = `[${tInitial}] Pagado`;
+                                else if (evt.isFullDayBlock || evt.isHourlyBlock) content = `[${tInitial}] Bloqueado`;
+                                if (evt.confirmed && canViewDetails) content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
                                 chip.innerHTML = content;
-                                if (canViewDetails) {
-                                    chip.title = `${therapistName}: ${evt.name} (${evt.isPaid ? 'Pagado' : 'Pendiente'})${evt.confirmed ? ' - CONFIRMADO' : ''} ${!canEdit ? '(Solo Lectura)' : ''}`;
-                                } else {
-                                    chip.title = "Horario Ocupado (Privado)";
-                                }
-
-                                chip.onclick = (e) => {
-                                    e.stopPropagation();
-                                    console.log('👆 Chip clicked (All):', evt.name);
-                                    if (onEventClick) onEventClick(evt);
-                                };
+                                chip.onclick = (e) => { e.stopPropagation(); if (onEventClick) onEventClick(evt); };
                                 container.appendChild(chip);
                             });
                             cell.appendChild(container);
@@ -249,142 +185,61 @@ export const CalendarUI = {
                             this.renderEmptySlot(cell, dateStr, hour, onEmptySlotClick);
                         }
                     } else {
-                        // VISTA INDIVIDUAL
-                        const matchingEvents = slotEvents.filter(p => {
-                            const apptTherapist = p.therapist || 'diana';
-                            return apptTherapist === selectedTherapist;
-                        });
-
+                        const matchingEvents = slotEvents.filter(p => (p.therapist || 'diana') === selectedTherapist);
                         if (matchingEvents.length > 0) {
                             const container = document.createElement('div');
                             container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5 overflow-hidden";
-
                             matchingEvents.forEach(evt => {
                                 const canView = AuthManager.canViewDetails(evt);
-                                const eventName = evt.name; // SIEMPRE MOSTRAR NOMBRE
-
                                 const eventCard = document.createElement('div');
                                 const isPaid = evt.isPaid;
-                                const isConfirmed = evt.confirmed;
                                 const heightClass = matchingEvents.length > 1 ? 'flex-1 min-h-0' : 'h-full';
-
-                                let cardClasses;
-                                if (!canView) {
-                                    // Gris, cursor normal (no mano), pero legible
-                                    cardClasses = 'bg-gray-100 text-gray-700 border border-gray-200 cursor-default';
-                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
-                                    cardClasses = 'bg-gray-900 text-white shadow-lg border-gray-950 cursor-pointer uppercase tracking-widest text-[10px] hover:bg-black hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200';
-                                } else {
-                                    cardClasses = `${isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-green-200 shadow-md' : 'bg-white border-l-4 border-l-red-500 text-gray-700 shadow-sm border-gray-100'} cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md transition-all duration-200`;
-                                }
-
-                                eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses}`;
-
-                                // 2. Bloqueo Visual/Funcional para No-Dueños
-                                const canEdit = AuthManager.canEditItem(evt) || 
-                                                AuthManager.isAdmin() || 
-                                                AuthManager.currentUser?.role === 'receptionist';
-                                
+                                let cardClasses = canView ? (evt.isFullDayBlock || evt.isHourlyBlock ? 'bg-gray-900 text-white shadow-lg border-gray-950' : (isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-white border-l-4 border-l-red-500 text-gray-700')) : 'bg-gray-100 text-gray-700 cursor-default';
+                                eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses} cursor-pointer transition-all`;
                                 if (canView) {
                                     eventCard.draggable = true;
-                                    eventCard.ondragstart = (e) => {
-                                        e.dataTransfer.setData("text/plain", evt.id);
-                                        eventCard.style.opacity = '0.5';
-                                    };
-                                    eventCard.ondragend = (e) => {
-                                        eventCard.style.opacity = '1';
-                                    };
+                                    eventCard.ondragstart = (e) => { e.dataTransfer.setData("text/plain", evt.id); eventCard.style.opacity = '0.5'; };
+                                    eventCard.ondragend = (e) => { eventCard.style.opacity = '1'; };
                                 }
-                                
-                                eventCard.onclick = (e) => {
-                                    e.stopPropagation();
-                                    console.log('👆 Card clicked (Individual):', evt.name);
-                                    if (onEventClick) onEventClick(evt);
-                                };
-
-                                eventCard.innerHTML = `
-                                    <div class="flex items-center justify-between gap-1 w-full">
-                                        <div class="truncate font-semibold flex-1 leading-tight tracking-tight">${eventName}</div>
-                                        ${isConfirmed && canView ? `<div class="flex-shrink-0 bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] shadow-sm ring-2 ring-white" title="Confirmado">✓</div>` : ''}
-                                    </div>
-                                    ${matchingEvents.length === 1 && canView ? `<div class="text-[10px] opacity-90 leading-tight font-light mt-0.5">$${evt.cost || '0'}</div>` : ''}
-                                `;
-
+                                eventCard.onclick = (e) => { e.stopPropagation(); if (onEventClick) onEventClick(evt); };
+                                eventCard.innerHTML = `<div class="flex items-center justify-between gap-1 w-full"><div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>${evt.confirmed && canView ? '✓' : ''}</div>`;
                                 container.appendChild(eventCard);
                             });
-
                             cell.appendChild(container);
                         } else {
                             this.renderEmptySlot(cell, dateStr, hour, onEmptySlotClick);
                         }
                     }
 
-                    // Hacer la celda un target para dropear
-                    cell.ondragover = (e) => {
-                        e.preventDefault();
-                        if (!cell.classList.contains('bg-blue-100')) {
-                            cell.classList.add('bg-blue-100', 'ring-2', 'ring-blue-400', 'ring-inset');
-                        }
-                    };
-                    cell.ondragleave = (e) => {
-                        cell.classList.remove('bg-blue-100', 'ring-2', 'ring-blue-400', 'ring-inset');
-                    };
+                    cell.ondragover = (e) => { e.preventDefault(); cell.classList.add('bg-blue-100'); };
+                    cell.ondragleave = (e) => cell.classList.remove('bg-blue-100');
                     cell.ondrop = async (e) => {
                         e.preventDefault();
-                        cell.classList.remove('bg-blue-100', 'ring-2', 'ring-blue-400', 'ring-inset');
+                        cell.classList.remove('bg-blue-100');
                         const evtId = e.dataTransfer.getData("text/plain");
-                        if (!evtId) return;
-                        
                         const evt = CalendarState.appointments.find(a => a.id === evtId);
-                        if (!evt) return;
-
-                        // Bloqueo de Seguridad: Solo permitir mover si eres dueño, Admin o Recepción
-                        const canEdit = AuthManager.canEditItem(evt) || 
-                                        AuthManager.isAdmin() || 
-                                        AuthManager.currentUser?.role === 'receptionist';
-
-                        if (!canEdit) {
-                            console.warn('🚫 CalendarUI: Intento de mover cita sin permiso:', evt.name);
-                            ToastService.warning("No tienes permiso para mover citas de otros terapeutas.");
-                            return;
-                        }
-
+                        if (!evt || !AuthManager.canEditItem(evt)) return;
                         const [year, month, day] = dateStr.split('-');
                         const newDateObj = new Date(year, month - 1, day, hour, 0, 0);
-
-                        // Evitar mover si es la misma fecha y hora
-                        const currentEvtDate = new Date(evt.date);
-                        if (currentEvtDate.getTime() === newDateObj.getTime()) return;
-
-                        const confirmed = await ModalService.confirm(
-                            'Mover Cita',
-                            `¿Estás seguro que deseas mover la cita de <b>${evt.name}</b><br>al <b>${dateStr}</b> a las <b>${hour}:00</b>?`,
-                            'Sí, mover',
-                            'Cancelar',
-                            'info'
-                        );
-
-                        if (confirmed) {
-                            CalendarUI.updateStatus("Moviendo cita...");
-                            const updatedData = { ...evt, date: newDateObj.toISOString() };
-                            await CalendarData.updateEvent(evt.id, updatedData);
-                            CalendarUI.updateStatus("Cita movida exitosamente.");
-
-                            // Preguntar si quiere avisar por WhatsApp
-                            const sendWA = await ModalService.confirm(
-                                "Cita Reagendada",
-                                "¿Deseas enviar un mensaje automático de confirmación del nuevo horario por WhatsApp?",
-                                "Enviar WhatsApp",
-                                "No, gracias"
-                            );
-                            if (sendWA) {
-                                WhatsAppMessaging.sendMessage(updatedData, 'reschedule');
-                            }
+                        if (await ModalService.confirm('Mover Cita', `¿Mover a ${evt.name}?`)) {
+                            await CalendarData.updateEvent(evt.id, { ...evt, date: newDateObj.toISOString() });
                         }
                     };
-
                     row.appendChild(cell);
                 });
+
+                // Línea de tiempo roja AL FINAL
+                if (isCurrentHour) {
+                    const now = new Date();
+                    const percent = (now.getMinutes() / 60) * 100;
+                    const indicator = document.createElement('div');
+                    indicator.className = "time-indicator";
+                    indicator.style.top = `${percent}%`;
+                    indicator.style.gridColumn = "1 / span 7";
+                    indicator.style.gridRow = "1";
+                    indicator.style.zIndex = "50";
+                    row.appendChild(indicator);
+                }
 
                 grid.appendChild(row);
             }
