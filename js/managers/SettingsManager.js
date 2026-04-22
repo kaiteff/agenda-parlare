@@ -34,6 +34,13 @@ export const SettingsManager = {
                     return;
                 }
 
+                // EMERGENCY FIX: Si la lista de temas está vacía, restaurar defaults
+                if (!this.config.themes || this.config.themes.length === 0) {
+                    console.log('🔄 Restaurando temas por defecto (Estaban vacíos)...');
+                    this._createDefaultConfig();
+                    return;
+                }
+
                 console.log('✅ SettingsManager: Configuración cargada', this.config);
                 this._notify();
             } else {

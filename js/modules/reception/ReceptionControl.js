@@ -130,6 +130,14 @@ export const ReceptionControl = {
                         </button>
                     </div>
 
+                    <!-- Filtro por Terapeuta (NUEVO) -->
+                    <div class="flex items-center gap-1 bg-white p-1 rounded-xl border shadow-sm ml-2">
+                        <button id="filterTherapist_all" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all bg-indigo-600 text-white shadow-sm" data-therapist="all">Todas</button>
+                        <button id="filterTherapist_diana" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="diana">Diana</button>
+                        <button id="filterTherapist_sam" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="sam">Sam</button>
+                        <button id="filterTherapist_vero" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="vero">Vero</button>
+                    </div>
+
                     <div class="ml-auto text-sm text-gray-500 bg-white px-3 py-1 rounded-full border">
                         <span id="receptionCount" class="font-bold text-indigo-600">0</span> registros
                     </div>
@@ -212,6 +220,25 @@ export const ReceptionControl = {
             }
             this.render();
         });
+
+        // Filtros de Terapeuta (NUEVO)
+        document.querySelectorAll('.filter-therapist-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget;
+                const therapist = target.getAttribute('data-therapist');
+                
+                // UI
+                document.querySelectorAll('.filter-therapist-btn').forEach(b => {
+                    b.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+                    b.classList.add('text-gray-600', 'hover:bg-gray-100');
+                });
+                target.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+                target.classList.remove('text-gray-600', 'hover:bg-gray-100');
+
+                this.selectedTherapist = therapist;
+                this.render();
+            });
+        });
     },
 
     open() {
@@ -231,6 +258,7 @@ export const ReceptionControl = {
 
         const showOnlyDebtors = document.getElementById('filterDebtorsBtn').classList.contains('active-filter-red');
         const showOnlyPending = document.getElementById('filterPendingBtn').classList.contains('active-filter-orange');
+        const therapistFilter = this.selectedTherapist || 'all';
         const query = searchInput.value.toLowerCase().trim();
         const activeView = this.currentView || 'today';
 
@@ -257,6 +285,11 @@ export const ReceptionControl = {
                                (p.parentName && normalize(p.parentName).includes(normalize(query)));
             
             if (!matchesSearch) return false;
+
+            // Filtro por terapeuta (NUEVO)
+            if (therapistFilter !== 'all' && (p.therapist || '').toLowerCase() !== therapistFilter) {
+                return false;
+            }
 
             // Encontrar citas relevantes para este paciente en esta vista
             const pApts = appointments.filter(a => normalize(a.name) === normalize(p.name) && !a.isCancelled);
