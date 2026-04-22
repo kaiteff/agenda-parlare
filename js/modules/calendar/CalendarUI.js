@@ -228,18 +228,17 @@ export const CalendarUI = {
                     row.appendChild(cell);
                 });
 
-                // Línea de tiempo roja AL FINAL con visibilidad forzada
+                // Línea de tiempo roja AL FINAL con visibilidad forzada (REVISIÓN FINAL)
                 if (isCurrentHour) {
                     const now = new Date();
                     const percent = (now.getMinutes() / 60) * 100;
                     const indicator = document.createElement('div');
-                    indicator.className = "time-indicator";
+                    indicator.className = "live-time-line";
                     indicator.style.top = `${percent}%`;
-                    indicator.style.left = "0";
-                    indicator.style.width = "100%";
                     indicator.style.gridColumn = "1 / span 7";
                     indicator.style.gridRow = "1";
                     row.appendChild(indicator);
+                    console.log("📍 Línea de tiempo inyectada en hora:", hour);
                 }
 
                 grid.appendChild(row);
