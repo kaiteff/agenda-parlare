@@ -664,7 +664,12 @@ export const PatientModals = {
                                         <span class="text-[10px] font-bold text-gray-500 group-hover/st:text-indigo-600">${st.name}</span>
                                     </label>
                                 `).join('')}
-                                ${subthemes.length === 0 ? '<p class="text-[9px] text-gray-400 italic">Sin subtemas definidos</p>' : ''}
+                                
+                                <!-- Botón para añadir subtema express -->
+                                <button type="button" class="add-subtheme-btn flex items-center gap-1 text-[9px] font-black text-blue-400 hover:text-blue-600 uppercase pt-1 transition-colors" data-theme-id="${theme.id}">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Añadir Subtema
+                                </button>
                             </div>
                         </div>
                         `;
@@ -675,7 +680,7 @@ export const PatientModals = {
                     addNewBtn.type = 'button';
                     addNewBtn.className = "col-span-1 sm:col-span-2 mt-2 py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all text-[10px] font-black uppercase flex items-center justify-center gap-2";
                     addNewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> + Nuevo Tema de Trabajo`;
-                    addNewBtn.onclick = () => this._handleCreateQuickTheme();
+                    addNewBtn.onclick = () => PatientModals._handleCreateQuickTheme();
                     themesList.appendChild(addNewBtn);
 
                     // Re-bind toggles
@@ -686,9 +691,17 @@ export const PatientModals = {
                                 container.classList.remove('hidden');
                             } else {
                                 container.classList.add('hidden');
-                                // Opcional: desmarcar subtemas si se desmarca el padre
                                 container.querySelectorAll('input').forEach(stCb => stCb.checked = false);
                             }
+                        };
+                    });
+
+                    // Bind Add Subtheme buttons
+                    themesList.querySelectorAll('.add-subtheme-btn').forEach(btn => {
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            const themeId = e.currentTarget.dataset.themeId;
+                            PatientModals._handleCreateQuickSubtheme(themeId);
                         };
                     });
                 };
@@ -1050,5 +1063,136 @@ export const PatientModals = {
                 </button>
             </div>
         `;
+    },
+
+    /**
+     * Helper para crear un tema rápido desde el modal de edición
+     * @private
+     */
+    async _handleCreateQuickTheme() {
+        const { ModalService } = await import('../../utils/ModalService.js');
+        const { SettingsManager } = await import('../SettingsManager.js');
+        const { ToastService } = await import('../../utils/ToastService.js');
+
+        const name = await ModalService.prompt("Nuevo Tema", "¿Cómo se llama el nuevo tema de trabajo?", "Ej: Deglución Atípica");
+        if (!name) return;
+
+        const subName = await ModalService.prompt("Sub-tema inicial", `Añade un primer sub-tema para "${name}" (Opcional)`, "Ej: General");
+        
+        const newTheme = {
+            id: 'tema_' + name.toLowerCase().trim().replace(/\s+/g, '_'),
+            name: name,
+            subthemes: subName ? [{ name: subName, items: [] }] : []
+        };
+
+        const currentThemes = SettingsManager.config.themes || [];
+        if (currentThemes.some(t => t.id === newTheme.id)) {
+            ToastService.error("Ese tema ya existe.");
+            return;
+        }
+
+        SettingsManager.config.themes = [...currentThemes, newTheme];
+        const success = await SettingsManager.saveConfig();
+        
+        if (success) {
+            ToastService.success("Tema creado y guardado en el catálogo global.");
+            const patient = PatientState.selectedPatient;
+            if (patient) PatientModals._setupHistoryActions(patient);
+        }
+    },
+
+    /**
+     * Helper para crear un sub-tema rápido dentro de un tema existente
+     * @private
+     */
+    async _handleCreateQuickSubtheme(themeId) {
+        const { ModalService } = await import('../../utils/ModalService.js');
+        const { SettingsManager } = await import('../SettingsManager.js');
+        const { ToastService } = await import('../../utils/ToastService.js');
+
+        const name = await ModalService.prompt("Nuevo Sub-tema", `¿Cómo se llama el nuevo sub-tema para este grupo?`, "Ej: Fonema /rr/");
+        if (!name) return;
+
+        const allThemes = SettingsManager.config.themes || [];
+        const theme = allThemes.find(t => t.id === themeId);
+        
+        if (!theme) return;
+
+        if (!theme.subthemes) theme.subthemes = [];
+        
+        if (theme.subthemes.some(st => st.name.toLowerCase() === name.toLowerCase())) {
+            ToastService.error("Este sub-tema ya existe en este grupo.");
+            return;
+        }
+
+        theme.subthemes.push({ name: name, items: [] });
+        const success = await SettingsManager.saveConfig();
+
+        if (success) {
+            ToastService.success(`Sub-tema "${name}" añadido correctamente.`);
+            const patient = PatientState.selectedPatient;
+            if (patient) PatientModals._setupHistoryActions(patient);
+        }
+    },
+
+    /**
+     * Renderiza los temas en la bitácora de sesión con subtemas
+     * @private
+     */
+    _renderSessionThemes(clinicalProgress, patient, filter = '') {
+        const themesList = document.getElementById('sessionThemesList');
+        if (!themesList) return;
+
+        const { SettingsManager } = PatientState;
+        const allThemes = SettingsManager.config.themes || [];
+        const assignedThemeIds = patient.assignedThemes || [];
+        const assignedSubthemes = patient.assignedSubthemes || []; 
+        
+        const patientThemes = allThemes.filter(t => assignedThemeIds.includes(t.id));
+
+        if (patientThemes.length === 0) {
+            themesList.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">No hay temas asignados. Ve a "Editar Perfil" para asignar un plan de trabajo.</p>';
+            return;
+        }
+
+        const searchLower = filter.toLowerCase();
+
+        themesList.innerHTML = patientThemes.map(theme => {
+            const filteredSubthemes = theme.subthemes.filter(st => {
+                const isAssigned = assignedSubthemes.includes(`${theme.id}:${st.name}`);
+                const matchesSearch = !filter || st.name.toLowerCase().includes(searchLower) || theme.name.toLowerCase().includes(searchLower);
+                return isAssigned && matchesSearch;
+            });
+
+            if (filter && filteredSubthemes.length === 0 && !theme.name.toLowerCase().includes(searchLower)) return '';
+
+            // Si no hay subtemas específicos asignados, mostramos todos los del tema (fallback útil)
+            const subthemesToShow = filteredSubthemes.length > 0 ? filteredSubthemes : theme.subthemes.filter(st => !filter || st.name.toLowerCase().includes(searchLower) || theme.name.toLowerCase().includes(searchLower));
+
+            return `
+                <div class="theme-block bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <h5 class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">${theme.name}</h5>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${subthemesToShow.map(st => `
+                            <div class="subtheme-item bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-[10px] font-bold text-gray-600">${st.name}</span>
+                                    <div class="flex items-center gap-1">
+                                        <input type="checkbox" data-theme="${theme.id}" data-subtheme="${st.name}" 
+                                            ${clinicalProgress.themes?.[theme.id]?.[st.name]?.achieved ? 'checked' : ''}
+                                            class="achievement-cb w-3 h-3 text-green-500 rounded border-gray-300">
+                                        <span class="text-[8px] font-black text-green-600 uppercase">Logrado</span>
+                                    </div>
+                                </div>
+                                <input type="text" placeholder="Observación específica..." 
+                                    value="${clinicalProgress.themes?.[theme.id]?.[st.name]?.note || ''}"
+                                    data-theme="${theme.id}" data-subtheme="${st.name}"
+                                    class="subtheme-note w-full bg-gray-50 border-none rounded p-1 text-[10px] focus:ring-1 focus:ring-indigo-100 outline-none">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 };
