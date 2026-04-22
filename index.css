@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /**
  * Agenda Parlare - Global Styles
  * Design System & UI Components

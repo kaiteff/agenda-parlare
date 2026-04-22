@@ -68,6 +68,11 @@ export async function initializeFirebase(onAuthCallback) {
         console.log("🔥 Inicializando Firebase...");
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        
+        // FORZAR PERSISTENCIA LOCAL (Para que no las saque en celular)
+        const { setPersistence, browserLocalPersistence } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+        await setPersistence(auth, browserLocalPersistence);
+        
         authInstance = auth;
         db = getFirestore(app);
 

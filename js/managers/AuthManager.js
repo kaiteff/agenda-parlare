@@ -16,6 +16,8 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+import { SettingsManager } from './SettingsManager.js';
+
 // Roles y Permisos
 const ROLES = {
     admin: {
@@ -73,11 +75,21 @@ export const AuthManager = {
     // ... (anterior)
     
     /**
-     * Obtiene los costos por defecto de un terapeuta
+     * Obtiene los costos por defecto de un terapeuta (Dinámico desde SettingsManager)
      */
     getTherapistDefaults(therapistId) {
         const id = (therapistId || 'diana').toLowerCase();
-        // Buscar en el mapeo de usuarios el que corresponda a ese ID de terapeuta
+        
+        // 1. Intentar obtener desde SettingsManager (Configuración viva del panel)
+        const config = SettingsManager.config?.baseCosts?.[id];
+        if (config) {
+            return {
+                cost: config.cost || 800,
+                clinicFee: config.fee || 250
+            };
+        }
+
+        // 2. Fallback a mapeo manual si no hay configuración en el panel
         const profile = Object.values(AUTHORIZED_USERS).find(u => u.therapist === id);
         return {
             cost: profile?.defaultCost || 800,

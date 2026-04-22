@@ -67,6 +67,7 @@ export const AdminSettingsModal = {
                     <div class="px-6 border-b border-gray-100 bg-white flex gap-6">
                         <button id="tab-themes" class="py-4 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-all">Temas y Metodología</button>
                         <button id="tab-costs" class="py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all">Costos y Comisiones</button>
+                        <button id="tab-reports" class="py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all">📊 Reporte Rápido</button>
                     </div>
 
                     <!-- Content Area -->
@@ -98,6 +99,33 @@ export const AdminSettingsModal = {
                                     Estos valores se usarán automáticamente cuando crees un nuevo paciente. 
                                     Los pacientes ya existentes conservarán sus costos actuales a menos que los edites individualmente.
                                 </p>
+                            </div>
+                        </div>
+
+                        <!-- TAB: REPORTS -->
+                        <div id="content-reports" class="hidden space-y-6">
+                            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl shadow-blue-100">
+                                <div class="flex items-center gap-4 mb-6">
+                                    <div class="p-3 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
+                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-2xl font-black">Reportes Financieros</h4>
+                                        <p class="text-blue-100 text-sm font-medium">Analiza la utilidad neta y el rendimiento de la clínica.</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button id="openFullReportBtn" class="flex items-center justify-center gap-3 p-4 bg-white text-blue-700 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg active:scale-95">
+                                        <span>Abrir Reporte Mensual</span>
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                                    </button>
+                                    
+                                    <div class="p-4 bg-blue-500 bg-opacity-20 border border-white border-opacity-20 rounded-2xl flex flex-col justify-center text-center">
+                                        <div class="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1 opacity-80">Siguiente Corte</div>
+                                        <div class="text-sm font-bold">Fin de Mes Automático</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -261,11 +289,11 @@ export const AdminSettingsModal = {
                     </div>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Costo Default ($)</label>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Costo Sugerido ($)</label>
                             <input type="number" value="${data.cost}" class="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-blue-100 outline-none" onchange="window.updateBaseCost('${id}', 'cost', this.value)">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cuota Parláre ($)</label>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cuota Parláre Sugerida ($)</label>
                             <input type="number" value="${data.fee}" class="w-full bg-emerald-50 text-emerald-700 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-100 outline-none" onchange="window.updateBaseCost('${id}', 'fee', this.value)">
                         </div>
                     </div>
@@ -285,20 +313,42 @@ export const AdminSettingsModal = {
     _setupListeners() {
         const tabThemes = document.getElementById('tab-themes');
         const tabCosts = document.getElementById('tab-costs');
+        const tabReports = document.getElementById('tab-reports');
         const contThemes = document.getElementById('content-themes');
         const contCosts = document.getElementById('content-costs');
+        const contReports = document.getElementById('content-reports');
 
-        const switchTab = (activeTab, inactiveTab, activeCont, inactiveCont) => {
-            activeTab.classList.add('border-blue-600', 'text-blue-600');
-            activeTab.classList.remove('border-transparent', 'text-gray-400');
-            inactiveTab.classList.remove('border-blue-600', 'text-blue-600');
-            inactiveTab.classList.add('border-transparent', 'text-gray-400');
-            activeCont.classList.remove('hidden');
-            inactiveCont.classList.add('hidden');
-        };
+        const tabs = [
+            { btn: tabThemes, cont: contThemes },
+            { btn: tabCosts, cont: contCosts },
+            { btn: tabReports, cont: contReports }
+        ];
 
-        tabThemes.onclick = () => switchTab(tabThemes, tabCosts, contThemes, contCosts);
-        tabCosts.onclick = () => switchTab(tabCosts, tabThemes, contCosts, contThemes);
+        tabs.forEach(tab => {
+            if (!tab.btn) return;
+            tab.btn.onclick = () => {
+                tabs.forEach(t => {
+                    if (t.btn) {
+                        t.btn.classList.remove('border-blue-600', 'text-blue-600');
+                        t.btn.classList.add('border-transparent', 'text-gray-400');
+                    }
+                    if (t.cont) t.cont.classList.add('hidden');
+                });
+                tab.btn.classList.add('border-blue-600', 'text-blue-600');
+                tab.btn.classList.remove('border-transparent', 'text-gray-400');
+                tab.cont.classList.remove('hidden');
+            };
+        });
+
+        // Botón para abrir el reporte completo
+        const openFullReportBtn = document.getElementById('openFullReportBtn');
+        if (openFullReportBtn) {
+            openFullReportBtn.onclick = () => {
+                this.close();
+                // Simular click en el botón del header para disparar la lógica de reportes
+                document.getElementById('openReportsBtn')?.click();
+            };
+        }
 
         // Cerrar modal
         const closeModals = () => this.close();

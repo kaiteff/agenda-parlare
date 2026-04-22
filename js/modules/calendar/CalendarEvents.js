@@ -60,6 +60,8 @@ export const CalendarEvents = {
             else if (id === 'patientCustomPhone') dom.phoneInput = el;
             else if (id === 'patientCountryCode') dom.countryCodeInput = el;
             else if (id === 'isRecurring') dom.isRecurringCheckbox = el;
+            else if (id === 'mobileDatePickerBtn') dom.mobileDatePickerBtn = el;
+            else if (id === 'calendarJumpInput') dom.calendarJumpInput = el;
             else dom[id] = el;
         });
 
@@ -90,7 +92,7 @@ export const CalendarEvents = {
     },
 
     bindEvents() {
-        const { prevWeekBtn, nextWeekBtn, todayBtn } = CalendarState.dom;
+        const { prevWeekBtn, nextWeekBtn, todayBtn, mobileDatePickerBtn, calendarJumpInput } = CalendarState.dom;
 
         if (prevWeekBtn) prevWeekBtn.onclick = () => {
             CalendarState.currentWeekStart = addDays(CalendarState.currentWeekStart, -7);
@@ -110,6 +112,23 @@ export const CalendarEvents = {
                 this.miniCalendar.render();
             }
         };
+
+        // Salto a fecha (Mobile)
+        if (mobileDatePickerBtn && calendarJumpInput) {
+            mobileDatePickerBtn.onclick = () => calendarJumpInput.showPicker ? calendarJumpInput.showPicker() : calendarJumpInput.click();
+            
+            calendarJumpInput.onchange = (e) => {
+                const date = new Date(e.target.value + 'T00:00:00'); // Evitar desfase de zona horaria
+                if (!isNaN(date.getTime())) {
+                    CalendarState.currentWeekStart = getStartOfWeek(date);
+                    this.render();
+                    if (this.miniCalendar) {
+                        this.miniCalendar.currentMonth = date;
+                        this.miniCalendar.render();
+                    }
+                }
+            };
+        }
 
         // Cerrar modales al hacer click en el backdrop (el área oscura)
         window.addEventListener('click', (event) => {

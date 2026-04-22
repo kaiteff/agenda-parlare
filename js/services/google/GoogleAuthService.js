@@ -4,6 +4,7 @@
  */
 
 import { Logger } from '../../utils/Logger.js';
+import { AuthManager } from '../../managers/AuthManager.js';
 
 const log = Logger.create('GoogleAuth');
 
@@ -38,16 +39,61 @@ export const GoogleAuthService = {
             await Promise.all([this.loadGapi(), this.loadGis()]);
             log.success("Librerías cargadas.");
 
-            // Intento de recuperación silenciosa si hay un token residual
-            if (window.gapi?.client?.getToken() && !this.tokenExpiration) {
-                log.info("Token residual detectado. Intentando validar...");
-                this._refreshSilently().catch(e => log.warn("Validación inicial fallida:", e));
-            }
+            // INTENTO DE RECUPERACIÓN DESDE LOCALSTORAGE (Persistencia)
+            this._loadTokenFromStorage();
 
             return true;
         } catch (error) {
             log.error("Error al inicializar", error);
             return false;
+        }
+    },
+
+    /**
+     * Guarda el token en LocalStorage para persistencia
+     * @private
+     */
+    _saveTokenToStorage(resp) {
+        try {
+            const data = {
+                token: resp,
+                expiration: this.tokenExpiration
+            };
+            localStorage.setItem('google_auth_token', JSON.stringify(data));
+            log.debug("Token guardado en almacenamiento local");
+        } catch (e) {
+            log.warn("No se pudo guardar el token en localStorage", e);
+        }
+    },
+
+    /**
+     * Carga el token desde LocalStorage
+     * @private
+     */
+    _loadTokenFromStorage() {
+        try {
+            const stored = localStorage.getItem('google_auth_token');
+            if (stored) {
+                const data = JSON.parse(stored);
+                const now = Date.now();
+
+                if (data.expiration && data.expiration > now) {
+                    log.info("Token recuperado de almacenamiento local.");
+                    this.tokenExpiration = data.expiration;
+                    if (window.gapi?.client) {
+                        window.gapi.client.setToken(data.token);
+                    }
+                    
+                    // Programar el próximo refresh
+                    const expiresInSeconds = Math.round((data.expiration - now) / 1000) + (5 * 60);
+                    this._scheduleRefresh(expiresInSeconds);
+                } else {
+                    log.info("Token en almacenamiento local expirado.");
+                    localStorage.removeItem('google_auth_token');
+                }
+            }
+        } catch (e) {
+            log.warn("Error cargando token de localStorage", e);
         }
     },
 
@@ -154,6 +200,9 @@ export const GoogleAuthService = {
                         this._refreshAttempts = 0;
                         log.debug(`Token válido hasta ${new Date(this.tokenExpiration).toLocaleTimeString()}`);
 
+                        // GUARDAR PARA PERSISTENCIA
+                        this._saveTokenToStorage(resp);
+
                         this._scheduleRefresh(expiresIn);
                         resolve(resp);
                     };
@@ -161,7 +210,7 @@ export const GoogleAuthService = {
                     log.info(`Solicitando token (Prompt: '${promptConfig}')...`);
                     this.tokenClient.requestAccessToken({
                         prompt: promptConfig,
-                        hint: 'rodriguezd.danielrob@gmail.com'
+                        // Eliminamos 'hint' para que no fuerce sugerencia de cuenta y el usuario elija libremente
                     });
                 } catch (err) {
                     if (!resolved) {
@@ -216,6 +265,7 @@ export const GoogleAuthService = {
         if (window.gapi?.client) {
             window.gapi.client.setToken(null);
         }
+        localStorage.removeItem('google_auth_token');
         log.info("Token invalidado manualmente (posible error 401)");
     },
 
@@ -267,6 +317,10 @@ export const GoogleAuthService = {
                     const expiresIn = resp.expires_in || 3599;
                     this.tokenExpiration = Date.now() + (expiresIn * 1000) - (5 * 60 * 1000);
                     this._refreshAttempts = 0;
+                    
+                    // GUARDAR REFRESH
+                    this._saveTokenToStorage(resp);
+
                     log.success(`Token renovado silenciosamente. Válido hasta ${new Date(this.tokenExpiration).toLocaleTimeString()}`);
                     this._scheduleRefresh(expiresIn);
                     resolve(resp);

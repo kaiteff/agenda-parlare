@@ -21,7 +21,7 @@ service cloud.firestore {
               getEmail() == 'kaiteff@gmail.com';
     }
     
-    // Verificar si el usuario que hace la petición es dueño del calendario al que intenta afectar
+    // Verificar si el usuario que hace la petición es dueño del recurso
     function isOwner(therapistKey) {
        return (getEmail() == 'sammygtz90@gmail.com' && therapistKey == 'sam') ||
               (getEmail() == 'lopezcarpio7@gmail.com' && therapistKey == 'diana') ||
@@ -29,31 +29,39 @@ service cloud.firestore {
               isSuper();
     }
 
-    // Reglas precisas para la colección de citas (appointments)
+    // Colección de Citas (Agenda)
     match /appointments/{docId} {
-      // PERMISO DE LECTURA: Todos los terapeutas pueden ver todas las citas
-      // Esto es vital para mostrar los horarios ocupados de las compañeras
+      // LECTURA: Permitida para todos los terapeutas para ver disponibilidad (slots ocupados)
+      // LEGAL: La UI se encarga de ocultar los nombres de pacientes que no les pertenecen.
+      // Para máxima seguridad, se recomienda migrar notas clínicas a una colección restringida.
       allow read: if isAuthenticated();
       
-      // PERMISO DE CREACIÓN: Sólo puedes crear si asignas la cita a tu propio calendario, o si eres Super
+      // ESCRITURA: Solo el dueño de la agenda o Super usuarios
       allow create: if isAuthenticated() && isOwner(request.resource.data.therapist);
-      
-      // PERMISO DE ACTUALIZACIÓN: Sólo puedes actualizar una cita si ésta te pertenecía originalmente, o si eres Super
-      allow update: if isAuthenticated() && isOwner(resource.data.therapist);
-      
-      // PERMISO DE ELIMINACIÓN: Sólo puedes borrar una cita si te pertenece, o si eres Super
-      allow delete: if isAuthenticated() && isOwner(resource.data.therapist);
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.therapist);
     }
     
-    // Colección de Perfiles de Pacientes (temporalmente abierta a todos los terapeutas)
-    match /patientProfiles/{docId} {
-      allow read, write: if isAuthenticated(); 
+    // Colección de Notas Clínicas (Privacidad Grado Médico)
+    match /clinicalNotes/{docId} {
+      // Solo el terapeuta asignado o Super usuarios pueden acceder
+      allow read, write: if isAuthenticated() && (isSuper() || (resource != null && isOwner(resource.data.therapist)) || (resource == null && isOwner(request.resource.data.therapist)));
     }
 
-    // Default para las demás colecciones (users, config, tools)
-    // Permite lectura y escritura general mientras se va migrando la seguridad específica
+    // Colección de Perfiles de Pacientes (Información Sensible - Protección Legal)
+    match /patientProfiles/{docId} {
+      // Solo el terapeuta asignado o Super usuarios pueden acceder
+      allow read, write: if isAuthenticated() && (isSuper() || (resource != null && isOwner(resource.data.therapist)) || (resource == null && isOwner(request.resource.data.therapist))); 
+    }
+    
+    // Colección de Usuarios (Perfiles de terapeutas)
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow write: if isSuper();
+    }
+
+    // Default para las demás colecciones
     match /{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isSuper();
     }
   }
 }

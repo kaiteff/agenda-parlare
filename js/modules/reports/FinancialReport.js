@@ -25,12 +25,14 @@ export const FinancialReport = {
             summary: {
                 totalIncome: 0,
                 totalPending: 0,
+                totalClinicFee: 0, // NUEVO: Utilidad neta de Parláre
+                totalTherapistPay: 0, // NUEVO: Pago total a terapeutas
                 totalAppointments: 0,
                 completionRate: 0
             },
             byTherapist: {
-                diana: { name: 'Diana', income: 0, pending: 0, count: 0, paidCount: 0 },
-                sam: { name: 'Sam', income: 0, pending: 0, count: 0, paidCount: 0 }
+                diana: { name: 'Diana', income: 0, pending: 0, clinicFee: 0, therapistPay: 0, count: 0, paidCount: 0 },
+                sam: { name: 'Sam', income: 0, pending: 0, clinicFee: 0, therapistPay: 0, count: 0, paidCount: 0 }
             },
             debtors: [] // Lista de deudores
         };
@@ -48,6 +50,9 @@ export const FinancialReport = {
 
         monthlyAppointments.forEach(appt => {
             const cost = parseFloat(appt.cost) || 0;
+            // NUEVO: Obtener la cuota de la clínica (si no está definida en la cita, usar default de 250)
+            const clinicFeePerApt = parseFloat(appt.clinicFee || appt.parlareFee || 250);
+            
             const therapistKey = (appt.therapist || 'diana').toLowerCase();
             const isPaid = appt.isPaid;
             const apptDate = new Date(appt.date);
@@ -58,7 +63,15 @@ export const FinancialReport = {
 
             // Asegurar que existe la clave del terapeuta
             if (!report.byTherapist[therapistKey]) {
-                report.byTherapist[therapistKey] = { name: therapistKey, income: 0, pending: 0, count: 0, paidCount: 0 };
+                report.byTherapist[therapistKey] = { 
+                    name: therapistKey.charAt(0).toUpperCase() + therapistKey.slice(1), 
+                    income: 0, 
+                    pending: 0, 
+                    clinicFee: 0, 
+                    therapistPay: 0, 
+                    count: 0, 
+                    paidCount: 0 
+                };
             }
 
             // Actualizar desglose por terapeuta
@@ -67,8 +80,19 @@ export const FinancialReport = {
             if (isPaid) {
                 // Ingreso cuenta SIEMPRE si está pagado
                 report.byTherapist[therapistKey].income += cost;
-                report.byTherapist[therapistKey].paidCount++;
+                
+                // CÁLCULO DE REPARTO
+                const currentClinicFee = Math.min(cost, clinicFeePerApt); // No puede cobrar más de lo que entró
+                const currentTherapistPay = Math.max(0, cost - currentClinicFee);
+
+                report.byTherapist[therapistKey].clinicFee += currentClinicFee;
+                report.byTherapist[therapistKey].therapistPay += currentTherapistPay;
+                
                 report.summary.totalIncome += cost;
+                report.summary.totalClinicFee += currentClinicFee;
+                report.summary.totalTherapistPay += currentTherapistPay;
+
+                report.byTherapist[therapistKey].paidCount++;
             } else {
                 // Pendiente SOLO cuenta si ya pasó la fecha
                 if (isPast) {

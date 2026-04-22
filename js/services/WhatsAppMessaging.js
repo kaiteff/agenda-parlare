@@ -65,7 +65,7 @@ export const WhatsAppMessaging = {
 
         if (mode === true) {
             // AUTOMÁTICO (Twilio)
-            this._sendViaTwilio(phoneDigits, template, {
+            this._sendViaTwilio(phoneDigits, template, type, {
                 "1": dateStr,
                 "2": timeStr
             });
@@ -75,7 +75,7 @@ export const WhatsAppMessaging = {
         }
     },
 
-    async _sendViaTwilio(phone, message, variables = null) {
+    async _sendViaTwilio(phone, message, type = 'reminder', variables = null) {
         if (!phone) {
             const { ToastService } = await import('../utils/ToastService.js');
             ToastService.error('El paciente no tiene teléfono registrado.');
@@ -85,16 +85,26 @@ export const WhatsAppMessaging = {
         const { ToastService } = await import('../utils/ToastService.js');
         ToastService.info('Enviando vía Twilio...');
 
+        // DICCIONARIO DE PLANTILLAS (Aquí es donde pondrás los SIDs de Meta)
+        const TEMPLATE_SIDS = {
+            'reminder': 'HXa1dc17f5edd3b774ef3ab3b92088035b', // El que ya tienes
+            'cancel': 'PONER_AQUI_SID_CANCELACION',         // <--- CAMBIAR ESTO CUANDO TENGAS EL NUEVO
+            'reschedule': 'PONER_AQUI_SID_REAGENDAR'       // <--- CAMBIAR ESTO CUANDO TENGAS EL NUEVO
+        };
+
         try {
             const payload = {
                 phone: phone,
-                message: message, // Fallback
+                message: message, // Fallback por si la plantilla falla
                 key: 'parlare_secret_2026'
             };
 
+            // Seleccionar el SID correcto según el tipo de mensaje
+            const sid = TEMPLATE_SIDS[type] || TEMPLATE_SIDS['reminder'];
+
             if (variables) {
                 payload.variables = variables;
-                payload.template_sid = 'HXa1dc17f5edd3b774ef3ab3b92088035b'; // Tu SID de plantilla
+                payload.template_sid = sid;
             }
 
             const response = await fetch('https://parlare-webhook.onrender.com/api/send-message', {

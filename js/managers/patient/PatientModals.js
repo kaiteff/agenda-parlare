@@ -84,6 +84,17 @@ export const PatientModals = {
         if (phoneInput) phoneInput.value = '';
         if (countryCodeInput) countryCodeInput.value = '52'; // Default Mexico
 
+        // MEJORA: Escuchar cambios en el selector de terapeuta para actualizar costos sugeridos
+        if (therapistInput) {
+            therapistInput.onchange = () => {
+                const newTherapist = therapistInput.value;
+                const newDefaults = AuthManager.getTherapistDefaults(newTherapist);
+                if (costInput) costInput.value = newDefaults.cost;
+                if (clinicFeeInput) clinicFeeInput.value = newDefaults.clinicFee.toFixed(2);
+                console.log(`💡 Costos actualizados para ${newTherapist}: $${newDefaults.cost} / $${newDefaults.clinicFee}`);
+            };
+        }
+
         // Mover al body para evitar problemas de stacking context
         if (modal.parentNode !== document.body) {
             document.body.appendChild(modal);
@@ -511,8 +522,8 @@ export const PatientModals = {
             `<div class="text-gray-600 font-medium">Costo: <span class="text-gray-800">$${apt.cost}</span></div>`
             : '<div></div>'; // Spacer
 
-        // INDICADOR DE BITÁCORA: Si ya tiene progreso guardado
-        const hasProgress = apt.clinicalProgress && (apt.clinicalProgress.generalNote || (apt.clinicalProgress.themes && Object.keys(apt.clinicalProgress.themes).length > 0));
+        // INDICADOR DE BITÁCORA: Si ya tiene progreso guardado (legacy) o marcado como nota protegida
+        const hasProgress = apt.hasClinicalNote || (apt.clinicalProgress && (apt.clinicalProgress.generalNote || (apt.clinicalProgress.themes && Object.keys(apt.clinicalProgress.themes).length > 0)));
 
         let footerHtml = '';
         if (canViewFinancials || showConfirmBtn) {
@@ -733,7 +744,7 @@ export const PatientModals = {
     /**
      * Abre el modal de bitácora de sesión
      */
-    openSessionNote(appointment, patient) {
+    async openSessionNote(appointment, patient) {
         if (AuthManager.currentUser?.role === 'receptionist') {
             ToastService.error("No tienes permisos para ver/editar la bitácora clínica.");
             return;
@@ -743,6 +754,21 @@ export const PatientModals = {
         if (!modal) return;
 
         console.log('📝 Abriendo bitácora para cita:', appointment.id);
+
+        // INTENTAR RECUPERAR NOTA PROTEGIDA (Paso de Privacidad)
+        let clinicalProgress = appointment.clinicalProgress || {};
+        try {
+            const { db, doc, getDoc } = await import('../../firebase.js');
+            const noteSnap = await getDoc(doc(db, 'clinicalNotes', appointment.id));
+            if (noteSnap.exists()) {
+                console.log("🔐 Nota protegida encontrada para esta sesión.");
+                clinicalProgress = noteSnap.data().clinicalProgress || {};
+            } else if (appointment.clinicalProgress) {
+                console.log("📜 Usando nota legacy de la cita.");
+            }
+        } catch (err) {
+            console.warn("⚠️ Error recuperando nota protegida (posible restricción de seguridad):", err);
+        }
 
         // Referencias
         const dateEl = document.getElementById('sessionNoteDate');
@@ -769,13 +795,13 @@ export const PatientModals = {
             const dateStr = new Date(appointment.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
             dateEl.textContent = `${dateStr} @ ${new Date(appointment.date).getHours()}:00`;
         }
-        if (generalNoteInput) generalNoteInput.value = appointment.clinicalProgress?.generalNote || '';
+        if (generalNoteInput) generalNoteInput.value = clinicalProgress.generalNote || '';
         if (searchInput) searchInput.value = '';
 
         const renderThemesList = (filter = '') => {
             const assignedIds = patient.assignedThemes || [];
             const themes = SettingsManager.getThemesByIds(assignedIds);
-            const progress = appointment.clinicalProgress?.themes || {};
+            const progress = clinicalProgress.themes || {};
 
             if (themes.length === 0) {
                 themesList.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">No hay temas asignados para este paciente.</p>';
@@ -847,7 +873,7 @@ export const PatientModals = {
         };
 
         // Estado local temporal para los botones
-        const currentProgress = JSON.parse(JSON.stringify(appointment.clinicalProgress?.themes || {}));
+        const currentProgress = JSON.parse(JSON.stringify(clinicalProgress.themes || {}));
         
         window.setSubthemeStatus = (themeId, itemName, status, btn) => {
             if (!currentProgress[themeId]) currentProgress[themeId] = {};
@@ -874,13 +900,16 @@ export const PatientModals = {
                 generalNote: generalNoteInput.value.trim()
             };
 
-            const success = await PatientActions.updateAppointmentNote(appointment.id, updatedProgress);
+            // Pasar el terapeuta de la cita o el logueado
+            const therapistKey = appointment.therapist || AuthManager.currentUser?.therapist || 'diana';
+            const success = await PatientActions.updateAppointmentNote(appointment.id, updatedProgress, therapistKey);
 
             if (success) {
                 ToastService.success('Bitácora guardada correctamente');
                 modal.classList.add('hidden');
                 // IMPORTANTE: Actualizar localmente la cita para no tener que refrescar todo
                 appointment.clinicalProgress = updatedProgress;
+                appointment.hasClinicalNote = true;
                 this.openHistory(patient); // Refrescar la vista del historial
             }
 

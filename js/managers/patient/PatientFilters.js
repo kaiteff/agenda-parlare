@@ -66,7 +66,7 @@ export const PatientFilters = {
         const todayAppointments = (PatientState.appointments || []).filter(apt => {
             const aptDate = new Date(apt.date);
 
-            // Buscar el dueño real (Perfil) con normalización extrema (espacios, mayúsculas y ACENTOS)
+            // Buscar el dueño real (Perfil) con normalización extrema
             const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const normalizedAptName = normalize(apt.name);
             const patientProfile = (PatientState.patients || []).find(p => 
@@ -74,18 +74,16 @@ export const PatientFilters = {
             );
             const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
 
-            // SEGURIDAD: Verificar filtro de terapeuta con permisos reales
+            // FILTRADO LÓGICO
             let matchesTherapist = true;
-            const canSeeAll = AuthManager.can('view_all_patients');
-            const userTherapist = AuthManager.currentUser?.therapist;
-
-            if (canSeeAll) {
-                // Si es admin o recepción, respetamos el selector
-                if (selectedTherapist && selectedTherapist !== 'all') {
-                    matchesTherapist = (ownerTherapist === selectedTherapist);
-                }
-            } else {
-                // Si es terapeuta (Sam/Vero), FORZAMOS que solo vea los suyos
+            
+            // 1. Si hay un filtro específico seleccionado (ej: "Vero"), filtrar estrictamente
+            if (selectedTherapist && selectedTherapist !== 'all') {
+                matchesTherapist = (ownerTherapist === selectedTherapist);
+            } 
+            // 2. Si es "Todas", pero el usuario es un terapeuta (Sam/Vero), solo ve los suyos por seguridad
+            else if (!AuthManager.can('view_all_patients')) {
+                const userTherapist = AuthManager.currentUser?.therapist;
                 matchesTherapist = (ownerTherapist === userTherapist);
             }
 
@@ -117,7 +115,7 @@ export const PatientFilters = {
         const tomorrowAppointments = (PatientState.appointments || []).filter(apt => {
             const aptDate = new Date(apt.date);
 
-            // Buscar el dueño real (Perfil) con normalización extrema (espacios, mayúsculas y ACENTOS)
+            // Buscar el dueño real (Perfil) con normalización extrema
             const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const normalizedAptName = normalize(apt.name);
             const patientProfile = (PatientState.patients || []).find(p => 
@@ -125,16 +123,13 @@ export const PatientFilters = {
             );
             const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
 
-            // SEGURIDAD: Verificar filtro de terapeuta con permisos reales
+            // FILTRADO LÓGICO
             let matchesTherapist = true;
-            const canSeeAll = AuthManager.can('view_all_patients');
-            const userTherapist = AuthManager.currentUser?.therapist;
-
-            if (canSeeAll) {
-                if (selectedTherapist && selectedTherapist !== 'all') {
-                    matchesTherapist = (ownerTherapist === selectedTherapist);
-                }
-            } else {
+            
+            if (selectedTherapist && selectedTherapist !== 'all') {
+                matchesTherapist = (ownerTherapist === selectedTherapist);
+            } else if (!AuthManager.can('view_all_patients')) {
+                const userTherapist = AuthManager.currentUser?.therapist;
                 matchesTherapist = (ownerTherapist === userTherapist);
             }
 
@@ -170,28 +165,20 @@ export const PatientFilters = {
                 normName.includes('bloqueo')) {
                 return false;
             }
-            // REMOVED: if (p.isActive === false) return false;
-            // La UI se encarga de filtrar activos/inactivos según el modo de vista.
-            // Si filtramos aquí, la vista de "Papelera" (inactivos) quedaría vacía siempre.
 
-            // 1. Si hay un terapeuta específico seleccionado (ej: "Diana" o "Sam")
+            // 1. Si hay un filtro específico seleccionado arriba
             if (selectedTherapist && selectedTherapist !== 'all') {
                 return p.therapist === selectedTherapist;
             }
 
-            // 2. Si está seleccionado "Todos" (selectedTherapist === 'all' o null)
-
-            // Si tiene permiso de ver todos, mostrar todos
+            // 2. Si es "Todas", aplicar permisos
             if (AuthManager.can('view_all_patients')) {
                 return true;
             }
 
-            // Si es terapeuta normal SIN permiso de ver todos, restringir a los suyos
-            if (AuthManager.isTherapist() && !AuthManager.isAdmin()) {
-                return p.therapist === AuthManager.currentUser.therapist;
-            }
-
-            return true;
+            // Si es terapeuta normal, solo sus pacientes
+            const userTherapist = AuthManager.currentUser?.therapist;
+            return p.therapist === userTherapist;
         });
     },
 

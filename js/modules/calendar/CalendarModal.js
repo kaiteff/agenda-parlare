@@ -84,15 +84,19 @@ export const CalendarModal = {
         CalendarState.selectedEventId = null;
         CalendarState.originalEventDate = null;
 
-        dom.modalTitle.textContent = 'Nueva Cita';
-        dom.patientSearchInput.value = '';
-        dom.patientFirstNameInput.value = '';
-        dom.patientLastNameInput.value = '';
-        dom.patientFirstNameInput.disabled = false;
-        dom.patientLastNameInput.disabled = false;
+        if (dom.modalTitle) dom.modalTitle.textContent = 'Nueva Cita';
+        if (dom.patientSearchInput) dom.patientSearchInput.value = '';
+        if (dom.patientFirstNameInput) {
+            dom.patientFirstNameInput.value = '';
+            dom.patientFirstNameInput.disabled = false;
+        }
+        if (dom.patientLastNameInput) {
+            dom.patientLastNameInput.value = '';
+            dom.patientLastNameInput.disabled = false;
+        }
         const currentTherapist = dom.appointmentTherapistInput?.value || AuthManager.currentUser?.therapist || 'diana';
         const defaults = AuthManager.getTherapistDefaults(currentTherapist);
-        dom.costInput.value = defaults.cost;
+        if (dom.costInput) dom.costInput.value = defaults.cost;
 
         // Reset Phone (Enabled for new appointments)
         if (dom.phoneInput) {
@@ -114,25 +118,25 @@ export const CalendarModal = {
         defaultRadio?.dispatchEvent(new Event('change'));
 
         // Reset buttons
-        dom.saveBtn.classList.remove('hidden');
+        if (dom.saveBtn) dom.saveBtn.classList.remove('hidden');
         if (dom.waBtn) dom.waBtn.classList.add('hidden');
-        dom.deleteBtn.classList.add('hidden');
-        dom.payBtn.classList.add('hidden');
-        dom.confirmBtn.classList.add('hidden');
+        if (dom.deleteBtn) dom.deleteBtn.classList.add('hidden');
+        if (dom.payBtn) dom.payBtn.classList.add('hidden');
+        if (dom.confirmBtn) dom.confirmBtn.classList.add('hidden');
         if (dom.confirmedAtLabel) dom.confirmedAtLabel.classList.add('hidden');
-        dom.cancelBtn.classList.add('hidden');
-        dom.rescheduleSection.classList.add('hidden');
+        if (dom.cancelBtn) dom.cancelBtn.classList.add('hidden');
+        if (dom.rescheduleSection) dom.rescheduleSection.classList.add('hidden');
 
         // Recurrence reset
-        dom.isRecurringCheckbox.checked = false;
-        dom.recurringSection.classList.add('hidden');
-        dom.recurringDatesList.innerHTML = '';
+        if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.checked = false;
+        if (dom.recurringSection) dom.recurringSection.classList.add('hidden');
+        if (dom.recurringDatesList) dom.recurringDatesList.innerHTML = '';
 
         // Set date
         const date = new Date(dateStr + 'T00:00:00');
         date.setHours(hour);
         const localISOTime = this._getLocalISOStringFormat(date);
-        dom.appointmentDateInput.value = localISOTime;
+        if (dom.appointmentDateInput) dom.appointmentDateInput.value = localISOTime;
 
         // SEGURIDAD: Solo Diana y Yari pueden inhabilitar horas
         const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');

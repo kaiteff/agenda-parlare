@@ -199,7 +199,7 @@ export const ScheduleManager = {
             currentDayDate.setDate(currentDayDate.getDate() + i);
 
             const dayColumn = document.createElement('div');
-            dayColumn.className = 'flex flex-col gap-2';
+            dayColumn.className = 'flex flex-col gap-2 w-32 md:w-auto flex-shrink-0';
 
             const dayHeader = document.createElement('div');
             dayHeader.className = 'text-center p-2 bg-gray-50 rounded-lg border border-gray-100 mb-2';

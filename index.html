@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>Agenda Parlare</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="dist/output.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="index.css?v=20260414" rel="stylesheet">
+
 </head>
 
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -78,8 +78,15 @@
                                     d="M15 19l-7-7 7-7"></path>
                             </svg>
                         </button>
-                        <h2 id="currentMonthLabel"
-                            class="text-xl font-bold text-gray-800 capitalize min-w-[140px] text-center"></h2>
+                        <div class="relative flex items-center gap-1">
+                            <h2 id="currentMonthLabel"
+                                class="text-xl font-bold text-gray-800 capitalize min-w-[140px] text-center"></h2>
+                            <!-- Mobile Date Picker Trigger -->
+                            <button id="mobileDatePickerBtn" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors md:hidden" title="Saltar a fecha">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z"></path></svg>
+                            </button>
+                            <input type="date" id="calendarJumpInput" class="absolute inset-0 opacity-0 w-0 h-0 pointer-events-none">
+                        </div>
                         <button id="nextWeekBtn"
                             class="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -371,8 +371,8 @@ export const Header = {
                     AuthManager.setSelectedTherapist(newTherapist);
 
                     // Recargar lista de pacientes (Sidebar)
-                    if (window.PatientManager && window.PatientManager.api) {
-                        window.PatientManager.api.refreshList();
+                    if (window.PatientManager) {
+                        window.PatientManager.render();
                     }
 
                     // Recargar calendario

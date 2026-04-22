@@ -22,8 +22,9 @@ import { Sidebar } from '../components/Sidebar.js';
 import { PatientActions } from './patient/PatientActions.js';
 import { PatientModals } from './patient/PatientModals.js';
 import { PatientModalsHTML } from './patient/PatientModalsHTML.js';
-import { db, collectionPath, collection, onSnapshot, query, orderBy } from '../firebase.js';
+import { db, collectionPath, collection, onSnapshot, query, orderBy, where } from '../firebase.js';
 import { Logger } from '../utils/Logger.js';
+import { AuthManager } from './AuthManager.js';
 
 const log = Logger.create('PatientMgr');
 
@@ -54,9 +55,6 @@ export const PatientManager = {
         log.info('Inicializando...');
 
         try {
-            // 0. Inyectar Modales
-            PatientModalsHTML.inject();
-
             // 1. Inicializar referencias DOM
             PatientState.initDOM();
 
@@ -172,8 +170,19 @@ export const PatientManager = {
             this._processData();
         });
 
-        // 2. Listen to Patient Profiles (El "Maestro" de datos)
-        const qProfiles = query(collection(db, 'patientProfiles'));
+        // 2. Listen to Patient Profiles (Filtrado por seguridad legal)
+        let qProfiles;
+        const user = AuthManager.currentUser;
+        
+        if (AuthManager.isAdmin() || user?.role === 'receptionist') {
+            log.info('Cargando todos los perfiles (Modo SuperUser)');
+            qProfiles = query(collection(db, 'patientProfiles'));
+        } else {
+            const therapistId = user?.therapist || 'diana';
+            log.info(`Filtrando perfiles para terapeuta: ${therapistId}`);
+            qProfiles = query(collection(db, 'patientProfiles'), where('therapist', '==', therapistId));
+        }
+
         onSnapshot(qProfiles, (snapshot) => {
             const profiles = [];
             snapshot.forEach((doc) => {
@@ -181,6 +190,8 @@ export const PatientManager = {
             });
             PatientState.updatePatients(profiles);
             this._processData();
+        }, (error) => {
+            log.error('Error en listener de perfiles:', error);
         });
     },
 

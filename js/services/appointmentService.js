@@ -266,6 +266,7 @@ export async function cancelAppointment(id, existingAppointments = []) {
  */
 export async function togglePaymentStatus(id, currentStatus, existingAppointments = [], clinicFee = null) {
     try {
+        const existing = existingAppointments.find(a => a.id === id);
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
         
@@ -290,17 +291,15 @@ export async function togglePaymentStatus(id, currentStatus, existingAppointment
 
         // Notificar a Yari (Manager) sobre el pago
         if (newStatus) {
-            const appointment = existingAppointments.find(a => a.id === id);
             _createNotification(
                 '💰 Pago Registrado',
-                `Se registró pago de $${appointment?.cost || 0} para ${appointment?.name}`,
+                `Se registró pago de $${existing?.cost || 0} para ${existing?.name}`,
                 'payment',
-                { appointmentId: id, patientName: appointment?.name, recipient: 'manager' }
+                { appointmentId: id, patientName: existing?.name, recipient: 'manager' }
             );
         }
 
         // Re-sync Google Calendar con estado actualizado
-        const existing = existingAppointments.find(a => a.id === id);
         if (existing) _syncToCalendar('update', { ...existing, isPaid: newStatus });
 
         return { success: true, newState: newStatus };

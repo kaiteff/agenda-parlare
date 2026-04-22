@@ -719,23 +719,39 @@ export const PatientActions = {
 
     /**
      * Actualiza la bitácora / progreso clínico de una cita
+     * MIGRACIÓN PRIVACIDAD: Ahora guarda en una colección independiente protegida 'clinicalNotes'
      * @param {string} appointmentId 
      * @param {Object} clinicalProgress 
+     * @param {string} therapist - El terapeuta dueño de la nota
      */
-    async updateAppointmentNote(appointmentId, clinicalProgress) {
+    async updateAppointmentNote(appointmentId, clinicalProgress, therapist = 'diana') {
         try {
-            const { db, doc, updateDoc } = await import('../../firebase.js');
-            const appointmentRef = doc(db, 'appointments', appointmentId);
+            const { db, doc, setDoc, updateDoc } = await import('../../firebase.js');
             
-            await updateDoc(appointmentRef, {
+            // 1. Guardar en la nueva colección PROTEGIDA
+            // Usamos el appointmentId como ID del documento para que sea fácil de encontrar
+            const noteRef = doc(db, 'clinicalNotes', appointmentId);
+            await setDoc(noteRef, {
+                appointmentId: appointmentId,
                 clinicalProgress: clinicalProgress,
+                therapist: therapist, // CRÍTICO: Esto activa la regla de seguridad de Firestore
+                updatedAt: new Date().toISOString(),
+                updatedBy: AuthManager.currentUser?.email || 'unknown'
+            }, { merge: true });
+
+            // 2. Opcional: Marcar en la cita original que YA tiene bitácora (sin guardar el contenido sensible)
+            // Esto sirve para mostrar el icono de "Bitácora ✓" sin exponer el texto
+            const appointmentRef = doc(db, 'appointments', appointmentId);
+            await updateDoc(appointmentRef, {
+                hasClinicalNote: true,
                 updatedAt: new Date().toISOString()
             });
             
-            console.log('✅ PatientActions: Bitácora actualizada para', appointmentId);
+            console.log('✅ PatientActions: Bitácora PROTEGIDA actualizada para', appointmentId);
             return true;
         } catch (error) {
-            console.error('❌ PatientActions: Error al actualizar bitácora:', error);
+            console.error('❌ PatientActions: Error al actualizar bitácora protegida:', error);
+            ToastService.error("Error de permisos al guardar la nota.");
             return false;
         }
     }
