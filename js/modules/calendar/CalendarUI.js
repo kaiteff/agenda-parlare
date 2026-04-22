@@ -47,7 +47,7 @@ export const CalendarUI = {
             headerRow.className = "grid grid-cols-7 sticky top-0 bg-white z-20 border-b-2 border-gray-200";
 
             const emptyCell = document.createElement('div');
-            emptyCell.className = "p-3 border-r border-gray-200 text-center";
+            emptyCell.className = "p-3 border-r border-gray-200 text-center sticky-corner";
             emptyCell.innerHTML = '<div class="text-xs font-semibold text-gray-500 uppercase">Hora</div>';
             headerRow.appendChild(emptyCell);
 
@@ -114,12 +114,24 @@ export const CalendarUI = {
             for (let hour = 8; hour <= 20; hour++) {
                 const row = document.createElement('div');
                 const rowColor = hour % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
-                row.className = `grid grid-cols-7 ${rowColor}`;
+                const isCurrentHour = new Date().getHours() === hour;
+                row.className = `grid grid-cols-7 ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`;
 
                 const hourCell = document.createElement('div');
-                hourCell.className = "p-2 border-r border-b border-gray-200 text-right";
-                hourCell.innerHTML = `<span class="text-xs font-medium text-gray-500">${formatTime12h(hour)}</span>`;
+                hourCell.className = `p-2 border-r border-b border-gray-200 text-right sticky-column ${isCurrentHour ? 'current-hour-cell' : ''}`;
+                hourCell.innerHTML = `<span class="text-xs font-medium ${isCurrentHour ? 'text-blue-600' : 'text-gray-500'}">${formatTime12h(hour)}</span>`;
                 row.appendChild(hourCell);
+
+                // Si es la hora actual, añadir la línea de tiempo roja
+                if (isCurrentHour) {
+                    const now = new Date();
+                    const minutes = now.getMinutes();
+                    const percent = (minutes / 60) * 100;
+                    const indicator = document.createElement('div');
+                    indicator.className = "time-indicator";
+                    indicator.style.top = `${percent}%`;
+                    row.appendChild(indicator);
+                }
 
                 weekDays.forEach((dayDate) => {
                     const isToday = dayDate.getTime() === today.getTime();
