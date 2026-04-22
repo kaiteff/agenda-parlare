@@ -228,27 +228,27 @@ export const CalendarUI = {
                     row.appendChild(cell);
                 });
 
-                // Línea de tiempo con ANCLAJE EN CELDA DE HORA (MÁXIMA VISIBILIDAD)
+                // Línea de tiempo REFINADA (ANCLAJE GARANTIZADO)
                 if (isCurrentHour) {
                     const now = new Date();
                     const percent = (now.getMinutes() / 60) * 100;
                     const indicator = document.createElement('div');
                     indicator.className = "live-time-line";
-                    // Estilos de fuerza bruta para asegurar que se vea
+                    // Estilos elegantes pero visibles
                     indicator.setAttribute('style', `
                         position: absolute !important;
                         top: ${percent}% !important;
                         left: 0 !important;
                         width: 5000px !important;
-                        height: 3px !important;
-                        background-color: #ff0000 !important;
-                        z-index: 9999 !important;
+                        height: 2px !important;
+                        background-color: #ef4444 !important;
+                        z-index: 50 !important;
                         pointer-events: none !important;
-                        box-shadow: 0 0 8px rgba(255,0,0,0.8) !important;
+                        opacity: 0.8 !important;
                         display: block !important;
                         visibility: visible !important;
                     `);
-                    hourCell.style.overflow = 'visible'; // Importante para que la línea "salga" de la celda
+                    hourCell.style.overflow = 'visible';
                     hourCell.appendChild(indicator);
                 }
 
