@@ -130,6 +130,8 @@ export const CalendarUI = {
                     const indicator = document.createElement('div');
                     indicator.className = "time-indicator";
                     indicator.style.top = `${percent}%`;
+                    indicator.style.gridColumn = "1 / span 7";
+                    indicator.style.gridRow = "1";
                     row.appendChild(indicator);
                 }
 
