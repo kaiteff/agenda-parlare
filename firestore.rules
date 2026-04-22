@@ -15,8 +15,9 @@ service cloud.firestore {
     
     // Verificar si es administrador o recepción (Super usuarios)
     function isSuper() {
-       // Daniel (Admin) o Yari (Recepción)
+       // Daniel (Admin), Diana (Admin) o Yari (Recepción)
        return getEmail() == 'rodriguezd.danielrob@gmail.com' || 
+              getEmail() == 'lopezcarpio7@gmail.com' || 
               getEmail() == 'yaritzajocgo@gmail.com' || 
               getEmail() == 'kaiteff@gmail.com';
     }
@@ -59,7 +60,13 @@ service cloud.firestore {
       allow write: if isSuper();
     }
 
-    // Default para las demás colecciones
+    // Colección de Configuración (Temas, Costos, etc.)
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuper();
+    }
+
+    // Default para las demás colecciones (Fallback)
     match /{document=**} {
       allow read, write: if isSuper();
     }
