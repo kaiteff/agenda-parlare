@@ -228,13 +228,16 @@ export const CalendarUI = {
                     row.appendChild(cell);
                 });
 
-                // Línea de tiempo roja REFINADA
+                // Línea de tiempo roja REFINADA (CON FIJACIÓN DE COORDENADAS)
                 if (isCurrentHour) {
                     const now = new Date();
                     const percent = (now.getMinutes() / 60) * 100;
                     const indicator = document.createElement('div');
                     indicator.className = "live-time-line";
                     indicator.style.top = `${percent}%`;
+                    indicator.style.gridColumn = "1 / span 7";
+                    indicator.style.gridRow = "1";
+                    indicator.style.zIndex = "100"; 
                     row.appendChild(indicator);
                 }
 
