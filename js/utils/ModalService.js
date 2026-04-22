@@ -117,6 +117,19 @@ export const ModalService = {
     },
 
     /**
+     * Muestra un prompt (Pregunta con entrada de texto)
+     * @param {string} title - Título
+     * @param {string} message - Mensaje
+     * @param {string} placeholder - Sugerencia en el campo
+     * @returns {Promise<string|null>} El texto ingresado o null si canceló
+     */
+    prompt(title, message, placeholder = '') {
+        // Por ahora usamos el nativo pero con una alerta de contexto
+        // En una futura actualización podemos hacerlo con UI propia
+        return Promise.resolve(window.prompt(`${title.toUpperCase()}\n\n${message}`, placeholder));
+    },
+
+    /**
      * Configura el contenido y estilo del modal
      * @private
      */

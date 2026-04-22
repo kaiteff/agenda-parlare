@@ -639,16 +639,64 @@ export const PatientModals = {
                 themesSection.classList.remove('hidden');
                 const allThemes = SettingsManager.config.themes || [];
                 const patientThemes = patient.assignedThemes || [];
+                const patientSubthemes = patient.assignedSubthemes || []; // Nuevo: guardar subtemas específicos
                 
-                themesList.innerHTML = allThemes.map(theme => `
-                    <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-gray-50">
-                        <input type="checkbox" name="patientTheme" value="${theme.id}" ${patientThemes.includes(theme.id) ? 'checked' : ''} class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
-                        <span class="text-xs font-bold text-gray-700">${theme.name}</span>
-                    </label>
-                `).join('');
+                const renderThemes = () => {
+                    themesList.innerHTML = allThemes.map(theme => {
+                        const isChecked = patientThemes.includes(theme.id);
+                        const subthemes = theme.subthemes || [];
+                        
+                        return `
+                        <div class="theme-group border border-gray-100 rounded-xl p-2 bg-gray-50/30">
+                            <label class="flex items-center gap-2 p-1 cursor-pointer group">
+                                <input type="checkbox" name="patientTheme" value="${theme.id}" ${isChecked ? 'checked' : ''} 
+                                    class="theme-checkbox w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 transition-all">
+                                <span class="text-xs font-black text-gray-700 group-hover:text-blue-600">${theme.name}</span>
+                            </label>
+                            
+                            <!-- Subtemas desglosados (Solo si el tema está activo) -->
+                            <div class="subthemes-container ml-6 mt-2 space-y-1 ${isChecked ? '' : 'hidden'}">
+                                ${subthemes.map(st => `
+                                    <label class="flex items-center gap-2 cursor-pointer py-0.5 group/st">
+                                        <input type="checkbox" name="patientSubtheme" value="${theme.id}:${st.name}" 
+                                            ${patientSubthemes.includes(`${theme.id}:${st.name}`) ? 'checked' : ''}
+                                            class="w-3 h-3 text-indigo-500 rounded border-gray-300">
+                                        <span class="text-[10px] font-bold text-gray-500 group-hover/st:text-indigo-600">${st.name}</span>
+                                    </label>
+                                `).join('')}
+                                ${subthemes.length === 0 ? '<p class="text-[9px] text-gray-400 italic">Sin subtemas definidos</p>' : ''}
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+
+                    // Añadir botón de "Nuevo Tema" express
+                    const addNewBtn = document.createElement('button');
+                    addNewBtn.type = 'button';
+                    addNewBtn.className = "col-span-1 sm:col-span-2 mt-2 py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all text-[10px] font-black uppercase flex items-center justify-center gap-2";
+                    addNewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> + Nuevo Tema de Trabajo`;
+                    addNewBtn.onclick = () => this._handleCreateQuickTheme();
+                    themesList.appendChild(addNewBtn);
+
+                    // Re-bind toggles
+                    themesList.querySelectorAll('.theme-checkbox').forEach(cb => {
+                        cb.onchange = (e) => {
+                            const container = e.target.closest('.theme-group').querySelector('.subthemes-container');
+                            if (e.target.checked) {
+                                container.classList.remove('hidden');
+                            } else {
+                                container.classList.add('hidden');
+                                // Opcional: desmarcar subtemas si se desmarca el padre
+                                container.querySelectorAll('input').forEach(stCb => stCb.checked = false);
+                            }
+                        };
+                    });
+                };
+
+                renderThemes();
                 
                 if (allThemes.length === 0) {
-                     themesList.innerHTML = '<p class="text-[10px] text-gray-400 italic col-span-2">No hay temas creados en la configuración.</p>';
+                     themesList.innerHTML = '<p class="text-[10px] text-gray-400 italic col-span-2">No hay temas creados. Pulsa el botón inferior para añadir uno.</p>';
                 }
             } else {
                 themesSection.classList.add('hidden');
@@ -668,6 +716,7 @@ export const PatientModals = {
 
                 // Recoger temas seleccionados
                 const selectedThemes = Array.from(document.querySelectorAll('input[name="patientTheme"]:checked')).map(cb => cb.value);
+                const selectedSubthemes = Array.from(document.querySelectorAll('input[name="patientSubtheme"]:checked')).map(cb => cb.value);
 
                 const success = await PatientActions.updatePatientProfile(
                     patient.id,
@@ -679,7 +728,8 @@ export const PatientModals = {
                         countryCode: countryCode,
                         parentName: newParentName,
                         wantsWhatsapp: wantsWhatsapp,
-                        assignedThemes: selectedThemes
+                        assignedThemes: selectedThemes,
+                        assignedSubthemes: selectedSubthemes
                     },
                     patient.name
                 );
@@ -798,124 +848,60 @@ export const PatientModals = {
         if (generalNoteInput) generalNoteInput.value = clinicalProgress.generalNote || '';
         if (searchInput) searchInput.value = '';
 
+        // Renderizar temas específicos del paciente
         const renderThemesList = (filter = '') => {
-            const assignedIds = patient.assignedThemes || [];
-            const themes = SettingsManager.getThemesByIds(assignedIds);
-            const progress = clinicalProgress.themes || {};
-
-            if (themes.length === 0) {
-                themesList.innerHTML = '<p class="text-xs text-gray-400 italic text-center py-4">No hay temas asignados para este paciente.</p>';
-                return;
-            }
-
-            const searchLower = filter.toLowerCase();
-
-            themesList.innerHTML = themes.map(theme => {
-                const subthemes = theme.subthemes || [];
-                
-                // Si hay filtro, verificar si el tema o algo adentro coincide
-                const hasThemeMatch = theme.name.toLowerCase().includes(searchLower);
-                const matchingSubs = subthemes.filter(s => 
-                    s.name.toLowerCase().includes(searchLower) || 
-                    (s.items || []).some(i => i.toLowerCase().includes(searchLower))
-                );
-
-                if (filter && !hasThemeMatch && matchingSubs.length === 0) return '';
-
-                return `
-                    <div class="space-y-4 mb-6 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                        <div class="flex items-center gap-2">
-                             <div class="w-1.5 h-5 bg-indigo-500 rounded-full"></div>
-                             <h5 class="text-base font-black text-gray-800">${theme.name}</h5>
-                        </div>
-                        
-                        <div class="space-y-4 pl-3">
-                            ${subthemes.map(sub => {
-                                const items = sub.items || [];
-                                const hasSubMatch = !filter || sub.name.toLowerCase().includes(searchLower) || hasThemeMatch;
-                                
-                                // Si no hay items, el subtema es el que se marca
-                                if (items.length === 0) {
-                                    const status = progress[theme.id]?.[sub.name] || 'none';
-                                    return `
-                                        <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50 ${hasSubMatch ? '' : 'opacity-30'} transition-all">
-                                            <span class="text-xs font-bold text-gray-700">${sub.name}</span>
-                                            ${this._renderStatusButtons(theme.id, sub.name, status)}
-                                        </div>
-                                    `;
-                                }
-
-                                // Si hay items, mostramos el título del subtema y los items abajo
-                                const filteredItems = items.filter(i => !filter || i.toLowerCase().includes(searchLower) || sub.name.toLowerCase().includes(searchLower) || hasThemeMatch);
-                                
-                                return `
-                                    <div class="space-y-2 ${hasSubMatch || filteredItems.length > 0 ? '' : 'opacity-30'}">
-                                        <h6 class="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">${sub.name}</h6>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            ${items.map(item => {
-                                                const status = progress[theme.id]?.[item] || 'none';
-                                                const isItemMatch = !filter || item.toLowerCase().includes(searchLower) || sub.name.toLowerCase().includes(searchLower) || hasThemeMatch;
-                                                return `
-                                                    <div class="flex items-center justify-between p-2 rounded-xl border border-gray-100 bg-white shadow-sm ${isItemMatch ? '' : 'opacity-30'} transition-all">
-                                                        <span class="text-[11px] font-medium text-gray-600">${item}</span>
-                                                        ${this._renderStatusButtons(theme.id, item, status)}
-                                                    </div>
-                                                `;
-                                            }).join('')}
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            this._renderSessionThemes(clinicalProgress, patient, filter);
         };
 
         // Estado local temporal para los botones
-        const currentProgress = JSON.parse(JSON.stringify(clinicalProgress.themes || {}));
+        const currentProgress = clinicalProgress.themes || {};
         
-        window.setSubthemeStatus = (themeId, itemName, status, btn) => {
-            if (!currentProgress[themeId]) currentProgress[themeId] = {};
-            
-            if (currentProgress[themeId][itemName] === status) {
-                delete currentProgress[themeId][itemName]; // Toggle off
-            } else {
-                currentProgress[themeId][itemName] = status;
-            }
-
-            renderThemesList(searchInput.value);
-        };
-
         // Buscador
-        searchInput.oninput = (e) => renderThemesList(e.target.value);
+        if (searchInput) {
+            searchInput.oninput = (e) => renderThemesList(e.target.value);
+        }
 
         // Guardar
-        saveBtn.onclick = async () => {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-            
-            const updatedProgress = {
-                themes: currentProgress,
-                generalNote: generalNoteInput.value.trim()
+        if (saveBtn) {
+            saveBtn.onclick = async () => {
+                saveBtn.disabled = true;
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                
+                // Recoger datos de los inputs de la bitácora
+                const themesData = {};
+                modal.querySelectorAll('.achievement-cb').forEach(cb => {
+                    const tId = cb.dataset.theme;
+                    const stName = cb.dataset.subtheme;
+                    const note = modal.querySelector(`.subtheme-note[data-theme="${tId}"][data-subtheme="${stName}"]`)?.value || '';
+                    
+                    if (!themesData[tId]) themesData[tId] = {};
+                    themesData[tId][stName] = {
+                        achieved: cb.checked,
+                        note: note
+                    };
+                });
+
+                const updatedProgress = {
+                    themes: themesData,
+                    generalNote: generalNoteInput.value.trim()
+                };
+
+                const therapistKey = appointment.therapist || AuthManager.currentUser?.therapist || 'diana';
+                const success = await PatientActions.updateAppointmentNote(appointment.id, updatedProgress, therapistKey);
+
+                if (success) {
+                    ToastService.success('Bitácora guardada correctamente');
+                    modal.classList.add('hidden');
+                    appointment.clinicalProgress = updatedProgress;
+                    appointment.hasClinicalNote = true;
+                    this.openHistory(patient); 
+                }
+
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
             };
-
-            // Pasar el terapeuta de la cita o el logueado
-            const therapistKey = appointment.therapist || AuthManager.currentUser?.therapist || 'diana';
-            const success = await PatientActions.updateAppointmentNote(appointment.id, updatedProgress, therapistKey);
-
-            if (success) {
-                ToastService.success('Bitácora guardada correctamente');
-                modal.classList.add('hidden');
-                // IMPORTANTE: Actualizar localmente la cita para no tener que refrescar todo
-                appointment.clinicalProgress = updatedProgress;
-                appointment.hasClinicalNote = true;
-                this.openHistory(patient); // Refrescar la vista del historial
-            }
-
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<span>Guardar Bitácora</span>';
-        };
+        }
 
         renderThemesList();
         modal.classList.remove('hidden');
