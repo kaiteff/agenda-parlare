@@ -228,16 +228,17 @@ export const CalendarUI = {
                     row.appendChild(cell);
                 });
 
-                // Línea de tiempo roja AL FINAL
+                // Línea de tiempo roja AL FINAL con visibilidad forzada
                 if (isCurrentHour) {
                     const now = new Date();
                     const percent = (now.getMinutes() / 60) * 100;
                     const indicator = document.createElement('div');
                     indicator.className = "time-indicator";
                     indicator.style.top = `${percent}%`;
+                    indicator.style.left = "0";
+                    indicator.style.width = "100%";
                     indicator.style.gridColumn = "1 / span 7";
                     indicator.style.gridRow = "1";
-                    indicator.style.zIndex = "50";
                     row.appendChild(indicator);
                 }
 

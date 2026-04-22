@@ -193,20 +193,23 @@ header::after {
 .time-indicator {
     position: absolute;
     left: 0;
-    right: 0;
-    height: 2px;
-    background-color: #ef4444;
-    z-index: 15;
+    width: 100%;
+    height: 3px;
+    background-color: #ff0000;
+    z-index: 100 !important;
     pointer-events: none;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
 }
 
 .time-indicator::before {
     content: '';
     position: absolute;
-    left: -4px;
-    top: -3px;
-    width: 8px;
-    height: 8px;
-    background-color: #ef4444;
+    left: 0;
+    top: -5px;
+    width: 12px;
+    height: 12px;
+    background-color: #ff0000;
     border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+    z-index: 101;
 }
