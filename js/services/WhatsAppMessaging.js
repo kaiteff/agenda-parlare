@@ -84,6 +84,8 @@ export const WhatsAppMessaging = {
                 vars = { "1": dateStr };
             } else if (type === 'reschedule') {
                 vars = { "1": therapistName, "2": dateStr, "3": timeStr };
+            } else if (type === 'reminder') {
+                vars = { "1": dateStr, "2": timeStr, "3": therapistName };
             } else {
                 vars = { "1": dateStr, "2": timeStr };
             }
