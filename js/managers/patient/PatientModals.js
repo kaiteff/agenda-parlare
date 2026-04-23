@@ -635,7 +635,7 @@ export const PatientModals = {
         const themesSection = document.getElementById('adminPatientThemesSection');
         const themesList = document.getElementById('editPatientThemesList');
         if (themesSection && themesList) {
-            if (AuthManager.isAdmin()) {
+            if (AuthManager.currentUser?.role !== 'receptionist') {
                 themesSection.classList.remove('hidden');
                 const allThemes = SettingsManager.config.themes || [];
                 const patientThemes = patient.assignedThemes || [];
@@ -665,23 +665,27 @@ export const PatientModals = {
                                     </label>
                                 `).join('')}
                                 
+                                ${AuthManager.isAdmin() ? `
                                 <!-- Botón para añadir subtema express -->
                                 <button type="button" class="add-subtheme-btn flex items-center gap-1 text-[9px] font-black text-blue-400 hover:text-blue-600 uppercase pt-1 transition-colors" data-theme-id="${theme.id}">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                     Añadir Subtema
                                 </button>
+                                ` : ''}
                             </div>
                         </div>
                         `;
                     }).join('');
 
-                    // Añadir botón de "Nuevo Tema" express
-                    const addNewBtn = document.createElement('button');
-                    addNewBtn.type = 'button';
-                    addNewBtn.className = "col-span-1 sm:col-span-2 mt-2 py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all text-[10px] font-black uppercase flex items-center justify-center gap-2";
-                    addNewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> + Nuevo Tema de Trabajo`;
-                    addNewBtn.onclick = () => PatientModals._handleCreateQuickTheme();
-                    themesList.appendChild(addNewBtn);
+                    if (AuthManager.isAdmin()) {
+                        // Añadir botón de "Nuevo Tema" express
+                        const addNewBtn = document.createElement('button');
+                        addNewBtn.type = 'button';
+                        addNewBtn.className = "col-span-1 sm:col-span-2 mt-2 py-2 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all text-[10px] font-black uppercase flex items-center justify-center gap-2";
+                        addNewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> + Nuevo Tema de Trabajo`;
+                        addNewBtn.onclick = () => PatientModals._handleCreateQuickTheme();
+                        themesList.appendChild(addNewBtn);
+                    }
 
                     // Re-bind toggles
                     themesList.querySelectorAll('.theme-checkbox').forEach(cb => {
