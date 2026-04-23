@@ -187,7 +187,9 @@ def find_patients_by_phone(phone):
     norm = normalize_phone(phone)
     profiles = db.collection('patientProfiles').stream()
     return [{'id': doc.id, 'name': doc.to_dict().get('name', '')} 
-            for doc in profiles if normalize_phone(doc.to_dict().get('phone', '')) == norm]
+            for doc in profiles 
+            if normalize_phone(doc.to_dict().get('phone', '')) == norm 
+            and doc.to_dict().get('isActive', True) is not False]
 
 def find_tomorrow_appointments(patient_names):
     mx_now = datetime.now(MX_TZ)
