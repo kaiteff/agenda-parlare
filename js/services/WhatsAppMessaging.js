@@ -112,7 +112,7 @@ export const WhatsAppMessaging = {
             'reminder': 'HXa1dc17f5edd3b774ef3ab3b92088035b', 
             'cancel': 'PONER_AQUI_SID_CANCELACION',
             'reschedule': 'HX9de65123a2d3b426f0b644ef2593d53e',
-            'no-show': 'PONER_AQUI_SID_FALTA',
+            'no-show': 'HX91155fde499d8551099df309515b1c68',
             'welcome': 'PONER_AQUI_SID_BIENVENIDA',
             'payment': 'PONER_AQUI_SID_PAGO'
         };
