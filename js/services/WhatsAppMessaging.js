@@ -113,8 +113,8 @@ export const WhatsAppMessaging = {
             'cancel': 'PONER_AQUI_SID_CANCELACION',
             'reschedule': 'HX9de65123a2d3b426f0b644ef2593d53e',
             'no-show': 'HX91155fde499d8551099df309515b1c68',
-            'welcome': 'PONER_AQUI_SID_BIENVENIDA',
-            'payment': 'PONER_AQUI_SID_PAGO'
+            'welcome': 'HX2ce20d173330363b2db700bc02e66204',
+            'payment': 'HXfe0923442618a0fae3018d17b9c33909'
         };
 
         try {
