@@ -250,12 +250,13 @@ export const CalendarUI = {
         setTimeout(() => {
             const container = CalendarState.dom.calendarGrid?.closest('.scroller');
             if (container) {
-                // Cada fila h-16 (64px). Empezamos en 7 am.
-                // Para ver 10 am al tope, saltamos 7 am, 8 am y 9 am (3 filas).
-                // 3 * 64 = 192px
-                container.scrollTop = 192;
+                // Cada fila tiene un alto de h-16 (64px). 
+                // El calendario empieza a las 8:00 AM.
+                // Para ver 10:00 AM al tope, saltamos 8:00 AM y 9:00 AM (2 filas).
+                // 2 filas * 64px = 128px.
+                container.scrollTop = 128;
             }
-        }, 100);
+        }, 150);
     },
 
     renderEmptySlot(cell, dateStr, hour, onClick) {
