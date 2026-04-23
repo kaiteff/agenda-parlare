@@ -185,21 +185,28 @@ def normalize_phone(phone):
 
 def find_patients_by_phone(phone):
     norm = normalize_phone(phone)
-    print(f"🔍 Buscando paciente para el número normalizado: {norm}")
-    profiles = db.collection('patientProfiles').stream()
+    print(f"🔍 Buscando paciente de forma optimizada para: {norm}")
+    
+    # Formatos comunes en los que podría estar guardado
+    search_variants = [norm, f"+52{norm}", f"52{norm}", f"+521{norm}", f"521{norm}"]
+    
     found = []
-    for doc in profiles:
-        d = doc.to_dict()
-        p_phone = d.get('phone')
-        if not p_phone: continue
+    found_ids = set()
+    
+    for variant in search_variants:
+        # Buscamos directamente por el campo 'phone'
+        docs = db.collection('patientProfiles').where('phone', '==', variant).stream()
+        for doc in docs:
+            if doc.id not in found_ids:
+                d = doc.to_dict()
+                if d.get('isActive', True) is not False:
+                    found.append({'id': doc.id, 'name': d.get('name', '')})
+                    found_ids.add(doc.id)
         
-        p_norm = normalize_phone(p_phone)
-        is_active = d.get('isActive', True)
-        
-        if p_norm == norm and is_active is not False:
-            found.append({'id': doc.id, 'name': d.get('name', '')})
-            
-    print(f"✅ Pacientes encontrados: {len(found)}")
+        # Si ya encontramos a alguien, no necesitamos seguir buscando variantes
+        if found: break
+
+    print(f"✅ Pacientes encontrados (Query): {len(found)}")
     return found
 
 def find_tomorrow_appointments(patient_names):
