@@ -27,6 +27,7 @@ export const GoogleCalendarService = {
 
     _enabled: false,
     _calendarId: null, // Legacy, kept for compatibility if needed
+    _autoSyncInterval: null,
 
     // Configuración del calendario dedicado
     CALENDAR_NAME: 'Parlare Citas',
@@ -45,10 +46,10 @@ export const GoogleCalendarService = {
             await window.gapi.client.load('calendar', 'v3');
             this._enabled = true;
 
-            // Recuperar calendarId guardado
             this._calendarId = localStorage.getItem(this._calIdKey) || null;
 
             log.success('Calendar API cargada');
+            this.startAutoSync();
             return true;
         } catch (err) {
             log.warn('No se pudo cargar Calendar API', err);
@@ -68,7 +69,33 @@ export const GoogleCalendarService = {
             const ok = await this.init();
             if (!ok) return false;
         }
-        return true;
+    },
+
+    /**
+     * Inicia el proceso automático de sincronización en segundo plano (cada 3 horas)
+     */
+    startAutoSync() {
+        if (this._autoSyncInterval) clearInterval(this._autoSyncInterval);
+        
+        // 3 horas = 10,800,000 ms
+        const INTERVAL_MS = 3 * 60 * 60 * 1000;
+        
+        this._autoSyncInterval = setInterval(async () => {
+            try {
+                const { AuthManager } = await import('../../managers/AuthManager.js');
+                const { CalendarState } = await import('../../modules/calendar/CalendarState.js');
+                
+                // Ejecutar solo si el usuario actual es Administrador (Recepción) y tiene un token válido
+                if (AuthManager.isAdmin() && GoogleAuthService.isTokenValid() && CalendarState.appointments?.length > 0) {
+                    log.info("⏰ Ejecutando Auto-Sync programado en segundo plano...");
+                    await this.syncWeek(CalendarState.appointments, true);
+                }
+            } catch (err) {
+                log.error("Fallo en Auto-Sync en segundo plano", err);
+            }
+        }, INTERVAL_MS);
+        
+        log.info("Auto-Sync de fondo iniciado (cada 3 horas)");
     },
 
     /**
@@ -361,9 +388,9 @@ export const GoogleCalendarService = {
     /**
      * Sync masivo: envía todas las citas activas a Google Calendar
      */
-    async syncWeek(appointments) {
+    async syncWeek(appointments, isSilent = false) {
         if (!(await this._ensureReady())) {
-            ToastService.info('Google Calendar no configurado');
+            if (!isSilent) ToastService.info('Google Calendar no configurado');
             return { created: 0, updated: 0, errors: 0 };
         }
 
@@ -381,7 +408,7 @@ export const GoogleCalendarService = {
         }
 
         const active = appointments.filter(a => !a.isCancelled && !idsAExcluir.includes(a.id));
-        ToastService.info(`Sincronizando ${active.length} citas...`);
+        if (!isSilent) ToastService.info(`Sincronizando ${active.length} citas...`);
 
         // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google
         const googleMaps = await this._fetchGoogleEventsMap();
@@ -485,7 +512,11 @@ export const GoogleCalendarService = {
         }
 
         const msg = `📅 Sync: ${created} nuevas, ${updated} actualizadas, ${linked} enlazadas${errors ? `, ${errors} errores` : ''}`;
-        ToastService.success(msg);
+        if (!isSilent || created > 0 || updated > 0 || errors > 0) {
+            ToastService.success(msg);
+        } else {
+            log.info(msg);
+        }
         return { created, updated, errors };
     }
 };
