@@ -50,7 +50,7 @@ export const WhatsAppMessaging = {
                 template = `¡Bienvenida a Parláre! 👋 Hemos dado de alta el perfil en nuestro sistema. Te confirmo que tu sesión recurrente ha quedado asignada para ${sched}. ¡Estamos felices de acompañarte!`;
                 break;
             case 'payment':
-                template = `Hola ${parentName}, te saludamos de Parláre. 💳 Te recordamos que la sesión de ${patientName} del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
+                template = `Hola, te saludamos de Parláre. 💳 Te recordamos que la sesión del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
                 break;
             default: // reminder
                 template = `${intro}Te recuerdo la cita de ${patientName} programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
@@ -80,6 +80,8 @@ export const WhatsAppMessaging = {
                 vars = { "1": appointment.schedule };
             } else if (type === 'no-show') {
                 vars = { "1": timeStr }; 
+            } else if (type === 'payment') {
+                vars = { "1": dateStr };
             } else {
                 vars = { "1": dateStr, "2": timeStr };
             }
