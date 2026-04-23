@@ -16,6 +16,18 @@ export const WhatsAppMessaging = {
     async sendMessage(appointment, type = 'reminder') {
         if (!appointment) return;
 
+        // BLINDAJE: Prevenir envío si ya está confirmado o pagado
+        if (type === 'reminder' && appointment.confirmed) {
+            const { ToastService } = await import('../utils/ToastService.js');
+            ToastService.success('Esta cita ya se encuentra confirmada.');
+            return;
+        }
+        if (type === 'payment' && appointment.isPaid) {
+            const { ToastService } = await import('../utils/ToastService.js');
+            ToastService.success('Esta cita ya se encuentra pagada.');
+            return;
+        }
+
         // 1. Obtener datos del paciente
         const profile = PatientState.patients.find(p => p.id === appointment.patientId || p.name === appointment.name);
         const nameParts = appointment.name.split(' ');
