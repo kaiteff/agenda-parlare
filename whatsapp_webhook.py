@@ -336,7 +336,7 @@ def webhook():
     except Exception as e:
         print(f"💥 CRASH EN WEBHOOK: {e}")
         error_resp = MessagingResponse()
-        error_resp.message("Lo sentimos, hubo un problema técnico. Por favor contacta a Recepción al 3315196702.")
+        error_resp.message(f"Lo sentimos, hubo un problema técnico (Error: {str(e)}). Por favor contacta a Recepción al 3315196702.")
         return str(error_resp), 200
 
 @app.route('/api/send-message', methods=['POST', 'OPTIONS'])
