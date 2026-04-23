@@ -43,7 +43,7 @@ export const WhatsAppMessaging = {
                 template = `${intro}Te confirmo que hemos REAGENDADO la cita de ${patientName} con ${therapistName} para el día ${dateStr} a las ${timeStr}. ¡Nos vemos pronto!`;
                 break;
             case 'no-show':
-                template = `${intro}Notamos que ${patientName} no pudo asistir a su sesión de hoy con ${therapistName}. ¿Todo bien? Quedamos a tus órdenes por si deseas reagendar.`;
+                template = `${intro}Notamos que no pudieron asistir a la sesión de hoy. ¿Todo bien? Quedamos a tus órdenes por si desean reagendar.`;
                 break;
             case 'welcome':
                 const sched = appointment.schedule || "tu horario asignado";
@@ -75,10 +75,16 @@ export const WhatsAppMessaging = {
 
         if (mode === true) {
             // AUTOMÁTICO (Twilio)
-            this._sendViaTwilio(phoneDigits, template, type, type === 'welcome' ? { "1": appointment.schedule } : {
-                "1": dateStr,
-                "2": timeStr
-            });
+            let vars = {};
+            if (type === 'welcome') {
+                vars = { "1": appointment.schedule };
+            } else if (type === 'no-show') {
+                vars = null; // No tiene variables
+            } else {
+                vars = { "1": dateStr, "2": timeStr };
+            }
+
+            this._sendViaTwilio(phoneDigits, template, type, vars);
         } else if (mode === false) {
             // MANUAL (wa.me)
             this._sendViaManual(phoneDigits, template);
