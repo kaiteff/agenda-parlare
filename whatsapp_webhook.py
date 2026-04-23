@@ -249,6 +249,11 @@ def webhook():
     if not patients:
         resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
         return str(resp), 200
+        
+    if msg_body in ['3', 'recepcion', 'yari']:
+        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
+        return str(resp), 200
+
     apts = find_tomorrow_appointments([p['name'] for p in patients])
     if not apts:
         resp.message("Hola, no encontramos citas agendadas para tu número el día de mañana.")
@@ -276,8 +281,6 @@ def webhook():
             update_google_calendar(a, "CANCELADO")
             
         resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
-    elif msg_body in ['3', 'recepcion', 'yari']:
-        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
     else:
         resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
     return str(resp), 200
