@@ -247,11 +247,11 @@ def webhook():
     resp = MessagingResponse()
     patients = find_patients_by_phone(from_num)
     if not patients:
-        resp.message("Tu número no está registrado. Contacta a Parláre.")
+        resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
         return str(resp), 200
     apts = find_tomorrow_appointments([p['name'] for p in patients])
     if not apts:
-        resp.message(f"Hola {patients[0]['name'].split()[0]}, no encontramos citas para mañana.")
+        resp.message("Hola, no encontramos citas agendadas para tu número el día de mañana.")
         return str(resp), 200
     if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
         for a in apts:
@@ -264,8 +264,7 @@ def webhook():
             update_google_sheet(a, "CONFIRMADO")
             update_google_calendar(a, "CONFIRMADO")
             
-        names = ", ".join([a['name'].split()[0] for a in apts])
-        resp.message(f"✅ ¡Gracias! Se han confirmado las citas de: {names}. ¡Nos vemos!")
+        resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
     elif msg_body in ['2', 'cancelar', 'no']:
         for a in apts:
             db.collection('appointments').document(a['id']).update({
@@ -364,12 +363,12 @@ def send_reminders():
             
             msg_body = (
                 f"🏥 *Parláre - Recordatorio de Cita*\n\n"
-                f"Hola {patient_name.split()[0]}, te recordamos tu cita para mañana "
+                f"Hola, te recordamos la cita programada para mañana "
                 f"*{tomorrow.strftime('%d/%b')}* a las *{hour_str}* con *{therapist}*.\n\n"
                 f"Responde:\n"
                 f"1️⃣ *OK* para confirmar\n"
                 f"2️⃣ *NO* para cancelar\n"
-                f"3️⃣ *RECEPTION* para dudas\n\n"
+                f"3️⃣ *RECEPCIÓN* para dudas\n\n"
                 f"¡Te esperamos! 😊"
             )
 

@@ -33,7 +33,7 @@ export const WhatsAppMessaging = {
 
         // 4. Seleccionar Plantilla
         let template = "";
-        const intro = `Hola ${parentName}, te saluda Recepción de Parláre. `;
+        const intro = `Hola, te saludamos de Recepción de Parláre. `;
 
         switch (type) {
             case 'cancel':
@@ -53,7 +53,7 @@ export const WhatsAppMessaging = {
                 template = `Hola, te saludamos de Parláre. 💳 Te recordamos que la sesión del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
                 break;
             default: // reminder
-                template = `${intro}Te recuerdo la cita de ${patientName} programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
+                template = `${intro}Te recordamos la cita programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
                 break;
         }
 
