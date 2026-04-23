@@ -42,6 +42,15 @@ export const WhatsAppMessaging = {
             case 'reschedule':
                 template = `${intro}Te confirmo que hemos REAGENDADO la cita de ${patientName} con ${therapistName} para el día ${dateStr} a las ${timeStr}. ¡Nos vemos pronto!`;
                 break;
+            case 'no-show':
+                template = `${intro}Notamos que ${patientName} no pudo asistir a su sesión de hoy con ${therapistName}. ¿Todo bien? Quedamos a tus órdenes por si deseas reagendar.`;
+                break;
+            case 'welcome':
+                template = `¡Bienvenida a Parláre! 👋 Hola ${parentName}, hemos dado de alta el perfil de ${patientName}. Estamos muy felices de acompañarles en su proceso. Cualquier duda, Yari está aquí para apoyarte.`;
+                break;
+            case 'payment':
+                template = `Hola ${parentName}, te saluda Yari de Parláre. 💳 Te recordamos que la sesión de ${patientName} del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
+                break;
             default: // reminder
                 template = `${intro}Te recuerdo la cita de ${patientName} programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
                 break;
@@ -87,9 +96,12 @@ export const WhatsAppMessaging = {
 
         // DICCIONARIO DE PLANTILLAS (Aquí es donde pondrás los SIDs de Meta)
         const TEMPLATE_SIDS = {
-            'reminder': 'HXa1dc17f5edd3b774ef3ab3b92088035b', // El que ya tienes
-            'cancel': 'PONER_AQUI_SID_CANCELACION',         // <--- CAMBIAR ESTO CUANDO TENGAS EL NUEVO
-            'reschedule': 'PONER_AQUI_SID_REAGENDAR'       // <--- CAMBIAR ESTO CUANDO TENGAS EL NUEVO
+            'reminder': 'HXa1dc17f5edd3b774ef3ab3b92088035b', 
+            'cancel': 'PONER_AQUI_SID_CANCELACION',
+            'reschedule': 'PONER_AQUI_SID_REAGENDAR',
+            'no-show': 'PONER_AQUI_SID_FALTA',
+            'welcome': 'PONER_AQUI_SID_BIENVENIDA',
+            'payment': 'PONER_AQUI_SID_PAGO'
         };
 
         try {
