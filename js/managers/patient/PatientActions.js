@@ -623,6 +623,8 @@ export const PatientActions = {
             if (updates.clinicFee !== undefined) profileUpdates.clinicFee = updates.clinicFee;
             if (updates.parentName !== undefined) profileUpdates.parentName = _toProperCase(updates.parentName);
             if (updates.wantsWhatsapp !== undefined) profileUpdates.wantsWhatsapp = updates.wantsWhatsapp;
+            if (updates.assignedThemes !== undefined) profileUpdates.assignedThemes = updates.assignedThemes;
+            if (updates.assignedSubthemes !== undefined) profileUpdates.assignedSubthemes = updates.assignedSubthemes;
 
             // Handle phone with country code
             if (updates.phone !== undefined) {

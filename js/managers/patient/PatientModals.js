@@ -1143,7 +1143,7 @@ export const PatientModals = {
         const themesList = document.getElementById('sessionThemesList');
         if (!themesList) return;
 
-        const { SettingsManager } = PatientState;
+
         const allThemes = SettingsManager.config.themes || [];
         const assignedThemeIds = patient.assignedThemes || [];
         const assignedSubthemes = patient.assignedSubthemes || []; 
