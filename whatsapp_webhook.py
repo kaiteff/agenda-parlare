@@ -185,11 +185,22 @@ def normalize_phone(phone):
 
 def find_patients_by_phone(phone):
     norm = normalize_phone(phone)
+    print(f"🔍 Buscando paciente para el número normalizado: {norm}")
     profiles = db.collection('patientProfiles').stream()
-    return [{'id': doc.id, 'name': doc.to_dict().get('name', '')} 
-            for doc in profiles 
-            if normalize_phone(doc.to_dict().get('phone', '')) == norm 
-            and doc.to_dict().get('isActive', True) is not False]
+    found = []
+    for doc in profiles:
+        d = doc.to_dict()
+        p_phone = d.get('phone')
+        if not p_phone: continue
+        
+        p_norm = normalize_phone(p_phone)
+        is_active = d.get('isActive', True)
+        
+        if p_norm == norm and is_active is not False:
+            found.append({'id': doc.id, 'name': d.get('name', '')})
+            
+    print(f"✅ Pacientes encontrados: {len(found)}")
+    return found
 
 def find_tomorrow_appointments(patient_names):
     mx_now = datetime.now(MX_TZ)
@@ -259,61 +270,74 @@ def home():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    msg_body = request.form.get('Body', '').strip().lower()
-    from_num = request.form.get('From', '')
-    resp = MessagingResponse()
-    patients = find_patients_by_phone(from_num)
-    if not patients:
-        resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
-        return str(resp), 200
+    try:
+        msg_body = request.form.get('Body', '').strip().lower()
+        from_num = request.form.get('From', '')
+        print(f"📥 Mensaje recibido de {from_num}: {msg_body}")
         
-    if msg_body in ['3', 'recepcion', 'yari']:
-        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
+        resp = MessagingResponse()
+        patients = find_patients_by_phone(from_num)
+        
+        if not patients:
+            print("❌ Número no registrado")
+            resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
+            return str(resp), 200
+            
+        if msg_body in ['3', 'recepcion', 'yari']:
+            print("📞 Solicitud de recepción detectada")
+            resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
+            return str(resp), 200
+
+        apts = find_tomorrow_appointments([p['name'] for p in patients])
+        if not apts:
+            print("📅 No hay citas para mañana. Buscando próxima cita...")
+            next_apt = find_next_appointment([p['name'] for p in patients])
+            if next_apt:
+                try:
+                    import locale
+                    try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+                    except: pass
+                    dt = datetime.fromisoformat(next_apt['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                    day_str = dt.strftime('%A %d/%b').capitalize()
+                    hour_str = dt.strftime('%I:%M %p').lstrip('0')
+                    resp.message(f"Hola, tu próxima sesión en Parláre está programada para el *{day_str} a las {hour_str}*. Si deseas reagendar o tienes dudas, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+                except Exception as e:
+                    print(f"⚠️ Error formateando fecha: {e}")
+                    resp.message("Hola, no encontramos citas agendadas para el día de mañana. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+            else:
+                resp.message("Hola, no encontramos citas futuras agendadas para tu número. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+            return str(resp), 200
+
+        if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
+            print("✅ Confirmación recibida")
+            for a in apts:
+                db.collection('appointments').document(a['id']).update({
+                    'status': 'CONFIRMADO', 
+                    'lastBotUpdate': 'WhatsApp-Confirm'
+                })
+                update_google_sheet(a, "CONFIRMADO")
+                update_google_calendar(a, "CONFIRMADO")
+            resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
+        elif msg_body in ['2', 'cancelar', 'no']:
+            print("🚫 Cancelación recibida")
+            for a in apts:
+                db.collection('appointments').document(a['id']).update({
+                    'isCancelled': True, 
+                    'lastBotUpdate': 'WhatsApp-Cancel'
+                })
+                update_google_sheet(a, "CANCELADO")
+                update_google_calendar(a, "CANCELADO")
+            resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
+        else:
+            resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
+        
         return str(resp), 200
 
-    apts = find_tomorrow_appointments([p['name'] for p in patients])
-    if not apts:
-        next_apt = find_next_appointment([p['name'] for p in patients])
-        if next_apt:
-            try:
-                import locale
-                try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-                except: pass
-                dt = datetime.fromisoformat(next_apt['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
-                day_str = dt.strftime('%A %d/%b').capitalize()
-                hour_str = dt.strftime('%I:%M %p').lstrip('0')
-                resp.message(f"Hola, tu próxima sesión en Parláre está programada para el *{day_str} a las {hour_str}*. Si deseas reagendar o tienes dudas, puedes hablar con Recepción aquí: https://wa.me/523315196702")
-            except:
-                resp.message("Hola, no encontramos citas agendadas para el día de mañana. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
-        else:
-            resp.message("Hola, no encontramos citas futuras agendadas para tu número. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
-        return str(resp), 200
-    if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
-        for a in apts:
-            db.collection('appointments').document(a['id']).update({
-                'confirmed': True, 
-                'confirmedAt': firestore.SERVER_TIMESTAMP,
-                'lastBotUpdate': 'WhatsApp-Confirm'
-            })
-            # Sync to Google
-            update_google_sheet(a, "CONFIRMADO")
-            update_google_calendar(a, "CONFIRMADO")
-            
-        resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
-    elif msg_body in ['2', 'cancelar', 'no']:
-        for a in apts:
-            db.collection('appointments').document(a['id']).update({
-                'isCancelled': True,
-                'lastBotUpdate': 'WhatsApp-Cancel'
-            })
-            # Sync to Google
-            update_google_sheet(a, "CANCELADO")
-            update_google_calendar(a, "CANCELADO")
-            
-        resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
-    else:
-        resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
-    return str(resp), 200
+    except Exception as e:
+        print(f"💥 CRASH EN WEBHOOK: {e}")
+        error_resp = MessagingResponse()
+        error_resp.message("Lo sentimos, hubo un problema técnico. Por favor contacta a Recepción al 3315196702.")
+        return str(error_resp), 200
 
 @app.route('/api/send-message', methods=['POST', 'OPTIONS'])
 def send_individual_message():
