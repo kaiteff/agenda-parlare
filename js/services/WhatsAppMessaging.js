@@ -33,7 +33,7 @@ export const WhatsAppMessaging = {
 
         // 4. Seleccionar Plantilla
         let template = "";
-        const intro = `Hola ${parentName}, te saluda Yari de Parláre. `;
+        const intro = `Hola ${parentName}, te saluda Recepción de Parláre. `;
 
         switch (type) {
             case 'cancel':
@@ -46,10 +46,11 @@ export const WhatsAppMessaging = {
                 template = `${intro}Notamos que ${patientName} no pudo asistir a su sesión de hoy con ${therapistName}. ¿Todo bien? Quedamos a tus órdenes por si deseas reagendar.`;
                 break;
             case 'welcome':
-                template = `¡Bienvenida a Parláre! 👋 Hola ${parentName}, hemos dado de alta el perfil de ${patientName}. Estamos muy felices de acompañarles en su proceso. Cualquier duda, Yari está aquí para apoyarte.`;
+                const sched = appointment.schedule || "tu horario asignado";
+                template = `¡Bienvenida a Parláre! 👋 Hemos dado de alta el perfil en nuestro sistema. Te confirmo que tu sesión recurrente ha quedado asignada para ${sched}. ¡Estamos felices de acompañarte!`;
                 break;
             case 'payment':
-                template = `Hola ${parentName}, te saluda Yari de Parláre. 💳 Te recordamos que la sesión de ${patientName} del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
+                template = `Hola ${parentName}, te saludamos de Parláre. 💳 Te recordamos que la sesión de ${patientName} del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
                 break;
             default: // reminder
                 template = `${intro}Te recuerdo la cita de ${patientName} programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
@@ -74,7 +75,7 @@ export const WhatsAppMessaging = {
 
         if (mode === true) {
             // AUTOMÁTICO (Twilio)
-            this._sendViaTwilio(phoneDigits, template, type, {
+            this._sendViaTwilio(phoneDigits, template, type, type === 'welcome' ? { "1": appointment.schedule } : {
                 "1": dateStr,
                 "2": timeStr
             });

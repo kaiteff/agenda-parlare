@@ -792,8 +792,27 @@ export const PatientModals = {
         if (welcomeBtn) {
             welcomeBtn.onclick = async () => {
                 const { WhatsAppMessaging } = await import('../../services/WhatsAppMessaging.js');
-                // Simulamos una pseudo-cita para la bienvenida
-                WhatsAppMessaging.sendMessage({ name: patient.name, therapist: patient.therapist }, 'welcome');
+                
+                // Intentar detectar el horario recurrente (Día y Hora)
+                const now = new Date();
+                const futureApts = (PatientState.appointments || [])
+                    .filter(a => a.name === patient.name && !a.isCancelled && new Date(a.date) >= now)
+                    .sort((a,b) => new Date(a.date) - new Date(b.date));
+                
+                let scheduleStr = "horario pendiente";
+                if (futureApts.length > 0) {
+                    const firstApt = new Date(futureApts[0].date);
+                    const day = firstApt.toLocaleDateString('es-MX', { weekday: 'long' });
+                    const hour = firstApt.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    scheduleStr = `los ${day} a las ${hour}`;
+                }
+
+                // Enviamos el mensaje de bienvenida con el horario detectado
+                WhatsAppMessaging.sendMessage({ 
+                    name: patient.name, 
+                    therapist: patient.therapist,
+                    schedule: scheduleStr 
+                }, 'welcome');
             };
         }
 
