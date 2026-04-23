@@ -372,8 +372,25 @@ def send_reminders():
                 f"¡Te esperamos! 😊"
             )
 
+            # Enviar usando Plantilla Oficial de Meta (Para asegurar entrega)
             try:
-                twilio_client.messages.create(body=msg_body, from_=config.get('twilio_whatsapp_from'), to=dest)
+                # El SID de la plantilla de recordatorio
+                reminder_template_sid = 'HXa1dc17f5edd3b774ef3ab3b92088035b'
+                
+                # Variables para la plantilla (Asegúrate que coincidan con Meta)
+                # 1: Fecha (Mañana), 2: Hora, 3: Terapeuta
+                variables = {
+                    "1": tomorrow.strftime('%d/%b'),
+                    "2": hour_str,
+                    "3": therapist
+                }
+
+                twilio_client.messages.create(
+                    from_=config.get('twilio_whatsapp_from'),
+                    to=dest,
+                    content_sid=reminder_template_sid,
+                    content_variables=json.dumps(variables)
+                )
                 sent_count += 1
             except Exception as e:
                 errors.append(f"Error {patient_name}: {str(e)}")
