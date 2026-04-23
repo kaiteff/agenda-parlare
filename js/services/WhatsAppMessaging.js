@@ -40,7 +40,7 @@ export const WhatsAppMessaging = {
                 template = `${intro}Te informo que la sesión de ${patientName} programada para hoy ${dateStr} a las ${timeStr} con ${therapistName} ha sido CANCELADA. Quedamos a tus órdenes para cualquier duda.`;
                 break;
             case 'reschedule':
-                template = `${intro}Te confirmo que hemos REAGENDADO la cita de ${patientName} con ${therapistName} para el día ${dateStr} a las ${timeStr}. ¡Nos vemos pronto!`;
+                template = `${intro}Te confirmo que hemos REAGENDADO la cita con ${therapistName} para el día ${dateStr} a las ${timeStr}. ¡Nos vemos pronto!`;
                 break;
             case 'no-show':
                 template = `${intro}Notamos que no pudieron asistir a la sesión de hoy ${timeStr}. ¿Todo bien? Quedamos a tus órdenes por si desean reagendar.`;
@@ -82,6 +82,8 @@ export const WhatsAppMessaging = {
                 vars = { "1": timeStr }; 
             } else if (type === 'payment') {
                 vars = { "1": dateStr };
+            } else if (type === 'reschedule') {
+                vars = { "1": therapistName, "2": dateStr, "3": timeStr };
             } else {
                 vars = { "1": dateStr, "2": timeStr };
             }
