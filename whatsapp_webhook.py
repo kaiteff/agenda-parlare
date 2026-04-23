@@ -198,6 +198,21 @@ def find_tomorrow_appointments(patient_names):
     results = db.collection('appointments').where('date', '>=', start).where('date', '<=', end).stream()
     return [{'id': doc.id, **doc.to_dict()} for doc in results if not doc.to_dict().get('isCancelled') and doc.to_dict().get('name', '').lower() in names_lower]
 
+def find_next_appointment(patient_names):
+    mx_now = datetime.now(MX_TZ)
+    now_iso = mx_now.strftime('%Y-%m-%dT%H:%M:%S')
+    names_lower = [n.lower() for n in patient_names]
+    results = db.collection('appointments').where('date', '>=', now_iso).stream()
+    future_apts = []
+    for doc in results:
+        apt = doc.to_dict()
+        if not apt.get('isCancelled') and apt.get('name', '').lower() in names_lower:
+            future_apts.append(apt)
+    if future_apts:
+        future_apts.sort(key=lambda x: x['date'])
+        return future_apts[0]
+    return None
+
 # ── Routes ───────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -256,7 +271,20 @@ def webhook():
 
     apts = find_tomorrow_appointments([p['name'] for p in patients])
     if not apts:
-        resp.message("Hola, no encontramos citas agendadas para tu número el día de mañana.")
+        next_apt = find_next_appointment([p['name'] for p in patients])
+        if next_apt:
+            try:
+                import locale
+                try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+                except: pass
+                dt = datetime.fromisoformat(next_apt['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                day_str = dt.strftime('%A %d/%b').capitalize()
+                hour_str = dt.strftime('%I:%M %p').lstrip('0')
+                resp.message(f"Hola, tu próxima sesión en Parláre está programada para el *{day_str} a las {hour_str}*. Si deseas reagendar o tienes dudas, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+            except:
+                resp.message("Hola, no encontramos citas agendadas para el día de mañana. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+        else:
+            resp.message("Hola, no encontramos citas futuras agendadas para tu número. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
         return str(resp), 200
     if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
         for a in apts:
