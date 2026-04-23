@@ -276,9 +276,9 @@ def webhook():
             update_google_sheet(a, "CANCELADO")
             update_google_calendar(a, "CANCELADO")
             
-        resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirle directamente a Yari de Recepción aquí: https://wa.me/523324955791. ¡Bonito día!")
+        resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
     elif msg_body in ['3', 'recepcion', 'yari']:
-        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523324955791")
+        resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
     else:
         resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
     return str(resp), 200
