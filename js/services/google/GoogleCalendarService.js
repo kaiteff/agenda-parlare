@@ -396,137 +396,97 @@ export const GoogleCalendarService = {
     },
 
     /**
-     * Sync masivo: envía todas las citas activas a Google Calendar
+     * Sync masivo: Mirroring puro. Elimina huérfanos, crea faltantes.
      */
     async syncWeek(appointments, isSilent = false) {
-        if (!(await this._ensureReady())) {
-            if (!isSilent) ToastService.info('Google Calendar no configurado');
-            return { created: 0, updated: 0, errors: 0 };
-        }
+        if (!(await this._ensureReady())) return { created: 0, errors: 0 };
 
-        // 0. LIMPIEZA AGRESIVA EN FIREBASE PARA EVITAR CIUDAR FANTASMAS
-        let idsAExcluir = [];
-        try {
-            const { CalendarData } = await import('../../modules/calendar/CalendarData.js');
-            const cleanResult = await CalendarData.cleanupDuplicates();
-            if (cleanResult && cleanResult.total > 0) {
-                log.info(`Eliminados ${cleanResult.total} duplicados de Firebase antes de sincronizar.`);
-                idsAExcluir = cleanResult.deletedIds || [];
-            }
-        } catch(e) {
-            log.warn('No se pudo ejecutar limpieza previa', e);
-        }
+        if (!isSilent) ToastService.info('🔍 Comparando Firebase con Google Calendar...');
 
-        const active = appointments.filter(a => !a.isCancelled && !idsAExcluir.includes(a.id));
-        if (!isSilent) ToastService.info(`Sincronizando ${active.length} citas...`);
-
-        // 1. FASE DE DESCUBRIMIENTO: Evitar encimar eventos que ya existen en Google
+        const active = appointments.filter(a => !a.isCancelled);
         const googleMaps = await this._fetchGoogleEventsMap();
         
-        // --- 1.5 FASE DE EXTERMINIO (Sincronización Espejo Absoluta 1 a 1) ---
-        let ghostsDeleted = 0;
+        // ── PASADA 1: Matching ─────────────────────────────────────
+        // Para cada cita en Firebase, intentamos encontrar su evento en Google.
+        // Si lo encontramos → lo protegemos (matchedGoogleIds).
+        // Si no existe → lo marcamos para crear (unlinked).
         const matchedGoogleIds = new Set();
-        const mappings = this._getMappings();
+        const unlinked = [];
 
-        // Paso A: Emparejar citas de Firebase con Google Calendar (1 a 1)
         for (const apt of active) {
+            const isoKey = new Date(apt.date).toISOString().slice(0, 16);
+            const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
+            const therapist = (apt.therapist || 'diana').toLowerCase();
+
+            // Prioridad 1: Match exacto por googleEventId guardado en Firestore
             if (apt.googleEventId && googleMaps.rawEvents.some(e => e.id === apt.googleEventId)) {
                 matchedGoogleIds.add(apt.googleEventId);
-            } else if (mappings[apt.id] && googleMaps.rawEvents.some(e => e.id === mappings[apt.id])) {
-                matchedGoogleIds.add(mappings[apt.id]);
-                apt.googleEventId = mappings[apt.id];
+                continue;
+            }
+
+            // Prioridad 2: Match por nombre + hora + terapeuta (1 a 1)
+            const candidate = googleMaps.rawEvents.find(e =>
+                !matchedGoogleIds.has(e.id) &&
+                e.therapist === therapist &&
+                e.isoKey === isoKey &&
+                e.nameNorm === nameNorm
+            );
+
+            if (candidate) {
+                matchedGoogleIds.add(candidate.id);
             } else {
-                const isoKey = new Date(apt.date).toISOString().slice(0, 16);
-                const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
-                const therapist = (apt.therapist || 'diana').toLowerCase();
-                
-                // Buscar candidato libre por Nombre Exacto
-                let candidate = googleMaps.rawEvents.find(e => !matchedGoogleIds.has(e.id) && 
-                    e.therapist === therapist && e.isoKey === isoKey && e.nameNorm === nameNorm);
-                
-                // Buscar candidato libre por Horario (Fallback)
-                if (!candidate) {
-                    candidate = googleMaps.rawEvents.find(e => !matchedGoogleIds.has(e.id) && 
-                        e.therapist === therapist && e.isoKey === isoKey);
-                }
-
-                if (candidate) {
-                    matchedGoogleIds.add(candidate.id);
-                    apt.googleEventId = candidate.id; // Enlace reparado en memoria
-                }
+                unlinked.push(apt); // No tiene par en Google → hay que crearlo
             }
         }
 
-        // Paso B: Exterminar TODO evento de Google que no haya sido reclamado
-        if (googleMaps.rawEvents && googleMaps.rawEvents.length > 0) {
-            log.info(`🧹 Fase de Espejo: Verificando ${googleMaps.rawEvents.length} eventos en Google. Reclamados/Protegidos: ${matchedGoogleIds.size}`);
-            
-            for (const gEvent of googleMaps.rawEvents) {
-                if (!matchedGoogleIds.has(gEvent.id)) {
-                    try {
-                        await new Promise(resolve => setTimeout(resolve, 150));
-                        log.warn(`👻 Fantasma Exterminado: [${gEvent.summary || 'Sin Titulo'}] el ${gEvent.isoKey} en ${gEvent.therapist}`);
-                        
-                        await this._callGapi(() => window.gapi.client.calendar.events.delete({
-                            calendarId: this.getCalendarId(gEvent.therapist),
-                            eventId: gEvent.id
-                        }));
-                        ghostsDeleted++;
-                    } catch(e) {
-                         log.error("Exterminio fallido para " + gEvent.id, e);
-                    }
-                }
-            }
-        }
-
-        let created = 0, updated = 0, errors = 0, linked = matchedGoogleIds.size;
-
-        // Fase 2: Inyección de actualizaciones
-        for (const apt of active) {
+        // ── PASADA 2: Creación de faltantes ────────────────────────
+        // Solo creamos citas que no tienen ningún evento en Google.
+        let created = 0;
+        for (const apt of unlinked) {
             try {
-                await new Promise(resolve => setTimeout(resolve, 300));
-                let result;
-                
-                // Como la fase de exterminio ya enlazó los eventos si fue posible, 
-                // apt.googleEventId estará seteado si existe un match visual en Google.
-                if (apt.googleEventId || mappings[apt.id]) {
-                    result = await this.updateEvent(apt);
-                    if (result && result.success) {
-                        updated++;
-                    } else {
-                        // PELIGRO ELIMINADO: Antes, si updateEvent fallaba por timeout/403, creaba uno nuevo ciegamente.
-                        log.warn(`Update falló para ${apt.id}. NO se recreará para evitar duplicidad.`);
-                        errors++;
-                    }
-                } else {
-                    result = await this.createEvent(apt);
-                    if (result && result.success) {
-                        created++;
-                        if (result.googleEventId) {
-                            try {
-                                const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
-                                const docRef = doc(db, collectionPath, apt.id);
-                                await updateDoc(docRef, { googleEventId: result.googleEventId });
-                            } catch (dbErr) {
-                                log.warn('No se pudo guardar googleEventId en Firestore', dbErr);
-                            }
-                        }
-                    } else {
-                        errors++;
+                await new Promise(r => setTimeout(r, 250));
+                const res = await this.createEvent(apt);
+                if (res?.success) {
+                    created++;
+                    // Proteger el evento recién creado para que no lo borre el exterminio
+                    if (res.googleEventId) matchedGoogleIds.add(res.googleEventId);
+                    // Guardar en Firestore para el sync individual futuro
+                    if (res.googleEventId && apt.id) {
+                        try {
+                            const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                            await updateDoc(doc(db, collectionPath, apt.id), { googleEventId: res.googleEventId });
+                        } catch (dbErr) { log.warn('No se pudo guardar googleEventId', dbErr); }
                     }
                 }
-            } catch (err) {
-                log.error(`Error en sync para cita ${apt.id}:`, err);
-                errors++;
+            } catch (e) { log.error('Error creando evento en sync', e); }
+        }
+
+        // ── PASADA 3: Exterminio de huérfanos ──────────────────────
+        // Borramos TODO evento de Google que no fue reclamado ni recién creado.
+        let ghostsDeleted = 0;
+        const orphans = googleMaps.rawEvents.filter(e => !matchedGoogleIds.has(e.id));
+        log.info(`🧹 Huérfanos a borrar: ${orphans.length} de ${googleMaps.rawEvents.length} eventos en Google`);
+
+        for (const gEvent of orphans) {
+            try {
+                await new Promise(r => setTimeout(r, 150));
+                log.warn(`👻 Borrando huérfano: "${gEvent.summary || 'Sin Título'}" ${gEvent.isoKey}`);
+                await this._callGapi(() => window.gapi.client.calendar.events.delete({
+                    calendarId: this.getCalendarId(gEvent.therapist),
+                    eventId: gEvent.id
+                }));
+                ghostsDeleted++;
+            } catch (e) {
+                log.error('Exterminio fallido para ' + gEvent.id, e);
             }
         }
 
-        const msg = `📅 Sync: ${created} nuevas, ${updated} actualizadas, ${linked} enlazadas${errors ? `, ${errors} errores` : ''}`;
-        if (!isSilent || created > 0 || updated > 0 || errors > 0) {
-            ToastService.success(msg);
-        } else {
-            log.info(msg);
-        }
-        return { created, updated, errors };
+        const msg = ghostsDeleted === 0 && created === 0
+            ? '✅ Google Calendar ya está sincronizado. No había diferencias.'
+            : `📅 Sync Total: ${created} citas creadas, ${ghostsDeleted} huérfanos borrados`;
+
+        if (!isSilent) ToastService.success(msg);
+        log.info(msg);
+        return { created, deleted: ghostsDeleted };
     }
 };
