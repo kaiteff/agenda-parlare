@@ -58,24 +58,15 @@ export const GoogleCalendarService = {
     },
 
     /**
-     * Asegura que el servicio esté listo (auto-inicializa si es necesario)
-     * @returns {boolean} true si está listo para usar
+     * Verifica que el servicio esté inicializado. NO pide token (eso lo hace syncWeek explícitamente).
+     * @returns {boolean} true si el servicio de Calendar está listo
      */
     async _ensureReady() {
         if (!GoogleAuthService.isConfigured()) return false;
 
-        // Auto-inicializar si no se ha hecho
         if (!this._enabled) {
             const ok = await this.init();
             if (!ok) return false;
-        }
-
-        // Asegurarse de que el token sea válido antes de cualquier llamada a la API
-        try {
-            await GoogleAuthService.ensureToken();
-        } catch (err) {
-            log.error('No se pudo obtener token de Google', err);
-            return false;
         }
 
         return true;
@@ -399,11 +390,24 @@ export const GoogleCalendarService = {
      * Sync masivo: Mirroring puro. Elimina huérfanos, crea faltantes.
      */
     async syncWeek(appointments, isSilent = false) {
-        if (!(await this._ensureReady())) return { created: 0, errors: 0 };
+        if (!(await this._ensureReady())) {
+            log.error('[syncWeek] Servicio de Calendar no inicializado');
+            if (!isSilent) ToastService.error('Google Calendar no disponible. Recarga la página.');
+            return { created: 0, errors: 0 };
+        }
 
+        // Verificar que el token de Google sea válido ANTES de arrancar
+        if (!GoogleAuthService.isTokenValid()) {
+            log.warn('[syncWeek] Token de Google inválido o expirado');
+            if (!isSilent) ToastService.error('Token de Google expirado. Haz clic en "Google Off" para reconectarte.');
+            return { created: 0, errors: 0 };
+        }
+
+        log.info('[syncWeek] Iniciando sincronización espejo...');
         if (!isSilent) ToastService.info('🔍 Comparando Firebase con Google Calendar...');
 
         const active = appointments.filter(a => !a.isCancelled);
+        log.info(`[syncWeek] Citas activas en Firebase: ${active.length}`);
         const googleMaps = await this._fetchGoogleEventsMap();
         
         // ── PASADA 1: Matching ─────────────────────────────────────
