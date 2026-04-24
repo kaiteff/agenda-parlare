@@ -387,6 +387,101 @@ export const GoogleCalendarService = {
     },
 
     /**
+     * NUKE TOTAL: Solo para soporte/admin.
+     * Borra ABSOLUTAMENTE TODOS los eventos de los 3 calendarios (rango 1 año atrás → 1 año adelante)
+     * y los recrea limpios desde Firebase.
+     * @param {Array} allAppointments - TODAS las citas activas de Firebase (sin filtro de semana)
+     */
+    async nukeAndRebuildAll(allAppointments) {
+        if (!(await this._ensureReady())) {
+            ToastService.error('Google Calendar no disponible. Recarga la página.');
+            return;
+        }
+        if (!GoogleAuthService.isTokenValid()) {
+            ToastService.error('Token de Google expirado. Haz clic en "Google Off" para reconectarte.');
+            return;
+        }
+
+        const active = allAppointments.filter(a => !a.isCancelled);
+        log.info(`[NUKE] Iniciando Nuke Total. Citas en Firebase: ${active.length}`);
+        ToastService.info(`💣 Nuke Total: Borrando TODO Google Calendar...`);
+
+        // Rango amplio: 1 año atrás → 1 año adelante
+        const now = new Date();
+        const timeMin = new Date(now.getFullYear() - 1, 0, 1).toISOString();
+        const timeMax = new Date(now.getFullYear() + 1, 11, 31).toISOString();
+
+        // ── FASE 1: Borrar TODO en los 3 calendarios ─────────────────────────────
+        let deleted = 0;
+        for (const [tKey, calendarId] of Object.entries(this.THERAPIST_CALENDARS)) {
+            let pageToken = null;
+            do {
+                try {
+                    const params = { calendarId, timeMin, timeMax, singleEvents: true, maxResults: 2500 };
+                    if (pageToken) params.pageToken = pageToken;
+
+                    const response = await this._callGapi(() => window.gapi.client.calendar.events.list(params));
+                    const result = response.result;
+                    const events = result.items || [];
+                    pageToken = result.nextPageToken || null;
+
+                    log.info(`[NUKE] 🗑️ ${tKey}: ${events.length} evento(s) encontrados`);
+
+                    for (const ev of events) {
+                        try {
+                            await new Promise(r => setTimeout(r, 80));
+                            await this._callGapi(() => window.gapi.client.calendar.events.delete({
+                                calendarId, eventId: ev.id
+                            }));
+                            deleted++;
+                        } catch (e) {
+                            log.warn(`[NUKE] No se pudo borrar ${ev.id}`, e);
+                        }
+                    }
+                } catch (e) {
+                    log.error(`[NUKE] Error en ${tKey}`, e);
+                    pageToken = null;
+                }
+            } while (pageToken);
+        }
+
+        log.info(`[NUKE] ✅ Fase 1 completa. Borrados: ${deleted}. Reconstruyendo ${active.length} citas...`);
+        ToastService.info(`✅ ${deleted} eventos borrados. Reconstruyendo ${active.length} citas...`);
+
+        // ── FASE 2: Crear TODAS las citas desde Firebase ─────────────────────────
+        let created = 0;
+        for (const apt of active) {
+            try {
+                await new Promise(r => setTimeout(r, 150));
+                const calendarId = this.getCalendarId(apt.therapist);
+                const event = this._toGoogleEvent(apt);
+
+                const response = await this._callGapi(() => window.gapi.client.calendar.events.insert({
+                    calendarId, resource: event
+                }));
+
+                const googleEventId = response.result.id;
+                this._setMapping(apt.id, googleEventId);
+                created++;
+
+                try {
+                    const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                    await updateDoc(doc(db, collectionPath, apt.id), { googleEventId });
+                } catch (dbErr) {
+                    log.warn('[NUKE] No se pudo guardar googleEventId', dbErr);
+                }
+            } catch (e) {
+                log.error(`[NUKE] Error creando evento para ${apt.id}`, e);
+            }
+        }
+
+        const msg = `💣 Nuke Total completado: ${deleted} borrados, ${created} recreados desde Firebase`;
+        log.info(msg);
+        ToastService.success(msg);
+    },
+
+    /**
+
      * Sync Total: Estrategia "Nuke & Replace por Semana".
      * 1. Calcula el rango de la semana visible (lunes a domingo) desde las citas
      * 2. Por cada calendario de terapeuta: borra TODOS los eventos de esa semana

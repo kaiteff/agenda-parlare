@@ -86,9 +86,9 @@ export const Header = {
                         <span id="syncStatusText">Google Sync</span>
                     </button>
 
-                    <button id="forceSyncAllBtn" class="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all font-bold" title="Sincronizar todo con Google">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        <span>Sync Total</span>
+                    <button id="forceSyncAllBtn" class="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all hidden" title="Nuke Total — Borrar y reconstruir TODO Google Calendar desde Firebase">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span>Nuke</span>
                     </button>
 
                     <button id="logoutBtn" class="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
@@ -602,18 +602,19 @@ export const Header = {
                 return;
             }
 
-            // 6. Botón de Sincronización Total Dedicado
+            // 6. Botón Nuke Total (Solo Soporte) → borra TODO Google Calendar y recrea desde Firebase
             const forceSyncAllBtn = e.target.closest('#forceSyncAllBtn');
             if (forceSyncAllBtn) {
                 e.preventDefault();
                 e.stopPropagation();
                 try {
                     const { GoogleCalendarService } = await import('../services/google/GoogleCalendarService.js');
+                    const { db, collection, getDocs } = await import('../firebase.js');
                     
                     const confirmed = await ModalService.confirm(
-                        "Sincronización Total",
-                        "¿Deseas sincronizar todas las citas visibles con tu Google Calendar?<br><small>(Esto enviará lo que Diana creó a tu calendario)</small>",
-                        "Sí, Sincronizar",
+                        "💣 Nuke Total — Solo Soporte",
+                        "Esto borrará <strong>ABSOLUTAMENTE TODOS</strong> los eventos de Google Calendar (los 3 calendarios) y los recreará limpios desde Firebase.<br><br><small>⏱️ Puede tardar varios minutos dependiendo del número de citas.</small>",
+                        "Sí, Nuke Total",
                         "Cancelar"
                     );
                     
@@ -621,17 +622,25 @@ export const Header = {
                         forceSyncAllBtn.disabled = true;
                         forceSyncAllBtn.classList.add('opacity-50', 'animate-pulse');
                         
-                        await GoogleCalendarService.syncWeek(CalendarState.appointments);
+                        // Obtener TODAS las citas de Firebase (no solo las de la semana visible)
+                        const { collectionPath } = await import('../firebase.js');
+                        const snapshot = await getDocs(collection(db, collectionPath));
+                        const allAppointments = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                        
+                        await GoogleCalendarService.nukeAndRebuildAll(allAppointments);
                         
                         forceSyncAllBtn.disabled = false;
                         forceSyncAllBtn.classList.remove('opacity-50', 'animate-pulse');
                     }
                 } catch (err) {
-                    console.error("Force Sync failed:", err);
-                    ToastService.error("Error al sincronizar.");
+                    console.error("Nuke Total failed:", err);
+                    ToastService.error("Error en el Nuke Total: " + err.message);
+                    document.getElementById('forceSyncAllBtn')?.classList.remove('opacity-50', 'animate-pulse');
+                    document.getElementById('forceSyncAllBtn') && (document.getElementById('forceSyncAllBtn').disabled = false);
                 }
                 return;
             }
+
 
             // 7. Botón Configuración Admin
             const adminSettingsBtn = e.target.closest('#adminSettingsBtn');
