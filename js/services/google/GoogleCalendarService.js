@@ -507,21 +507,40 @@ export const GoogleCalendarService = {
             return { created: 0, deleted: 0 };
         }
 
-        // ── PASO 1: Calcular rango de la semana visible ───────────────────────────
-        // Usamos las fechas min/max de las citas recibidas para definir el rango exacto
-        const dates = active.map(a => a.date.slice(0, 10)).sort();
-        const weekStart = dates[0];                // primer día con citas
-        const weekEnd   = dates[dates.length - 1]; // último día con citas
+        // Importaciones dinámicas para evitar dependencias circulares
+        const { CalendarState } = await import('../../modules/calendar/CalendarState.js');
+        const { AuthManager } = await import('../../managers/AuthManager.js');
 
-        const timeMin = `${weekStart}T00:00:00-06:00`;
-        const timeMax = `${weekEnd}T23:59:59-06:00`;
+        // ── PASO 1: Calcular rango estricto de la semana visible ──────────────────
+        // La semana empieza en CalendarState.currentDate y dura 7 días.
+        const weekStartDate = CalendarState.currentDate || new Date();
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setDate(weekStartDate.getDate() + 6);
 
-        log.info(`[syncWeek] Semana a sincronizar: ${weekStart} → ${weekEnd} | Citas: ${active.length}`);
-        if (!isSilent) ToastService.info(`🧹 Limpiando semana ${weekStart} → ${weekEnd} en Google Calendar...`);
+        // Formateo YYYY-MM-DD
+        const startStr = weekStartDate.toISOString().slice(0, 10);
+        const endStr = weekEndDate.toISOString().slice(0, 10);
 
-        // ── PASO 2: Borrar TODOS los eventos de la semana (1 llamada por calendario) ──
+        const timeMin = `${startStr}T00:00:00-06:00`;
+        const timeMax = `${endStr}T23:59:59-06:00`;
+
+        // ── PASO 2: Determinar qué calendarios afectar ────────────────────────────
+        const selectedTherapist = AuthManager.getSelectedTherapist();
+        const isViewAll = !selectedTherapist || selectedTherapist === 'all';
+        const therapistsToSync = isViewAll 
+            ? Object.keys(this.THERAPIST_CALENDARS) 
+            : [selectedTherapist.toLowerCase()];
+
+        const filterName = isViewAll ? "Todos los Terapeutas" : selectedTherapist;
+        log.info(`[syncWeek] Filtro activo: ${filterName}. Semana: ${startStr} → ${endStr}`);
+        if (!isSilent) ToastService.info(`🧹 Limpiando ${filterName} (${startStr} a ${endStr})...`);
+
+        // ── PASO 3: Borrar eventos SOLO de los calendarios afectados ─────────────
         let deleted = 0;
-        for (const [tKey, calendarId] of Object.entries(this.THERAPIST_CALENDARS)) {
+        for (const tKey of therapistsToSync) {
+            const calendarId = this.THERAPIST_CALENDARS[tKey];
+            if (!calendarId) continue;
+            
             try {
                 const response = await this._callGapi(() => window.gapi.client.calendar.events.list({
                     calendarId,
@@ -551,14 +570,22 @@ export const GoogleCalendarService = {
             }
         }
 
-        log.info(`[syncWeek] ✅ Borrados: ${deleted}. Creando ${active.length} citas desde Firebase...`);
+        log.info(`[syncWeek] ✅ Borrados: ${deleted}. Creando citas desde Firebase...`);
 
-        // ── PASO 3: Crear todos los eventos desde Firebase (pizarrón limpio) ─────
+        // ── PASO 4: Crear todos los eventos desde Firebase ────────────────────────
         let created = 0;
         for (const apt of active) {
+            // Filtrar estrictamente por fecha
+            const aptDateStr = apt.date.slice(0, 10);
+            if (aptDateStr < startStr || aptDateStr > endStr) continue;
+
+            // Filtrar estrictamente por terapeuta
+            const tKey = (apt.therapist || 'diana').toLowerCase();
+            if (!therapistsToSync.includes(tKey)) continue;
+
             try {
                 await new Promise(r => setTimeout(r, 150));
-                const calendarId = this.getCalendarId(apt.therapist);
+                const calendarId = this.THERAPIST_CALENDARS[tKey];
                 const event = this._toGoogleEvent(apt);
 
                 const response = await this._callGapi(() => window.gapi.client.calendar.events.insert({
@@ -570,7 +597,7 @@ export const GoogleCalendarService = {
                 this._setMapping(apt.id, googleEventId);
                 created++;
 
-                // Guardar googleEventId en Firestore para el sync individual futuro
+                // Guardar googleEventId en Firestore
                 try {
                     const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
                     await updateDoc(doc(db, collectionPath, apt.id), { googleEventId });
@@ -582,7 +609,7 @@ export const GoogleCalendarService = {
             }
         }
 
-        const msg = `✅ Sync Semana: ${deleted} borrados de Google, ${created} creados desde Firebase`;
+        const msg = `✅ Sync Semana: ${deleted} borrados, ${created} recreados (${filterName})`;
         log.info('[syncWeek]', msg);
         if (!isSilent) ToastService.success(msg);
         return { created, deleted };
