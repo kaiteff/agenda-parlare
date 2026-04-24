@@ -249,7 +249,7 @@ def home():
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
     </style></head><body>
     <div class="container">
-        <img src="https://firebasestorage.googleapis.com/v0/b/taconotaco-d94fc.appspot.com/o/WhatsApp%20Image%202025-02-05%20at%2018.41.31.jpeg?alt=media&token=737229a8-8e68-45ec-9ec5-b69c4c776a3b" class="logo-img" alt="Parláre Logo">
+        <img src="https://taconotaco-d94fc.web.app/assets/parlare_logo.png" class="logo-img" alt="Parláre Logo" style="border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
         <h1>Centro de Atención</h1>
         <p>Messaging & Notifications</p>
         <div class="status"><div class="status-dot"></div> Sistema Operativo</div>
