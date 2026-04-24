@@ -69,6 +69,16 @@ export const GoogleCalendarService = {
             const ok = await this.init();
             if (!ok) return false;
         }
+
+        // Asegurarse de que el token sea válido antes de cualquier llamada a la API
+        try {
+            await GoogleAuthService.ensureToken();
+        } catch (err) {
+            log.error('No se pudo obtener token de Google', err);
+            return false;
+        }
+
+        return true;
     },
 
     /**
