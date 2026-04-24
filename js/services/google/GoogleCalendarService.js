@@ -387,110 +387,110 @@ export const GoogleCalendarService = {
     },
 
     /**
-     * Sync masivo: Mirroring puro. Elimina huérfanos, crea faltantes.
+     * Sync Total: Estrategia "Nuke & Replace por Día".
+     * Por cada día que tenga citas en Firebase:
+     *   1. Borra TODO lo que hay en Google Calendar ese día (los 3 calendarios)
+     *   2. Crea los eventos limpios desde Firebase
+     * Firebase siempre gana. Sin comparaciones, sin duplicados posibles.
      */
     async syncWeek(appointments, isSilent = false) {
         if (!(await this._ensureReady())) {
             log.error('[syncWeek] Servicio de Calendar no inicializado');
             if (!isSilent) ToastService.error('Google Calendar no disponible. Recarga la página.');
-            return { created: 0, errors: 0 };
+            return { created: 0, deleted: 0 };
         }
 
-        // Verificar que el token de Google sea válido ANTES de arrancar
         if (!GoogleAuthService.isTokenValid()) {
             log.warn('[syncWeek] Token de Google inválido o expirado');
             if (!isSilent) ToastService.error('Token de Google expirado. Haz clic en "Google Off" para reconectarte.');
-            return { created: 0, errors: 0 };
+            return { created: 0, deleted: 0 };
         }
-
-        log.info('[syncWeek] Iniciando sincronización espejo...');
-        if (!isSilent) ToastService.info('🔍 Comparando Firebase con Google Calendar...');
 
         const active = appointments.filter(a => !a.isCancelled);
-        log.info(`[syncWeek] Citas activas en Firebase: ${active.length}`);
-        const googleMaps = await this._fetchGoogleEventsMap();
-        
-        // ── PASADA 1: Matching ─────────────────────────────────────
-        // Para cada cita en Firebase, intentamos encontrar su evento en Google.
-        // Si lo encontramos → lo protegemos (matchedGoogleIds).
-        // Si no existe → lo marcamos para crear (unlinked).
-        const matchedGoogleIds = new Set();
-        const unlinked = [];
+        log.info(`[syncWeek] Iniciando Nuke & Replace. Citas en Firebase: ${active.length}`);
+        if (!isSilent) ToastService.info(`🧹 Limpiando y reconstruyendo ${active.length} citas en Google Calendar...`);
 
+        // ── PASO 1: Recolectar días únicos por terapeuta ──────────────────────────
+        const daysByTherapist = { diana: new Set(), sam: new Set(), vero: new Set() };
         for (const apt of active) {
-            const isoKey = new Date(apt.date).toISOString().slice(0, 16);
-            const nameNorm = (apt.name || '').toLowerCase().trim().replace(/\s+/g, '');
-            const therapist = (apt.therapist || 'diana').toLowerCase();
-
-            // Prioridad 1: Match exacto por googleEventId guardado en Firestore
-            if (apt.googleEventId && googleMaps.rawEvents.some(e => e.id === apt.googleEventId)) {
-                matchedGoogleIds.add(apt.googleEventId);
-                continue;
-            }
-
-            // Prioridad 2: Match por nombre + hora + terapeuta (1 a 1)
-            const candidate = googleMaps.rawEvents.find(e =>
-                !matchedGoogleIds.has(e.id) &&
-                e.therapist === therapist &&
-                e.isoKey === isoKey &&
-                e.nameNorm === nameNorm
-            );
-
-            if (candidate) {
-                matchedGoogleIds.add(candidate.id);
-            } else {
-                unlinked.push(apt); // No tiene par en Google → hay que crearlo
-            }
+            const day = apt.date.slice(0, 10); // "YYYY-MM-DD"
+            const t = (apt.therapist || 'diana').toLowerCase();
+            if (daysByTherapist[t]) daysByTherapist[t].add(day);
         }
+        log.info('[syncWeek] Días afectados — Diana:', daysByTherapist.diana.size, '| Sam:', daysByTherapist.sam.size, '| Vero:', daysByTherapist.vero.size);
 
-        // ── PASADA 2: Creación de faltantes ────────────────────────
-        // Solo creamos citas que no tienen ningún evento en Google.
-        let created = 0;
-        for (const apt of unlinked) {
-            try {
-                await new Promise(r => setTimeout(r, 250));
-                const res = await this.createEvent(apt);
-                if (res?.success) {
-                    created++;
-                    // Proteger el evento recién creado para que no lo borre el exterminio
-                    if (res.googleEventId) matchedGoogleIds.add(res.googleEventId);
-                    // Guardar en Firestore para el sync individual futuro
-                    if (res.googleEventId && apt.id) {
+        // ── PASO 2: Borrar TODOS los eventos de Google en esos días ──────────────
+        let deleted = 0;
+        for (const [tKey, days] of Object.entries(daysByTherapist)) {
+            if (days.size === 0) continue;
+            const calendarId = this.THERAPIST_CALENDARS[tKey];
+
+            for (const day of days) {
+                try {
+                    const response = await this._callGapi(() => window.gapi.client.calendar.events.list({
+                        calendarId,
+                        timeMin: `${day}T00:00:00-06:00`,
+                        timeMax: `${day}T23:59:59-06:00`,
+                        singleEvents: true,
+                        maxResults: 500
+                    }));
+
+                    const events = response.result.items || [];
+                    log.info(`[syncWeek] 🗑️ ${tKey} / ${day}: ${events.length} evento(s) a borrar`);
+
+                    for (const ev of events) {
                         try {
-                            const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
-                            await updateDoc(doc(db, collectionPath, apt.id), { googleEventId: res.googleEventId });
-                        } catch (dbErr) { log.warn('No se pudo guardar googleEventId', dbErr); }
+                            await new Promise(r => setTimeout(r, 100));
+                            await this._callGapi(() => window.gapi.client.calendar.events.delete({
+                                calendarId,
+                                eventId: ev.id
+                            }));
+                            deleted++;
+                        } catch (e) {
+                            log.warn(`No se pudo borrar evento ${ev.id}`, e);
+                        }
                     }
+                } catch (e) {
+                    log.warn(`Error listando eventos de ${tKey} el ${day}`, e);
                 }
-            } catch (e) { log.error('Error creando evento en sync', e); }
-        }
-
-        // ── PASADA 3: Exterminio de huérfanos ──────────────────────
-        // Borramos TODO evento de Google que no fue reclamado ni recién creado.
-        let ghostsDeleted = 0;
-        const orphans = googleMaps.rawEvents.filter(e => !matchedGoogleIds.has(e.id));
-        log.info(`🧹 Huérfanos a borrar: ${orphans.length} de ${googleMaps.rawEvents.length} eventos en Google`);
-
-        for (const gEvent of orphans) {
-            try {
-                await new Promise(r => setTimeout(r, 150));
-                log.warn(`👻 Borrando huérfano: "${gEvent.summary || 'Sin Título'}" ${gEvent.isoKey}`);
-                await this._callGapi(() => window.gapi.client.calendar.events.delete({
-                    calendarId: this.getCalendarId(gEvent.therapist),
-                    eventId: gEvent.id
-                }));
-                ghostsDeleted++;
-            } catch (e) {
-                log.error('Exterminio fallido para ' + gEvent.id, e);
             }
         }
 
-        const msg = ghostsDeleted === 0 && created === 0
-            ? '✅ Google Calendar ya está sincronizado. No había diferencias.'
-            : `📅 Sync Total: ${created} citas creadas, ${ghostsDeleted} huérfanos borrados`;
+        log.info(`[syncWeek] ✅ Paso 2 completo. Borrados: ${deleted}. Creando eventos desde Firebase...`);
 
+        // ── PASO 3: Crear todos los eventos desde Firebase (pizarrón limpio) ─────
+        let created = 0;
+        for (const apt of active) {
+            try {
+                await new Promise(r => setTimeout(r, 200));
+                const calendarId = this.getCalendarId(apt.therapist);
+                const event = this._toGoogleEvent(apt);
+
+                const response = await this._callGapi(() => window.gapi.client.calendar.events.insert({
+                    calendarId,
+                    resource: event
+                }));
+
+                const googleEventId = response.result.id;
+                this._setMapping(apt.id, googleEventId);
+                created++;
+
+                // Guardar el nuevo googleEventId en Firestore para el sync individual futuro
+                try {
+                    const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                    await updateDoc(doc(db, collectionPath, apt.id), { googleEventId });
+                } catch (dbErr) {
+                    log.warn('No se pudo guardar googleEventId en Firestore', dbErr);
+                }
+            } catch (e) {
+                log.error(`Error creando evento para cita ${apt.id}`, e);
+            }
+        }
+
+        const msg = `✅ Sync Total: ${deleted} borrados de Google, ${created} creados desde Firebase`;
+        log.info('[syncWeek]', msg);
         if (!isSilent) ToastService.success(msg);
-        log.info(msg);
-        return { created, deleted: ghostsDeleted };
+        return { created, deleted };
     }
 };
+
