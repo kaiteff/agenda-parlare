@@ -124,26 +124,19 @@ def update_google_sheet(appointment, status):
     except Exception as e:
         print(f"❌ Error Sync Sheet: {e}")
 
+THERAPIST_CALENDARS = {
+    'diana': '3c4ab8fa048916ce6ce6d2891926a646a4728d1a9ad3edf43ef56f478680c958@group.calendar.google.com',
+    'vero': 'b66fd1b4b55d6fe42ee578696e79aaaa6445b2d744050e8fc90b81c395bd291e@group.calendar.google.com',
+    'sam': '6ff316ac3643f346833cc816cb0fc4020ea89ec923a4ca6681a39550f814daa5@group.calendar.google.com'
+}
+
 def update_google_calendar(appointment, status_text):
     if not calendar_service or not appointment.get('googleEventId'): return
     try:
-        # 1. Encontrar el calendario "Parlare Citas"
-        cal_list = calendar_service.calendarList().list().execute()
-        calendars = cal_list.get('items', [])
-        
-        # Log available calendars for debugging
-        print(f"📊 Calendarios disponibles: {[c.get('summary') for c in calendars]}")
-        
-        parlare_cal = next((c for c in calendars if c.get('summary') == 'Parlare Citas'), None)
-        
-        if not parlare_cal:
-            print("⚠️ Calendario 'Parlare Citas' no encontrado en la cuenta de servicio.")
-            # Si no existe, usamos 'primary', pero probablemente no sea lo que buscamos
-            target_cal_id = 'primary'
-        else:
-            target_cal_id = parlare_cal['id']
+        therapist = appointment.get('therapist', 'diana').lower()
+        target_cal_id = THERAPIST_CALENDARS.get(therapist, THERAPIST_CALENDARS['diana'])
             
-        print(f"📡 Sync Calendar: Usando calendario ID: {target_cal_id}")
+        print(f"📡 Sync Calendar: Usando calendario ID: {target_cal_id} (Terapeuta: {therapist})")
 
         # 2. Obtener el evento
         event = calendar_service.events().get(
@@ -319,7 +312,8 @@ def webhook():
             print("✅ Confirmación recibida")
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
-                    'status': 'CONFIRMADO', 
+                    'confirmed': True, 
+                    'confirmedAt': firestore.SERVER_TIMESTAMP,
                     'lastBotUpdate': 'WhatsApp-Confirm'
                 })
                 update_google_sheet(a, "CONFIRMADO")
