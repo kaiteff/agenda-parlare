@@ -1,0 +1,7 @@
+# Backup 2026-04-28 (STABLE)
+
+- Fixes `normalizeName` crash on Calendar empty cells.
+- Fixes `genericModal` z-index so confirm dialogs appear above `auditLogModal`.
+- Expands HelpManual.
+- Implements Audit Log auto-cleanup (60+ days) functionality.
+- Confirmed Cost/Commission settings and Cash Drawer (Corte) works perfectly.
