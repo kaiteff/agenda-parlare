@@ -149,6 +149,8 @@ export const CalendarModal = {
         this.renderDailySlots(date);
 
         dom.eventModal.classList.remove('hidden');
+        dom.eventModal.style.setProperty('display', 'flex', 'important');
+        dom.eventModal.style.setProperty('z-index', '9999', 'important');
         dom.patientSearchInput.focus();
     },
 
