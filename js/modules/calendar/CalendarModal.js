@@ -11,7 +11,7 @@ import { CalendarSuggestions } from './CalendarSuggestions.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
-import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday, isSlotFree } from '../../utils/validators.js';
+import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday, isSlotFree, normalizeName } from '../../utils/validators.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
