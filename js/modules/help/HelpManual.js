@@ -110,10 +110,39 @@ export const HelpManual = {
                                         En la lista lateral, los pacientes con deuda aparecen con un punto <span class="text-orange-500 font-bold">Naranja</span>. Si están al corriente, el punto es <span class="text-green-500 font-bold">Verde</span>.
                                     </p>
                                 </div>
+                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                                    <h4 class="font-bold text-gray-800 mb-2">🔄 Sincronización y Google Calendar</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">
+                                        El sistema se sincroniza <strong>automáticamente</strong> con Google Calendar en tiempo real.
+                                        <strong class="text-red-500">IMPORTANTE:</strong> No modifiques ni elimines citas directamente desde la app de Google Calendar, ya que podrías romper la sincronización. Si necesitas mover una cita, usa la app de Parláre arrastrando y soltando la cita.
+                                    </p>
+                                </div>
                             </div>
                         </section>
 
-                        <!-- Sección 4: Recomendaciones -->
+                        <!-- Sección 4: Administración y Reportes -->
+                        <section>
+                            <h3 class="text-purple-600 font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
+                                <span class="w-1.5 h-6 bg-purple-600 rounded-full"></span>
+                                📊 Administración y Cortes
+                            </h3>
+                            <div class="grid gap-4">
+                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                                    <h4 class="font-bold text-gray-800 mb-2">💵 Cortes de Caja</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">
+                                        En el menú lateral (abajo a la izquierda), encontrarás el botón de <strong>Corte</strong>. Este genera un resumen automático del día: citas atendidas, cobradas y desglose por terapeuta. Puedes copiar el reporte para enviarlo por WhatsApp a Diana.
+                                    </p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                                    <h4 class="font-bold text-gray-800 mb-2">⚙️ Configuración (Costos y Comisiones)</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">
+                                        En el engrane de arriba a la derecha, los administradores pueden abrir el Panel de Configuración. Ahí se pueden configurar los temas clínicos y establecer la <strong>Cuota Base y Comisión</strong> para cada terapeuta (Diana, Sam, Vero). Estos costos se aplican automáticamente al crear nuevos pacientes.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Sección 5: Recomendaciones -->
                         <div class="p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
                             <h4 class="font-bold text-indigo-900 mb-2 flex items-center gap-2">
                                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM14.586 15.414a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM7.071 14.343a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707z"></path></svg>

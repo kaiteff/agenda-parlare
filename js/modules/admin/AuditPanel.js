@@ -5,8 +5,43 @@
 
 import { db, collection, query, orderBy, limit, getDocs } from '../../firebase.js';
 import { AuthManager } from '../../managers/AuthManager.js';
+import { AuditService } from '../../services/AuditService.js';
+import { ModalService } from '../../utils/ModalService.js';
+import { ToastService } from '../../utils/ToastService.js';
 
 export const AuditPanel = {
+    async cleanup() {
+        if (!AuthManager.isAdmin()) return;
+        
+        const confirmed = await ModalService.confirm(
+            '¿Limpiar Registros Antiguos?',
+            'Se eliminarán permanentemente todos los registros de auditoría con más de 60 días de antigüedad. Esto ayuda a mantener la base de datos rápida y económica. ¿Deseas continuar?',
+            'Limpiar',
+            'Cancelar'
+        );
+
+        if (!confirmed) return;
+
+        const btn = document.getElementById('cleanupAuditBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Limpiando...';
+        }
+
+        const result = await AuditService.cleanupOldLogs(60);
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Limpiar Antiguos (60+ días)`;
+        }
+
+        if (result.success) {
+            ToastService.success(result.msg);
+            this.open(); // Refresh list
+        } else {
+            ToastService.error('Error al limpiar: ' + result.msg);
+        }
+    },
     async open() {
         if (!AuthManager.isAdmin()) {
             console.warn('🚫 AuditPanel: Acceso denegado.');
