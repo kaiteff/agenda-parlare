@@ -44,11 +44,23 @@ export const WhatsAppDashboard = {
                     <span class="text-lg font-black text-orange-600">${stats.pending}</span>
                     <span class="text-[9px] text-orange-500 font-bold uppercase">Pend.</span>
                 </div>
-                <div class="bg-white/60 rounded-lg p-2 border border-red-100 flex flex-col items-center">
+                <div class="bg-white/60 rounded-lg p-2 border border-red-100 flex flex-col items-center cursor-pointer" title="${stats.cancelledNames.join('\n') || 'Sin cancelados'}">
                     <span class="text-lg font-black text-red-500">${stats.cancelled}</span>
                     <span class="text-[9px] text-red-400 font-bold uppercase">Canc.</span>
                 </div>
             </div>
+            
+            ${stats.cancelled > 0 ? `
+                <div class="mt-2 bg-red-50 border border-red-100 rounded-lg px-2 py-1.5">
+                    <p class="text-[9px] font-bold text-red-600 uppercase mb-1">❌ Cancelados mañana:</p>
+                    ${stats.cancelledApts.map(a => `
+                        <div class="flex items-start justify-between gap-1 py-0.5 border-b border-red-100 last:border-0">
+                            <span class="text-[10px] font-semibold text-red-800">${a.name?.split(' ').slice(0,2).join(' ') || '?'}</span>
+                            <span class="text-[9px] text-red-500 shrink-0">${a.cancelledBy ? '🤖 WA' : a.updatedBy ? a.updatedBy.split('@')[0] : '—'}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
             
             ${stats.pending > 0 ? `
                 <button id="sendManualRemindersBtn" class="w-full mt-2 py-1 text-[10px] bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition-colors shadow-sm">
@@ -100,9 +112,18 @@ export const WhatsAppDashboard = {
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         
         const currentTherapist = AuthManager.getSelectedTherapist();
+
+        // Helper robusto: acepta string ISO y Firestore Timestamp
+        const getDateStr = (d) => {
+            if (!d) return '';
+            if (typeof d === 'string') return d.split('T')[0];
+            if (d.toDate) return d.toDate().toISOString().split('T')[0]; // Firestore Timestamp
+            if (d instanceof Date) return d.toISOString().split('T')[0];
+            return '';
+        };
         
         const tomorrowsApts = CalendarState.appointments.filter(a => {
-            const dateStr = a.date.split('T')[0];
+            const dateStr = getDateStr(a.date);
             const isTomorrow = dateStr === tomorrowStr;
             const matchesTherapist = currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist;
             
@@ -118,9 +139,9 @@ export const WhatsAppDashboard = {
             return isTomorrow && matchesTherapist && !a.isCancelled && !isBlock;
         });
 
-        // Contar canceladas de mañana específicamente (aunque las filtramos arriba para el total activo)
+        // Contar canceladas de mañana específicamente
         const cancelledApts = CalendarState.appointments.filter(a => {
-             const dateStr = a.date.split('T')[0];
+             const dateStr = getDateStr(a.date);
              return dateStr === tomorrowStr && a.isCancelled && (currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist);
         });
 
@@ -128,7 +149,9 @@ export const WhatsAppDashboard = {
             total: tomorrowsApts.length,
             confirmed: tomorrowsApts.filter(a => a.confirmed).length,
             pending: tomorrowsApts.filter(a => !a.confirmed).length,
-            cancelled: cancelledApts.length
+            cancelled: cancelledApts.length,
+            cancelledApts: cancelledApts,
+            cancelledNames: cancelledApts.map(a => a.name || '?')
         };
     }
 };

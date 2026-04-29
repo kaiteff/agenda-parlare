@@ -324,6 +324,8 @@ def webhook():
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
                     'isCancelled': True, 
+                    'cancelledBy': 'WhatsApp',
+                    'cancelledAt': firestore.SERVER_TIMESTAMP,
                     'lastBotUpdate': 'WhatsApp-Cancel'
                 })
                 update_google_sheet(a, "CANCELADO")

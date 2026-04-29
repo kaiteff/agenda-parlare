@@ -110,7 +110,7 @@ export const MainModals = {
                             <button id="saveBtn" class="col-span-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-md">Guardar Cita</button>
                             <div class="col-span-2 flex gap-2">
                                 <button id="payBtn" class="hidden flex-1 bg-green-100 text-green-700 py-2 rounded-lg hover:bg-green-200 font-semibold">Pagado</button>
-                                <button id="cancelBtn" onclick="import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="hidden flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 font-semibold">Cerrar</button>
+                                <button id="cancelBtn" class="hidden flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 font-semibold">Cancelar Cita</button>
                                 <button id="deleteBtn" class="hidden flex-1 bg-red-100 text-red-700 py-2 rounded-lg hover:bg-red-200 font-semibold">Eliminar</button>
                             </div>
                         </div>
