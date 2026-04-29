@@ -1,10 +1,6 @@
-/**
- * AuditService.js
- * Servicio para registrar acciones críticas (Auditoría)
- */
-
-import { db, serverTimestamp, collection, addDoc, query, where, getDocs, deleteDoc, doc } from '../firebase.js';
+import { db, serverTimestamp, collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from '../firebase.js';
 import { AuthManager } from '../managers/AuthManager.js';
+import { SheetService } from './google/SheetService.js';
 
 export const AuditService = {
     /**
@@ -28,10 +24,45 @@ export const AuditService = {
                 userRole: user?.role || 'unknown'
             };
 
+            // 1. Guardar en Firestore (Vista rápida 60 días)
             await addDoc(collection(db, 'audit_logs'), logEntry);
+            
+            // 2. Guardar en Google Sheets (Archivo Permanente)
+            // No esperamos a que termine para no bloquear la UI
+            SheetService.logAudit({ ...logEntry, timestamp: new Date() }).catch(err => {
+                console.warn('⚠️ Error enviando log a Sheets:', err);
+            });
+
             console.log(`📝 Audit: [${action}] por ${logEntry.userName}`);
         } catch (error) {
             console.error('❌ Error al registrar log de auditoría:', error);
+        }
+    },
+
+    /**
+     * Exporta todos los logs actuales a la hoja de cálculo
+     */
+    async exportToSheets() {
+        if (!AuthManager.isAdmin()) return { success: false, msg: 'Acceso denegado' };
+        try {
+            const logsRef = collection(db, 'audit_logs');
+            const q = query(logsRef, orderBy('timestamp', 'asc'));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) return { success: true, msg: 'No hay logs para exportar.' };
+
+            console.log(`📤 Exportando ${snapshot.size} logs a Google Sheets...`);
+            let exported = 0;
+            for (const docSnap of snapshot.docs) {
+                const logData = docSnap.data();
+                const success = await SheetService.logAudit(logData);
+                if (success) exported++;
+            }
+
+            return { success: true, msg: `Se exportaron ${exported} registros a la hoja permanente de Excel.` };
+        } catch (error) {
+            console.error('❌ Error exportando logs:', error);
+            return { success: false, msg: error.message };
         }
     },
 

@@ -10,13 +10,34 @@ import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 
 export const AuditPanel = {
+    async export() {
+        if (!AuthManager.isAdmin()) return;
+        const btn = document.getElementById('exportAuditBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Exportando...';
+        }
+
+        const result = await AuditService.exportToSheets();
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Exportar a Excel`;
+        }
+
+        if (result.success) {
+            ToastService.success(result.msg);
+        } else {
+            ToastService.error('Error al exportar: ' + result.msg);
+        }
+    },
     async cleanup() {
         if (!AuthManager.isAdmin()) return;
         
         const confirmed = await ModalService.confirm(
-            '¿Limpiar Registros Antiguos?',
-            'Se eliminarán permanentemente todos los registros de auditoría con más de 60 días de antigüedad. Esto ayuda a mantener la base de datos rápida y económica. ¿Deseas continuar?',
-            'Limpiar',
+            '⚠️ ¿Limpiar Registros Antiguos?',
+            'Se eliminarán de la App los registros de más de 60 días.<br><br><strong>Recomendación:</strong> Asegúrate de haber exportado a Excel primero si necesitas conservarlos por años.',
+            'Limpiar App',
             'Cancelar'
         );
 

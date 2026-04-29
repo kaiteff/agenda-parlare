@@ -206,6 +206,43 @@ export const SheetService = {
     },
 
     /**
+     * Registra un evento de auditoría en la hoja global (Bitácora)
+     * @param {Object} auditData { action, type, targetId, details, userName, timestamp }
+     */
+    async logAudit(auditData) {
+        // Usamos la hoja de Diana como repositorio central de auditoría
+        const targetSpreadsheetId = this.config.spreadsheets.diana;
+        if (!targetSpreadsheetId) return false;
+
+        try {
+            await GoogleAuthService.ensureToken();
+
+            const date = auditData.timestamp?.toDate ? auditData.timestamp.toDate() : new Date(auditData.timestamp || Date.now());
+            const values = [[
+                date.toLocaleString('es-MX'), // Fecha/Hora legible
+                auditData.userName || 'Sistema',
+                auditData.action,
+                auditData.type || 'N/A',
+                auditData.details?.patientName || 'N/A',
+                auditData.details?.therapist || 'N/A',
+                JSON.stringify(auditData.details || {}),
+                auditData.targetId || ''
+            ]];
+
+            await window.gapi.client.sheets.spreadsheets.values.append({
+                spreadsheetId: targetSpreadsheetId,
+                range: 'Bitacora!A:H', // Pestaña dedicada
+                valueInputOption: 'USER_ENTERED',
+                resource: { values: values },
+            });
+            return true;
+        } catch (err) {
+            console.warn('⚠️ SheetService: No se pudo registrar auditoría en Excel:', err);
+            return false;
+        }
+    },
+
+    /**
      * Elimina del Sheet todos los registros de pacientes que NO están activos
      * @param {string} therapist - El terapeuta cuya hoja limpiar
      * @param {Array<string>} activePatientNames - Lista de nombres de pacientes activos
