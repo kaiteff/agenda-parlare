@@ -252,17 +252,54 @@ export const CalendarModal = {
             ? "w-full bg-gray-100 text-gray-600 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors flex items-center justify-center gap-2 mb-1 text-sm font-medium"
             : "w-full bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1";
 
-        if (dom.confirmedAtLabel && ev.confirmed) {
-            dom.confirmedAtLabel.classList.remove('hidden');
-            let ds = '';
-            if (ev.confirmedAt && ev.confirmedAt.toDate) { // Firestore Date
-                ds = ev.confirmedAt.toDate().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
-            } else if (ev.confirmedAt) { // ISO String
-                ds = new Date(ev.confirmedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+        // AUDITORÍA
+        if (dom.appointmentAuditInfo) {
+            dom.appointmentAuditInfo.classList.add('hidden');
+            let hasAudit = false;
+
+            // 1. Confirmación
+            if (dom.confirmedAtLabel) {
+                if (ev.confirmed) {
+                    let ds = '';
+                    if (ev.confirmedAt && ev.confirmedAt.toDate) ds = ev.confirmedAt.toDate().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+                    else if (ev.confirmedAt) ds = new Date(ev.confirmedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+                    
+                    const span = dom.confirmedAtLabel.querySelector('span:last-child');
+                    if (span) span.textContent = ds ? `Confirmado el: ${ds}` : 'Confirmado';
+                    dom.confirmedAtLabel.classList.remove('hidden');
+                    hasAudit = true;
+                } else {
+                    dom.confirmedAtLabel.classList.add('hidden');
+                }
             }
-            dom.confirmedAtLabel.textContent = ds ? `Confirmado el: ${ds}` : 'Confirmado';
-        } else if (dom.confirmedAtLabel) {
-            dom.confirmedAtLabel.classList.add('hidden');
+
+            // 2. Cancelación
+            if (dom.cancelledByLabel) {
+                if (ev.isCancelled) {
+                    const source = ev.cancelledBy === 'WhatsApp' ? '🤖 WhatsApp' : (ev.cancelledBy || 'Manual');
+                    const span = dom.cancelledByLabel.querySelector('span:last-child');
+                    if (span) span.textContent = `Cancelado por: ${source}`;
+                    dom.cancelledByLabel.classList.remove('hidden');
+                    hasAudit = true;
+                } else {
+                    dom.cancelledByLabel.classList.add('hidden');
+                }
+            }
+
+            // 3. Reagendamiento
+            if (dom.rescheduledByLabel) {
+                if (ev.rescheduledFromId) {
+                    const source = ev.rescheduleSource || 'Manual';
+                    const span = dom.rescheduledByLabel.querySelector('span:last-child');
+                    if (span) span.textContent = `Reagendado por: ${source}`;
+                    dom.rescheduledByLabel.classList.remove('hidden');
+                    hasAudit = true;
+                } else {
+                    dom.rescheduledByLabel.classList.add('hidden');
+                }
+            }
+
+            if (hasAudit) dom.appointmentAuditInfo.classList.remove('hidden');
         }
 
         // Pay button state
@@ -475,6 +512,11 @@ export const CalendarModal = {
                 isFullDayBlock: false // we distinguish from full day
             };
 
+            if (CalendarState.rescheduledFromId) {
+                appointmentData.rescheduledFromId = CalendarState.rescheduledFromId;
+                appointmentData.rescheduleSource = AuthManager.currentUser?.email || 'Manual';
+            }
+
             if (isSchoolVisit || isBlock) {
                 // No interactuar con pacientes, solo guardar el evento
                 appointmentData.name = name;
@@ -529,6 +571,7 @@ export const CalendarModal = {
                     }
                 }
             }
+            CalendarState.rescheduledFromId = null;
             this.closeModal();
             console.log("✅ Cita guardada y modal cerrado");
         } catch (e) {
@@ -574,7 +617,8 @@ export const CalendarModal = {
         if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
         
         // 1. Ejecutar cancelación en base de datos
-        await CalendarData.cancelEvent(eventId);
+        const userEmail = AuthManager.currentUser?.email || 'Manual';
+        await CalendarData.cancelEvent(eventId, userEmail);
 
         // 2. Preguntar si quiere avisar por WhatsApp
         const sendWA = await ModalService.confirm(
@@ -598,6 +642,7 @@ export const CalendarModal = {
 
         if (reschedule) {
             // Switch to create mode with same patient
+            CalendarState.rescheduledFromId = eventId;
             CalendarState.selectedEventId = null;
             const dom = CalendarState.dom;
 

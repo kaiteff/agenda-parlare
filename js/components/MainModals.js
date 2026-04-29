@@ -103,6 +103,13 @@ export const MainModals = {
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Espacios Ocupados</label>
                             <div id="busySlotsList" class="space-y-1 text-[10px] text-gray-500 italic scroller max-h-24"></div>
                         </div>
+
+                        <!-- Audit Info -->
+                        <div id="appointmentAuditInfo" class="hidden pt-4 border-t border-gray-100 space-y-1 text-[10px] text-gray-400">
+                            <p id="confirmedAtLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span> <span></span></p>
+                            <p id="cancelledByLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> <span></span></p>
+                            <p id="rescheduledByLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span> <span></span></p>
+                        </div>
                     </div>
                     <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-3xl">
                         <div class="grid grid-cols-2 gap-3">

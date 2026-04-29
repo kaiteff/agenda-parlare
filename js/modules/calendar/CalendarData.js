@@ -172,11 +172,11 @@ export const CalendarData = {
         return result;
     },
 
-    async cancelEvent(id) {
+    async cancelEvent(id, source = 'Manual') {
         // Get event before cancelling to have data for log
         const evt = CalendarState.appointments.find(a => a.id === id);
         
-        const result = await cancelAppointment(id, CalendarState.appointments);
+        const result = await cancelAppointment(id, CalendarState.appointments, source);
         
         if (result.success && evt) {
              SheetService.logAttendance({

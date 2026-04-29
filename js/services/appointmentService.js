@@ -226,21 +226,23 @@ export async function deleteAppointment(id, googleEventId = null, therapist = 'a
  * @param {string} id - ID de la cita
  * @returns {Promise<Object>} - Resultado { success, error }
  */
-export async function cancelAppointment(id, existingAppointments = []) {
+export async function cancelAppointment(id, existingAppointments = [], source = 'Manual') {
     try {
         const appointment = existingAppointments.find(a => a.id === id) || {};
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, {
             isCancelled: true,
             cancelledAt: serverTimestamp(),
+            cancelledBy: source,
             updatedBy: AuthManager.currentUser?.email || 'unknown'
         });
         log.info(`Cita cancelada [${id}]`);
 
         // Bitácora de Auditoría
-        await AuditService.log('CANCEL', 'APPOINTMENT', id, { 
+        await AuditService.log('CANCEL', 'APPOINTMENT', id, {
             patientName: appointment.name,
-            therapist: appointment.therapist 
+            therapist: appointment.therapist,
+            cancelledBy: source
         });
 
         _createNotification(

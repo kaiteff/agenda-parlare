@@ -8,6 +8,7 @@ export const CalendarState = {
     appointments: [],
     selectedEventId: null,
     originalEventDate: null,
+    rescheduledFromId: null,
 
     // Referencias DOM (se inicializan en init)
     dom: {

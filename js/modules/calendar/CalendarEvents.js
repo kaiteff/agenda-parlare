@@ -43,6 +43,7 @@ export const CalendarEvents = {
             'miniCalendarGrid', 'miniMonthLabel', 'miniPrevBtn', 'miniNextBtn',
             'eventModal', 'modalTitle', 'patientSearch', 'patientFirstName', 'patientLastName',
             'appointmentDate', 'cost', 'appointmentTherapist', 'saveBtn', 'waBtn', 'deleteBtn', 'payBtn', 'confirmBtn', 'confirmedAtLabel', 'cancelBtn',
+            'appointmentAuditInfo', 'cancelledByLabel', 'rescheduledByLabel',
             'rescheduleSection', 'rescheduleOptions', 'busySlotsContainer', 'busySlotsList',
             'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList',
             'patientCustomPhone', 'patientCountryCode'

@@ -56,7 +56,11 @@ export const WhatsAppDashboard = {
                     ${stats.cancelledApts.map(a => `
                         <div class="flex items-start justify-between gap-1 py-0.5 border-b border-red-100 last:border-0">
                             <span class="text-[10px] font-semibold text-red-800">${a.name?.split(' ').slice(0,2).join(' ') || '?'}</span>
-                            <span class="text-[9px] text-red-500 shrink-0">${a.cancelledBy ? '🤖 WA' : a.updatedBy ? a.updatedBy.split('@')[0] : '—'}</span>
+                            <span class="text-[9px] text-red-500 shrink-0">
+                                ${a.cancelledBy === 'WhatsApp' ? '🤖 WA' : 
+                                  (a.cancelledBy && a.cancelledBy !== 'Manual') ? `🧑 ${a.cancelledBy.split('@')[0]}` : 
+                                  a.updatedBy ? `🧑 ${a.updatedBy.split('@')[0]}` : '—'}
+                            </span>
                         </div>
                     `).join('')}
                 </div>
