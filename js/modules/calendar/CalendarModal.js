@@ -566,9 +566,12 @@ export const CalendarModal = {
     async handleCancel() {
         if (!CalendarState.selectedEventId) return;
 
-        if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
-
+        // ⚠️ CRÍTICO: capturar eventId ANTES de cualquier await.
+        // Si durante el confirm dialog algo llama closeModal() (botón X, backdrop),
+        // selectedEventId se pone null — y sin esta captura anticipada el cancel falla.
         const eventId = CalendarState.selectedEventId;
+
+        if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
         
         // 1. Ejecutar cancelación en base de datos
         await CalendarData.cancelEvent(eventId);

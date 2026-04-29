@@ -172,8 +172,11 @@ export const ModalService = {
 
     _show() {
         this.dom.modal.classList.remove('hidden');
+        // Forzar que siempre quede encima de cualquier otro modal activo
+        this.dom.modal.style.setProperty('display', 'block', 'important');
+        this.dom.modal.style.setProperty('z-index', '999999', 'important');
         // Pequeña animación
-        const panel = this.dom.modal.querySelector('div[class*="bg-white"]');
+        const panel = this.dom.modal.querySelector('.modal-panel');
         if (panel) {
             panel.classList.remove('opacity-0', 'scale-95');
             panel.classList.add('opacity-100', 'scale-100');
@@ -182,8 +185,9 @@ export const ModalService = {
 
     _close() {
         this.dom.modal.classList.add('hidden');
+        this.dom.modal.style.setProperty('display', 'none', 'important');
         // Reset state
         this.dom.confirmBtn.onclick = null;
-        this.dom.cancelBtn.onclick = null;
+        if (this.dom.cancelBtn) this.dom.cancelBtn.onclick = null;
     }
 };
