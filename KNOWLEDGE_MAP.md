@@ -1,34 +1,43 @@
 # 🗺️ Mapa del Sistema - Agenda Parláre
 
-Este archivo es tu guía rápida para entender dónde está cada cosa tras la Gran Refactorización de Abril 2026.
+Este archivo es tu guía rápida para entender dónde está cada cosa. Actualizado tras la implementación de auditoría y reportes financieros (Abril 2026).
 
-## 📁 Estructura de Archivos
+## 📁 Estructura de Archivos Principal
 
-### 🌐 Frontend (Interfaz)
-- **`index.html`**: Solo contiene el esqueleto. Si quieres cambiar la estructura base, es aquí.
-- **`index.css`**: Contiene todos los estilos, animaciones y colores.
-- **`js/components/`**: Las piezas modulares de la UI:
-    - `Header.js`: Barra superior, usuario, filtros y estado de sync.
-    - `Sidebar.js`: Lista de pacientes y acciones rápidas.
-    - `MainModals.js`: Modales de Calendario, Corte de Caja y Reportes.
-    - `ComponentManager.js`: El orquestador que inyecta todo al cargar.
+### 🌐 Frontend (Interfaz y Estilo)
+- **`index.html`**: Esqueleto base (SPA).
+- **`index.css`**: Sistema de diseño, animaciones premium y variables de color.
+- **`js/components/`**: Piezas modulares de la UI:
+    - `Header.js`: Gestión de Auth, filtros de terapeuta, estado de sync y accesos a Admin/Reportes.
+    - `Sidebar.js`: Lista de pacientes (búsqueda rápida) y panel de navegación.
+    - `MainModals.js`: Contenedor de HTML para modales (Citas, Corte de Caja, Auditoría).
+    - `WhatsAppDashboard.js`: Monitor de mensajes y confirmaciones pendientes.
 
-### ⚙️ Lógica y Datos
-- **`js/app.js`**: El punto de entrada principal. Coordina la carga.
-- **`js/firebase.js`**: Configuración de la base de datos.
-- **`js/managers/`**: Manejadores de lógica de negocio (Pacientes, Auth, Pagos).
-- **`js/modules/`**: Módulos especializados (Calendario, Reportes, WhatsApp).
+### ⚙️ Lógica de Negocio y Servicios
+- **`js/managers/`**: Lógica central (AuthManager, PatientManager).
+- **`js/services/`**: Integraciones externas:
+    - `google/`: `GoogleCalendarService.js` (Sync citas) y `SheetService.js` (Sync pagos y auditoría).
+    - `AuditService.js`: Motor de registro de acciones (Bitácora).
+    - `SyncService.js`: Coordinador de guardado en lote y reintentos.
 
-### 🤖 Automatización y Bot
-- **`whatsapp_webhook.py`**: El motor del bot en Render.
-- **`render.yaml` / `requirements.txt`**: Archivos de despliegue para el bot.
+### 📊 Módulos Especializados (`js/modules/`)
+- **`calendar/`**: Lógica del calendario (Grid, Drag & Drop, Modales de edición).
+- **`reports/`**: `FinancialReport.js` (Cálculo de utilidades) y `CorteDeCaja.js` (Reconciliación diaria).
+- **`admin/`**: `AdminSettingsModal.js` (Configuración de costos) y `AuditPanel.js` (Visualización de bitácora).
+- **`help/`**: `HelpManual.js` (Manual de capacitación integrado).
 
-## 🔄 Flujo de Sincronización
-1. **Firebase**: Es la verdad absoluta. Todo se guarda aquí primero.
-2. **Google Calendar**: Se sincroniza al crear/editar citas (si hay sesión iniciada).
-3. **Google Sheets**: 
-    - Pagos individuales se sincronizan al marcar como "Pagado".
-    - Si falla o estás offline, usa el **Botón Naranja** en el Header para sincronización masiva.
+### 📝 Documentación de Sesión (`resumen_sesion/`)
+- Carpeta que contiene el histórico de avances y pendientes:
+    - `RESUMEN_SESION_*.md`: Detalles técnicos de cada jornada.
+    - `NEXT_STEPS_*.md`: Hoja de ruta para la siguiente sesión.
+
+## 🔄 Flujos Críticos de Datos
+
+1. **Firebase**: Single Source of Truth (SSOT).
+2. **Google Calendar**: Espejo en tiempo real de las citas en Firebase.
+3. **Google Sheets (Excel)**: 
+    - **Pagos**: Se registran al marcar "Pagado".
+    - **Bitácora**: Copia permanente de todas las acciones del sistema para auditoría histórica.
 
 ---
-*Ultima actualización: 14 de Abril, 2026 - Fase de Modularización Completa*
+*Ultima actualización: 29 de Abril, 2026 - Auditoría y Respaldo Permanente en Sheets Completado*
