@@ -1,10 +1,6 @@
-/**
- * WhatsAppDashboard.js
- * Visualización del estado de confirmaciones en el dashboard principal
- */
-
 import { CalendarState } from '../modules/calendar/CalendarState.js';
 import { AuthManager } from '../managers/AuthManager.js';
+import { PatientState } from '../managers/patient/PatientState.js';
 
 export const WhatsAppDashboard = {
     selectedView: 'today', // Por defecto hoy en la mañana
@@ -26,13 +22,7 @@ export const WhatsAppDashboard = {
             }
         }
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        
-        const targetDate = this.selectedView === 'today' ? todayStr : tomorrowStr;
-        const stats = this._calculateStats(targetDate);
+        const stats = this._calculateStats(this.selectedView);
         
         container.innerHTML = `
             <div class="flex items-center justify-between mb-2">
@@ -132,21 +122,24 @@ export const WhatsAppDashboard = {
         }
     },
 
-    _calculateStats(targetDateStr) {
-        const currentTherapist = AuthManager.getSelectedTherapist();
-
-        // Helper robusto: acepta string ISO y Firestore Timestamp
-        const getDateStr = (d) => {
-            if (!d) return '';
-            if (typeof d === 'string') return d.split('T')[0];
-            if (d.toDate) return d.toDate().toISOString().split('T')[0]; // Firestore Timestamp
-            if (d instanceof Date) return d.toISOString().split('T')[0];
-            return '';
-        };
+    _calculateStats(view) {
+        // Rango de fechas local (evita problemas de UTC)
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
         
-        const targetApts = CalendarState.appointments.filter(a => {
-            const dateStr = getDateStr(a.date);
-            const isMatch = dateStr === targetDateStr;
+        if (view === 'tomorrow') {
+            start.setDate(start.getDate() + 1);
+        }
+        
+        const end = new Date(start);
+        end.setDate(start.getDate() + 1);
+
+        const currentTherapist = AuthManager.getSelectedTherapist();
+        const appointments = PatientState.appointments || [];
+        
+        const targetApts = appointments.filter(a => {
+            const aptDate = new Date(a.date);
+            const isMatch = aptDate >= start && aptDate < end;
             const matchesTherapist = currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist;
             
             // EXCLUIR BLOQUES (No son pacientes reales)
@@ -161,10 +154,10 @@ export const WhatsAppDashboard = {
             return isMatch && matchesTherapist && !a.isCancelled && !isBlock;
         });
 
-        // Contar canceladas del día específico
-        const cancelledApts = CalendarState.appointments.filter(a => {
-             const dateStr = getDateStr(a.date);
-             return dateStr === targetDateStr && a.isCancelled && (currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist);
+        const cancelledApts = appointments.filter(a => {
+             const aptDate = new Date(a.date);
+             const isMatch = aptDate >= start && aptDate < end;
+             return isMatch && a.isCancelled && (currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist);
         });
 
         return {
@@ -177,4 +170,5 @@ export const WhatsAppDashboard = {
         };
     }
 };
+
 
