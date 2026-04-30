@@ -102,6 +102,11 @@ export const PatientModalsHTML = {
                                 <span class="text-[10px] text-gray-600 font-medium">Recibir recordatorios automáticos</span>
                             </label>
                         </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🎂 Fecha de Nacimiento</label>
+                            <input type="date" id="newPatientBirthday"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
                     </div>
 
                     <div class="pt-4 flex gap-3">
@@ -213,6 +218,11 @@ export const PatientModalsHTML = {
                                         class="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300">
                                     <span class="text-[10px] text-gray-600 font-medium tracking-tight">Recibir recordatorios automáticos</span>
                                 </label>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">🎂 Cumpleaños</label>
+                                <input type="date" id="editPatientBirthday"
+                                    class="w-full border rounded px-3 py-2 text-sm">
                             </div>
                         </div>
 

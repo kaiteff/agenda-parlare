@@ -258,6 +258,17 @@ export const Sidebar = {
             timeLabel = 'Sin citas';
         }
 
+        // Comprobar cumpleaños
+        let birthdayIcon = '';
+        if (p.birthday) {
+            const today = new Date();
+            const bDate = new Date(p.birthday);
+            // Comparar solo mes y día (ignorando año)
+            if (today.getMonth() === bDate.getMonth() && today.getDate() === bDate.getDate()) {
+                birthdayIcon = ' <span class="animate-bounce inline-block ml-1" title="¡Hoy cumple años!">🎂</span>';
+            }
+        }
+
         return `
             <div onclick="window.openPatientHistoryById('${p.id}')" 
                  class="group p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-200">
@@ -268,7 +279,7 @@ export const Sidebar = {
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <h3 class="font-bold text-gray-800 truncate">${p.name}</h3>
+                            <h3 class="font-bold text-gray-800 truncate">${p.name}${birthdayIcon}</h3>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] ${p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium'}">

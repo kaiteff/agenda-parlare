@@ -83,6 +83,8 @@ export const PatientModals = {
         if (parentNameInput) parentNameInput.value = '';
         if (phoneInput) phoneInput.value = '';
         if (countryCodeInput) countryCodeInput.value = '52'; // Default Mexico
+        const birthdayInput = document.getElementById('newPatientBirthday');
+        if (birthdayInput) birthdayInput.value = '';
 
         // MEJORA: Escuchar cambios en el selector de terapeuta para actualizar costos sugeridos
         if (therapistInput) {
@@ -645,6 +647,9 @@ export const PatientModals = {
         if (document.getElementById('editPatientParentName')) {
             document.getElementById('editPatientParentName').value = patient.parentName || '';
         }
+        if (document.getElementById('editPatientBirthday')) {
+            document.getElementById('editPatientBirthday').value = patient.birthday || '';
+        }
 
         // Renderizar sección de Temas (Solo Admin o si ya tiene temas)
         const themesSection = document.getElementById('adminPatientThemesSection');
@@ -745,6 +750,7 @@ export const PatientModals = {
                 const countryCode = document.getElementById('editPatientCountryCode')?.value || '52';
                 const newParentName = document.getElementById('editPatientParentName')?.value.trim() || '';
                 const wantsWhatsapp = document.getElementById('editPatientWantsWhatsapp')?.checked !== false;
+                const birthday = document.getElementById('editPatientBirthday')?.value || '';
 
                 // Recoger temas seleccionados
                 const selectedThemes = Array.from(document.querySelectorAll('input[name="patientTheme"]:checked')).map(cb => cb.value);
@@ -761,7 +767,8 @@ export const PatientModals = {
                         parentName: newParentName,
                         wantsWhatsapp: wantsWhatsapp,
                         assignedThemes: selectedThemes,
-                        assignedSubthemes: selectedSubthemes
+                        assignedSubthemes: selectedSubthemes,
+                        birthday: birthday
                     },
                     patient.name
                 );

@@ -109,6 +109,7 @@ export const PatientActions = {
         const phone = dom.newPatientPhone?.value.trim() || '';
         const parentName = dom.newPatientParentName?.value.trim() || '';
         const wantsWhatsapp = document.getElementById('newPatientWantsWhatsapp')?.checked !== false;
+        const birthday = document.getElementById('newPatientBirthday')?.value || '';
 
         // Validación
         if (!firstName || !lastName) {
@@ -144,7 +145,8 @@ export const PatientActions = {
                 clinicFee, 
                 phone: phoneDigits, 
                 parentName: _toProperCase(parentName), 
-                wantsWhatsapp 
+                wantsWhatsapp,
+                birthday 
             });
 
             if (result.success) {
@@ -625,6 +627,7 @@ export const PatientActions = {
             if (updates.wantsWhatsapp !== undefined) profileUpdates.wantsWhatsapp = updates.wantsWhatsapp;
             if (updates.assignedThemes !== undefined) profileUpdates.assignedThemes = updates.assignedThemes;
             if (updates.assignedSubthemes !== undefined) profileUpdates.assignedSubthemes = updates.assignedSubthemes;
+            if (updates.birthday !== undefined) profileUpdates.birthday = updates.birthday;
 
             // Handle phone with country code
             if (updates.phone !== undefined) {
