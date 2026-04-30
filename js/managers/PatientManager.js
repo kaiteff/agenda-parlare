@@ -312,6 +312,7 @@ export const PatientManager = {
      */
     render() {
         Sidebar.render();
+        import('../components/WhatsAppDashboard.js').then(m => m.WhatsAppDashboard.render());
 
         // Refrescar modal de historial si está abierto para reflejar cambios en tiempo real
         const selectedPatient = PatientState.getSelectedPatient();

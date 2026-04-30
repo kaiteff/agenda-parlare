@@ -7,6 +7,8 @@ import { CalendarState } from '../modules/calendar/CalendarState.js';
 import { AuthManager } from '../managers/AuthManager.js';
 
 export const WhatsAppDashboard = {
+    selectedView: 'today', // Por defecto hoy en la mañana
+
     render() {
         const sidebar = document.getElementById('mainSidebar');
         if (!sidebar) return;
@@ -24,15 +26,25 @@ export const WhatsAppDashboard = {
             }
         }
 
-        const stats = this._calculateStats();
+        const todayStr = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        const targetDate = this.selectedView === 'today' ? todayStr : tomorrowStr;
+        const stats = this._calculateStats(targetDate);
         
         container.innerHTML = `
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-1.5">
                     <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span class="text-xs font-bold text-green-800 uppercase tracking-wider">Confirmaciones Mañana</span>
+                    <span class="text-[10px] font-bold text-green-800 uppercase tracking-wider">Confirmaciones</span>
                 </div>
-                <span class="text-[10px] text-green-600 font-medium">${new Date(Date.now() + 86400000).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                <!-- Mini Tabs -->
+                <div class="flex bg-green-100/50 p-0.5 rounded-md" id="waDashboardTabs">
+                    <button data-view="today" class="px-2 py-0.5 text-[9px] font-black uppercase rounded transition-all ${this.selectedView === 'today' ? 'bg-white text-green-700 shadow-sm' : 'text-green-600/60 hover:text-green-700'}">Hoy</button>
+                    <button data-view="tomorrow" class="px-2 py-0.5 text-[9px] font-black uppercase rounded transition-all ${this.selectedView === 'tomorrow' ? 'bg-white text-green-700 shadow-sm' : 'text-green-600/60 hover:text-green-700'}">Mañana</button>
+                </div>
             </div>
             
             <div class="grid grid-cols-3 gap-2">
@@ -52,7 +64,7 @@ export const WhatsAppDashboard = {
             
             ${stats.cancelled > 0 ? `
                 <div class="mt-2 bg-red-50 border border-red-100 rounded-lg px-2 py-1.5">
-                    <p class="text-[9px] font-bold text-red-600 uppercase mb-1">❌ Cancelados mañana:</p>
+                    <p class="text-[9px] font-bold text-red-600 uppercase mb-1">❌ Cancelados ${this.selectedView === 'today' ? 'hoy' : 'mañana'}:</p>
                     ${stats.cancelledApts.map(a => `
                         <div class="flex items-start justify-between gap-1 py-0.5 border-b border-red-100 last:border-0">
                             <span class="text-[10px] font-semibold text-red-800">${a.name?.split(' ').slice(0,2).join(' ') || '?'}</span>
@@ -66,18 +78,29 @@ export const WhatsAppDashboard = {
                 </div>
             ` : ''}
             
-            ${stats.pending > 0 ? `
+            ${this.selectedView === 'tomorrow' && stats.pending > 0 ? `
                 <button id="sendManualRemindersBtn" class="w-full mt-2 py-1 text-[10px] bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition-colors shadow-sm">
                     Re-enviar Recordatorios
                 </button>
             ` : ''}
         `;
 
-        if (stats.total === 0) {
+        if (stats.total === 0 && stats.cancelled === 0) {
             container.classList.add('hidden');
         } else {
             container.classList.remove('hidden');
             
+            // Listeners para Tabs
+            const tabs = document.getElementById('waDashboardTabs');
+            if (tabs) {
+                tabs.onclick = (e) => {
+                    const btn = e.target.closest('button');
+                    if (!btn) return;
+                    this.selectedView = btn.dataset.view;
+                    this.render();
+                };
+            }
+
             // Listener para re-enviar
             const btn = document.getElementById('sendManualRemindersBtn');
             if (btn) {
@@ -87,7 +110,6 @@ export const WhatsAppDashboard = {
                     btn.textContent = "Enviando...";
                     
                     try {
-                        // Conectar con el servidor oficial en Render con parámetros de compatibilidad
                         const response = await fetch('https://parlare-webhook.onrender.com/cron/reminders?key=parlare_secret_2026', {
                             method: 'GET',
                             mode: 'cors',
@@ -110,11 +132,7 @@ export const WhatsAppDashboard = {
         }
     },
 
-    _calculateStats() {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        
+    _calculateStats(targetDateStr) {
         const currentTherapist = AuthManager.getSelectedTherapist();
 
         // Helper robusto: acepta string ISO y Firestore Timestamp
@@ -126,9 +144,9 @@ export const WhatsAppDashboard = {
             return '';
         };
         
-        const tomorrowsApts = CalendarState.appointments.filter(a => {
+        const targetApts = CalendarState.appointments.filter(a => {
             const dateStr = getDateStr(a.date);
-            const isTomorrow = dateStr === tomorrowStr;
+            const isMatch = dateStr === targetDateStr;
             const matchesTherapist = currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist;
             
             // EXCLUIR BLOQUES (No son pacientes reales)
@@ -140,22 +158,23 @@ export const WhatsAppDashboard = {
                             a.isFullDayBlock || 
                             a.isHourlyBlock;
 
-            return isTomorrow && matchesTherapist && !a.isCancelled && !isBlock;
+            return isMatch && matchesTherapist && !a.isCancelled && !isBlock;
         });
 
-        // Contar canceladas de mañana específicamente
+        // Contar canceladas del día específico
         const cancelledApts = CalendarState.appointments.filter(a => {
              const dateStr = getDateStr(a.date);
-             return dateStr === tomorrowStr && a.isCancelled && (currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist);
+             return dateStr === targetDateStr && a.isCancelled && (currentTherapist === 'all' || (a.therapist || 'diana') === currentTherapist);
         });
 
         return {
-            total: tomorrowsApts.length,
-            confirmed: tomorrowsApts.filter(a => a.confirmed).length,
-            pending: tomorrowsApts.filter(a => !a.confirmed).length,
+            total: targetApts.length,
+            confirmed: targetApts.filter(a => a.confirmed).length,
+            pending: targetApts.filter(a => !a.confirmed).length,
             cancelled: cancelledApts.length,
             cancelledApts: cancelledApts,
             cancelledNames: cancelledApts.map(a => a.name || '?')
         };
     }
 };
+
