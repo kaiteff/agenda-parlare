@@ -176,19 +176,14 @@ def normalize_phone(phone):
     elif digits.startswith('52'): digits = digits[2:]
     return digits[-10:]
 
-def find_patients_by_phone(phone):
-    norm = normalize_phone(phone)
-    print(f"🔍 Buscando paciente de forma optimizada para: {norm}")
-    
-    # Formatos comunes en los que podría estar guardado
-    search_variants = [norm, f"+52{norm}", f"52{norm}", f"+521{norm}", f"521{norm}"]
-    
+def find_patients_by_identifier(phone, bsuid=None):
     found = []
     found_ids = set()
     
-    for variant in search_variants:
-        # Buscamos directamente por el campo 'phone'
-        docs = db.collection('patientProfiles').where('phone', '==', variant).stream()
+    # 1. Intentar buscar por BSUID primero (identificador único de WhatsApp)
+    if bsuid:
+        print(f"🔍 Buscando paciente por BSUID: {bsuid}")
+        docs = db.collection('patientProfiles').where('whatsappBSUID', '==', bsuid).stream()
         for doc in docs:
             if doc.id not in found_ids:
                 d = doc.to_dict()
@@ -196,10 +191,46 @@ def find_patients_by_phone(phone):
                     found.append({'id': doc.id, 'name': d.get('name', '')})
                     found_ids.add(doc.id)
         
-        # Si ya encontramos a alguien, no necesitamos seguir buscando variantes
-        if found: break
+        if found:
+            print(f"✅ Pacientes encontrados por BSUID: {len(found)}")
+            return found
 
-    print(f"✅ Pacientes encontrados (Query): {len(found)}")
+    # 2. Si no hay BSUID o no se encontró, buscar por teléfono
+    if phone:
+        norm = normalize_phone(phone)
+        print(f"🔍 Buscando paciente de forma optimizada para: {norm}")
+        
+        # Formatos comunes en los que podría estar guardado
+        search_variants = [norm, f"+52{norm}", f"52{norm}", f"+521{norm}", f"521{norm}"]
+        
+        docs_to_update = []
+        for variant in search_variants:
+            # Buscamos directamente por el campo 'phone'
+            docs = db.collection('patientProfiles').where('phone', '==', variant).stream()
+            for doc in docs:
+                if doc.id not in found_ids:
+                    d = doc.to_dict()
+                    if d.get('isActive', True) is not False:
+                        found.append({'id': doc.id, 'name': d.get('name', '')})
+                        found_ids.add(doc.id)
+                        # Guardar referencia para vincular el BSUID si es nuevo
+                        if bsuid and not d.get('whatsappBSUID'):
+                            docs_to_update.append(doc.reference)
+            
+            # Si ya encontramos a alguien, no necesitamos seguir buscando variantes
+            if found: break
+
+        # 3. Vincular el BSUID al perfil si lo encontramos por teléfono y nos llegó un BSUID nuevo
+        if docs_to_update and bsuid:
+            for ref in docs_to_update:
+                try:
+                    ref.update({'whatsappBSUID': bsuid})
+                    print(f"🔗 Nuevo BSUID ({bsuid}) guardado en el perfil del paciente.")
+                except Exception as e:
+                    print(f"⚠️ Error vinculando BSUID: {e}")
+
+        print(f"✅ Pacientes encontrados (Query): {len(found)}")
+        
     return found
 
 def find_tomorrow_appointments(patient_names):
@@ -273,10 +304,12 @@ def webhook():
     try:
         msg_body = request.form.get('Body', '').strip().lower()
         from_num = request.form.get('From', '')
-        print(f"📥 Mensaje recibido de {from_num}: {msg_body}")
+        bsuid = request.form.get('ExternalUserId', '')
+        
+        print(f"📥 Mensaje recibido de {from_num} (BSUID: {bsuid}): {msg_body}")
         
         resp = MessagingResponse()
-        patients = find_patients_by_phone(from_num)
+        patients = find_patients_by_identifier(from_num, bsuid)
         
         if not patients:
             print("❌ Número no registrado")
