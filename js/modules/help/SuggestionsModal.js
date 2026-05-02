@@ -13,7 +13,7 @@ export const SuggestionsModal = {
         if (document.getElementById(modalId)) return;
 
         const html = `
-        <div id="${modalId}" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div id="${modalId}" onclick="if(event.target===this) this.remove()" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-scale-up">
                 
                 <!-- Header -->

@@ -87,7 +87,7 @@ export const ReceptionControl = {
 
     injectHTML() {
         const html = `
-        <div id="receptionControlModal" class="hidden fixed inset-0 z-[9900] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm sm:p-4">
+        <div id="receptionControlModal" onclick="if(event.target === this) document.getElementById('receptionControlModal').classList.add('hidden')" class="hidden fixed inset-0 z-[9900] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm sm:p-4">
             <div class="bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-6xl sm:h-[90vh] flex flex-col overflow-hidden animate-fade-in">
                 <!-- Header -->
                 <div class="p-6 bg-indigo-600 text-white flex justify-between items-center bg-gradient-to-r from-indigo-600 to-blue-700">

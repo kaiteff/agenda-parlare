@@ -21,7 +21,7 @@ export const PatientModalsHTML = {
     getHtml() {
         return `
         <!-- 2. NEW PATIENT MODAL -->
-        <div id="newPatientModal"
+        <div id="newPatientModal" onclick="if(event.target === this) this.classList.add('hidden')"
             class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all modal-panel">
                 <div class="flex justify-between items-center mb-6">
@@ -122,7 +122,7 @@ export const PatientModalsHTML = {
         </div>
 
         <!-- 4. PATIENT HISTORY MODAL -->
-        <div id="patientHistoryModal"
+        <div id="patientHistoryModal" onclick="if(event.target === this) this.classList.add('hidden')"
             class="hidden fixed inset-0 z-[9500] flex items-center justify-center bg-black bg-opacity-50 p-0 md:p-4">
             <div
                 class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90svh] md:h-[85vh] flex flex-col modal-panel overflow-hidden mx-2 md:mx-0">
@@ -257,7 +257,7 @@ export const PatientModalsHTML = {
         </div>
 
         <!-- 5. INACTIVE PATIENTS MODAL -->
-        <div id="inactivePatientsModal"
+        <div id="inactivePatientsModal" onclick="if(event.target === this) this.classList.add('hidden')"
             class="hidden fixed inset-0 z-[9800] flex items-center justify-center bg-black bg-opacity-50">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 modal-panel flex flex-col max-h-[80vh]">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
@@ -289,7 +289,8 @@ export const PatientModalsHTML = {
         </div>
         
         <!-- 6. SESSION NOTE / CLINICAL PROGRESS MODAL -->
-        <div id="sessionNoteModal" class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+        <div id="sessionNoteModal" onclick="if(event.target === this) this.classList.add('hidden')"
+            class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden animate-fade-in-up">
                 <!-- Header -->
                 <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">

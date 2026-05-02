@@ -18,9 +18,13 @@ export const MainModals = {
             <!-- 1. GENERIC ALERT MODAL -->
             <div id="genericModal" class="hidden fixed inset-0 z-[99999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                 <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity modal-backdrop" aria-hidden="true"></div>
+                    <div class="fixed inset-0 bg-gray-500/75 transition-opacity modal-backdrop" aria-hidden="true"></div>
                     <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full modal-panel">
+                    <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full modal-panel border border-gray-100">
+                        <!-- Botón Cerrar (X) -->
+                        <button id="genericModalCloseBtn" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors z-10">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                             <div class="sm:flex sm:items-start">
                                 <div id="genericModalIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"></div>
@@ -39,7 +43,7 @@ export const MainModals = {
             </div>
 
             <!-- 2. APPOINTMENT / EVENT MODAL -->
-            <div id="eventModal" class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div id="eventModal" onclick="if(event.target === this) import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50 p-4">
                 <div class="bg-white w-full max-w-lg h-[85vh] rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
                         <h3 id="modalTitle" class="text-xl font-bold tracking-tight">Detalles de Cita</h3>
@@ -126,7 +130,7 @@ export const MainModals = {
             </div>
 
             <!-- 3. CORTE DE CAJA MODAL -->
-            <div id="corteDeCajaModal" class="hidden fixed inset-0 z-[9800] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div id="corteDeCajaModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[9800] flex items-center justify-center bg-black bg-opacity-50 p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 modal-panel flex flex-col max-h-[90vh] overflow-hidden">
                     <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex justify-between items-center text-white">
                         <div>
@@ -215,7 +219,7 @@ export const MainModals = {
             </div>
 
             <!-- 4. FINANCIAL REPORT MODAL -->
-            <div id="financialReportModal" class="hidden fixed inset-0 z-[9700] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div id="financialReportModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[9700] flex items-center justify-center bg-black bg-opacity-50 p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 modal-panel flex flex-col max-h-[90vh] overflow-hidden">
                     <div class="bg-gray-800 px-6 py-4 flex justify-between items-center text-white">
                         <div>
@@ -256,7 +260,7 @@ export const MainModals = {
             </div>
 
             <!-- 5. SCHEDULE NEW PATIENT MODAL (Restaurado) -->
-            <div id="scheduleNewPatientModal" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div id="scheduleNewPatientModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50 p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col modal-panel overflow-hidden">
                     <!-- Header -->
                     <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
@@ -334,7 +338,7 @@ export const MainModals = {
             </div>
 
             <!-- 6. AUDIT LOG MODAL -->
-            <div id="auditLogModal" class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div id="auditLogModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-50 p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col modal-panel overflow-hidden">
                     <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
                         <div>

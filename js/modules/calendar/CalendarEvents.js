@@ -131,40 +131,8 @@ export const CalendarEvents = {
             };
         }
 
-        // Cerrar modales al hacer click en el backdrop (el área oscura)
-        window.addEventListener('click', (event) => {
-            // 1. Modal de Calendario (Citas)
-            if (event.target === CalendarState.dom.eventModal) {
-                CalendarModal.closeModal();
-            }
-            
-            // 2. Modal de Nuevo Paciente
-            const newPatientModal = document.getElementById('newPatientModal');
-            if (event.target === newPatientModal) {
-                console.log('🚪 Cerrando NewPatientModal desde backdrop');
-                newPatientModal.classList.add('hidden');
-                newPatientModal.style.setProperty('display', 'none', 'important');
-            }
-
-            // 3. Otros modales comunes
-            const patientHistoryModal = document.getElementById('patientHistoryModal');
-            if (event.target === patientHistoryModal) {
-                patientHistoryModal.classList.add('hidden');
-                patientHistoryModal.style.setProperty('display', 'none', 'important');
-            }
-
-            const receptionControlModal = document.getElementById('receptionControlModal');
-            if (event.target === receptionControlModal) {
-                receptionControlModal.classList.add('hidden');
-                receptionControlModal.style.setProperty('display', 'none', 'important');
-            }
-
-            // 4. Modal de Pacientes Inactivos
-            const inactiveModal = document.getElementById('inactivePatientsModal');
-            if (event.target === inactiveModal) {
-                inactiveModal.classList.add('hidden');
-            }
-        });
+        // Los cierres de modal por click en backdrop ahora se manejan declarativamente 
+        // en el HTML (onclick="if(event.target===this)...") para mayor robustez.
     },
 
     render() {
