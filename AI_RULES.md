@@ -23,3 +23,8 @@ Al finalizar cualquier tarea o sesión, se deben ejecutar los siguientes pasos:
 - Mantener la estética premium (Rich Aesthetics).
 - No eliminar comentarios existentes.
 - Usar hora local de México (`America/Mexico_City`) para toda la lógica de fechas.
+- **Google Calendar Sync**: Ante cambios de terapeuta o errores 404, usar estrategia "Borrar Anterior + Crear Nuevo" en lugar de solo actualizar. Siempre buscar huérfanos por Nombre/Fecha si el ID no responde.
+- **Zonas Horarias**: NUNCA usar `toISOString()` para cálculos de rangos diarios en `syncWeek`; usar siempre formato local `YYYY-MM-DD` para evitar saltos de día por UTC.
+- **UI Grid vs Sidebar**: Las citas canceladas se OCULTAN de la cuadrícula central para liberar espacio visual, pero se MANTIENEN en el sidebar con etiqueta roja para control administrativo.
+- **Pestaña Dinámica**: La lógica de "Próxima Cita" debe saltar días sin citas ACTIVAS, pero mostrar TODO (activas+canceladas) una vez aterrizada en el día correcto.
+- **Refactorización Segura**: Al modificar funciones de filtrado como `_groupByPatient`, verificar rigurosamente que no se eliminen variables de contexto (como `existing` o `aptTime`).

@@ -19,6 +19,16 @@
     - 📱 **Celular**: Recordatorio enviado manualmente por Yari.
 - **Transparencia Clínica**: Los terapeutas ahora pueden confirmar desde el historial si el paciente ya fue contactado.
 
+### 4. Sincronización e Integración con Google Calendar
+- **Sincronización Infalible**: Se implementó una lógica de "limpieza de huérfanos" que busca citas por nombre y fecha si el ID de Google falla, evitando eventos duplicados al reagendar.
+- **Manejo de Zonas Horarias**: Se corrigió el cálculo de rangos semanales para usar estrictamente la hora local, evitando desfases en la sincronización nocturna.
+- **Estrategia Nuke & Replace Segura**: El botón de sincronización manual ahora es 100% preciso con la vista del usuario.
+
+### 5. Refinamiento de la Interfaz (UI/UX)
+- **Limpieza de Cuadrícula**: Las citas canceladas ahora son invisibles en el calendario central, dejando el espacio visualmente libre para nuevas citas.
+- **Control en Sidebar**: Se mantienen las etiquetas rojas (`X Nombre`) en el sidebar para que administración sepa quién canceló sin saturar la vista principal.
+
+
 ---
 
 ## 🛠️ Detalles Técnicos
