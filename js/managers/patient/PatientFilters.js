@@ -168,10 +168,9 @@ export const PatientFilters = {
             const dayEnd = new Date(currentDate);
             dayEnd.setDate(dayEnd.getDate() + 1);
 
-            foundAppointments = (PatientState.appointments || []).filter(apt => {
+            // Primero verificamos si hay citas ACTIVAS ese día
+            const activeAppointments = (PatientState.appointments || []).filter(apt => {
                 const aptDate = new Date(apt.date);
-
-                // Filtrado por terapeuta
                 const patientProfile = (PatientState.patients || []).find(p => 
                     normalize(p.name) === normalize(apt.name)
                 );
@@ -187,8 +186,32 @@ export const PatientFilters = {
 
                 return aptDate >= dayStart &&
                     aptDate < dayEnd &&
+                    !apt.isCancelled &&
                     matchesTherapist;
             });
+
+            // Si hay citas activas, entonces capturamos TODAS las citas de ese día (incluyendo canceladas)
+            if (activeAppointments.length > 0) {
+                foundAppointments = (PatientState.appointments || []).filter(apt => {
+                    const aptDate = new Date(apt.date);
+                    const patientProfile = (PatientState.patients || []).find(p => 
+                        normalize(p.name) === normalize(apt.name)
+                    );
+                    const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
+
+                    let matchesTherapist = true;
+                    if (selectedTherapist && selectedTherapist !== 'all') {
+                        matchesTherapist = (ownerTherapist === selectedTherapist);
+                    } else if (!AuthManager.can('view_all_patients')) {
+                        const userTherapist = AuthManager.currentUser?.therapist;
+                        matchesTherapist = (ownerTherapist === userTherapist);
+                    }
+
+                    return aptDate >= dayStart &&
+                        aptDate < dayEnd &&
+                        matchesTherapist;
+                });
+            }
         }
 
         // Si encontramos el día, ahora filtramos para la info de retorno
