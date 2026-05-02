@@ -707,12 +707,17 @@ export const PatientActions = {
      */
     async toggleConfirmationDirect(appointmentId, currentStatus) {
         try {
-            await updateDoc(doc(db, collectionPath, appointmentId), {
-                confirmed: !currentStatus
-            });
-            console.log('✅ PatientActions: Confirmación alternada para', appointmentId);
-
             const newStatus = !currentStatus;
+            const userName = AuthManager.currentUser?.displayName || AuthManager.currentUser?.email || 'unknown';
+            
+            const updateData = { 
+                confirmed: newStatus,
+                confirmedAt: newStatus ? serverTimestamp() : null,
+                confirmedBy: newStatus ? userName : null
+            };
+
+            await updateDoc(doc(db, collectionPath, appointmentId), { ...updateData });
+            console.log('✅ PatientActions: Confirmación alternada para', appointmentId, 'por', userName);
             ToastService.success(newStatus ? 'Asistencia CONFIRMADA' : 'Asistencia PENDIENTE');
 
             return true;

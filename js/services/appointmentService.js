@@ -350,14 +350,24 @@ export async function togglePaymentStatus(id, currentStatus, existingAppointment
  * @param {boolean} currentStatus - Estado actual
  * @returns {Promise<Object>} - Resultado { success, newState, error }
  */
-export async function toggleConfirmationStatus(id, currentStatus, existingAppointments = []) {
+export async function toggleConfirmationStatus(id, currentStatus, existingAppointments = [], source = null) {
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
+        const userName = source || AuthManager.currentUser?.displayName || AuthManager.currentUser?.email || 'unknown';
+        
         const updateData = { confirmed: newStatus };
-        if (newStatus) updateData.confirmedAt = serverTimestamp();
+        if (newStatus) {
+            updateData.confirmedAt = serverTimestamp();
+            updateData.confirmedBy = userName;
+        } else {
+            // Si desconfirmamos, limpiamos el rastro
+            updateData.confirmedAt = null;
+            updateData.confirmedBy = null;
+        }
+        
         await updateDoc(docRef, updateData);
-        log.info(`Cita [${id}] confirmación: ${newStatus}`);
+        log.info(`Cita [${id}] confirmación: ${newStatus} por ${userName}`);
 
         // Re-sync Google Calendar con estado actualizado
         const existing = existingAppointments.find(a => a.id === id);

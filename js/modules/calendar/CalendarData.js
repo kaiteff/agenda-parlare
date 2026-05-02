@@ -166,8 +166,8 @@ export const CalendarData = {
         return result;
     },
 
-    async toggleConfirmation(id, currentStatus) {
-        const result = await toggleConfirmationStatus(id, currentStatus, CalendarState.appointments);
+    async toggleConfirmation(id, currentStatus, source = null) {
+        const result = await toggleConfirmationStatus(id, currentStatus, CalendarState.appointments, source);
         // Confirmación no genera entrada financiera en Sheets
         return result;
     },

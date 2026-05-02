@@ -265,7 +265,8 @@ export const CalendarModal = {
                     else if (ev.confirmedAt) ds = new Date(ev.confirmedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
                     
                     const span = dom.confirmedAtLabel.querySelector('span:last-child');
-                    if (span) span.textContent = ds ? `Confirmado el: ${ds}` : 'Confirmado';
+                    const confirmedBy = ev.confirmedBy ? ` por ${ev.confirmedBy}` : '';
+                    if (span) span.textContent = ds ? `Confirmado${confirmedBy} el: ${ds}` : `Confirmado${confirmedBy}`;
                     dom.confirmedAtLabel.classList.remove('hidden');
                     hasAudit = true;
                 } else {

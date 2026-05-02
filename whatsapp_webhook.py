@@ -352,6 +352,7 @@ def webhook():
                 db.collection('appointments').document(a['id']).update({
                     'confirmed': True, 
                     'confirmedAt': firestore.SERVER_TIMESTAMP,
+                    'confirmedBy': 'Robot Parláre',
                     'lastBotUpdate': 'WhatsApp-Confirm'
                 })
                 update_google_sheet(a, "CONFIRMADO")
