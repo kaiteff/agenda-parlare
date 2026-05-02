@@ -62,9 +62,9 @@ export const HelpManual = {
                                 <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                                     <h4 class="font-bold text-gray-800 mb-2">💬 Respuestas del Bot</h4>
                                     <ul class="text-sm text-gray-600 space-y-1.5 mt-2">
-                                        <li>• <strong>Respuesta "1":</strong> Confirma la cita automáticamente en la agenda.</li>
-                                        <li>• <strong>Respuesta "2":</strong> Cancela la cita y avisa a recepción.</li>
-                                        <li>• <strong>Respuesta "3" o "recepcion":</strong> Envía un link directo al WhatsApp de Yari.</li>
+                                        <li>• <strong>CONFIRMAR:</strong> Responde "1", "OK", "Sí", "Confirmar" o "Confirmado".</li>
+                                        <li>• <strong>CANCELAR:</strong> Responde "2", "No", "Cancelar" o "Cancelado".</li>
+                                        <li>• <strong>RECEPCIÓN:</strong> Responde "3", "Recepción", "Yari" o "Hablar con recepción".</li>
                                     </ul>
                                 </div>
                                 <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
