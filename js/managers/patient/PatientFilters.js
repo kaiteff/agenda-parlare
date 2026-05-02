@@ -42,7 +42,8 @@ export const PatientFilters = {
             );
         }
         
-        return filtered;
+        // Ordenar alfabéticamente por nombre
+        return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
 
 
