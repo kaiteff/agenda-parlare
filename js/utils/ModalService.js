@@ -12,8 +12,10 @@ export const ModalService = {
         message: null,
         confirmBtn: null,
         cancelBtn: null,
-        icon: null
+        icon: null,
+        closeBtn: null
     },
+    _currentResolver: null,
 
     /**
      * Inicializa el servicio buscando los elementos en el DOM
@@ -25,15 +27,29 @@ export const ModalService = {
         this.dom.confirmBtn = document.getElementById('genericModalConfirmBtn');
         this.dom.cancelBtn = document.getElementById('genericModalCancelBtn');
         this.dom.icon = document.getElementById('genericModalIcon');
+        this.dom.closeBtn = document.getElementById('genericModalCloseBtn');
 
-        // Cerrar al hacer click fuera
+        // Cerrar al hacer click fuera (Backdrop)
         if (this.dom.modal) {
             this.dom.modal.onclick = (e) => {
-                if (e.target === this.dom.modal) {
-                    this._close(false);
+                // Solo si el click fue directamente en el fondo oscuro (el contenedor principal)
+                if (e.target === this.dom.modal || e.target.classList.contains('modal-backdrop')) {
+                    this._close(null);
                 }
             };
         }
+
+        // Cerrar con el botón X
+        if (this.dom.closeBtn) {
+            this.dom.closeBtn.onclick = () => this._close(null);
+        }
+
+        // Cerrar con Escape
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !this.dom.modal.classList.contains('hidden')) {
+                this._close(null);
+            }
+        });
     },
 
     /**
@@ -52,6 +68,7 @@ export const ModalService = {
         }
 
         return new Promise((resolve) => {
+            this._currentResolver = resolve;
             this._setupModal(title, message, type);
 
             // Configurar botones
@@ -61,7 +78,6 @@ export const ModalService = {
 
             this.dom.confirmBtn.onclick = () => {
                 this._close();
-                resolve();
             };
 
             this._show();
@@ -93,6 +109,7 @@ export const ModalService = {
         }
 
         return new Promise((resolve) => {
+            this._currentResolver = resolve;
             this._setupModal(title, message, type);
 
             // Configurar botones
@@ -103,13 +120,11 @@ export const ModalService = {
             this.dom.cancelBtn.classList.remove('hidden');
 
             this.dom.confirmBtn.onclick = () => {
-                this._close();
-                resolve(true);
+                this._close(true);
             };
 
             this.dom.cancelBtn.onclick = () => {
-                this._close();
-                resolve(false);
+                this._close(false);
             };
 
             this._show();
@@ -183,11 +198,17 @@ export const ModalService = {
         }
     },
 
-    _close() {
+    _close(value = null) {
         this.dom.modal.classList.add('hidden');
         this.dom.modal.style.setProperty('display', 'none', 'important');
         // Reset state
         this.dom.confirmBtn.onclick = null;
         if (this.dom.cancelBtn) this.dom.cancelBtn.onclick = null;
+        
+        // Resolver el promise pendiente
+        if (this._currentResolver) {
+            this._currentResolver(value);
+            this._currentResolver = null;
+        }
     }
 };
