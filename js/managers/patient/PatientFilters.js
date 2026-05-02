@@ -375,6 +375,8 @@ export const PatientFilters = {
                 apt.isHourlyBlock) {
                 return;
             }
+            const existing = patientsMap.get(apt.name);
+            const aptTime = new Date(apt.date);
 
             const isNewCancelled = !!apt.isCancelled;
             const isExistingCancelled = existing ? !!existing.isCancelled : false;
