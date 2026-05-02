@@ -19,6 +19,7 @@
 
 import { PatientState } from './PatientState.js';
 import { AuthManager } from '../AuthManager.js';
+import { getDayNameES } from '../../utils/dateUtils.js';
 
 /**
  * Funciones de filtrado para pacientes
@@ -140,6 +141,86 @@ export const PatientFilters = {
         });
 
         return this._groupByPatient(tomorrowAppointments);
+    },
+
+    /**
+     * Busca la próxima fecha con citas (después de hoy)
+     * y devuelve la información necesaria para la pestaña del sidebar.
+     * 
+     * @returns {Object} { date: Date, label: string, appointments: Array }
+     */
+    getNextSessionInfo() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const selectedTherapist = AuthManager.getSelectedTherapist();
+        const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        let currentDate = new Date(today);
+        let foundAppointments = [];
+        let dayCount = 0;
+
+        // Buscar en los próximos 30 días
+        while (foundAppointments.length === 0 && dayCount < 30) {
+            dayCount++;
+            currentDate.setDate(currentDate.getDate() + 1);
+            
+            const dayStart = new Date(currentDate);
+            const dayEnd = new Date(currentDate);
+            dayEnd.setDate(dayEnd.getDate() + 1);
+
+            foundAppointments = (PatientState.appointments || []).filter(apt => {
+                const aptDate = new Date(apt.date);
+
+                // Filtrado por terapeuta
+                const patientProfile = (PatientState.patients || []).find(p => 
+                    normalize(p.name) === normalize(apt.name)
+                );
+                const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
+
+                let matchesTherapist = true;
+                if (selectedTherapist && selectedTherapist !== 'all') {
+                    matchesTherapist = (ownerTherapist === selectedTherapist);
+                } else if (!AuthManager.can('view_all_patients')) {
+                    const userTherapist = AuthManager.currentUser?.therapist;
+                    matchesTherapist = (ownerTherapist === userTherapist);
+                }
+
+                return aptDate >= dayStart &&
+                    aptDate < dayEnd &&
+                    !apt.isCancelled &&
+                    matchesTherapist;
+            });
+        }
+
+        // Si no se encontró nada, devolver mañana vacío
+        if (foundAppointments.length === 0) {
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return {
+                date: tomorrow,
+                label: 'Mañana',
+                appointments: []
+            };
+        }
+
+        // Determinar el label
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        let label = '';
+        if (currentDate.getTime() === tomorrow.getTime()) {
+            label = 'Mañana';
+        } else {
+            // Nombre del día (ej: "Lunes")
+            label = getDayNameES(currentDate);
+        }
+
+        return {
+            date: currentDate,
+            label: label,
+            appointments: this._groupByPatient(foundAppointments)
+        };
     },
 
     // ==========================================

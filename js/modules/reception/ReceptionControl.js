@@ -280,33 +280,50 @@ export const ReceptionControl = {
 
         const normalize = (s) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        let filtered = patients.filter(p => {
-            const matchesSearch = normalize(p.name).includes(normalize(query)) || 
-                               (p.parentName && normalize(p.parentName).includes(normalize(query)));
-            
-            if (!matchesSearch) return false;
-
-            // Filtro por terapeuta (NUEVO)
-            if (therapistFilter !== 'all' && (p.therapist || '').toLowerCase() !== therapistFilter) {
-                return false;
+            // Obtener info de la próxima sesión para el label del botón
+            const nextSessionInfo = PatientFilters.getNextSessionInfo();
+            const tomorrowBtn = document.getElementById('viewTomorrowBtn');
+            if (tomorrowBtn) {
+                tomorrowBtn.textContent = (nextSessionInfo.label === 'Mañana') ? '🌅 Mañana' : `📅 ${nextSessionInfo.label}`;
             }
 
-            // Encontrar citas relevantes para este paciente en esta vista
-            const pApts = appointments.filter(a => normalize(a.name) === normalize(p.name) && !a.isCancelled);
-            
-            if (activeView === 'today' || activeView === 'tomorrow') {
-                const start = activeView === 'today' ? todayStart : tomorrowStart;
-                const end = activeView === 'today' ? todayEnd : tomorrowEnd;
+            let filtered = patients.filter(p => {
+                const matchesSearch = normalize(p.name).includes(normalize(query)) || 
+                                   (p.parentName && normalize(p.parentName).includes(normalize(query)));
                 
-                const hasAptInRange = pApts.some(a => {
-                    const d = new Date(a.date);
-                    return d >= start && d <= end;
-                });
-                if (!hasAptInRange) return false;
-            } else if (activeView === 'future') {
-                const hasFutureApt = pApts.some(a => new Date(a.date) > tomorrowEnd);
-                if (!hasFutureApt) return false;
-            }
+                if (!matchesSearch) return false;
+
+                // Filtro por terapeuta (NUEVO)
+                if (therapistFilter !== 'all' && (p.therapist || '').toLowerCase() !== therapistFilter) {
+                    return false;
+                }
+
+                // Encontrar citas relevantes para este paciente en esta vista
+                const pApts = appointments.filter(a => normalize(a.name) === normalize(p.name) && !a.isCancelled);
+                
+                if (activeView === 'today' || activeView === 'tomorrow') {
+                    let start, end;
+                    
+                    if (activeView === 'today') {
+                        start = todayStart;
+                        end = todayEnd;
+                    } else {
+                        // Vista de "Próxima/Mañana" dinámica
+                        start = new Date(nextSessionInfo.date);
+                        start.setHours(0, 0, 0, 0);
+                        end = new Date(nextSessionInfo.date);
+                        end.setHours(23, 59, 59, 999);
+                    }
+                    
+                    const hasAptInRange = pApts.some(a => {
+                        const d = new Date(a.date);
+                        return d >= start && d <= end;
+                    });
+                    if (!hasAptInRange) return false;
+                } else if (activeView === 'future') {
+                    const hasFutureApt = pApts.some(a => new Date(a.date) > tomorrowEnd);
+                    if (!hasFutureApt) return false;
+                }
 
             const pending = PatientFilters.getPendingPayments(p.name);
             const totalDebt = pending.reduce((sum, a) => sum + (a.cost || 0), 0);

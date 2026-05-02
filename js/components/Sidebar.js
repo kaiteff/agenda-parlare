@@ -157,10 +157,17 @@ export const Sidebar = {
             let filtered = [];
             let activeCount = 0;
 
+            // Obtener info de la próxima sesión para actualizar el label del botón (ej: "Lunes")
+            const nextSessionInfo = PatientFilters.getNextSessionInfo();
+            const tomorrowBtn = document.querySelector('[data-tab="tomorrow"]');
+            if (tomorrowBtn) {
+                tomorrowBtn.textContent = nextSessionInfo.label;
+            }
+
             if (tab === 'today') {
                 filtered = PatientFilters.getToday();
             } else if (tab === 'tomorrow') {
-                filtered = PatientFilters.getTomorrow();
+                filtered = nextSessionInfo.appointments;
             } else {
                 filtered = PatientFilters.applyAll(PatientState.patients, query);
             }
