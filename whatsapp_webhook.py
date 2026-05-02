@@ -484,6 +484,16 @@ def send_reminders():
                     content_sid=reminder_template_sid,
                     content_variables=json.dumps(variables)
                 )
+                
+                # 5. Marcar en Firestore que se envió el recordatorio
+                try:
+                    db.collection('appointments').document(doc.id).update({
+                        'lastReminderSentAt': firestore.SERVER_TIMESTAMP,
+                        'lastReminderType': 'AUTO_CRON'
+                    })
+                except Exception as db_e:
+                    print(f"⚠️ Error actualizando Firestore para {patient_name}: {db_e}")
+
                 sent_count += 1
             except Exception as e:
                 errors.append(f"Error {patient_name}: {str(e)}")

@@ -580,10 +580,27 @@ export const PatientModals = {
             `;
         }
 
+        // Info de WhatsApp
+        let whatsappHtml = '';
+        if (apt.lastReminderSentAt) {
+            const waDate = apt.lastReminderSentAt.toDate ? apt.lastReminderSentAt.toDate() : new Date(apt.lastReminderSentAt);
+            const waTime = waDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const waType = apt.lastReminderType === 'AUTO_CRON' ? '🤖' : '📱';
+            whatsappHtml = `
+                <div class="flex items-center gap-1 text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100" title="Recordatorio enviado vía WhatsApp">
+                    <span>${waType}</span>
+                    <span>${waTime}</span>
+                </div>
+            `;
+        }
+
         aptEl.innerHTML = `
             <div class="flex items-center justify-between mb-1">
-                <div class="text-sm font-bold text-gray-800 tracking-tight">
-                    ${dateStr} <span class="font-normal text-gray-500 mx-1">|</span> ${timeStr}
+                <div class="flex items-center gap-2">
+                    <div class="text-sm font-bold text-gray-800 tracking-tight">
+                        ${dateStr} <span class="font-normal text-gray-500 mx-1">|</span> ${timeStr}
+                    </div>
+                    ${whatsappHtml}
                 </div>
                 <div class="text-[10px] uppercase font-bold tracking-wider ${statusTextColor}">
                     ${statusText}

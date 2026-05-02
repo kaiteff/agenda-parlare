@@ -5,8 +5,26 @@
 
 import { AuthManager } from '../managers/AuthManager.js';
 import { PatientState } from '../managers/patient/PatientState.js';
+import { db, updateDoc, doc, serverTimestamp } from '../firebase.js';
 
 export const WhatsAppMessaging = {
+
+    /**
+     * Registra el envío de un mensaje en la base de datos
+     * @private
+     */
+    async _recordMessageSent(appointmentId, type) {
+        if (!appointmentId) return;
+        try {
+            await updateDoc(doc(db, 'appointments', appointmentId), {
+                lastReminderSentAt: serverTimestamp(),
+                lastReminderType: type.toUpperCase()
+            });
+            console.log(`📝 Record: Mensaje ${type} registrado para cita ${appointmentId}`);
+        } catch (error) {
+            console.warn('⚠️ No se pudo registrar el envío del mensaje en la DB:', error);
+        }
+    },
 
     /**
      * Genera y abre un link de WhatsApp con un mensaje predefinido
@@ -102,14 +120,14 @@ export const WhatsAppMessaging = {
                 vars = { "1": dateStr, "2": timeStr };
             }
 
-            this._sendViaTwilio(phoneDigits, template, type, vars);
+            this._sendViaTwilio(phoneDigits, template, type, vars, appointment.id);
         } else if (mode === false) {
             // MANUAL (wa.me)
-            this._sendViaManual(phoneDigits, template);
+            this._sendViaManual(phoneDigits, template, appointment.id, type);
         }
     },
 
-    async _sendViaTwilio(phone, message, type = 'reminder', variables = null) {
+    async _sendViaTwilio(phone, message, type = 'reminder', variables = null, appointmentId = null) {
         if (!phone) {
             const { ToastService } = await import('../utils/ToastService.js');
             ToastService.error('El paciente no tiene teléfono registrado.');
@@ -153,6 +171,8 @@ export const WhatsAppMessaging = {
             const result = await response.json();
             if (result.status === 'success') {
                 ToastService.success('¡Mensaje enviado por la Clínica!');
+                // Registrar envío exitoso
+                if (appointmentId) this._recordMessageSent(appointmentId, type);
             } else {
                 throw new Error(result.error || 'Error desconocido');
             }
@@ -162,7 +182,7 @@ export const WhatsAppMessaging = {
         }
     },
 
-    _sendViaManual(phone, template) {
+    _sendViaManual(phone, template, appointmentId = null, type = 'reminder') {
         let phoneDigits = phone;
         if (phoneDigits && !phoneDigits.startsWith('52') && phoneDigits.length === 10) {
             phoneDigits = '52' + phoneDigits;
@@ -174,5 +194,8 @@ export const WhatsAppMessaging = {
             : `https://wa.me/?text=${encodedMsg}`;
             
         window.open(url, '_blank');
+
+        // Registrar envío manual (asumimos éxito al abrir el link)
+        if (appointmentId) this._recordMessageSent(appointmentId, type + '_MANUAL');
     }
 };
