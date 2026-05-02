@@ -177,7 +177,8 @@ export const GoogleCalendarService = {
             if (profile.phone) phoneInfo = `Tel: ${profile.phone}`;
         }
 
-        const summary = appointment.name || '(Sin nombre)';
+        let summary = appointment.name || '(Sin nombre)';
+        if (appointment.confirmed) summary = `✅ ${summary}`;
 
         return {
             summary: summary,
