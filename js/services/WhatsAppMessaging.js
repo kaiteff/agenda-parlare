@@ -16,11 +16,15 @@ export const WhatsAppMessaging = {
     async _recordMessageSent(appointmentId, type) {
         if (!appointmentId) return;
         try {
+            const user = AuthManager.currentUser;
+            const userName = user?.displayName || user?.email || 'Sistema';
+
             await updateDoc(doc(db, 'appointments', appointmentId), {
                 lastReminderSentAt: serverTimestamp(),
-                lastReminderType: type.toUpperCase()
+                lastReminderType: type.toUpperCase(),
+                lastReminderBy: userName
             });
-            console.log(`📝 Record: Mensaje ${type} registrado para cita ${appointmentId}`);
+            console.log(`📝 Record: Mensaje ${type} registrado por ${userName} para cita ${appointmentId}`);
         } catch (error) {
             console.warn('⚠️ No se pudo registrar el envío del mensaje en la DB:', error);
         }

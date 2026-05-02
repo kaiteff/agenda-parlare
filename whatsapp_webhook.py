@@ -489,7 +489,8 @@ def send_reminders():
                 try:
                     db.collection('appointments').document(doc.id).update({
                         'lastReminderSentAt': firestore.SERVER_TIMESTAMP,
-                        'lastReminderType': 'AUTO_CRON'
+                        'lastReminderType': 'AUTO_CRON',
+                        'lastReminderBy': 'Robot Parláre'
                     })
                 except Exception as db_e:
                     print(f"⚠️ Error actualizando Firestore para {patient_name}: {db_e}")

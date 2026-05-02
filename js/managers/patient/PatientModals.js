@@ -586,8 +586,9 @@ export const PatientModals = {
             const waDate = apt.lastReminderSentAt.toDate ? apt.lastReminderSentAt.toDate() : new Date(apt.lastReminderSentAt);
             const waTime = waDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             const waType = apt.lastReminderType === 'AUTO_CRON' ? '🤖' : '📱';
+            const waBy = apt.lastReminderBy || 'Manual';
             whatsappHtml = `
-                <div class="flex items-center gap-1 text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100" title="Recordatorio enviado vía WhatsApp">
+                <div class="flex items-center gap-1 text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100" title="Enviado por: ${waBy} (${waTime})">
                     <span>${waType}</span>
                     <span>${waTime}</span>
                 </div>
