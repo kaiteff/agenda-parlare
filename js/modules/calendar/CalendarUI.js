@@ -136,6 +136,8 @@ export const CalendarUI = {
                     }
 
                     const slotEvents = CalendarState.appointments.filter(p => {
+                        if (p.isCancelled) return false; // OCULTAR CANCELADOS DEL CALENDARIO PRINCIPAL
+                        
                         const pDate = new Date(p.date);
                         let pDateStr;
                         try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
