@@ -64,6 +64,16 @@ export const HelpManual = {
                                         <li>• <strong>Respuesta "3" o "recepcion":</strong> Envía un link directo al WhatsApp de Yari.</li>
                                     </ul>
                                 </div>
+                                <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
+                                    <h4 class="font-bold text-emerald-800 mb-2">✅ Rastreo de Envíos (Novedad)</h4>
+                                    <p class="text-emerald-700 text-sm leading-relaxed">
+                                        Ahora puedes saber si ya se envió el recordatorio consultando el <strong>Historial del Paciente</strong>:
+                                    </p>
+                                    <ul class="text-[11px] text-emerald-800 font-bold space-y-1 mt-2">
+                                        <li>🤖 <strong>Robot:</strong> Enviado automáticamente a las 8:00 AM.</li>
+                                        <li>📱 <strong>Celular:</strong> Enviado manualmente por Yari.</li>
+                                    </ul>
+                                </div>
                             </div>
                         </section>
 
@@ -86,6 +96,12 @@ export const HelpManual = {
                                         Este botón borra permanentemente al paciente y todas sus citas de la base de datos. <strong class="text-red-600">No se puede deshacer.</strong> Úsalo solo para errores de dedo o pruebas.
                                     </p>
                                 </div>
+                                <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
+                                    <h4 class="font-bold text-indigo-800 mb-2">🔤 Orden Alfabético</h4>
+                                    <p class="text-indigo-700 text-sm leading-relaxed">
+                                        La pestaña <strong>"TODOS"</strong> del sidebar ahora organiza a los pacientes de la <strong>A a la Z</strong> para que sea más fácil encontrarlos manualmente.
+                                    </p>
+                                </div>
                             </div>
                         </section>
 
@@ -103,6 +119,12 @@ export const HelpManual = {
                                         <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded border border-blue-200">Sam</span>
                                         <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded border border-purple-200">Vero</span>
                                     </div>
+                                </div>
+                                <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm">
+                                    <h4 class="font-bold text-blue-800 mb-2">⚡ Pestañas Inteligentes</h4>
+                                    <p class="text-blue-700 text-sm leading-relaxed">
+                                        La segunda pestaña del sidebar ya no es solo "Mañana". Ahora busca automáticamente el <strong>siguiente día con citas</strong> (ej: si hoy es viernes, te mostrará el Lunes). ¡Ya no verás pestañas vacías!
+                                    </p>
                                 </div>
                                 <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                                     <h4 class="font-bold text-gray-800 mb-2">💰 Pagos y Deudas</h4>
