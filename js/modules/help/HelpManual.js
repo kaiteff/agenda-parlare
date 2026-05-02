@@ -1,6 +1,9 @@
 /**
  * HelpManual.js
  * Modal interactivo con el manual de usuario de Parláre.
+ * 
+ * ⚠️ AI INSTRUCTION: Always update this file whenever core features, 
+ * UI tabs, or WhatsApp logic are modified to keep users informed.
  */
 
 import { ModalService } from '../../utils/ModalService.js';
