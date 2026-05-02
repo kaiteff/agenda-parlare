@@ -316,7 +316,12 @@ def webhook():
             resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
             return str(resp), 200
             
-        if msg_body in ['3', 'recepcion', 'yari']:
+        # PALABRAS CLAVE AMPLIADAS
+        RECEPTION_KEYWORDS = ['3', 'recepcion', 'yari', 'recepcionista', 'hablar con recepcion', 'hablar con recepsion', 'duda', 'pregunta']
+        CONFIRM_KEYWORDS = ['1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro']
+        CANCEL_KEYWORDS = ['2', 'cancelar', 'no', 'cancelado', 'no puedo', 'no asistiremos', 'no asistira']
+
+        if any(word in msg_body for word in RECEPTION_KEYWORDS):
             print("📞 Solicitud de recepción detectada")
             resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
             return str(resp), 200
@@ -341,7 +346,7 @@ def webhook():
                 resp.message("Hola, no encontramos citas futuras agendadas para tu número. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
             return str(resp), 200
 
-        if msg_body in ['1', 'ok', 'si', 'sí', 'confirmar']:
+        if any(word in msg_body for word in CONFIRM_KEYWORDS):
             print("✅ Confirmación recibida")
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
@@ -352,7 +357,7 @@ def webhook():
                 update_google_sheet(a, "CONFIRMADO")
                 update_google_calendar(a, "CONFIRMADO")
             resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
-        elif msg_body in ['2', 'cancelar', 'no']:
+        elif any(word in msg_body for word in CANCEL_KEYWORDS):
             print("🚫 Cancelación recibida")
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
