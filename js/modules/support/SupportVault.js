@@ -217,7 +217,8 @@ export const SupportVault = {
 
             for (const [id, docSnap] of allDocs.entries()) {
                 try {
-                    await GoogleCalendarService.deleteEvent(id);
+                    const data = docSnap.data();
+                    await GoogleCalendarService.deleteEvent(id, data?.googleEventId, data?.therapist, data);
                     calDeleted++;
                 } catch (e) {
                     console.warn('No se pudo borrar de Google Calendar:', id);

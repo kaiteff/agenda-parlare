@@ -39,16 +39,30 @@ async function _createNotification(title, message, type = 'info', metadata = {})
 async function _syncToCalendar(action, data) {
     try {
         const { GoogleCalendarService } = await import('./google/GoogleCalendarService.js');
+        const { GoogleAuthService } = await import('./google/GoogleAuthService.js');
+        const { ToastService } = await import('../utils/ToastService.js');
+
+        // PRE-CHECK: Si no hay token válido, avisamos y abortamos sync (pero la cita ya se guardó en Firebase)
+        if (!GoogleAuthService.isTokenValid()) {
+            log.warn('Sync cancelado: Token de Google inválido o expirado.');
+            ToastService.warn('⚠️ Cita guardada localmente, pero Google Calendar no se pudo actualizar (Token expirado/desconectado). Reconecta Google en el menú superior.');
+            return;
+        }
 
         const result = await (async () => {
             if (action === 'create') return await GoogleCalendarService.createEvent(data);
             if (action === 'update') return await GoogleCalendarService.updateEvent(data);
-            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data.id, data.googleEventId, data.therapist);
+            if (action === 'delete') return await GoogleCalendarService.deleteEvent(data.id, data.googleEventId, data.therapist, data);
             return { success: false };
         })();
 
+        // Si falló por otra razón (network, error 500, etc)
+        if (!result || (typeof result === 'object' && result.success === false) || result === false) {
+             ToastService.warn('⚠️ Hubo un problema al sincronizar con Google Calendar. Verifica tu conexión.');
+        }
+
         // Si se creó un evento y devolvió un ID de Google, lo guardamos en el documento
-        if (result.success && result.googleEventId && (action === 'create' || action === 'update')) {
+        if (result && result.success && result.googleEventId && (action === 'create' || action === 'update')) {
             const docRef = doc(db, collectionPath, data.id);
             await updateDoc(docRef, { googleEventId: result.googleEventId });
             log.debug(`googleEventId [${result.googleEventId}] guardado en Firestore.`);
@@ -200,7 +214,13 @@ export async function updateAppointment(id, updateData, existingAppointments) {
  * @param {string} id - ID de la cita
  * @returns {Promise<Object>} - Resultado { success, error }
  */
-export async function deleteAppointment(id, googleEventId = null, therapist = 'all') {
+/**
+ * Elimina una cita permanentemente
+ * @param {string} id - ID de la cita
+ * @param {Object} appointmentData - Objeto completo de la cita (para búsqueda huérfana en GCal)
+ * @returns {Promise<Object>} - Resultado { success, error }
+ */
+export async function deleteAppointment(id, appointmentData = {}) {
     try {
         const docRef = doc(db, collectionPath, id);
         await deleteDoc(docRef);
@@ -208,12 +228,19 @@ export async function deleteAppointment(id, googleEventId = null, therapist = 'a
 
         // Bitácora de Auditoría
         await AuditService.log('DELETE_PERMANENT', 'APPOINTMENT', id, { 
-            therapist: therapist 
+            therapist: appointmentData.therapist || 'all' 
         });
 
         _createNotification('Cita Eliminada', 'Se ha eliminado una cita permanentemente', 'warning');
 
-        _syncToCalendar('delete', { id, googleEventId, therapist }); 
+        // Pasar todo el objeto para permitir búsqueda huérfana si no hay googleEventId
+        _syncToCalendar('delete', { 
+            id, 
+            googleEventId: appointmentData.googleEventId, 
+            therapist: appointmentData.therapist,
+            date: appointmentData.date,
+            name: appointmentData.name
+        }); 
         return { success: true };
     } catch (error) {
         log.error("Error eliminando cita:", error);
@@ -252,7 +279,13 @@ export async function cancelAppointment(id, existingAppointments = [], source = 
             { appointmentId: id, therapist: appointment.therapist }
         );
 
-        _syncToCalendar('delete', { id, googleEventId: appointment.googleEventId, therapist: appointment.therapist });
+        _syncToCalendar('delete', { 
+            id, 
+            googleEventId: appointment.googleEventId, 
+            therapist: appointment.therapist,
+            date: appointment.date,
+            name: appointment.name
+        });
         return { success: true };
     } catch (error) {
         log.error("Error cancelando cita:", error);

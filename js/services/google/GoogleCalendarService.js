@@ -289,23 +289,63 @@ export const GoogleCalendarService = {
     },
 
     /**
-     * Elimina un evento (al cancelar cita)
+     * Elimina un evento (al cancelar o borrar cita)
+     * Soporta "Búsqueda Huérfana": si no hay ID, intenta buscarlo por Fecha y Nombre para asegurar limpieza.
      */
-    async deleteEvent(appointmentId, googleEventIdParam = null, therapist = 'diana') {
+    async deleteEvent(appointmentId, googleEventIdParam = null, therapist = 'diana', appointmentData = {}) {
         if (!(await this._ensureReady())) return false;
 
-        const googleEventId = googleEventIdParam || this._getMappings()[appointmentId];
-        if (!googleEventId) return true;
+        let googleEventId = googleEventIdParam || this._getMappings()[appointmentId];
+        const calendarId = this.getCalendarId(therapist);
+
+        // ROBUST DELETE: Si no hay ID, intentar buscar el evento en Google por Fecha y Nombre
+        if (!googleEventId && appointmentData.date && appointmentData.name) {
+            log.info(`🔍 Buscando evento huérfano en Google Calendar: ${appointmentData.name} en ${appointmentData.date}`);
+            try {
+                const startDt = new Date(appointmentData.date);
+                // Rango de 1 hora para la búsqueda
+                const timeMin = startDt.toISOString();
+                const timeMax = new Date(startDt.getTime() + 60 * 60 * 1000).toISOString();
+
+                const response = await this._callGapi(() => window.gapi.client.calendar.events.list({
+                    calendarId,
+                    timeMin,
+                    timeMax,
+                    singleEvents: true,
+                    q: appointmentData.name // Filtro por nombre
+                }));
+
+                const items = response.result.items || [];
+                const nameNorm = appointmentData.name.toLowerCase().trim().replace(/\s+/g, '');
+                
+                // Encontrar el match exacto
+                const match = items.find(item => {
+                    const itemSummary = (item.summary || '').toLowerCase().trim().replace(/\s+/g, '');
+                    return itemSummary === nameNorm;
+                });
+
+                if (match) {
+                    googleEventId = match.id;
+                    log.success(`🎯 Evento huérfano encontrado [${googleEventId}]. Procediendo a borrar.`);
+                }
+            } catch (err) {
+                log.warn('Fallo en búsqueda de evento huérfano:', err);
+            }
+        }
+
+        if (!googleEventId) {
+            log.info("No se encontró googleEventId ni match huérfano. Nada que borrar en Google.");
+            return true; 
+        }
 
         try {
-            const calendarId = this.getCalendarId(therapist);
-
             await this._callGapi(() => window.gapi.client.calendar.events.delete({
                 calendarId,
                 eventId: googleEventId
             }));
 
             this._removeMapping(appointmentId);
+            log.success(`Evento eliminado de Google Calendar [${googleEventId}]`);
             return true;
         } catch (err) {
             if (err.status === 404) {
