@@ -51,7 +51,7 @@ async function _syncToCalendar(action, data) {
 
         const result = await (async () => {
             if (action === 'create') return await GoogleCalendarService.createEvent(data);
-            if (action === 'update') return await GoogleCalendarService.updateEvent(data);
+            if (action === 'update') return await GoogleCalendarService.updateEvent(data.current, data.previous);
             if (action === 'delete') return await GoogleCalendarService.deleteEvent(data.id, data.googleEventId, data.therapist, data);
             return { success: false };
         })();
@@ -199,8 +199,8 @@ export async function updateAppointment(id, updateData, existingAppointments) {
             { appointmentId: id, patientName: updateData.name || null, therapist: mergedData.therapist }
         );
 
-        // Sync a Google Calendar con datos COMPLETOS (no solo el delta)
-        _syncToCalendar('update', mergedData);
+        // Sync a Google Calendar con datos COMPLETOS y ANTERIORES para evitar huérfanos
+        _syncToCalendar('update', { current: mergedData, previous: existingData });
 
         return { success: true };
     } catch (error) {

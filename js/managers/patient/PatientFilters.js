@@ -91,7 +91,6 @@ export const PatientFilters = {
 
             return aptDate >= today &&
                 aptDate < tomorrow &&
-                !apt.isCancelled &&
                 matchesTherapist;
         });
 
@@ -137,7 +136,6 @@ export const PatientFilters = {
 
             return aptDate >= tomorrow &&
                 aptDate < dayAfter &&
-                !apt.isCancelled &&
                 matchesTherapist;
         });
 
@@ -189,10 +187,17 @@ export const PatientFilters = {
 
                 return aptDate >= dayStart &&
                     aptDate < dayEnd &&
-                    !apt.isCancelled &&
                     matchesTherapist;
             });
         }
+
+        // Si encontramos el día, ahora filtramos para la info de retorno
+        // Queremos saber si el día TIENE citas activas para que sea un día válido de "Próxima Sesión"
+        // Pero una vez encontrado, queremos devolver TODAS las citas (incluyendo canceladas)
+        // La lógica anterior ya buscó hasta encontrar un día con citas (activas o no)
+        // Para ser consistentes con lo que pide el usuario (ver cancelados), 
+        // simplemente devolvemos lo que encontramos.
+
 
         // Si no se encontró nada, devolver mañana vacío
         if (foundAppointments.length === 0) {
@@ -348,10 +353,21 @@ export const PatientFilters = {
                 return;
             }
 
-            const existing = patientsMap.get(apt.name);
-            const aptTime = new Date(apt.date);
+            const isNewCancelled = !!apt.isCancelled;
+            const isExistingCancelled = existing ? !!existing.isCancelled : false;
 
-            if (!existing || aptTime < existing.appointmentTime) {
+            let shouldReplace = false;
+            if (!existing) {
+                shouldReplace = true;
+            } else if (!isNewCancelled && isExistingCancelled) {
+                // Preferir la cita activa sobre la cancelada si son el mismo día
+                shouldReplace = true;
+            } else if (isNewCancelled === isExistingCancelled && aptTime < existing.appointmentTime) {
+                // Si ambos tienen el mismo estado, preferir la más temprana
+                shouldReplace = true;
+            }
+
+            if (shouldReplace) {
                 // Buscar el perfil real del paciente para obtener su ID correcto
                 const patientProfile = allPatients.find(p => p.name === apt.name);
 
@@ -362,14 +378,12 @@ export const PatientFilters = {
 
                 const realPatientId = patientProfile ? patientProfile.id : (apt.patientId || null);
 
-                if (!realPatientId) {
-                    // Si no encontramos ID, alerta suave
-                }
-
                 patientsMap.set(apt.name, {
                     name: apt.name,
                     appointmentTime: aptTime,
                     confirmed: apt.confirmed || false,
+                    isCancelled: !!apt.isCancelled,
+                    cancelledBy: apt.cancelledBy || null,
                     therapist: patientProfile ? patientProfile.therapist : apt.therapist, // Prioridad al dueño
                     id: realPatientId,
                     hasProfile: !!patientProfile

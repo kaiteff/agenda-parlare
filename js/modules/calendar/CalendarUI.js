@@ -136,7 +136,6 @@ export const CalendarUI = {
                     }
 
                     const slotEvents = CalendarState.appointments.filter(p => {
-                        if (p.isCancelled) return false;
                         const pDate = new Date(p.date);
                         let pDateStr;
                         try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
@@ -157,6 +156,7 @@ export const CalendarUI = {
                                 let bgColor = '';
                                 if (evt.isPaid) bgColor = 'bg-green-100 text-green-800 border-green-200';
                                 else if (evt.isFullDayBlock || evt.isHourlyBlock) bgColor = 'bg-gray-900 text-white border-gray-950 shadow-md';
+                                else if (evt.isCancelled) bgColor = 'bg-red-50 text-red-700 border-red-200 opacity-60';
                                 else {
                                     if (tKey === 'diana') bgColor = 'bg-pink-100 text-pink-800 border-pink-200';
                                     else if (tKey === 'sam') bgColor = 'bg-blue-100 text-blue-800 border-blue-200';
@@ -175,7 +175,9 @@ export const CalendarUI = {
                                 let content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
                                 if (evt.isPaid) content = `[${tInitial}] Pagado`;
                                 else if (evt.isFullDayBlock || evt.isHourlyBlock) content = `[${tInitial}] Bloqueado`;
-                                if (evt.confirmed && canViewDetails) content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
+                                else if (evt.isCancelled) content = `<span class="line-through">[${tInitial}] ${therapistName}</span> <span class="text-[7px] font-black">X ${evt.cancelledBy || '?'}</span>`;
+                                
+                                if (evt.confirmed && canViewDetails && !evt.isCancelled) content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
                                 chip.innerHTML = content;
                                 chip.onclick = (e) => { e.stopPropagation(); if (onEventClick) onEventClick(evt); };
                                 container.appendChild(chip);
@@ -194,7 +196,19 @@ export const CalendarUI = {
                                 const eventCard = document.createElement('div');
                                 const isPaid = evt.isPaid;
                                 const heightClass = matchingEvents.length > 1 ? 'flex-1 min-h-0' : 'h-full';
-                                let cardClasses = canView ? (evt.isFullDayBlock || evt.isHourlyBlock ? 'bg-gray-900 text-white shadow-lg border-gray-950' : (isPaid ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-white border-l-4 border-l-red-500 text-gray-700')) : 'bg-gray-100 text-gray-700 cursor-default';
+                                let cardClasses = '';
+                                if (!canView) {
+                                    cardClasses = 'bg-gray-100 text-gray-700 cursor-default';
+                                } else if (evt.isCancelled) {
+                                    cardClasses = 'bg-red-50 text-red-600 border-l-4 border-l-red-600 opacity-60';
+                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
+                                    cardClasses = 'bg-gray-900 text-white shadow-lg border-gray-950';
+                                } else if (isPaid) {
+                                    cardClasses = 'bg-gradient-to-r from-green-500 to-green-600 text-white';
+                                } else {
+                                    cardClasses = 'bg-white border-l-4 border-l-red-500 text-gray-700';
+                                }
+                                
                                 eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses} cursor-pointer transition-all`;
                                 if (canView) {
                                     eventCard.draggable = true;
@@ -202,7 +216,11 @@ export const CalendarUI = {
                                     eventCard.ondragend = (e) => { eventCard.style.opacity = '1'; };
                                 }
                                 eventCard.onclick = (e) => { e.stopPropagation(); if (onEventClick) onEventClick(evt); };
-                                eventCard.innerHTML = `<div class="flex items-center justify-between gap-1 w-full"><div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>${evt.confirmed && canView ? '✓' : ''}</div>`;
+                                const nameContent = evt.isCancelled 
+                                    ? `<div class="truncate font-semibold flex-1 leading-tight flex items-center gap-1"><span class="line-through">${evt.name}</span> <span class="text-[9px] font-black uppercase bg-red-100 px-1 rounded">X ${evt.cancelledBy || '?'}</span></div>`
+                                    : `<div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>`;
+                                    
+                                eventCard.innerHTML = `<div class="flex items-center justify-between gap-1 w-full">${nameContent}${evt.confirmed && canView && !evt.isCancelled ? '✓' : ''}</div>`;
                                 container.appendChild(eventCard);
                             });
                             cell.appendChild(container);

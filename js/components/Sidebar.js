@@ -239,7 +239,9 @@ export const Sidebar = {
      * Genera el HTML para una tarjeta de paciente
      */
     _generatePatientCard(p) {
-        const statusColor = p.totalPending > 0 ? 'bg-orange-500' : 'bg-green-500';
+        const statusColor = p.isCancelled 
+            ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' 
+            : (p.totalPending > 0 ? 'bg-orange-500' : 'bg-green-500');
         
         // Configuración de Tag de Terapeuta
         const tKey = (p.therapist || 'diana').toLowerCase();
@@ -276,22 +278,26 @@ export const Sidebar = {
             }
         }
 
+        const cancelLabel = p.isCancelled 
+            ? `<span class="text-[8px] px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-md ml-2 uppercase font-black tracking-tighter">X ${p.cancelledBy || '?' }</span>` 
+            : '';
+
         return `
             <div onclick="window.openPatientHistoryById('${p.id}')" 
-                 class="group p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-200">
+                 class="group p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-200 ${p.isCancelled ? 'opacity-70 bg-gray-50/50' : ''}">
                 <div class="flex items-start gap-3">
-                    <div class="relative w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
+                    <div class="relative w-10 h-10 rounded-full ${p.isCancelled ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-600'} flex items-center justify-center font-bold shrink-0">
                         ${p.name.charAt(0)}
                         <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black border-2 border-white flex items-center justify-center shadow-sm ${tClass}" title="Terapeuta: ${tKey}">${tLetter}</span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <h3 class="font-bold text-gray-800 truncate">${p.name}${birthdayIcon}</h3>
+                            <h3 class="font-bold text-gray-800 truncate flex items-center">${p.name}${birthdayIcon}${cancelLabel}</h3>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
-                        <div class="flex items-center gap-2 text-[10px] ${p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium'}">
+                        <div class="flex items-center gap-2 text-[10px] ${p.isCancelled ? 'text-gray-400' : (p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium')}">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            ${timeLabel}
+                            ${p.isCancelled ? 'Cancelada' : timeLabel}
                         </div>
                     </div>
                 </div>

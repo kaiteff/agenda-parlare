@@ -250,37 +250,55 @@ export const GoogleCalendarService = {
 
     /**
      * Actualiza un evento existente
+     * @param {Object} appointment - Nuevos datos
+     * @param {Object} previous - Datos anteriores (opcional, útil si cambió el terapeuta o fecha)
      */
-    async updateEvent(appointment) {
+    async updateEvent(appointment, previous = {}) {
         if (!(await this._ensureReady())) return false;
 
         const googleEventId = appointment.googleEventId || this._getMappings()[appointment.id];
 
         if (!googleEventId) {
+            // Intento de borrado huérfano antes de crear por si acaso (usando datos anteriores si los hay)
+            if (previous && previous.date && previous.name) {
+                await this.deleteEvent(appointment.id, null, previous.therapist || appointment.therapist, previous);
+            }
             return this.createEvent(appointment);
         }
 
         try {
-            // Obtener datos actuales de la app para ver si cambió el terapeuta
-            // (Ya vienen en el objeto appointment que recibe esta función)
+            const currentTherapist = (appointment.therapist || 'diana').toLowerCase();
+            const prevTherapist = (previous.therapist || currentTherapist).toLowerCase();
+
+            // Si cambió el terapeuta, el calendario destino cambia.
+            // NO podemos hacer update en un calendario cruzado, dará 404.
+            // Debemos borrar el viejo y crear uno nuevo.
+            if (currentTherapist !== prevTherapist) {
+                log.info(`Terapeuta cambió de ${prevTherapist} a ${currentTherapist}. Moviendo evento...`);
+                await this.deleteEvent(appointment.id, googleEventId, prevTherapist, previous);
+                this._removeMapping(appointment.id);
+                return this.createEvent(appointment);
+            }
+
+            // Si es el mismo terapeuta, intentamos el update normal
             const calendarId = this.getCalendarId(appointment.therapist);
             const event = this._toGoogleEvent(appointment);
 
-            // IMPORTANTE: Si googleEventId viene de Firestore, no sabemos en qué calendario está
-            // si el terapeuta cambió. Por ahora asumimos que el terapeuta del objeto es el dueño del ID.
-            // Si falla con 404, reintentamos creando uno nuevo.
-            
             await this._callGapi(() => window.gapi.client.calendar.events.update({
                 calendarId,
                 eventId: googleEventId,
                 resource: event
             }));
 
-            log.info(`Evento actualizado [${googleEventId}]`);
+            log.info(`Evento actualizado [${googleEventId}] en calendario ${appointment.therapist}`);
             return { success: true, googleEventId };
         } catch (err) {
             if (err.status === 404) {
-                log.warn('Evento no encontrado para actualizar. Re-creando...');
+                log.warn('Evento no encontrado para actualizar. Limpiando huérfano y re-creando...');
+                
+                // Intento extra de borrar el posible huérfano en cualquier calendario
+                await this.deleteEvent(appointment.id, null, appointment.therapist, previous.date ? previous : appointment);
+                
                 this._removeMapping(appointment.id);
                 return this.createEvent(appointment);
             }
@@ -558,9 +576,16 @@ export const GoogleCalendarService = {
         const weekEndDate = new Date(weekStartDate);
         weekEndDate.setDate(weekStartDate.getDate() + 6);
 
-        // Formateo YYYY-MM-DD
-        const startStr = weekStartDate.toISOString().slice(0, 10);
-        const endStr = weekEndDate.toISOString().slice(0, 10);
+        // Formateo YYYY-MM-DD usando locale para evitar corrimientos por timezone
+        const formatDateLocal = (d) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        const startStr = formatDateLocal(weekStartDate);
+        const endStr = formatDateLocal(weekEndDate);
 
         const timeMin = `${startStr}T00:00:00-06:00`;
         const timeMax = `${endStr}T23:59:59-06:00`;

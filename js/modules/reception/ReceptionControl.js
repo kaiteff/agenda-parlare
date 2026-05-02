@@ -299,7 +299,7 @@ export const ReceptionControl = {
                 }
 
                 // Encontrar citas relevantes para este paciente en esta vista
-                const pApts = appointments.filter(a => normalize(a.name) === normalize(p.name) && !a.isCancelled);
+                const pApts = appointments.filter(a => normalize(a.name) === normalize(p.name));
                 
                 if (activeView === 'today' || activeView === 'tomorrow') {
                     let start, end;
@@ -355,9 +355,12 @@ export const ReceptionControl = {
             const totalDebt = pending.reduce((sum, a) => sum + (a.cost || 0), 0);
             
             // Buscar próxima cita
-            const upcoming = appointments
-                .filter(a => a.name === p.name && !a.isCancelled && new Date(a.date) >= now)
-                .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+            const upcomingApts = appointments
+                .filter(a => a.name === p.name && new Date(a.date) >= now)
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Preferir la primera activa, si no hay, la primera cancelada
+            const upcoming = upcomingApts.find(a => !a.isCancelled) || upcomingApts[0];
 
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-indigo-50/30 transition-colors group text-sm md:text-base';
@@ -394,9 +397,11 @@ export const ReceptionControl = {
                 <td class="px-4 md:px-6 py-3 md:py-4">
                     ${upcoming 
                         ? `<div class="flex flex-col">
-                             <span class="text-xs md:text-sm text-gray-700 font-medium">${this.formatDate(upcoming.date)}</span>
-                             <span class="text-[9px] md:text-[10px] ${upcoming.confirmed ? 'text-emerald-600 font-bold' : 'text-orange-500 animate-pulse'} uppercase">
-                                ${upcoming.confirmed ? '✅ Confirmada' : '⏳ Pendiente'}
+                             <span class="text-xs md:text-sm ${upcoming.isCancelled ? 'text-red-400 line-through' : 'text-gray-700 font-medium'}">${this.formatDate(upcoming.date)}</span>
+                             <span class="text-[9px] md:text-[10px] uppercase font-bold">
+                                ${upcoming.isCancelled 
+                                    ? `<span class="text-red-600 bg-red-50 px-1 rounded">❌ CANCELÓ: ${upcoming.cancelledBy || '?'}</span>` 
+                                    : (upcoming.confirmed ? '<span class="text-emerald-600">✅ Confirmada</span>' : '<span class="text-orange-500 animate-pulse text-[10px]">⏳ Pendiente</span>')}
                              </span>
                            </div>`
                         : `<span class="text-[10px] md:text-xs text-gray-400 italic">Sin próxima</span>`
