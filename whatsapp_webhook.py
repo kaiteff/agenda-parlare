@@ -169,17 +169,25 @@ def update_google_calendar(appointment, status_text):
     except Exception as e:
         print(f"❌ Error Sync Calendar: {e}")
 
-def notify_receptionist(patient_name, action_type):
-    """Notifica a Yari (Recepción) sobre acciones críticas de pacientes"""
+def notify_receptionist(patient_name, action_type, date_str="Mañana", hour_str="", therapist="Diana", phone=""):
+    """Notifica a Yari (Recepción) sobre acciones críticas de pacientes con detalles completos"""
     try:
         # Número de Yari (Central Parláre)
         yari_num = "whatsapp:+523315196702"
         
         icon = "❌" if "CANCELAR" in action_type.upper() else "📞"
+        
+        # Crear link directo de WhatsApp para que Yari responda al paciente
+        wa_link = f"https://wa.me/{phone}" if phone else "No disponible"
+
         msg = (
             f"📢 *Aviso de Recepción*\n\n"
-            f"{icon} El paciente *{patient_name}* ha marcado como *{action_type}* su cita de mañana vía WhatsApp Bot.\n\n"
-            f"Favor de dar seguimiento para reagendar o aplicar políticas de cobro según corresponda."
+            f"{icon} *{action_type.upper()}* DETECTADA\n"
+            f"👤 *Paciente:* {patient_name}\n"
+            f"📅 *Cita:* {date_str} a las {hour_str}\n"
+            f"👩‍⚕️ *Terapeuta:* {therapist}\n\n"
+            f"Favor de dar seguimiento para reagendar o aplicar políticas de cobro según corresponda.\n\n"
+            f"📱 *Escribir al paciente:* {wa_link}"
         )
         
         twilio_client.messages.create(
@@ -187,7 +195,7 @@ def notify_receptionist(patient_name, action_type):
             to=yari_num,
             body=msg
         )
-        print(f"📩 Notificación enviada a Yari para: {patient_name}")
+        print(f"📩 Notificación detallada enviada a Yari para: {patient_name}")
     except Exception as e:
         print(f"⚠️ Error notificando a Yari: {e}")
 
@@ -391,10 +399,28 @@ def webhook():
                 })
                 update_google_sheet(a, "CANCELADO")
                 update_google_calendar(a, "CANCELADO")
-            
-            # Notificar a Yari para seguimiento
-            names_str = ", ".join([p['name'] for p in patients])
-            notify_receptionist(names_str, "CANCELADA")
+                
+                # Formatear datos específicos para la notificación a Yari
+                try:
+                    dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                    date_info = dt.strftime('%d/%b')
+                    hour_info = dt.strftime('%I:%M %p').lstrip('0')
+                except:
+                    date_info = "Mañana"
+                    hour_info = "Horario pendiente"
+                
+                therapist_info = a.get('therapist', 'Diana').title()
+                # Extraer solo dígitos para el link de WhatsApp
+                clean_phone = re.sub(r'\D', '', from_num)
+                
+                notify_receptionist(
+                    a.get('name', 'Paciente'), 
+                    "CANCELADA", 
+                    date_info, 
+                    hour_info, 
+                    therapist_info, 
+                    clean_phone
+                )
             
             resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
         else:
