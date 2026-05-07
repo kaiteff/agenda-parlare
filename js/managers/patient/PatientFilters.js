@@ -79,14 +79,16 @@ export const PatientFilters = {
             // FILTRADO LÓGICO
             let matchesTherapist = true;
             
-            // 1. Si hay un filtro específico seleccionado (ej: "Vero"), filtrar estrictamente
+            // PRIORIDAD: Para la agenda diaria (Hoy/Mañana), manda el terapeuta de la CITA
+            // Si Diana tiene una cita, debe verla en su agenda sin importar de quién sea el paciente.
+            const attendingTherapist = apt.therapist || 'diana';
+
             if (selectedTherapist && selectedTherapist !== 'all') {
-                matchesTherapist = (ownerTherapist === selectedTherapist);
+                matchesTherapist = (attendingTherapist === selectedTherapist);
             } 
-            // 2. Si es "Todas", pero el usuario es un terapeuta (Sam/Vero), solo ve los suyos por seguridad
             else if (!AuthManager.can('view_all_patients')) {
                 const userTherapist = AuthManager.currentUser?.therapist;
-                matchesTherapist = (ownerTherapist === userTherapist);
+                matchesTherapist = (attendingTherapist === userTherapist);
             }
 
             return aptDate >= today &&
@@ -127,11 +129,14 @@ export const PatientFilters = {
             // FILTRADO LÓGICO
             let matchesTherapist = true;
             
+            // PRIORIDAD: Para la agenda diaria (Hoy/Mañana), manda el terapeuta de la CITA
+            const attendingTherapist = apt.therapist || 'diana';
+
             if (selectedTherapist && selectedTherapist !== 'all') {
-                matchesTherapist = (ownerTherapist === selectedTherapist);
+                matchesTherapist = (attendingTherapist === selectedTherapist);
             } else if (!AuthManager.can('view_all_patients')) {
                 const userTherapist = AuthManager.currentUser?.therapist;
-                matchesTherapist = (ownerTherapist === userTherapist);
+                matchesTherapist = (attendingTherapist === userTherapist);
             }
 
             return aptDate >= tomorrow &&
@@ -174,14 +179,15 @@ export const PatientFilters = {
                 const patientProfile = (PatientState.patients || []).find(p => 
                     normalize(p.name) === normalize(apt.name)
                 );
-                const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
+                // PRIORIDAD: Terapeuta de la cita para la agenda
+                const attendingTherapist = apt.therapist || 'diana';
 
                 let matchesTherapist = true;
                 if (selectedTherapist && selectedTherapist !== 'all') {
-                    matchesTherapist = (ownerTherapist === selectedTherapist);
+                    matchesTherapist = (attendingTherapist === selectedTherapist);
                 } else if (!AuthManager.can('view_all_patients')) {
                     const userTherapist = AuthManager.currentUser?.therapist;
-                    matchesTherapist = (ownerTherapist === userTherapist);
+                    matchesTherapist = (attendingTherapist === userTherapist);
                 }
 
                 return aptDate >= dayStart &&
@@ -197,14 +203,14 @@ export const PatientFilters = {
                     const patientProfile = (PatientState.patients || []).find(p => 
                         normalize(p.name) === normalize(apt.name)
                     );
-                    const ownerTherapist = patientProfile ? patientProfile.therapist : apt.therapist;
+                    const attendingTherapist = apt.therapist || 'diana';
 
                     let matchesTherapist = true;
                     if (selectedTherapist && selectedTherapist !== 'all') {
-                        matchesTherapist = (ownerTherapist === selectedTherapist);
+                        matchesTherapist = (attendingTherapist === selectedTherapist);
                     } else if (!AuthManager.can('view_all_patients')) {
                         const userTherapist = AuthManager.currentUser?.therapist;
-                        matchesTherapist = (ownerTherapist === userTherapist);
+                        matchesTherapist = (attendingTherapist === userTherapist);
                     }
 
                     return aptDate >= dayStart &&
@@ -393,8 +399,8 @@ export const PatientFilters = {
             }
 
             if (shouldReplace) {
-                // Buscar el perfil real del paciente para obtener su ID correcto
-                const patientProfile = allPatients.find(p => p.name === apt.name);
+                // Buscar el perfil real usando normalización para evitar fallos por acentos/espacios
+                const patientProfile = allPatients.find(p => normalize(p.name) === normalize(apt.name));
 
                 // CRUCIAL: Si el paciente está INACTIVO, no mostrarlo en listas de Hoy/Mañana
                 if (patientProfile && patientProfile.isActive === false) {
@@ -409,7 +415,11 @@ export const PatientFilters = {
                     confirmed: apt.confirmed || false,
                     isCancelled: !!apt.isCancelled,
                     cancelledBy: apt.cancelledBy || null,
-                    therapist: patientProfile ? patientProfile.therapist : apt.therapist, // Prioridad al dueño
+                    // LÓGICA DE RELEVO: 
+                    // therapist -> Quién atiende hoy (el de la cita)
+                    // planningTherapist -> Quién es el dueño/planeador (el del perfil)
+                    therapist: apt.therapist || (patientProfile ? patientProfile.therapist : 'diana'),
+                    planningTherapist: patientProfile ? patientProfile.therapist : null,
                     id: realPatientId,
                     hasProfile: !!patientProfile
                 });

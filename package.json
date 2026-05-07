@@ -1,0 +1,19 @@
+{
+  "name": "ag",
+  "version": "1.0.0",
+  "description": "Agenda Parlare",
+  "main": "index.js",
+  "scripts": {
+    "build": "tailwindcss -i ./index.css -o ./dist/output.css",
+    "watch": "tailwindcss -i ./index.css -o ./dist/output.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.35",
+    "autoprefixer": "^10.4.18"
+  }
+}

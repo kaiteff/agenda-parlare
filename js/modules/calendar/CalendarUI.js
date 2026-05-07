@@ -174,10 +174,23 @@ export const CalendarUI = {
                                 }
                                 const canViewDetails = AuthManager.canViewDetails(evt);
                                 const tInitial = tKey.charAt(0).toUpperCase();
-                                let content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
-                                if (evt.isPaid) content = `[${tInitial}] Pagado`;
-                                else if (evt.isFullDayBlock || evt.isHourlyBlock) content = `[${tInitial}] Bloqueado`;
-                                else if (evt.isCancelled) content = `<span class="line-through">[${tInitial}] ${therapistName}</span> <span class="text-[7px] font-black">X ${evt.cancelledBy || '?'}</span>`;
+                                const pInitial = evt.planningTherapist ? evt.planningTherapist.charAt(0).toUpperCase() : null;
+                                
+                                let content = "";
+                                if (evt.isPaid) {
+                                    content = `[${tInitial}] Pagado`;
+                                } else if (evt.isFullDayBlock || evt.isHourlyBlock) {
+                                    content = `[${tInitial}] Bloqueado`;
+                                } else if (evt.isCancelled) {
+                                    content = `<span class="line-through">[${tInitial}] ${therapistName}</span> <span class="text-[7px] font-black">X ${evt.cancelledBy || '?'}</span>`;
+                                } else {
+                                    // INDICADOR DE RELEVO: Tachamos la original si hay planeadora diferente
+                                    if (pInitial && pInitial !== tInitial) {
+                                        content = `<span class="line-through opacity-40 text-red-500 mr-0.5">${pInitial}</span><span class="text-blue-600">/</span>[${tInitial}] ${therapistName}`;
+                                    } else {
+                                        content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
+                                    }
+                                }
                                 
                                 if (evt.confirmed && canViewDetails && !evt.isCancelled) content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
                                 chip.innerHTML = content;
@@ -218,9 +231,14 @@ export const CalendarUI = {
                                     eventCard.ondragend = (e) => { eventCard.style.opacity = '1'; };
                                 }
                                 eventCard.onclick = (e) => { e.stopPropagation(); if (onEventClick) onEventClick(evt); };
+                                const tInitial = (evt.therapist || 'diana').charAt(0).toUpperCase();
+                                const pInitial = evt.planningTherapist ? evt.planningTherapist.charAt(0).toUpperCase() : null;
+                                
                                 const nameContent = evt.isCancelled 
                                     ? `<div class="truncate font-semibold flex-1 leading-tight flex items-center gap-1"><span class="line-through">${evt.name}</span> <span class="text-[9px] font-black uppercase bg-red-100 px-1 rounded">X ${evt.cancelledBy || '?'}</span></div>`
-                                    : `<div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>`;
+                                    : (pInitial && pInitial !== tInitial) 
+                                        ? `<div class="truncate font-semibold flex-1 leading-tight"><span class="line-through opacity-50 text-[10px] mr-1">${pInitial}</span><span class="text-red-500 mr-1">/</span>${evt.name}</div>`
+                                        : `<div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>`;
                                     
                                 eventCard.innerHTML = `<div class="flex items-center justify-between gap-1 w-full">${nameContent}${evt.confirmed && canView && !evt.isCancelled ? '✓' : ''}</div>`;
                                 container.appendChild(eventCard);
