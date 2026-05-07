@@ -47,7 +47,7 @@ export const CalendarEvents = {
             'rescheduleSection', 'rescheduleOptions', 'busySlotsContainer', 'busySlotsList',
             'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList',
             'patientCustomPhone', 'patientCountryCode',
-            'financialBreakdownSection', 'manualClinicFee', 'manualTherapistPay', 'manualPlanningPay', 'planningTherapist', 'toggleFinancialBtn'
+            'financialBreakdownSection', 'manualClinicFee', 'manualTherapistPay', 'manualPlanningPay', 'planningTherapist', 'toggleFinancialBtn', 'labelPlanning'
         ];
 
         ids.forEach(id => {

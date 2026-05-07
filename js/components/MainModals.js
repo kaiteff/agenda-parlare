@@ -107,7 +107,7 @@ export const MainModals = {
                                     <input type="number" id="manualTherapistPay" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-100" placeholder="0">
                                 </div>
                                 <div>
-                                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Planeación</label>
+                                    <label id="labelPlanning" class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Planeación</label>
                                     <input type="number" id="manualPlanningPay" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-orange-500 outline-none focus:ring-2 focus:ring-orange-100" placeholder="0">
                                 </div>
                             </div>

@@ -19,6 +19,7 @@ import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 
 
 export const CalendarModal = {
+    originalTherapistOnOpen: null,
     init() {
         this.bindEvents();
         this.bindGridEvents();
@@ -137,6 +138,12 @@ export const CalendarModal = {
         date.setHours(hour);
         const localISOTime = this._getLocalISOStringFormat(date);
         if (dom.appointmentDateInput) dom.appointmentDateInput.value = localISOTime;
+        
+        const selectedTherapist = AuthManager.getSelectedTherapist();
+        if (dom.appointmentTherapistInput) {
+            dom.appointmentTherapistInput.value = (selectedTherapist && selectedTherapist !== 'all') ? selectedTherapist : 'diana';
+        }
+        this.originalTherapistOnOpen = dom.appointmentTherapistInput.value;
 
         // SEGURIDAD: Solo Diana y Yari pueden inhabilitar horas
         const blockOption = document.querySelector('input[name="appointmentType"][value="block"]')?.closest('label');
@@ -201,6 +208,7 @@ export const CalendarModal = {
         // Set Therapist and Type
         if (dom.appointmentTherapistInput) {
             dom.appointmentTherapistInput.value = ev.therapist || 'diana';
+            this.originalTherapistOnOpen = ev.therapist || 'diana';
         }
 
         // Phone Reference (Read-only if exists)
@@ -725,13 +733,18 @@ export const CalendarModal = {
                     if (dom.financialBreakdownSection) {
                         dom.financialBreakdownSection.classList.remove('hidden');
                         
+                        // AUTO-SELECCIONAR PLANEADOR (La original)
+                        if (dom.planningTherapist && !dom.planningTherapist.value) {
+                            dom.planningTherapist.value = this.originalTherapistOnOpen;
+                        }
+
                         // Sugerir valores basados en el costo actual
                         const cost = parseFloat(dom.costInput.value) || 0;
                         const t = dom.appointmentTherapistInput.value;
                         const defaults = AuthManager.getTherapistDefaults(t);
                         
                         if (dom.manualClinicFee) dom.manualClinicFee.value = defaults.clinicFee;
-                        if (dom.manualTherapistPay) dom.manualTherapistPay.value = cost - defaults.clinicFee;
+                        this.balanceFinancials();
                     }
                 };
             }
@@ -753,7 +766,38 @@ export const CalendarModal = {
                     }
                 };
             }
+
+            // LISTENERS PARA BALANCEO FINANCIERO EN TIEMPO REAL
+            [dom.costInput, dom.manualClinicFee, dom.manualPlanningPay, dom.planningTherapist].forEach(el => {
+                if (el) {
+                    el.addEventListener('input', () => this.balanceFinancials());
+                    el.addEventListener('change', () => this.balanceFinancials());
+                }
+            });
         }, 500); // Pequeño delay para asegurar DOM
+    },
+
+    /**
+     * Balancea los montos financieros para que siempre sumen el total
+     */
+    balanceFinancials() {
+        const dom = CalendarState.dom;
+        const total = parseFloat(dom.costInput.value) || 0;
+        const parlrare = parseFloat(dom.manualClinicFee.value) || 0;
+        const planning = parseFloat(dom.manualPlanningPay.value) || 0;
+        
+        // Sesión = Total - Parláre - Planeación
+        const session = total - parlrare - planning;
+        
+        if (dom.manualTherapistPay) {
+            dom.manualTherapistPay.value = session >= 0 ? session : 0;
+        }
+        
+        // Actualizar etiqueta dinámica para que diga "Planeación (SAM)" por ejemplo
+        const pTherapist = dom.planningTherapist.value;
+        if (dom.labelPlanning) {
+            dom.labelPlanning.textContent = pTherapist ? `PLANEACIÓN (${pTherapist.toUpperCase()})` : "PLANEACIÓN";
+        }
     },
 
     shiftDay(offset) {
