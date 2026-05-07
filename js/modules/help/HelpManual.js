@@ -63,9 +63,15 @@ export const HelpManual = {
                                     <h4 class="font-bold text-gray-800 mb-2">💬 Respuestas del Bot</h4>
                                     <ul class="text-sm text-gray-600 space-y-1.5 mt-2">
                                         <li>• <strong>CONFIRMAR:</strong> Responde "1", "OK", "Sí", "Confirmar" o "Confirmado".</li>
-                                        <li>• <strong>CANCELAR:</strong> Responde "2", "No", "Cancelar" o "Cancelado".</li>
+                                        <li>• <strong>CANCELAR:</strong> Responde "2", "No", "Cancelar" o "Cancelado". El sistema notificará automáticamente a Recepción para seguimiento.</li>
                                         <li>• <strong>RECEPCIÓN:</strong> Responde "3", "Recepción", "Yari" o "Hablar con recepción".</li>
                                     </ul>
+                                </div>
+                                <div class="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm">
+                                    <h4 class="font-bold text-red-800 mb-2">📢 Alertas a Yari</h4>
+                                    <p class="text-red-700 text-sm leading-relaxed">
+                                        Cuando un paciente cancela vía WhatsApp (respondiendo "2"), Yari recibe una notificación inmediata en su celular para poder dar seguimiento clínico, explicar políticas de cobro o reagendar.
+                                    </p>
                                 </div>
                                 <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
                                     <h4 class="font-bold text-emerald-800 mb-2">✅ Rastreo de Envíos (Novedad)</h4>
@@ -162,6 +168,12 @@ export const HelpManual = {
                                     <h4 class="font-bold text-gray-800 mb-2">⚙️ Configuración (Costos y Comisiones)</h4>
                                     <p class="text-gray-600 text-sm leading-relaxed">
                                         En el engrane de arriba a la derecha, los administradores pueden abrir el Panel de Configuración. Ahí se pueden configurar los temas clínicos y establecer la <strong>Cuota Base y Comisión</strong> para cada terapeuta (Diana, Sam, Vero). Estos costos se aplican automáticamente al crear nuevos pacientes.
+                                    </p>
+                                </div>
+                                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h4 class="font-bold text-slate-800 mb-2">📋 Bitácora de Auditoría</h4>
+                                    <p class="text-slate-700 text-sm leading-relaxed">
+                                        Tanto Administradores como Recepción pueden acceder a la <strong>Bitácora</strong> (icono de lista en el sidebar). Aquí se registra quién creó, modificó o canceló cada cita, permitiendo un control total de los movimientos del sistema.
                                     </p>
                                 </div>
                             </div>

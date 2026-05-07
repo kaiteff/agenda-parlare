@@ -169,6 +169,28 @@ def update_google_calendar(appointment, status_text):
     except Exception as e:
         print(f"❌ Error Sync Calendar: {e}")
 
+def notify_receptionist(patient_name, action_type):
+    """Notifica a Yari (Recepción) sobre acciones críticas de pacientes"""
+    try:
+        # Número de Yari (Central Parláre)
+        yari_num = "whatsapp:+523315196702"
+        
+        icon = "❌" if "CANCELAR" in action_type.upper() else "📞"
+        msg = (
+            f"📢 *Aviso de Recepción*\n\n"
+            f"{icon} El paciente *{patient_name}* ha marcado como *{action_type}* su cita de mañana vía WhatsApp Bot.\n\n"
+            f"Favor de dar seguimiento para reagendar o aplicar políticas de cobro según corresponda."
+        )
+        
+        twilio_client.messages.create(
+            from_=config.get('twilio_whatsapp_from'),
+            to=yari_num,
+            body=msg
+        )
+        print(f"📩 Notificación enviada a Yari para: {patient_name}")
+    except Exception as e:
+        print(f"⚠️ Error notificando a Yari: {e}")
+
 # ── Helpers ──────────────────────────────────────────────────────────
 def normalize_phone(phone):
     digits = re.sub(r'\D', '', str(phone))
@@ -369,6 +391,11 @@ def webhook():
                 })
                 update_google_sheet(a, "CANCELADO")
                 update_google_calendar(a, "CANCELADO")
+            
+            # Notificar a Yari para seguimiento
+            names_str = ", ".join([p['name'] for p in patients])
+            notify_receptionist(names_str, "CANCELADA")
+            
             resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
         else:
             resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")

@@ -64,7 +64,7 @@ export const AuditPanel = {
         }
     },
     async open() {
-        if (!AuthManager.isAdmin()) {
+        if (!AuthManager.isAdmin() && AuthManager.currentUser?.role !== 'receptionist') {
             console.warn('🚫 AuditPanel: Acceso denegado.');
             return;
         }
@@ -81,6 +81,14 @@ export const AuditPanel = {
             const querySnapshot = await getDocs(q);
 
             list.innerHTML = '';
+            
+            // Ocultar botones de acción si no es admin
+            const exportBtn = document.getElementById('exportAuditBtn');
+            const cleanupBtn = document.getElementById('cleanupAuditBtn');
+            const isAdmin = AuthManager.isAdmin();
+            
+            if (exportBtn) exportBtn.classList.toggle('hidden', !isAdmin);
+            if (cleanupBtn) cleanupBtn.classList.toggle('hidden', !isAdmin);
 
             if (querySnapshot.empty) {
                 list.innerHTML = '<div class="text-center py-10 text-gray-400">No hay registros de actividad aún.</div>';
