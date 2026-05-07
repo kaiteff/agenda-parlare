@@ -240,11 +240,11 @@ export const Header = {
                 } else if (health.hasToken) {
                     indicator.className = "w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse";
                     statusText.textContent = "Reconectar Google";
-                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-yellow-200 bg-yellow-50 text-yellow-700";
+                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-yellow-200 bg-yellow-50 text-yellow-700 animate-pulse";
                 } else {
-                    indicator.className = "w-1.5 h-1.5 rounded-full bg-red-400";
+                    indicator.className = "w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse";
                     statusText.textContent = "Google Off";
-                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-gray-200 bg-white text-gray-400";
+                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-red-200 bg-red-50 text-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.2)]";
                 }
 
                 // Mostrar/Ocultar botón de Sincronización Total

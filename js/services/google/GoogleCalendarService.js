@@ -180,10 +180,14 @@ export const GoogleCalendarService = {
         let summary = appointment.name || '(Sin nombre)';
         if (appointment.confirmed) summary = `✅ ${summary}`;
 
+        const pKey = (appointment.planningTherapist || '').toLowerCase();
+        const planningInfo = pKey ? `📍 Planeó: ${pKey.charAt(0).toUpperCase() + pKey.slice(1)}` : '';
+
         return {
             summary: summary,
             description: [
                 'Terapeuta: ' + therapist,
+                planningInfo,
                 appointment.cost ? 'Costo: $' + appointment.cost : '',
                 parentInfo ? 'Responsable: ' + parentInfo.replace(/[()]/g, '') : '',
                 phoneInfo ? 'Teléfono: ' + phoneInfo.replace('Tel: ', '') : '',
