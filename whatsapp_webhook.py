@@ -622,15 +622,18 @@ def send_daily_summary():
         for t in by_therapist:
             by_therapist[t].sort(key=lambda x: x['date'])
         
-        # 3. Enviar resúmenes individuales
+        # 3. Enviar resúmenes individuales usando la Plantilla Oficial
         sent_summaries = 0
+        template_sid = 'HX28a1f7c6ccbb2b507f9764b098c44779' # reporte_diario
+        
         for t_key, list_apts in by_therapist.items():
             if not list_apts: continue
             
             phone = THERAPIST_PHONES.get(t_key)
             if not phone: continue
             
-            msg = f"☀️ *¡Buen día, {t_key.capitalize()}!*\n\n🗓️ *Tu Agenda de Hoy ({mx_now.strftime('%d/%b')})*\n\n"
+            # Formatear la lista de pacientes para la variable {{3}}
+            list_str = ""
             for a in list_apts:
                 try:
                     dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
@@ -639,48 +642,63 @@ def send_daily_summary():
                     time = "??:??"
                 
                 status = "✅ Conf" if a.get('confirmed') else "⏳ Pend"
-                msg += f"• {time}: *{a.get('name')}* ({status})\n"
+                list_str += f"• {time}: *{a.get('name')}* ({status})\n"
             
-            msg += "\n¡Que tengas un excelente día! 😊"
+            # Enviar usando Content API de Twilio (Plantilla)
+            try:
+                twilio_client.messages.create(
+                    from_=config.get('twilio_whatsapp_from'),
+                    to=f"whatsapp:+{phone}",
+                    content_sid=template_sid,
+                    content_variables=json.dumps({
+                        "1": t_key.capitalize(),
+                        "2": mx_now.strftime('%d/%b'),
+                        "3": list_str.strip()
+                    })
+                )
+                sent_summaries += 1
+            except Exception as e:
+                print(f"❌ Error enviando plantilla a {t_key}: {e}")
             
-            twilio_client.messages.create(
-                from_=config.get('twilio_whatsapp_from'),
-                to=f"whatsapp:+{phone}",
-                body=msg
-            )
-            sent_summaries += 1
-            
-        # 4. Enviar Reporte Maestro a Yari
+        # 4. Enviar Reporte Maestro a Yari usando la MISMA plantilla
         yari_phone = THERAPIST_PHONES.get('reception')
         if yari_phone:
-            yari_msg = f"📋 *Reporte Maestro de Agenda ({mx_now.strftime('%d/%b')})*\n\n"
-            total_apts = 0
-            
-            for t_key in ['diana', 'sam', 'vero']:
-                list_apts = by_therapist[t_key]
-                yari_msg += f"👩‍⚕️ *{t_key.upper()}*:\n"
-                if not list_apts:
-                    yari_msg += "  _(Sin citas hoy)_\n"
-                else:
-                    for a in list_apts:
-                        try:
-                            dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
-                            time = dt.strftime('%I:%M %p').lstrip('0')
-                        except:
-                            time = "??:??"
-                        
-                        status = "✅" if a.get('confirmed') else "❓"
-                        yari_msg += f"  - {time}: {a.get('name')} {status}\n"
-                        total_apts += 1
-                yari_msg += "\n"
-            
-            yari_msg += f"📊 *Total de citas:* {total_apts}\n_Bot Parláre Intelligence_"
-            
-            twilio_client.messages.create(
-                from_=config.get('twilio_whatsapp_from'),
-                to=f"whatsapp:+{yari_phone}",
-                body=yari_msg
-            )
+            try:
+                master_list = ""
+                total_apts = 0
+                for t_key in ['diana', 'sam', 'vero']:
+                    list_apts = by_therapist[t_key]
+                    master_list += f"👩‍⚕️ *{t_key.upper()}*:\n"
+                    if not list_apts:
+                        master_list += "  _(Sin citas)_\n"
+                    else:
+                        for a in list_apts:
+                            try:
+                                dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                                time = dt.strftime('%I:%M').lstrip('0')
+                            except:
+                                time = "??:??"
+                            
+                            status_icon = "✅" if a.get('confirmed') else "⏳"
+                            master_list += f"  {status_icon} {time}: {a.get('name')}\n"
+                            total_apts += 1
+                    master_list += "\n"
+                
+                master_list += f"📊 *Total:* {total_apts} citas."
+                
+                twilio_client.messages.create(
+                    from_=config.get('twilio_whatsapp_from'),
+                    to=f"whatsapp:+{yari_phone}",
+                    content_sid=template_sid,
+                    content_variables=json.dumps({
+                        "1": "Yari",
+                        "2": mx_now.strftime('%d/%b'),
+                        "3": master_list.strip()
+                    })
+                )
+                print(f"✅ Reporte Maestro enviado a Yari.")
+            except Exception as e:
+                print(f"❌ Error enviando reporte a Yari: {e}")
 
         return jsonify({
             'status': 'success',
