@@ -601,6 +601,7 @@ def send_daily_summary():
         mx_now = datetime.now(MX_TZ)
         day_str = mx_now.strftime('%Y-%m-%d')
         start_iso, end_iso = f"{day_str}T00:00:00", f"{day_str}T23:59:59"
+        errors = []
         
         # 2. Consultar citas de HOY
         apts_ref = db.collection('appointments')
@@ -666,6 +667,7 @@ def send_daily_summary():
                 sent_summaries += 1
             except Exception as e:
                 print(f"❌ Error enviando plantilla a {t_key}: {e}")
+                errors.append(f"Therapist {t_key}: {str(e)}")
             
         # 4. Enviar Reporte Maestro a Yari usando la MISMA plantilla
         yari_phone = THERAPIST_PHONES.get('reception')
@@ -706,6 +708,7 @@ def send_daily_summary():
                 print(f"✅ Reporte Maestro enviado a Yari.")
             except Exception as e:
                 print(f"❌ Error enviando reporte a Yari: {e}")
+                errors.append(f"Reception: {str(e)}")
 
         return jsonify({
             'status': 'success',
@@ -716,7 +719,8 @@ def send_daily_summary():
             },
             'summaries_sent': sent_summaries,
             'reception_report': True,
-            'total_appointments': len(all_apts)
+            'total_appointments': len(all_apts),
+            'errors': errors
         }), 200
 
     except Exception as e:
