@@ -641,16 +641,21 @@ def send_daily_summary():
             if not phone: continue
             
             # Formatear la lista de pacientes para la variable {{3}}
-            list_str = ""
+            # IMPORTANTE: La Content API de Twilio a veces rechaza \n en variables.
+            # Usaremos un separador visual limpio.
+            items = []
             for a in list_apts:
                 try:
                     dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
-                    time = dt.strftime('%I:%M %p').lstrip('0')
+                    time = dt.strftime('%I:%M').lstrip('0')
                 except:
                     time = "??:??"
                 
-                status = "✅ Conf" if a.get('confirmed') else "⏳ Pend"
-                list_str += f"• {time}: *{a.get('name')}* ({status})\n"
+                status = "✅" if a.get('confirmed') else "⏳"
+                items.append(f"• {time}: {a.get('name')} ({status})")
+            
+            # Unir con un espacio o un separador que no rompa la API
+            list_str = "  /  ".join(items) if items else "Sin citas"
             
             # Enviar usando Content API de Twilio (Plantilla)
             try:
@@ -673,27 +678,28 @@ def send_daily_summary():
         yari_phone = THERAPIST_PHONES.get('reception')
         if yari_phone:
             try:
-                master_list = ""
+                master_items = []
                 total_apts = 0
                 for t_key in ['diana', 'sam', 'vero']:
                     list_apts = by_therapist[t_key]
-                    master_list += f"👩‍⚕️ *{t_key.upper()}*:\n"
+                    t_section = f"*{t_key.upper()}*: "
                     if not list_apts:
-                        master_list += "  _(Sin citas)_\n"
+                        t_section += "Sin citas"
                     else:
+                        sub_items = []
                         for a in list_apts:
                             try:
                                 dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
                                 time = dt.strftime('%I:%M').lstrip('0')
                             except:
                                 time = "??:??"
-                            
                             status_icon = "✅" if a.get('confirmed') else "⏳"
-                            master_list += f"  {status_icon} {time}: {a.get('name')}\n"
+                            sub_items.append(f"{time} {a.get('name')} {status_icon}")
                             total_apts += 1
-                    master_list += "\n"
+                        t_section += " | ".join(sub_items)
+                    master_items.append(t_section)
                 
-                master_list += f"📊 *Total:* {total_apts} citas."
+                final_content = "  //  ".join(master_items) + f"  >> Total: {total_apts}"
                 
                 twilio_client.messages.create(
                     from_=config.get('twilio_whatsapp_from'),
@@ -702,7 +708,7 @@ def send_daily_summary():
                     content_variables=json.dumps({
                         "1": "Yari",
                         "2": mx_now.strftime('%d/%b'),
-                        "3": master_list.strip()
+                        "3": final_content
                     })
                 )
                 print(f"✅ Reporte Maestro enviado a Yari.")

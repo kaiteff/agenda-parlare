@@ -245,17 +245,17 @@ export const Sidebar = {
         
         // Configuración de Tag de Terapeuta
         const tKey = (p.therapist || 'diana').toLowerCase();
-        let tLetter = 'D';
-        let tClass = 'bg-pink-100 text-pink-700 border-pink-200';
+        const pKey = (p.planningTherapist || '').toLowerCase();
         
-        if (tKey === 'sam') {
-            tLetter = 'S';
-            tClass = 'bg-blue-100 text-blue-700 border-blue-200';
-        } else if (tKey === 'vero') {
-            tLetter = 'V';
-            tClass = 'bg-purple-100 text-purple-700 border-purple-200';
-        }
+        const getTClass = (key) => {
+            if (key === 'sam') return 'bg-blue-100 text-blue-700 border-blue-200';
+            if (key === 'vero') return 'bg-purple-100 text-purple-700 border-purple-200';
+            return 'bg-pink-100 text-pink-700 border-pink-200';
+        };
 
+        const tLetter = tKey.charAt(0).toUpperCase();
+        const pLetter = pKey ? pKey.charAt(0).toUpperCase() : null;
+        
         // Formatear hora si existe (para vista Hoy/Mañana)
         let timeLabel = '';
         if (p.appointmentTime) {
@@ -265,6 +265,19 @@ export const Sidebar = {
             timeLabel = new Date(p.lastVisit).toLocaleDateString('es-MX', {day:'numeric', month:'short'});
         } else {
             timeLabel = 'Sin citas';
+        }
+
+        // HTML del tag de terapeuta (con soporte para relevo)
+        let therapistTag = "";
+        if (pLetter && pLetter !== tLetter) {
+            therapistTag = `
+                <div class="absolute -bottom-1 -right-2 flex items-center shadow-sm">
+                    <span class="w-4 h-4 rounded-full text-[8px] font-black border-2 border-white flex items-center justify-center line-through opacity-40 bg-gray-100 text-gray-500" title="Planeó: ${pKey}">${pLetter}</span>
+                    <span class="w-4 h-4 rounded-full text-[9px] font-black border-2 border-white flex items-center justify-center -ml-1 ${getTClass(tKey)}" title="Atiende: ${tKey}">${tLetter}</span>
+                </div>
+            `;
+        } else {
+            therapistTag = `<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black border-2 border-white flex items-center justify-center shadow-sm ${getTClass(tKey)}" title="Terapeuta: ${tKey}">${tLetter}</span>`;
         }
 
         // Comprobar cumpleaños
@@ -288,7 +301,7 @@ export const Sidebar = {
                 <div class="flex items-start gap-3">
                     <div class="relative w-10 h-10 rounded-full ${p.isCancelled ? 'bg-gray-200 text-gray-400' : 'bg-blue-100 text-blue-600'} flex items-center justify-center font-bold shrink-0">
                         ${p.name.charAt(0)}
-                        <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black border-2 border-white flex items-center justify-center shadow-sm ${tClass}" title="Terapeuta: ${tKey}">${tLetter}</span>
+                        ${therapistTag}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
