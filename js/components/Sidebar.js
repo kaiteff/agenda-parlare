@@ -272,7 +272,9 @@ export const Sidebar = {
         if (pLetter && pLetter !== tLetter) {
             therapistTag = `
                 <div class="absolute -bottom-1 -right-2 flex items-center shadow-sm">
-                    <span class="w-4 h-4 rounded-full text-[8px] font-black border-2 border-white flex items-center justify-center line-through opacity-40 bg-gray-100 text-gray-500" title="Planeó: ${pKey}">${pLetter}</span>
+                    <span class="w-4 h-4 rounded-full text-[8px] font-black border-2 border-white flex items-center justify-center opacity-60 bg-gray-100 text-gray-500" title="Planeó: ${pKey}">
+                        <span class="line-through decoration-gray-600 decoration-2">${pLetter}</span>
+                    </span>
                     <span class="w-4 h-4 rounded-full text-[9px] font-black border-2 border-white flex items-center justify-center -ml-1 ${getTClass(tKey)}" title="Atiende: ${tKey}">${tLetter}</span>
                 </div>
             `;

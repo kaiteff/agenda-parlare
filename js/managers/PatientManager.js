@@ -279,10 +279,19 @@ export const PatientManager = {
                 p.appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 if (p.appointments.length > 0) {
-                    p.lastVisit = p.appointments[0].date;
+                    const lastApt = p.appointments[0];
+                    p.lastVisit = lastApt.date;
+
+                    // LÓGICA DE RELEVO PARA PESTAÑA "TODAS":
+                    // Si el terapeuta de la cita es distinto al del perfil, marcamos el relevo
+                    if (lastApt.therapist && lastApt.therapist !== p.therapist) {
+                        p.planningTherapist = p.therapist; // El dueño del perfil planeó
+                        p.therapist = lastApt.therapist;   // El de la cita atiende
+                    }
+
                     // Solo sobreescribir si el perfil NO tiene terapeuta asignado (caso paciente nuevo sin perfil)
-                    if (!p.hasProfile && p.appointments[0].therapist) {
-                        p.therapist = p.appointments[0].therapist;
+                    if (!p.hasProfile && lastApt.therapist) {
+                        p.therapist = lastApt.therapist;
                     }
                 }
 
