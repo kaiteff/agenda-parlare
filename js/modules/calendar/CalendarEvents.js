@@ -46,7 +46,8 @@ export const CalendarEvents = {
             'appointmentAuditInfo', 'cancelledByLabel', 'rescheduledByLabel',
             'rescheduleSection', 'rescheduleOptions', 'busySlotsContainer', 'busySlotsList',
             'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList',
-            'patientCustomPhone', 'patientCountryCode'
+            'patientCustomPhone', 'patientCountryCode',
+            'financialBreakdownSection', 'manualClinicFee', 'manualTherapistPay', 'manualPlanningPay', 'planningTherapist', 'toggleFinancialBtn'
         ];
 
         ids.forEach(id => {

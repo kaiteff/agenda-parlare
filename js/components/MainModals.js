@@ -78,8 +78,51 @@ export const MainModals = {
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"><option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option></select></div>
-                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Costo ($)</label><input type="number" id="cost" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="0.00"></div>
+                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none"><option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option></select></div>
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 uppercase">Costo Total ($)</label>
+                                    <button type="button" id="toggleFinancialBtn" class="text-[10px] font-bold text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Ajuste Manual
+                                    </button>
+                                </div>
+                                <input type="number" id="cost" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-100 outline-none" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- DESGLOSE FINANCIERO MANUAL -->
+                        <div id="financialBreakdownSection" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ajuste Financiero Especial</h4>
+                                <span class="text-[9px] text-slate-400 italic">Opcional</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Parláre</label>
+                                    <input type="number" id="manualClinicFee" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-100" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Sesión</label>
+                                    <input type="number" id="manualTherapistPay" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-100" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Planeación</label>
+                                    <input type="number" id="manualPlanningPay" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-orange-500 outline-none focus:ring-2 focus:ring-orange-100" placeholder="0">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">¿Quién realizó la planeación?</label>
+                                <select id="planningTherapist" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-blue-100">
+                                    <option value="">(Ninguno / Solo atención)</option>
+                                    <option value="diana">Diana</option>
+                                    <option value="sam">Sam</option>
+                                    <option value="vero">Vero</option>
+                                </select>
+                            </div>
+                            
+                            <p class="text-[9px] text-slate-400 leading-tight">* Usa estos campos solo para casos de relevos o acuerdos especiales de pago.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <input type="checkbox" id="isRecurring" class="w-4 h-4 text-blue-600 rounded border-gray-300"><label for="isRecurring" class="text-sm text-gray-700 select-none">Agendar sesiones recurrentes</label>

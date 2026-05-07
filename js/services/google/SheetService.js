@@ -67,20 +67,22 @@ export const SheetService = {
             if (networkRetries === 0) console.log("🛠️ DEBUG: Autenticación exitosa. Preparando datos...");
 
             // 3. Preparar datos para la pestaña "App_Data"
-            // Estructura: [Fecha, Hora, Paciente, Monto, Estatus, Timestamp, HoraSimple, Parlare, Terapeuta]
+            // Estructura: [Fecha, Hora, Paciente, Monto, Estatus, Timestamp, HoraSimple, Parlare, Terapeuta, Planeación]
             const dateObj = new Date(paymentData.date);
 
             // Cálculos de desglose
             const totalAmount = paymentData.amount || 0;
-            const therapistKey = paymentData.therapist?.toLowerCase() || 'diana';
             
-            // Lógica de cobro de clínica por defecto: Vero $400, otros $250
+            // Lógica de cobro de clínica: Priorizar manual, si no usar default
             const defaultFee = therapistKey === 'vero' ? 400 : 250;
             const rawClinicFee = paymentData.clinicFee !== undefined ? paymentData.clinicFee : defaultFee;
 
             // Si el monto total es negativo (anulación), el desglose también debe ser negativo
             const finalClinicFee = totalAmount < 0 ? -Math.abs(rawClinicFee) : Math.abs(rawClinicFee);
-            const therapistIncome = totalAmount - finalClinicFee;
+            
+            // Priorizar pago manual a terapeuta si existe
+            const therapistIncome = paymentData.therapistPay !== undefined ? paymentData.therapistPay : (totalAmount - finalClinicFee);
+            const planningIncome = paymentData.planningPay || 0;
 
             // Force DD/MM/YYYY format specifically for Sheets formulas
             const day = dateObj.getDate().toString().padStart(2, '0');
@@ -90,19 +92,20 @@ export const SheetService = {
 
             const values = [
                 [
-                    dateStr, // Col A: Fecha (DD/MM/YYYY Manual)
+                    dateStr, // Col A: Fecha
                     dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Col B: Hora Texto
                     paymentData.patientName,      // Col C: Paciente
-                    totalAmount,                  // Col D: Monto (Puede ser negativo)
-                    paymentData.status || "Pagado", // Col E: Estatus (Pagado o ANULADO)
-                    new Date().toISOString(),     // Col F: ID Técnico
+                    totalAmount,                  // Col D: Monto
+                    paymentData.status || "Pagado", // Col E: Estatus
+                    paymentData.id || new Date().toISOString(), // Col F: ID Cita
                     dateObj.getHours(),           // Col G: HORA SIMPLE
                     finalClinicFee,               // Col H: Ingreso Parlare
-                    therapistIncome               // Col I: Ingreso Terapeuta
+                    therapistIncome,              // Col I: Ingreso Terapeuta
+                    planningIncome                // Col J: Ingreso Planeación
                 ]
             ];
 
-            const range = `${this.config.targetSheetName}!A:I`;
+            const range = `${this.config.targetSheetName}!A:J`;
 
             console.log(`🛠️ DEBUG: Enviando a Sheet ID: ${targetSpreadsheetId}, Range: ${range}`);
 
@@ -113,6 +116,21 @@ export const SheetService = {
                 valueInputOption: 'USER_ENTERED',
                 resource: { values: values },
             });
+
+            // --- DOBLE SYNC: Si hay pago de planeación para OTRA persona ---
+            if (planningIncome > 0 && paymentData.planningTherapist && !paymentData.isPlanningRow) {
+                console.log(`🔄 SheetService: Iniciando sync secundario para planeación (${paymentData.planningTherapist})...`);
+                await this.logPayment({
+                    ...paymentData,
+                    therapist: paymentData.planningTherapist,
+                    amount: 0, // No duplicar ingreso total en la clínica
+                    clinicFee: 0,
+                    therapistPay: 0, // No es pago de sesión
+                    planningPay: planningIncome, // Es pago de planeación
+                    status: `PLANEACIÓN (REF: ${paymentData.id || 'N/A'})`,
+                    isPlanningRow: true // Evitar bucle infinito
+                }, isAuthRetry, networkRetries);
+            }
 
             console.log("🛠️ DEBUG: Respuesta recibida de Google:", response);
 

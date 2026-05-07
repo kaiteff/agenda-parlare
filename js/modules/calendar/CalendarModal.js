@@ -148,6 +148,13 @@ export const CalendarModal = {
         // NEW: Render Custom Grid for Create Mode
         this.renderDailySlots(date);
 
+        // Reset Financial Breakdown
+        if (dom.financialBreakdownSection) dom.financialBreakdownSection.classList.add('hidden');
+        if (dom.manualClinicFee) dom.manualClinicFee.value = '';
+        if (dom.manualTherapistPay) dom.manualTherapistPay.value = '';
+        if (dom.manualPlanningPay) dom.manualPlanningPay.value = '';
+        if (dom.planningTherapist) dom.planningTherapist.value = '';
+
         dom.eventModal.classList.remove('hidden');
         dom.eventModal.style.setProperty('display', 'flex', 'important');
         dom.eventModal.style.setProperty('z-index', '9999', 'important');
@@ -243,6 +250,23 @@ export const CalendarModal = {
 
             if (dom.waBtn) {
                 dom.waBtn.classList.toggle('hidden', isSchool || !canEdit);
+            }
+
+            // CARGAR DESGLOSE FINANCIERO SI EXISTE
+            if (dom.financialBreakdownSection) {
+                if (ev.manualClinicFee || ev.manualTherapistPay || ev.manualPlanningPay) {
+                    dom.financialBreakdownSection.classList.remove('hidden');
+                    dom.manualClinicFee.value = ev.manualClinicFee || '';
+                    dom.manualTherapistPay.value = ev.manualTherapistPay || '';
+                    dom.manualPlanningPay.value = ev.manualPlanningPay || '';
+                    dom.planningTherapist.value = ev.planningTherapist || '';
+                } else {
+                    dom.financialBreakdownSection.classList.add('hidden');
+                    dom.manualClinicFee.value = '';
+                    dom.manualTherapistPay.value = '';
+                    dom.manualPlanningPay.value = '';
+                    dom.planningTherapist.value = '';
+                }
             }
         }
 
@@ -536,6 +560,12 @@ export const CalendarModal = {
                 appointmentData.name = profile.name;
                 appointmentData.patientId = profile.id;
                 appointmentData.clinicFee = profile.clinicFee || therapistDefaults.clinicFee;
+
+                // AGREGAR DATOS FINANCIEROS MANUALES SI EXISTEN
+                if (dom.manualClinicFee && dom.manualClinicFee.value) appointmentData.manualClinicFee = parseFloat(dom.manualClinicFee.value);
+                if (dom.manualTherapistPay && dom.manualTherapistPay.value) appointmentData.manualTherapistPay = parseFloat(dom.manualTherapistPay.value);
+                if (dom.manualPlanningPay && dom.manualPlanningPay.value) appointmentData.manualPlanningPay = parseFloat(dom.manualPlanningPay.value);
+                if (dom.planningTherapist && dom.planningTherapist.value) appointmentData.planningTherapist = dom.planningTherapist.value;
             }
 
             if (CalendarState.selectedEventId) {
@@ -690,6 +720,37 @@ export const CalendarModal = {
             if (dom.appointmentTherapistInput) {
                 dom.appointmentTherapistInput.onchange = () => {
                     if (this.currentGridDate) this.renderDailySlots(this.currentGridDate);
+                    
+                    // Si cambia el terapeuta, mostrar el desglose para ajuste manual
+                    if (dom.financialBreakdownSection) {
+                        dom.financialBreakdownSection.classList.remove('hidden');
+                        
+                        // Sugerir valores basados en el costo actual
+                        const cost = parseFloat(dom.costInput.value) || 0;
+                        const t = dom.appointmentTherapistInput.value;
+                        const defaults = AuthManager.getTherapistDefaults(t);
+                        
+                        if (dom.manualClinicFee) dom.manualClinicFee.value = defaults.clinicFee;
+                        if (dom.manualTherapistPay) dom.manualTherapistPay.value = cost - defaults.clinicFee;
+                    }
+                };
+            }
+
+            if (dom.toggleFinancialBtn) {
+                dom.toggleFinancialBtn.onclick = (e) => {
+                    e.preventDefault();
+                    if (dom.financialBreakdownSection) {
+                        dom.financialBreakdownSection.classList.toggle('hidden');
+                        
+                        // Si se abre y está vacío, sugerir valores
+                        if (!dom.financialBreakdownSection.classList.contains('hidden') && !dom.manualClinicFee.value) {
+                            const cost = parseFloat(dom.costInput.value) || 0;
+                            const t = dom.appointmentTherapistInput.value;
+                            const defaults = AuthManager.getTherapistDefaults(t);
+                            if (dom.manualClinicFee) dom.manualClinicFee.value = defaults.clinicFee;
+                            if (dom.manualTherapistPay) dom.manualTherapistPay.value = cost - defaults.clinicFee;
+                        }
+                    }
                 };
             }
         }, 500); // Pequeño delay para asegurar DOM

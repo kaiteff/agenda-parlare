@@ -58,12 +58,16 @@ export const SyncService = {
             try {
                 // Para batch sync, no queremos alerts por cada uno, así que usamos un log silencioso
                 const success = await SheetService.logPayment({
+                    id: apt.id,
                     date: apt.date,
                     patientName: apt.name,
                     amount: apt.cost || 0,
                     status: "Pagado",
                     therapist: apt.therapist,
-                    clinicFee: apt.clinicFee || 250 // Deberíamos haber guardado el clinicFee en la cita
+                    clinicFee: apt.manualClinicFee !== undefined ? apt.manualClinicFee : (apt.clinicFee || 250),
+                    therapistPay: apt.manualTherapistPay,
+                    planningPay: apt.manualPlanningPay,
+                    planningTherapist: apt.planningTherapist
                 });
 
                 if (success) {
