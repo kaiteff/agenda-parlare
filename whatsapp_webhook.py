@@ -568,9 +568,118 @@ def send_reminders():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    return "OK", 200
+# ── Therapist Config (Private) ──────────────────────────────────────
+# Se recomienda configurar estos en Render como Variables de Entorno
+THERAPIST_PHONES = {
+    'diana': os.environ.get('PHONE_DIANA', '523331834432'),
+    'sam': os.environ.get('PHONE_SAM', '523321145307'),
+    'vero': os.environ.get('PHONE_VERO', '523318006167'),
+    'reception': os.environ.get('PHONE_YARI', '523315196702')
+}
+
+@app.route('/cron/daily-summary', methods=['GET', 'POST'])
+def send_daily_summary():
+    """Envía la agenda de HOY a cada terapeuta y un reporte maestro a Yari"""
+    # 1. Verificar llave de seguridad
+    key = request.args.get('key') or (request.json.get('key') if request.is_json else None)
+    if key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        mx_now = datetime.now(MX_TZ)
+        day_str = mx_now.strftime('%Y-%m-%d')
+        start_iso, end_iso = f"{day_str}T00:00:00", f"{day_str}T23:59:59"
+        
+        # 2. Consultar citas de HOY
+        apts_ref = db.collection('appointments')
+        query = apts_ref.where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+        
+        by_therapist = {'diana': [], 'sam': [], 'vero': []}
+        all_apts = []
+        
+        for doc in query:
+            a = doc.to_dict()
+            if a.get('isCancelled'): continue
+            
+            t_key = a.get('therapist', 'diana').lower()
+            if t_key in by_therapist:
+                by_therapist[t_key].append(a)
+                all_apts.append(a)
+        
+        # Ordenar por hora
+        for t in by_therapist:
+            by_therapist[t].sort(key=lambda x: x['date'])
+        
+        # 3. Enviar resúmenes individuales
+        sent_summaries = 0
+        for t_key, list_apts in by_therapist.items():
+            if not list_apts: continue
+            
+            phone = THERAPIST_PHONES.get(t_key)
+            if not phone: continue
+            
+            msg = f"☀️ *¡Buen día, {t_key.capitalize()}!*\n\n🗓️ *Tu Agenda de Hoy ({mx_now.strftime('%d/%b')})*\n\n"
+            for a in list_apts:
+                try:
+                    dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                    time = dt.strftime('%I:%M %p').lstrip('0')
+                except:
+                    time = "??:??"
+                
+                status = "✅ Conf" if a.get('confirmed') else "⏳ Pend"
+                msg += f"• {time}: *{a.get('name')}* ({status})\n"
+            
+            msg += "\n¡Que tengas un excelente día! 😊"
+            
+            twilio_client.messages.create(
+                from_=config.get('twilio_whatsapp_from'),
+                to=f"whatsapp:+{phone}",
+                body=msg
+            )
+            sent_summaries += 1
+            
+        # 4. Enviar Reporte Maestro a Yari
+        yari_phone = THERAPIST_PHONES.get('reception')
+        if yari_phone:
+            yari_msg = f"📋 *Reporte Maestro de Agenda ({mx_now.strftime('%d/%b')})*\n\n"
+            total_apts = 0
+            
+            for t_key in ['diana', 'sam', 'vero']:
+                list_apts = by_therapist[t_key]
+                yari_msg += f"👩‍⚕️ *{t_key.upper()}*:\n"
+                if not list_apts:
+                    yari_msg += "  _(Sin citas hoy)_\n"
+                else:
+                    for a in list_apts:
+                        try:
+                            dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                            time = dt.strftime('%I:%M %p').lstrip('0')
+                        except:
+                            time = "??:??"
+                        
+                        status = "✅" if a.get('confirmed') else "❓"
+                        yari_msg += f"  - {time}: {a.get('name')} {status}\n"
+                        total_apts += 1
+                yari_msg += "\n"
+            
+            yari_msg += f"📊 *Total de citas:* {total_apts}\n_Bot Parláre Intelligence_"
+            
+            twilio_client.messages.create(
+                from_=config.get('twilio_whatsapp_from'),
+                to=f"whatsapp:+{yari_phone}",
+                body=yari_msg
+            )
+
+        return jsonify({
+            'status': 'success',
+            'summaries_sent': sent_summaries,
+            'reception_report': True,
+            'total_appointments': len(all_apts)
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error en Daily Summary: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     # Usar el puerto que asigne Render
