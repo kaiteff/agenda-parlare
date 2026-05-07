@@ -141,6 +141,16 @@ export const HelpManual = {
                                         En la lista lateral, los pacientes con deuda aparecen con un punto <span class="text-orange-500 font-bold">Naranja</span>. Si están al corriente, el punto es <span class="text-green-500 font-bold">Verde</span>.
                                     </p>
                                 </div>
+                                <div class="bg-amber-50 p-5 rounded-2xl border border-amber-100 shadow-sm">
+                                    <h4 class="font-bold text-amber-800 mb-2">🔄 Sistema de Relevo (Handovers)</h4>
+                                    <p class="text-amber-700 text-sm leading-relaxed">
+                                        Cuando un paciente que originalmente pertenece a una terapeuta (ej: Sam) es atendido por otra (ej: Diana), verás dos iniciales en el sidebar:
+                                        <br>• <span class="line-through opacity-50 text-xs mr-1">S</span>: Inicial tachada de quien planeó originalmente.
+                                        <br>• <strong>D</strong>: Inicial normal de quien atiende la sesión actual.
+                                        <br><br>
+                                        Esto te permite saber quién es el dueño del paciente aunque la cita la esté cubriendo otra persona.
+                                    </p>
+                                </div>
                                 <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                                     <h4 class="font-bold text-gray-800 mb-2">🔄 Sincronización y Google Calendar</h4>
                                     <p class="text-gray-600 text-sm leading-relaxed">
