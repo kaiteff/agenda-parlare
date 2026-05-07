@@ -287,6 +287,14 @@ def find_next_appointment(patient_names):
         return future_apts[0]
     return None
 
+# ── Configuración de Staff (Privado) ─────────────────────────────────
+THERAPIST_PHONES = {
+    'diana': os.environ.get('PHONE_DIANA', '523331834432'),
+    'sam': os.environ.get('PHONE_SAM', '523321145307'),
+    'vero': os.environ.get('PHONE_VERO', '523318006167'),
+    'reception': os.environ.get('PHONE_YARI', '523315196702')
+}
+
 # ── Routes ───────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -342,10 +350,23 @@ def webhook():
         patients = find_patients_by_identifier(from_num, bsuid)
         
         if not patients:
-            print("❌ Número no registrado")
-            resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
-            return str(resp), 200
+            # 1. Verificar si es una terapeuta o recepción
+            norm_from = normalize_phone(from_num)
+            staff_name = None
+            for key, phone in THERAPIST_PHONES.items():
+                if normalize_phone(phone) == norm_from:
+                    staff_name = key.capitalize()
+                    break
             
+            if staff_name:
+                print(f"👩‍⚕️ Staff detectado: {staff_name}")
+                resp.message(f"¡Hola {staff_name}! Tu sesión de WhatsApp está abierta por 24 horas. Lista para recibir reportes y notificaciones del sistema. 🤖✅")
+                return str(resp), 200
+            else:
+                print("❌ Número no registrado")
+                resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
+                return str(resp), 200
+
         # PALABRAS CLAVE AMPLIADAS
         RECEPTION_KEYWORDS = ['3', 'recepcion', 'yari', 'recepcionista', 'hablar con recepcion', 'hablar con recepsion', 'duda', 'pregunta']
         CONFIRM_KEYWORDS = ['1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro']
@@ -567,15 +588,6 @@ def send_reminders():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-# ── Therapist Config (Private) ──────────────────────────────────────
-# Se recomienda configurar estos en Render como Variables de Entorno
-THERAPIST_PHONES = {
-    'diana': os.environ.get('PHONE_DIANA', '523331834432'),
-    'sam': os.environ.get('PHONE_SAM', '523321145307'),
-    'vero': os.environ.get('PHONE_VERO', '523318006167'),
-    'reception': os.environ.get('PHONE_YARI', '523315196702')
-}
 
 @app.route('/cron/daily-summary', methods=['GET', 'POST'])
 def send_daily_summary():
