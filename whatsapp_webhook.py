@@ -613,10 +613,17 @@ def send_daily_summary():
             a = doc.to_dict()
             if a.get('isCancelled'): continue
             
-            t_key = a.get('therapist', 'diana').lower()
-            if t_key in by_therapist:
-                by_therapist[t_key].append(a)
+            # Limpiar y normalizar el nombre del terapeuta
+            raw_t = str(a.get('therapist', 'diana')).strip().lower()
+            if raw_t in by_therapist:
+                by_therapist[raw_t].append(a)
                 all_apts.append(a)
+            else:
+                # Si es un nombre desconocido, lo asignamos a Diana por seguridad
+                by_therapist['diana'].append(a)
+                all_apts.append(a)
+        
+        print(f"📊 Citas agrupadas: Diana({len(by_therapist['diana'])}), Sam({len(by_therapist['sam'])}), Vero({len(by_therapist['vero'])})")
         
         # Ordenar por hora
         for t in by_therapist:
