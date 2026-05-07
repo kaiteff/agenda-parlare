@@ -626,9 +626,9 @@ def send_daily_summary():
         
         print(f"📊 Citas agrupadas: Diana({len(by_therapist['diana'])}), Sam({len(by_therapist['sam'])}), Vero({len(by_therapist['vero'])})")
         
-        # Ordenar por hora
+        # Ordenar por hora cada lista de forma explícita
         for t in by_therapist:
-            by_therapist[t].sort(key=lambda x: x['date'])
+            by_therapist[t].sort(key=lambda x: x.get('date', ''))
         
         # 3. Enviar resúmenes individuales usando la Plantilla Oficial
         sent_summaries = 0
@@ -641,23 +641,19 @@ def send_daily_summary():
             if not phone: continue
             
             # Formatear la lista de pacientes para la variable {{3}}
-            # IMPORTANTE: La Content API de Twilio a veces rechaza \n en variables.
-            # Usaremos un separador visual limpio.
             items = []
             for a in list_apts:
                 try:
                     dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
-                    time = dt.strftime('%I:%M').lstrip('0')
+                    time = dt.strftime('%I:%M %p').lstrip('0').lower() # ej: 9:00 am
                 except:
                     time = "??:??"
                 
                 status = "✅" if a.get('confirmed') else "⏳"
                 items.append(f"• {time}: {a.get('name')} ({status})")
             
-            # Unir con un espacio o un separador que no rompa la API
             list_str = "  /  ".join(items) if items else "Sin citas"
             
-            # Enviar usando Content API de Twilio (Plantilla)
             try:
                 twilio_client.messages.create(
                     from_=config.get('twilio_whatsapp_from'),
@@ -666,7 +662,7 @@ def send_daily_summary():
                     content_variables=json.dumps({
                         "1": t_key.capitalize(),
                         "2": mx_now.strftime('%d/%b'),
-                        "3": list_str.strip()
+                        "3": list_str
                     })
                 )
                 sent_summaries += 1
@@ -690,7 +686,7 @@ def send_daily_summary():
                         for a in list_apts:
                             try:
                                 dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
-                                time = dt.strftime('%I:%M').lstrip('0')
+                                time = dt.strftime('%I:%M%p').lstrip('0').lower() # ej: 9:00am
                             except:
                                 time = "??:??"
                             status_icon = "✅" if a.get('confirmed') else "⏳"
