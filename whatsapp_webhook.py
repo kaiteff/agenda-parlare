@@ -709,6 +709,11 @@ def send_daily_summary():
 
         return jsonify({
             'status': 'success',
+            'debug': {
+                'diana': len(by_therapist['diana']),
+                'sam': len(by_therapist['sam']),
+                'vero': len(by_therapist['vero'])
+            },
             'summaries_sent': sent_summaries,
             'reception_report': True,
             'total_appointments': len(all_apts)
