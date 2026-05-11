@@ -38,3 +38,6 @@ __pycache__/
 
 # Environment variables
 .env
+
+# Script de autenticación de un solo uso
+get_google_token.py

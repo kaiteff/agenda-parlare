@@ -53,6 +53,8 @@ db = firestore.client()
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 # ── Google APIs ──────────────────────────────────────────────────────
@@ -88,6 +90,44 @@ def get_google_services():
 
 sheets_service, calendar_service = get_google_services()
 twilio_client = Client(config.get('twilio_sid'), config.get('twilio_token'))
+
+# ── Google Calendar (OAuth - Cuenta Admin) ───────────────────────────────
+def get_user_calendar_service():
+    """
+    Construye un cliente de Google Calendar usando el OAuth Refresh Token
+    de la cuenta Admin (Daniel). Independiente del usuario que tenga la app abierta.
+    Requiere las variables de entorno: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN
+    """
+    try:
+        client_id     = os.environ.get('GOOGLE_CLIENT_ID')
+        client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+        refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
+
+        if not all([client_id, client_secret, refresh_token]):
+            print("⚠️ get_user_calendar_service: Faltan variables GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN")
+            return None
+
+        creds = Credentials(
+            token=None,
+            refresh_token=refresh_token,
+            token_uri='https://oauth2.googleapis.com/token',
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=['https://www.googleapis.com/auth/calendar']
+        )
+        # Forzar refresh para obtener un access_token válido
+        creds.refresh(Request())
+        return build('calendar', 'v3', credentials=creds)
+    except Exception as e:
+        print(f"❌ Error construyendo user calendar service: {e}")
+        return None
+
+# IDs de calendarios por terapeuta (mismos que el frontend)
+THERAPIST_CALENDARS = {
+    'diana': '3c4ab8fa048916ce6ce6d2891926a646a4728d1a9ad3edf43ef56f478680c958@group.calendar.google.com',
+    'vero':  'b66fd1b4b55d6fe42ee578696e79aaaa6445b2d744050e8fc90b81c395bd291e@group.calendar.google.com',
+    'sam':   '6ff316ac3643f346833cc816cb0fc4020ea89ec923a4ca6681a39550f814daa5@group.calendar.google.com'
+}
 
 # ── Timezone Helper ─────────────────────────────────────────────────
 def parse_mx_datetime(date_str):
@@ -754,6 +794,136 @@ def send_daily_summary():
 
     except Exception as e:
         print(f"❌ Error en Daily Summary: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/cron/calendar-sync', methods=['GET', 'POST'])
+def server_calendar_sync():
+    """
+    Sincroniza Google Calendar desde el servidor usando el Refresh Token de Admin.
+    Estrategia: Nuke & Replace de la semana actual en cada calendario.
+    Llamar desde cron.job o manualmente para forzar sync.
+    """
+    key = request.args.get('key') or (request.json.get('key') if request.is_json else None)
+    if key != os.environ.get('CRON_SECRET_KEY', 'parlare_secret_2026'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        gcal = get_user_calendar_service()
+        if not gcal:
+            return jsonify({'error': 'Google Calendar no disponible. Verifica GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN en Render.'}), 503
+
+        mx_now = datetime.now(MX_TZ)
+
+        # ── Rango: semana actual (lunes a domingo) ────────────────────────
+        days_to_monday = mx_now.weekday()  # 0 = lunes
+        week_start = (mx_now - timedelta(days=days_to_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        week_end   = week_start + timedelta(days=6, hours=23, minutes=59, seconds=59)
+
+        time_min = week_start.isoformat()
+        time_max = week_end.isoformat()
+        week_str = week_start.strftime('%d/%b') + ' - ' + week_end.strftime('%d/%b')
+
+        print(f"📅 Server Calendar Sync: {week_str}")
+
+        # ── Leer citas activas de Firestore ──────────────────────────────
+        start_iso = week_start.strftime('%Y-%m-%d') + 'T00:00:00'
+        end_iso   = week_end.strftime('%Y-%m-%d')   + 'T23:59:59'
+
+        query = db.collection('appointments') \
+            .where('date', '>=', start_iso) \
+            .where('date', '<=', end_iso) \
+            .stream()
+
+        active_apts = []
+        for doc in query:
+            a = doc.to_dict()
+            a['_id'] = doc.id
+            if not a.get('isCancelled'):
+                active_apts.append(a)
+
+        print(f"   Citas activas esta semana: {len(active_apts)}")
+
+        deleted_total = 0
+        created_total = 0
+        errors = []
+
+        for t_key, cal_id in THERAPIST_CALENDARS.items():
+            # FASE 1: Borrar todos los eventos de esta semana en este calendario
+            try:
+                resp = gcal.events().list(
+                    calendarId=cal_id,
+                    timeMin=time_min,
+                    timeMax=time_max,
+                    singleEvents=True,
+                    maxResults=2500
+                ).execute()
+
+                existing = resp.get('items', [])
+                print(f"   [{t_key}] Borrando {len(existing)} eventos...")
+
+                for ev in existing:
+                    try:
+                        gcal.events().delete(calendarId=cal_id, eventId=ev['id']).execute()
+                        deleted_total += 1
+                    except Exception as del_e:
+                        print(f"   ⚠️ No se pudo borrar {ev['id']}: {del_e}")
+
+            except Exception as list_e:
+                print(f"   ❌ Error listando [{t_key}]: {list_e}")
+                errors.append(f"{t_key}_list: {str(list_e)}")
+                continue
+
+            # FASE 2: Crear eventos desde Firestore
+            apt_for_therapist = [a for a in active_apts if (a.get('therapist') or 'diana').lower() == t_key]
+            print(f"   [{t_key}] Creando {len(apt_for_therapist)} citas...")
+
+            for a in apt_for_therapist:
+                try:
+                    dt_start = parse_mx_datetime(a['date'])
+                    dt_end   = dt_start + timedelta(hours=1)
+
+                    therapist_name = t_key.capitalize()
+                    color_id = '4' if t_key == 'diana' else ('7' if t_key == 'sam' else '3')
+
+                    summary = a.get('name', 'Cita')
+                    if a.get('confirmed'): summary = '✅ ' + summary
+
+                    event_body = {
+                        'summary': summary,
+                        'description': f"Terapeuta: {therapist_name}\nCosto: ${a.get('cost', 0)}\n📱 Agenda Parláre (Sync Automático)",
+                        'start': {'dateTime': dt_start.isoformat(), 'timeZone': 'America/Mexico_City'},
+                        'end':   {'dateTime': dt_end.isoformat(),   'timeZone': 'America/Mexico_City'},
+                        'colorId': color_id,
+                        'reminders': {'useDefault': False, 'overrides': [{'method': 'popup', 'minutes': 5}]}
+                    }
+
+                    created_ev = gcal.events().insert(calendarId=cal_id, body=event_body).execute()
+
+                    # Guardar googleEventId en Firestore
+                    try:
+                        db.collection('appointments').document(a['_id']).update({'googleEventId': created_ev['id']})
+                    except: pass
+
+                    created_total += 1
+
+                except Exception as create_e:
+                    print(f"   ❌ Error creando [{a.get('name')}]: {create_e}")
+                    errors.append(f"{a.get('name', '?')}: {str(create_e)}")
+
+        result_msg = f"✅ Server Sync completo: {deleted_total} borrados, {created_total} creados ({week_str})"
+        print(result_msg)
+
+        return jsonify({
+            'status': 'success',
+            'week': week_str,
+            'deleted': deleted_total,
+            'created': created_total,
+            'appointments_found': len(active_apts),
+            'errors': errors
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error en server_calendar_sync: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
