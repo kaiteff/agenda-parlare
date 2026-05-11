@@ -152,7 +152,16 @@ export const CalendarUI = {
                         if (slotEvents.length > 0) {
                             const container = document.createElement('div');
                             container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5";
-                            slotEvents.forEach(evt => {
+                            
+                            // 🔒 ORDEN FIJO: Diana siempre arriba, Sam al medio, Vero abajo
+                            const THERAPIST_ORDER = { diana: 0, sam: 1, vero: 2 };
+                            const sortedEvents = [...slotEvents].sort((a, b) => {
+                                const aOrder = THERAPIST_ORDER[(a.therapist || 'diana').toLowerCase()] ?? 99;
+                                const bOrder = THERAPIST_ORDER[(b.therapist || 'diana').toLowerCase()] ?? 99;
+                                return aOrder - bOrder;
+                            });
+                            
+                            sortedEvents.forEach(evt => {
                                 const tKey = evt.therapist || 'diana';
                                 const therapistName = tKey.charAt(0).toUpperCase() + tKey.slice(1);
                                 let bgColor = '';

@@ -86,8 +86,8 @@ export const GoogleCalendarService = {
                 const { AuthManager } = await import('../../managers/AuthManager.js');
                 const { CalendarState } = await import('../../modules/calendar/CalendarState.js');
                 
-                // Ejecutar solo si el usuario actual es Administrador (Recepción) y tiene un token válido
-                if (AuthManager.isAdmin() && GoogleAuthService.isTokenValid() && CalendarState.appointments?.length > 0) {
+                // Ejecutar si el usuario tiene un token válido (todos los roles)
+                if (GoogleAuthService.isTokenValid() && CalendarState.appointments?.length > 0) {
                     log.info("⏰ Ejecutando Auto-Sync programado en segundo plano...");
                     await this.syncWeek(CalendarState.appointments, true);
                 }
