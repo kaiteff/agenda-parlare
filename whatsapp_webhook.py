@@ -89,6 +89,21 @@ def get_google_services():
 sheets_service, calendar_service = get_google_services()
 twilio_client = Client(config.get('twilio_sid'), config.get('twilio_token'))
 
+# ── Timezone Helper ─────────────────────────────────────────────────
+def parse_mx_datetime(date_str):
+    """
+    Parsea correctamente las fechas de Firestore como hora local de México.
+    El frontend guarda fechas como strings ISO SIN zona horaria (ej: '2026-05-11T11:00'),
+    representando hora local de México. Si se parsean como UTC, resultan 6 horas menos.
+    """
+    raw = str(date_str).replace('Z', '').strip()
+    dt = datetime.fromisoformat(raw)
+    if dt.tzinfo is None:
+        dt = MX_TZ.localize(dt)  # Decirle explícitamente: es hora de México
+    else:
+        dt = dt.astimezone(MX_TZ)
+    return dt
+
 # ── Google Sync Helpers ─────────────────────────────────────────────
 def update_google_sheet(appointment, status):
     if not sheets_service: return
@@ -97,7 +112,7 @@ def update_google_sheet(appointment, status):
         spreadsheet_id = SHEET_CONFIG['spreadsheets'].get(therapist)
         if not spreadsheet_id: return
 
-        dt = datetime.fromisoformat(appointment['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+        dt = parse_mx_datetime(appointment['date'])
         date_str = dt.strftime('%d/%m/%Y')
         time_str = dt.strftime('%I:%M %p')
 
@@ -386,7 +401,7 @@ def webhook():
                     import locale
                     try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
                     except: pass
-                    dt = datetime.fromisoformat(next_apt['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                    dt = parse_mx_datetime(next_apt['date'])
                     day_str = dt.strftime('%A %d/%b').capitalize()
                     hour_str = dt.strftime('%I:%M %p').lstrip('0')
                     resp.message(f"Hola, tu próxima sesión en Parláre está programada para el *{day_str} a las {hour_str}*. Si deseas reagendar o tienes dudas, puedes hablar con Recepción aquí: https://wa.me/523315196702")
@@ -423,7 +438,7 @@ def webhook():
                 
                 # Formatear datos específicos para la notificación a Yari
                 try:
-                    dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                    dt = parse_mx_datetime(a['date'])
                     date_info = dt.strftime('%d/%b')
                     hour_info = dt.strftime('%I:%M %p').lstrip('0')
                 except:
@@ -523,10 +538,14 @@ def send_reminders():
                 skipped_count += 1
                 continue
             
-            # Formatear hora (asumiendo ISO string)
+            # Formatear hora y filtrar horario Parláre (8am-8pm)
             try:
-                # Extraer hora de "2024-05-20T15:00:00Z" -> "3:00 PM"
-                dt = datetime.fromisoformat(apt['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                dt = parse_mx_datetime(apt['date'])
+                # 🛡️ GUARDIA: Solo enviar recordatorios dentro del horario Parláre
+                if not (8 <= dt.hour <= 20):
+                    print(f"⏰ Cita fuera de horario Parláre ({dt.hour}h) para {patient_name}. Recordatorio omitido.")
+                    skipped_count += 1
+                    continue
                 hour_str = dt.strftime('%I:%M %p').lstrip('0')
             except:
                 hour_str = "horario pendiente"
@@ -644,7 +663,11 @@ def send_daily_summary():
             items = []
             for a in list_apts:
                 try:
-                    dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                    dt = parse_mx_datetime(a['date'])
+                    # 🛡️ GUARDIA: Omitir citas fuera del horario Parláre
+                    if not (8 <= dt.hour <= 20):
+                        print(f"⏰ Cita fuera de horario ({dt.hour}h) para {a.get('name')}. Omitida del resumen.")
+                        continue
                     time = dt.strftime('%I:%M %p').lstrip('0').lower() # ej: 9:00 am
                 except:
                     time = "??:??"
@@ -685,7 +708,11 @@ def send_daily_summary():
                         sub_items = []
                         for a in list_apts:
                             try:
-                                dt = datetime.fromisoformat(a['date'].replace('Z', '+00:00')).astimezone(MX_TZ)
+                                dt = parse_mx_datetime(a['date'])
+                                # 🛡️ GUARDIA: Omitir citas fuera del horario Parláre
+                                if not (8 <= dt.hour <= 20):
+                                    print(f"⏰ Cita fuera de horario ({dt.hour}h) omitida del reporte maestro.")
+                                    continue
                                 time = dt.strftime('%I:%M%p').lstrip('0').lower() # ej: 9:00am
                             except:
                                 time = "??:??"
