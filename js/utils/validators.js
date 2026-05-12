@@ -169,8 +169,22 @@ export function isFutureOrToday(date) {
  */
 export function isWithinWorkingHours(date) {
     const checkDate = new Date(date);
-    const hour = checkDate.getHours();
-    return hour >= 8 && hour <= 20;
+    // Blindaje robusto: Obtener la hora real en Ciudad de México sin importar el dispositivo
+    try {
+        const mxHour = parseInt(new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'America/Mexico_City',
+            hour: 'numeric',
+            hour12: false
+        }).format(checkDate), 10);
+        
+        // 8 AM a 8 PM (última cita permitida inicia a las 7 PM / 19:00)
+        // Si el usuario quiere permitir el slot de las 8 PM, entonces <= 20.
+        return mxHour >= 8 && mxHour <= 20;
+    } catch (e) {
+        // Fallback si Intl no está disponible
+        const hour = checkDate.getHours();
+        return hour >= 8 && hour <= 20;
+    }
 }
 
 /**

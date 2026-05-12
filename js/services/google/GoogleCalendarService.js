@@ -156,12 +156,39 @@ export const GoogleCalendarService = {
         localStorage.setItem(this._storageKey, JSON.stringify(mappings));
     },
 
+    /**
+     * Helper para asegurar que la fecha se envía con el offset de México (-06:00)
+     * y dentro del horario permitido (8am - 8pm).
+     */
+    _formatMXDateTime(dateInput, appointmentId = 'unknown') {
+        // El input suele ser un string ISO "YYYY-MM-DDTHH:mm" o un Date
+        let base = "";
+        if (typeof dateInput === 'string') {
+            base = dateInput.split('.')[0].replace('Z', '');
+        } else {
+            // Si es objeto Date, lo forzamos a string ignorando su timezone interno
+            // ya que los strings en la app se guardan como "hora local de méxico"
+            const pad = (n) => String(n).padStart(2, '0');
+            base = `${dateInput.getFullYear()}-${pad(dateInput.getMonth() + 1)}-${pad(dateInput.getDate())}T${pad(dateInput.getHours())}:${pad(dateInput.getMinutes())}`;
+        }
+
+        // Extraer hora para el blindaje
+        const hourMatch = base.match(/T(\d{2}):/);
+        const hour = hourMatch ? parseInt(hourMatch[1], 10) : -1;
+
+        if (hour !== -1 && (hour < 8 || hour > 20)) {
+            log.error(`🚫 BLINDAJE: Intento de escribir cita [${appointmentId}] fuera de horario (Hora: ${hour}). Operación cancelada.`);
+            return null;
+        }
+
+        // Asegurar formato completo con segundos y offset
+        if (base.length === 16) base += ":00";
+        return `${base}-06:00`;
+    },
+
     // ── Conversión de cita → evento ─────────────────────────────
 
     _toGoogleEvent(appointment) {
-        const startDate = new Date(appointment.date);
-        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hora
-
         const tKey = (appointment.therapist || 'diana').toLowerCase();
         const therapist = tKey.charAt(0).toUpperCase() + tKey.slice(1);
 
@@ -183,6 +210,14 @@ export const GoogleCalendarService = {
         const pKey = (appointment.planningTherapist || '').toLowerCase();
         const planningInfo = pKey ? `📍 Planeó: ${pKey.charAt(0).toUpperCase() + pKey.slice(1)}` : '';
 
+        // Blindaje de Horarios y Offset de México
+        const startMX = this._formatMXDateTime(appointment.date, appointment.id);
+        const endMX = this._formatMXDateTime(new Date(new Date(appointment.date).getTime() + 60 * 60 * 1000), appointment.id);
+
+        if (!startMX || !endMX) {
+            throw new Error(`HORARIO_INVALIDO: La cita ${appointment.name} está fuera del rango 8am-8pm`);
+        }
+
         return {
             summary: summary,
             description: [
@@ -196,15 +231,15 @@ export const GoogleCalendarService = {
                 '📱 Agenda Parlare'
             ].filter(Boolean).join('\n'),
             start: appointment.isFullDayBlock ? {
-                date: startDate.toISOString().split('T')[0]
+                date: appointment.date.split('T')[0]
             } : {
-                dateTime: startDate.toISOString(),
+                dateTime: startMX,
                 timeZone: 'America/Mexico_City'
             },
             end: appointment.isFullDayBlock ? {
-                date: new Date(startDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                date: new Date(new Date(appointment.date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             } : {
-                dateTime: endDate.toISOString(),
+                dateTime: endMX,
                 timeZone: 'America/Mexico_City'
             },
             reminders: (appointment.isFullDayBlock || appointment.isHourlyBlock) ? {
