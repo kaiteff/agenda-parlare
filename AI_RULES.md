@@ -12,12 +12,13 @@ Cada vez que realices un cambio en la interfaz, funcionalidad principal o flujo 
 - Nuevas secciones administrativas o de reportes.
 - Cualquier cambio que afecte cómo la terapeuta o Yari interactúan con la página.
 
-## 🚀 Protocolo de Despliegue (Siempre)
-Al finalizar cualquier tarea o sesión, se deben ejecutar los siguientes pasos:
-1. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (y se actualice el bot en Render).
-2. **Firebase Deploy**: Desplegar la versión web a Firebase Hosting.
-3. **ZIP Backup**: Crear un respaldo comprimido de la sesión en la carpeta `_backups/`.
-4. **Resumen de Sesión**: Crear o actualizar el archivo correspondiente en `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`.
+## 🚀 Protocolo de Despliegue ("Alistémonos para irnos")
+Al finalizar cualquier tarea o sesión, se deben ejecutar obligatoriamente los siguientes pasos:
+1. **Manual Check**: Verificar si los cambios realizados requieren actualizar el manual de ayuda en `js/modules/help/HelpManual.js`.
+2. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (esto dispara la actualización automática del bot en Render).
+3. **Firebase Deploy**: Desplegar la versión web a Firebase Hosting si hubo cambios en el frontend.
+4. **ZIP Backup**: Crear un respaldo comprimido de la sesión (ej: `Backup_Parlare_YYYYMMDD_Final.zip`).
+5. **Resumen de Sesión**: Crear el archivo de cierre en `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`.
 
 ## 🛠️ Estándares Técnicos
 - Mantener la estética premium (Rich Aesthetics).
