@@ -12,14 +12,21 @@ El buscador de pacientes (del lado izquierdo) es inteligente y comprensivo con l
 *   No importa si olvidas los **acentos** (puedes escribir "jose" y el sistema encontrará a "José" sin problema).
 </details>
 
-<details>
-<summary><b>👤 C. Crear un Paciente Nuevo</b></summary>
+<details open>
+<summary><b>👤 C. Crear un Paciente Nuevo (Guía Paso a Paso)</b></summary>
 
-El proceso de crear pacientes está diseñado como si tuvieras una asistente digital que te ahorra pasos. Así funciona:
+El proceso de crear pacientes es muy sencillo. Aquí tienes la guía detallada:
 
-1.  **Llenas la Ficha:** Al abrir "Nuevo Paciente", escribes sus datos básicos. ¡No te preocupes por poner mayúsculas perfectas o agregar el "+52" al teléfono! El sistema pule y limpia los textos por ti.
-2.  **El Archivero Digital:** Al hacer clic en "Guardar", la aplicación crea su expediente seguro en la nube.
-3.  **¡Directo a Agendar!:** Justo al terminar, el sistema sabe que querrás agendar su primera sesión. Por eso, te abre automáticamente la ventana de horarios ya lista con el nombre de tu paciente y tu tarifa. ¡Tú solo eliges el día en el calendario y listo!
+1.  **¿Dónde empiezo?:** Haz clic en el botón azul con el símbolo **"+"** que aparece en la parte superior derecha de tu panel de pacientes (donde dice "9 activos").
+2.  **Llenado de la Ficha:** Se abrirá una ventana. Solo necesitas ingresar:
+    *   **Nombre y Apellidos:** El sistema les pondrá mayúsculas automáticamente.
+    *   **Terapeuta:** Selecciona quién atenderá al paciente.
+    *   **WhatsApp:** Elige la bandera del país y escribe los 10 dígitos (el sistema ya sabe que no debe llevar el 52 extra).
+    *   **Costos:** Ya vienen pre-llenados, pero puedes cambiarlos si hay un acuerdo especial con el paciente.
+3.  **¿Qué pasa al finalizar?:** Al hacer clic en "Crear Paciente":
+    *   Aparecerá un aviso verde confirmando el éxito.
+    *   El paciente se añade a tu lista en la pestaña **"TODOS"**.
+    *   **¡Súper Importante!:** El sistema te abrirá de inmediato la ventana de horarios para que agendes su primera cita sin tener que buscarlo de nuevo.
 </details>
 
 <details>

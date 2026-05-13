@@ -99,20 +99,46 @@ export const HelpManual = {
                         </details>
 
                         <!-- C. Crear Paciente -->
-                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
-                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                        <details open class="group bg-blue-50 rounded-2xl border border-blue-200 shadow-md overflow-hidden transition-all">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none bg-white">
                                 <h3 class="text-gray-800 font-bold flex items-center gap-3">
-                                    <span class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">C</span>
-                                    Crear un Paciente Nuevo
+                                    <span class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-sm">+</span>
+                                    Crear un Paciente Nuevo (Guía Paso a Paso)
                                 </h3>
                                 <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </summary>
-                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
-                                <p>Pensado para ahorrarte tiempo:</p>
-                                <ol class="list-decimal ml-5 space-y-2">
-                                    <li><strong>Llenas la Ficha:</strong> Escribes los datos. El sistema pule mayúsculas y limpia el teléfono automáticamente.</li>
-                                    <li><strong>¡Directo a Agendar!:</strong> Al terminar, se abre <strong>automáticamente</strong> la ventana de horarios ya lista con el nombre de tu paciente. ¡Solo eliges el día y listo!</li>
-                                </ol>
+                            <div class="px-6 pb-6 pt-4 text-sm text-gray-700 space-y-4 animate-fade-in">
+                                
+                                <div class="flex items-start gap-4">
+                                    <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">1</div>
+                                    <p><strong>¿Dónde empiezo?:</strong> Haz clic en el botón azul con el símbolo <strong>"+"</strong> que está en la esquina superior derecha del panel de pacientes.</p>
+                                </div>
+
+                                <div class="flex items-start gap-4">
+                                    <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">2</div>
+                                    <div>
+                                        <p><strong>Llenado de la Ficha:</strong> Se abrirá una ventana donde debes ingresar:</p>
+                                        <ul class="mt-2 space-y-1 ml-4 list-disc text-gray-600">
+                                            <li><strong>Nombre y Apellidos:</strong> El sistema les pondrá mayúsculas solo.</li>
+                                            <li><strong>Terapeuta:</strong> Elige quién atenderá al paciente.</li>
+                                            <li><strong>WhatsApp:</strong> Elige la bandera y escribe los 10 dígitos (sin el 52).</li>
+                                            <li><strong>Costos:</strong> El sistema ya trae los precios base, pero puedes ajustarlos si el paciente tiene una tarifa especial.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-4">
+                                    <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">3</div>
+                                    <div>
+                                        <p><strong>¿Qué pasa al Guardar?:</strong> Al hacer clic en "Crear Paciente":</p>
+                                        <ul class="mt-2 space-y-1 ml-4 list-disc text-gray-600">
+                                            <li>Verás una confirmación verde arriba a la derecha.</li>
+                                            <li>El paciente aparecerá en tu lista de la pestaña <strong>"TODOS"</strong>.</li>
+                                            <li><strong>¡IMPORTANTE!:</strong> El sistema te abrirá automáticamente la ventana de agendar para que elijas su primera cita de una vez sin perder tiempo.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
                             </div>
                         </details>
 
