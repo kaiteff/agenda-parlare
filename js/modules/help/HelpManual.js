@@ -1,9 +1,6 @@
 /**
  * HelpManual.js
  * Modal interactivo con el manual de usuario de Parláre.
- * 
- * ⚠️ AI INSTRUCTION: Always update this file whenever core features, 
- * UI tabs, or WhatsApp logic are modified to keep users informed.
  */
 
 import { ModalService } from '../../utils/ModalService.js';
@@ -37,179 +34,152 @@ export const HelpManual = {
 
                 <!-- Content -->
                 <div class="flex-1 overflow-y-auto p-8 scroller bg-gray-50/50">
-                    <div class="max-w-3xl mx-auto space-y-10 pb-10">
+                    <div class="max-w-3xl mx-auto space-y-4 pb-10">
                         
-                        <!-- Sección 1: WhatsApp -->
-                        <section>
-                            <h3 class="text-blue-600 font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
-                                <span class="w-1.5 h-6 bg-blue-600 rounded-full"></span>
-                                📱 Automatización de WhatsApp
-                            </h3>
-                            <div class="grid gap-4">
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">🤖 Robot de las 8:00 AM</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        Cada mañana a las 8:00 AM, el sistema envía recordatorios automáticos a todos los pacientes del día siguiente.
-                                        Solo se envían si la casilla <strong class="text-blue-600">"Recibir recordatorios automáticos"</strong> está marcada en el perfil del paciente.
-                                    </p>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">Temas ordenados alfabéticamente</p>
+
+                        <!-- A. Administración -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-sm">A</span>
+                                    Administración y Reportes
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <div class="bg-purple-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-purple-800 mb-1">💵 Cortes de Caja</h4>
+                                    <p>En el menú lateral encontrarás el botón de <strong>Corte</strong>. Genera un resumen automático del día (citas cobradas, desgloses, etc.) listo para copiar y enviar a Diana.</p>
                                 </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">🛡️ Seguridad y Privacidad</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        Por política de seguridad, los mensajes de WhatsApp <strong class="text-red-500">JAMÁS</strong> incluyen nombres de pacientes o papás. Solo incluyen fecha, hora y terapeuta.
-                                    </p>
-                                </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">💬 Respuestas del Bot</h4>
-                                    <ul class="text-sm text-gray-600 space-y-1.5 mt-2">
-                                        <li>• <strong>CONFIRMAR:</strong> Responde "1", "OK", "Sí", "Confirmar" o "Confirmado".</li>
-                                        <li>• <strong>CANCELAR:</strong> Responde "2", "No", "Cancelar" o "Cancelado". El sistema notificará automáticamente a Recepción para seguimiento.</li>
-                                        <li>• <strong>RECEPCIÓN:</strong> Responde "3", "Recepción", "Yari" o "Hablar con recepción".</li>
-                                    </ul>
-                                </div>
-                                <div class="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm">
-                                    <h4 class="font-bold text-red-800 mb-2">📢 Alertas a Yari</h4>
-                                    <p class="text-red-700 text-sm leading-relaxed">
-                                        Cuando un paciente cancela vía WhatsApp (respondiendo "2"), Yari recibe una notificación inmediata en su celular para poder dar seguimiento clínico, explicar políticas de cobro o reagendar.
-                                    </p>
-                                </div>
-                                <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
-                                    <h4 class="font-bold text-emerald-800 mb-2">✅ Rastreo Visual de Envíos en la Lista</h4>
-                                    <p class="text-emerald-700 text-sm leading-relaxed">
-                                        Ahora puedes saber el estatus de WhatsApp directamente desde la lista lateral de pacientes. Verás los siguientes íconos a la derecha de su nombre:
-                                    </p>
-                                    <ul class="text-[12px] text-emerald-800 font-bold space-y-2 mt-3">
-                                        <li class="flex items-center gap-2"><span class="text-base">📩</span> <strong>Recordatorio Enviado:</strong> El sistema o Yari ya mandó el mensaje de recordatorio, pero el paciente aún no responde.</li>
-                                        <li class="flex items-center gap-2"><span class="text-base">✅</span> <strong>Asistencia Confirmada:</strong> El paciente ya respondió "1" y confirmó su asistencia.</li>
-                                    </ul>
-                                    <p class="text-emerald-700 text-xs mt-3 opacity-80 italic">
-                                        *También puedes consultar los detalles exactos desde el Historial del Paciente.
-                                    </p>
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <h4 class="font-bold text-slate-800 mb-1">📋 Bitácora de Auditoría</h4>
+                                    <p>Registra quién creó, modificó o canceló cada cita. Disponible para Admins y Recepción desde el icono de lista en el sidebar.</p>
                                 </div>
                             </div>
-                        </section>
+                        </details>
 
-                        <!-- Sección 2: Gestión de Pacientes -->
-                        <section>
-                            <h3 class="text-indigo-600 font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
-                                <span class="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
-                                👥 Gestión de Pacientes
-                            </h3>
-                            <div class="grid gap-4">
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">🚫 Dar de Baja / Inactivar</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        Si un paciente deja de asistir, cámbialo a <strong>"Inactivo"</strong> en su perfil. Esto detiene todos los mensajes automáticos y lo mueve a la "Papelera" para mantener limpia tu lista.
-                                    </p>
+                        <!-- B. Búsqueda -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm">B</span>
+                                    Búsqueda de Pacientes
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <p>El buscador es inteligente y no le importan los errores comunes:</p>
+                                <ul class="list-disc ml-5 space-y-1">
+                                    <li>No importa si usas <strong>MAYÚSCULAS</strong> o minúsculas.</li>
+                                    <li>Ignora los <strong>acentos</strong> (puedes escribir "jose" para buscar a "José").</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <!-- C. Citas y Calendario -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm">C</span>
+                                    Citas y Calendario
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <div class="bg-emerald-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-emerald-800 mb-1">🛡️ Blindaje de Horarios</h4>
+                                    <p>Para evitar errores, solo se permite agendar entre <strong>8:00 AM y 8:00 PM</strong> (Hora CDMX).</p>
                                 </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">☢️ Botón NUKE (Eliminar)</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        Este botón borra permanentemente al paciente y todas sus citas de la base de datos. <strong class="text-red-600">No se puede deshacer.</strong> Úsalo solo para errores de dedo o pruebas.
-                                    </p>
-                                </div>
-                                <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
-                                    <h4 class="font-bold text-indigo-800 mb-2">🔤 Orden Alfabético</h4>
-                                    <p class="text-indigo-700 text-sm leading-relaxed">
-                                        La pestaña <strong>"TODOS"</strong> del sidebar ahora organiza a los pacientes de la <strong>A a la Z</strong> para que sea más fácil encontrarlos manualmente.
-                                    </p>
+                                <div class="bg-white p-4 border rounded-xl">
+                                    <h4 class="font-bold text-gray-800 mb-1">⚡ Pestañas Inteligentes</h4>
+                                    <p>El sidebar busca automáticamente el <strong>siguiente día con citas</strong>. Si hoy es viernes, te mostrará el lunes en lugar de dejar la pestaña vacía.</p>
                                 </div>
                             </div>
-                        </section>
+                        </details>
 
-                        <!-- Sección 3: Calendario -->
-                        <section>
-                            <h3 class="text-emerald-600 font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
-                                <span class="w-1.5 h-6 bg-emerald-600 rounded-full"></span>
-                                📅 Calendario y Citas
-                            </h3>
-                            <div class="grid gap-4">
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">🎨 Colores de Terapeutas</h4>
-                                    <div class="flex gap-4 text-xs font-bold uppercase mt-2">
-                                        <span class="px-2 py-1 bg-pink-100 text-pink-700 rounded border border-pink-200">Diana</span>
-                                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded border border-blue-200">Sam</span>
-                                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded border border-purple-200">Vero</span>
-                                    </div>
+                        <!-- C. Crear Paciente -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">C</span>
+                                    Crear un Paciente Nuevo
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <p>Pensado para ahorrarte tiempo:</p>
+                                <ol class="list-decimal ml-5 space-y-2">
+                                    <li><strong>Llenas la Ficha:</strong> Escribes los datos. El sistema pule mayúsculas y limpia el teléfono automáticamente.</li>
+                                    <li><strong>¡Directo a Agendar!:</strong> Al terminar, se abre <strong>automáticamente</strong> la ventana de horarios ya lista con el nombre de tu paciente. ¡Solo eliges el día y listo!</li>
+                                </ol>
+                            </div>
+                        </details>
+
+                        <!-- G. Google Sync -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center text-sm">G</span>
+                                    Google Sync (Tu Semáforo)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <div class="flex items-start gap-3 p-3 bg-green-50 rounded-xl text-green-800 font-medium">
+                                    <span>🟢</span> <p><strong>Verde:</strong> Tus citas se están enviando a tu celular automáticamente.</p>
                                 </div>
-                                <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm">
-                                    <h4 class="font-bold text-blue-800 mb-2">⚡ Pestañas Inteligentes</h4>
-                                    <p class="text-blue-700 text-sm leading-relaxed">
-                                        La segunda pestaña del sidebar ya no es solo "Mañana". Ahora busca automáticamente el <strong>siguiente día con citas</strong> (ej: si hoy es viernes, te mostrará el Lunes). ¡Ya no verás pestañas vacías!
-                                    </p>
-                                </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">💰 Pagos y Deudas</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        En la lista lateral, los pacientes con deuda aparecen con un punto <span class="text-orange-500 font-bold">Naranja</span>. Si están al corriente, el punto es <span class="text-green-500 font-bold">Verde</span>.
-                                    </p>
-                                </div>
-                                <div class="bg-amber-50 p-5 rounded-2xl border border-amber-100 shadow-sm">
-                                    <h4 class="font-bold text-amber-800 mb-2">🔄 Sistema de Relevo (Handovers)</h4>
-                                    <p class="text-amber-700 text-sm leading-relaxed">
-                                        Cuando un paciente que originalmente pertenece a una terapeuta (ej: Sam) es atendido por otra (ej: Diana), verás dos iniciales en el sidebar:
-                                        <br>• <span class="line-through opacity-50 text-xs mr-1">S</span>: Inicial tachada de quien planeó originalmente.
-                                        <br>• <strong>D</strong>: Inicial normal de quien atiende la sesión actual.
-                                        <br><br>
-                                        Esto te permite saber quién es el dueño del paciente aunque la cita la esté cubriendo otra persona.
-                                    </p>
-                                </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">🔄 Sincronización y Google Calendar</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        El sistema se sincroniza <strong>automáticamente</strong> con Google Calendar en tiempo real.
-                                        <strong class="text-red-500">IMPORTANTE:</strong> No modifiques ni elimines citas directamente desde la app de Google Calendar, ya que podrías romper la sincronización. Si necesitas mover una cita, usa la app de Parláre arrastrando y soltando la cita.
-                                    </p>
-                                </div>
-                                <div class="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm">
-                                    <h4 class="font-bold text-red-800 mb-2">🛡️ Blindaje de Horarios (Novedad)</h4>
-                                    <p class="text-red-700 text-sm leading-relaxed">
-                                        Para evitar errores de desface, el sistema ahora cuenta con un <strong>blindaje estricto</strong>:
-                                        <br>• Solo se permite agendar entre <strong>8:00 AM y 8:00 PM</strong>.
-                                        <br>• El sistema ignora la zona horaria de tu dispositivo y utiliza siempre la <strong>Hora de Ciudad de México</strong> para que Google Calendar sea 100% preciso.
-                                    </p>
+                                <div class="flex items-start gap-3 p-3 bg-red-50 rounded-xl text-red-800 font-medium">
+                                    <span>🔴</span> <p><strong>Rojo:</strong> Tu permiso expiró. Haz clic para reconectar y volver a ver tus citas en el celular.</p>
                                 </div>
                             </div>
-                        </section>
+                        </details>
 
-                        <!-- Sección 4: Administración y Reportes -->
-                        <section>
-                            <h3 class="text-purple-600 font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
-                                <span class="w-1.5 h-6 bg-purple-600 rounded-full"></span>
-                                📊 Administración y Cortes
-                            </h3>
-                            <div class="grid gap-4">
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">💵 Cortes de Caja</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        En el menú lateral (abajo a la izquierda), encontrarás el botón de <strong>Corte</strong>. Este genera un resumen automático del día: citas atendidas, cobradas y desglose por terapeuta. Puedes copiar el reporte para enviarlo por WhatsApp a Diana.
-                                    </p>
-                                </div>
-                                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 class="font-bold text-gray-800 mb-2">⚙️ Configuración (Costos y Comisiones)</h4>
-                                    <p class="text-gray-600 text-sm leading-relaxed">
-                                        En el engrane de arriba a la derecha, los administradores pueden abrir el Panel de Configuración. Ahí se pueden configurar los temas clínicos y establecer la <strong>Cuota Base y Comisión</strong> para cada terapeuta (Diana, Sam, Vero). Estos costos se aplican automáticamente al crear nuevos pacientes.
-                                    </p>
-                                </div>
-                                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                    <h4 class="font-bold text-slate-800 mb-2">📋 Bitácora de Auditoría</h4>
-                                    <p class="text-slate-700 text-sm leading-relaxed">
-                                        Tanto Administradores como Recepción pueden acceder a la <strong>Bitácora</strong> (icono de lista en el sidebar). Aquí se registra quién creó, modificó o canceló cada cita, permitiendo un control total de los movimientos del sistema.
-                                    </p>
-                                </div>
+                        <!-- R. Relevos -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-sm">R</span>
+                                    Relevos de Terapeutas (Handover)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <p>Cuando veas algo como <code class="bg-gray-100 px-1 rounded">~~D~~ / S</code>:</p>
+                                <ul class="list-disc ml-5 space-y-1">
+                                    <li><strong>Letra tachada:</strong> Quien planeó originalmente.</li>
+                                    <li><strong>Letra activa:</strong> Quien dará la sesión hoy.</li>
+                                </ul>
+                                <p class="text-xs text-amber-600 italic">Esto asegura que el pago de planeación y ejecución llegue a la persona correcta sin que tengas que avisar.</p>
                             </div>
-                        </section>
+                        </details>
 
-                        <!-- Sección 5: Recomendaciones -->
-                        <div class="p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
+                        <!-- T. Teléfonos -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">T</span>
+                                    Teléfonos y WhatsApp
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <ul class="list-disc ml-5 space-y-2">
+                                    <li><strong>Solo 10 Dígitos:</strong> El sistema te bloquea si intentas poner más.</li>
+                                    <li><strong>Olvida el +52:</strong> No lo pongas en el cuadro; el sistema lo sabe por la bandera de la izquierda.</li>
+                                    <li><strong>Robot de las 8 AM:</strong> Cada mañana se envían recordatorios automáticos (sin nombres de pacientes por privacidad).</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <!-- Tips -->
+                        <div class="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 mt-10">
                             <h4 class="font-bold text-indigo-900 mb-2 flex items-center gap-2">
                                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM14.586 15.414a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM7.071 14.343a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707z"></path></svg>
-                                Tips Rápidos
+                                Tip de Navegación
                             </h4>
                             <p class="text-indigo-800/80 text-sm leading-relaxed">
-                                Si el sistema se siente lento, recarga la página. 
-                                <br><br>
-                                💡 <strong>Navegación:</strong> Ahora todos los cuadros de diálogo tienen una <strong>"X"</strong> en la esquina y también puedes cerrarlos haciendo clic en el área oscura fuera de la ventana.
+                                Todas las ventanas ahora tienen una <strong>"X"</strong> y también se pueden cerrar haciendo clic afuera en lo oscuro. ¡Más rápido y fácil!
                             </p>
                         </div>
                     </div>
