@@ -297,6 +297,13 @@ export const Sidebar = {
             ? `<span class="text-[8px] px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-md ml-2 uppercase font-black tracking-tighter">X ${p.cancelledBy || '?' }</span>` 
             : '';
 
+        let whatsAppStatus = '';
+        if (p.confirmed) {
+            whatsAppStatus = '<span class="text-[12px] ml-1.5" title="Asistencia confirmada">✅</span>';
+        } else if (p.lastReminderSentAt && !p.isCancelled) {
+            whatsAppStatus = '<span class="text-[12px] ml-1.5 opacity-80 hover:opacity-100 transition-opacity cursor-help" title="Recordatorio enviado (Pendiente de confirmación)">📩</span>';
+        }
+
         return `
             <div onclick="window.openPatientHistoryById('${p.id}')" 
                  class="group p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-200 ${p.isCancelled ? 'opacity-70 bg-gray-50/50' : ''}">
@@ -307,7 +314,7 @@ export const Sidebar = {
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <h3 class="font-bold text-gray-800 truncate flex items-center">${p.name}${birthdayIcon}${cancelLabel}</h3>
+                            <h3 class="font-bold text-gray-800 truncate flex items-center">${p.name}${birthdayIcon}${whatsAppStatus}${cancelLabel}</h3>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] ${p.isCancelled ? 'text-gray-400' : (p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium')}">

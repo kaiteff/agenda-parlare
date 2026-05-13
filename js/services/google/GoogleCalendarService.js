@@ -161,28 +161,30 @@ export const GoogleCalendarService = {
      * y dentro del horario permitido (8am - 8pm).
      */
     _formatMXDateTime(dateInput, appointmentId = 'unknown') {
-        // El input suele ser un string ISO "YYYY-MM-DDTHH:mm" o un Date
-        let base = "";
+        let d;
         if (typeof dateInput === 'string') {
-            base = dateInput.split('.')[0].replace('Z', '');
+            // JS parses ISO strings with 'Z' as UTC and without 'Z' as Local Time.
+            // This properly handles both scenarios (e.g., from CalendarSuggestions and standard Calendar UI).
+            d = new Date(dateInput);
         } else {
-            // Si es objeto Date, lo forzamos a string ignorando su timezone interno
-            // ya que los strings en la app se guardan como "hora local de méxico"
-            const pad = (n) => String(n).padStart(2, '0');
-            base = `${dateInput.getFullYear()}-${pad(dateInput.getMonth() + 1)}-${pad(dateInput.getDate())}T${pad(dateInput.getHours())}:${pad(dateInput.getMinutes())}`;
+            d = dateInput;
         }
 
-        // Extraer hora para el blindaje
-        const hourMatch = base.match(/T(\d{2}):/);
-        const hour = hourMatch ? parseInt(hourMatch[1], 10) : -1;
+        const pad = (n) => String(n).padStart(2, '0');
+        const y = d.getFullYear();
+        const m = pad(d.getMonth() + 1);
+        const day = pad(d.getDate());
+        const h = pad(d.getHours());
+        const min = pad(d.getMinutes());
 
-        if (hour !== -1 && (hour < 8 || hour > 20)) {
+        const base = `${y}-${m}-${day}T${h}:${min}:00`;
+        const hour = parseInt(h, 10);
+
+        if (hour < 8 || hour > 20) {
             log.error(`🚫 BLINDAJE: Intento de escribir cita [${appointmentId}] fuera de horario (Hora: ${hour}). Operación cancelada.`);
             return null;
         }
 
-        // Asegurar formato completo con segundos y offset
-        if (base.length === 16) base += ":00";
         return `${base}-06:00`;
     },
 

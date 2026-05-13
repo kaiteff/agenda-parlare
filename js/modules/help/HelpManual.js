@@ -74,14 +74,17 @@ export const HelpManual = {
                                     </p>
                                 </div>
                                 <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
-                                    <h4 class="font-bold text-emerald-800 mb-2">✅ Rastreo de Envíos (Novedad)</h4>
+                                    <h4 class="font-bold text-emerald-800 mb-2">✅ Rastreo Visual de Envíos en la Lista</h4>
                                     <p class="text-emerald-700 text-sm leading-relaxed">
-                                        Ahora puedes saber si ya se envió el recordatorio consultando el <strong>Historial del Paciente</strong>:
+                                        Ahora puedes saber el estatus de WhatsApp directamente desde la lista lateral de pacientes. Verás los siguientes íconos a la derecha de su nombre:
                                     </p>
-                                    <ul class="text-[11px] text-emerald-800 font-bold space-y-1 mt-2">
-                                        <li>🤖 <strong>Robot:</strong> Enviado automáticamente a las 8:00 AM.</li>
-                                        <li>📱 <strong>Celular:</strong> Enviado manualmente por Yari.</li>
+                                    <ul class="text-[12px] text-emerald-800 font-bold space-y-2 mt-3">
+                                        <li class="flex items-center gap-2"><span class="text-base">📩</span> <strong>Recordatorio Enviado:</strong> El sistema o Yari ya mandó el mensaje de recordatorio, pero el paciente aún no responde.</li>
+                                        <li class="flex items-center gap-2"><span class="text-base">✅</span> <strong>Asistencia Confirmada:</strong> El paciente ya respondió "1" y confirmó su asistencia.</li>
                                     </ul>
+                                    <p class="text-emerald-700 text-xs mt-3 opacity-80 italic">
+                                        *También puedes consultar los detalles exactos desde el Historial del Paciente.
+                                    </p>
                                 </div>
                             </div>
                         </section>
@@ -158,6 +161,14 @@ export const HelpManual = {
                                         <strong class="text-red-500">IMPORTANTE:</strong> No modifiques ni elimines citas directamente desde la app de Google Calendar, ya que podrías romper la sincronización. Si necesitas mover una cita, usa la app de Parláre arrastrando y soltando la cita.
                                     </p>
                                 </div>
+                                <div class="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm">
+                                    <h4 class="font-bold text-red-800 mb-2">🛡️ Blindaje de Horarios (Novedad)</h4>
+                                    <p class="text-red-700 text-sm leading-relaxed">
+                                        Para evitar errores de desface, el sistema ahora cuenta con un <strong>blindaje estricto</strong>:
+                                        <br>• Solo se permite agendar entre <strong>8:00 AM y 8:00 PM</strong>.
+                                        <br>• El sistema ignora la zona horaria de tu dispositivo y utiliza siempre la <strong>Hora de Ciudad de México</strong> para que Google Calendar sea 100% preciso.
+                                    </p>
+                                </div>
                             </div>
                         </section>
 
@@ -206,7 +217,7 @@ export const HelpManual = {
 
                 <!-- Footer -->
                 <div class="p-6 bg-white border-t border-gray-100 flex justify-center shrink-0">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Parláre Clinical Intelligence v7.8.0</p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Parláre Clinical Intelligence v7.9.0</p>
                 </div>
             </div>
         </div>

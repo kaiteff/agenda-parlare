@@ -413,6 +413,7 @@ export const PatientFilters = {
                     name: apt.name,
                     appointmentTime: aptTime,
                     confirmed: apt.confirmed || false,
+                    lastReminderSentAt: apt.lastReminderSentAt || null,
                     isCancelled: !!apt.isCancelled,
                     cancelledBy: apt.cancelledBy || null,
                     // LÓGICA DE RELEVO: 

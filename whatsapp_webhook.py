@@ -133,10 +133,17 @@ THERAPIST_CALENDARS = {
 def parse_mx_datetime(date_str):
     """
     Parsea correctamente las fechas de Firestore como hora local de México.
-    El frontend guarda fechas como strings ISO SIN zona horaria (ej: '2026-05-11T11:00'),
-    representando hora local de México. Si se parsean como UTC, resultan 6 horas menos.
+    Si el string tiene 'Z', se interpreta como UTC y se convierte a México.
+    Si no tiene 'Z', se asume que es una fecha 'naive' que ya representa hora de México.
     """
-    raw = str(date_str).replace('Z', '').strip()
+    raw = str(date_str).strip()
+    
+    if raw.endswith('Z'):
+        # Es UTC, reemplazar por offset para que fromisoformat lo entienda
+        raw = raw.replace('Z', '+00:00')
+        dt = datetime.fromisoformat(raw)
+        return dt.astimezone(MX_TZ)
+        
     dt = datetime.fromisoformat(raw)
     if dt.tzinfo is None:
         dt = MX_TZ.localize(dt)  # Decirle explícitamente: es hora de México
