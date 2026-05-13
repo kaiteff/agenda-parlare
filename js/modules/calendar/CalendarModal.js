@@ -17,6 +17,9 @@ import { ModalService } from '../../utils/ModalService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 import { TimeManager } from '../../utils/TimeManager.js';
+import { ToastService } from '../../utils/ToastService.js';
+import { LoaderService } from '../../utils/LoaderService.js';
+
 
 
 
@@ -478,15 +481,20 @@ export const CalendarModal = {
 
     async handleSave() {
         console.log("💾 handleSave invocado");
-
-        // Ensure Google Token (Popup)
+        LoaderService.show("Guardando cita...");
         try {
-            await GoogleAuthService.ensureToken(false);
-        } catch (authErr) {
-            console.warn("Google Auth pre-check failed:", authErr);
+            await this._executeSave();
+        } catch (e) {
+            console.error(e);
+            await ModalService.alert("Error", "Error al guardar: " + e.message, "error");
+        } finally {
+            LoaderService.hide();
         }
+    },
 
+    async _executeSave() {
         const dom = CalendarState.dom;
+
         const typeRadio = document.querySelector('input[name="appointmentType"]:checked')?.value;
         const isBlock = typeRadio === 'block';
         
@@ -617,6 +625,7 @@ export const CalendarModal = {
             CalendarState.rescheduledFromId = null;
             this.closeModal();
             console.log("✅ Cita guardada y modal cerrado");
+            ToastService.success("Cita guardada correctamente");
         } catch (e) {
             console.error(e);
             await ModalService.alert("Error", "Error al guardar: " + e.message, "error");

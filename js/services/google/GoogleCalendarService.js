@@ -15,6 +15,8 @@ import { ToastService } from '../../utils/ToastService.js';
 import { Logger } from '../../utils/Logger.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { TimeManager } from '../../utils/TimeManager.js';
+import { LoaderService } from '../../utils/LoaderService.js';
+
 
 
 const log = Logger.create('GCalService');
@@ -589,6 +591,15 @@ export const GoogleCalendarService = {
      * Firebase siempre gana. 3 llamadas de lista en lugar de N*3.
      */
     async syncWeek(appointments, isSilent = false) {
+        if (!isSilent) LoaderService.show("Sincronizando con Google Calendar...");
+        try {
+            return await this._executeSyncWeek(appointments, isSilent);
+        } finally {
+            if (!isSilent) LoaderService.hide();
+        }
+    },
+
+    async _executeSyncWeek(appointments, isSilent = false) {
         if (!(await this._ensureReady())) {
             log.error('[syncWeek] Servicio de Calendar no inicializado');
             if (!isSilent) ToastService.error('Google Calendar no disponible. Recarga la página.');
@@ -597,13 +608,19 @@ export const GoogleCalendarService = {
 
         if (!GoogleAuthService.isTokenValid()) {
             log.warn('[syncWeek] Token de Google inválido o expirado');
-            if (!isSilent) ToastService.error('Token de Google expirado. Haz clic en "Google Off" para reconectarte.');
+            if (!isSilent) {
+                LoaderService.hide();
+                ToastService.error('Token de Google expirado. Haz clic en "Google Off" para reconectarte.');
+            }
             return { created: 0, deleted: 0 };
         }
 
         const active = appointments.filter(a => !a.isCancelled);
         if (active.length === 0) {
-            if (!isSilent) ToastService.info('No hay citas activas para sincronizar.');
+            if (!isSilent) {
+                LoaderService.hide();
+                ToastService.info('No hay citas activas para sincronizar.');
+            }
             return { created: 0, deleted: 0 };
         }
 

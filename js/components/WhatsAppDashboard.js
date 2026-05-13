@@ -1,6 +1,9 @@
 import { CalendarState } from '../modules/calendar/CalendarState.js';
 import { AuthManager } from '../managers/AuthManager.js';
 import { PatientState } from '../managers/patient/PatientState.js';
+import { ToastService } from '../utils/ToastService.js';
+import { LoaderService } from '../utils/LoaderService.js';
+
 
 export const WhatsAppDashboard = {
     selectedView: 'today', // Por defecto hoy en la mañana
@@ -98,6 +101,7 @@ export const WhatsAppDashboard = {
                     const originalText = btn.textContent;
                     btn.disabled = true;
                     btn.textContent = "Enviando...";
+                    LoaderService.show("Enviando recordatorios...");
                     
                     try {
                         const response = await fetch('https://parlare-webhook.onrender.com/cron/reminders?key=parlare_secret_2026', {
@@ -109,10 +113,12 @@ export const WhatsAppDashboard = {
                             }
                         });
                         const result = await response.json();
-                        alert(`Resultado: Se enviaron ${result.sent || 0} recordatorios y se saltaron ${result.skipped || 0}.`);
+                        LoaderService.hide();
+                        ToastService.success(`Se enviaron ${result.sent || 0} recordatorios y se saltaron ${result.skipped || 0}.`);
                     } catch (err) {
+                        LoaderService.hide();
                         console.error("Error enviando recordatorios:", err);
-                        alert("Error al conectar con el servidor de WhatsApp.");
+                        ToastService.error("Error al conectar con el servidor de WhatsApp.");
                     } finally {
                         btn.disabled = false;
                         btn.textContent = originalText;

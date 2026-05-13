@@ -8,6 +8,8 @@ import { AuthManager } from './managers/AuthManager.js';
 import { ScheduleManager } from './managers/ScheduleManager.js';
 import { ModalService } from './utils/ModalService.js';
 import { ToastService } from './utils/ToastService.js';
+import { LoaderService } from './utils/LoaderService.js';
+
 import { NetworkMonitor } from './services/NetworkMonitor.js';
 import { Header } from './components/Header.js';
 import { GoogleAuthService } from './services/google/GoogleAuthService.js';
@@ -80,6 +82,7 @@ async function initializeModules() {
             initModule('ScheduleManager', () => ScheduleManager.init()),
             initModule('WhatsAppDashboard', () => WhatsAppDashboard.render()),
             initModule('ToastService', () => ToastService.init()),
+            initModule('LoaderService', () => LoaderService.init()),
             initModule('NetworkMonitor', () => NetworkMonitor.init()),
             initModule('SettingsManager', () => SettingsManager.init())
         ]);
