@@ -29,8 +29,6 @@ export function isSlotFree(dateObj, appointments, excludeId = null, therapist = 
 
         if (apptTherapist !== targetTherapist) return false;
 
-        if (apptTherapist !== targetTherapist) return false;
-
         if (p.isFullDayBlock) {
             const pDateStr = p.date.split('T')[0];
             const targetDateStr = dateObj.toISOString().split('T')[0];
@@ -60,8 +58,6 @@ export function checkSlotConflict(dateTimeStr, appointments, excludeId = null, t
 
         const apptTherapist = p.therapist || 'diana';
         const targetTherapist = therapist || 'diana';
-
-        if (apptTherapist !== targetTherapist) return false;
 
         if (apptTherapist !== targetTherapist) return false;
 
@@ -179,16 +175,10 @@ export function isWithinWorkingHours(date) {
     // Blindaje robusto: Obtener la hora real en Ciudad de México
     try {
         const mxHour = parseInt(mxHourFormatter.format(checkDate), 10);
-        
         // 8 AM a 8 PM
         return mxHour >= 8 && mxHour <= 20;
     } catch (e) {
-        
-        // 8 AM a 8 PM (última cita permitida inicia a las 7 PM / 19:00)
-        // Si el usuario quiere permitir el slot de las 8 PM, entonces <= 20.
-        return mxHour >= 8 && mxHour <= 20;
-    } catch (e) {
-        // Fallback si Intl no está disponible
+        // Fallback si Intl no está disponible o falla el formateo
         const hour = checkDate.getHours();
         return hour >= 8 && hour <= 20;
     }
