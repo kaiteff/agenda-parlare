@@ -22,7 +22,17 @@ Cuando veas una tarjeta de paciente con iniciales como esta: `~~D~~ / S`
 
 ---
 
-## 📱 3. Agenda Diaria por WhatsApp
+## 📞 3. WhatsApp y Teléfonos (Normalización)
+Hemos simplificado cómo guardas los números de teléfono para evitar errores:
+
+*   **Solo 10 Dígitos**: Para pacientes de México, el sistema ahora te bloquea para que solo escribas los 10 números locales.
+*   **Sin el +52**: Ya no es necesario escribir el "52" dentro del cuadro de texto; el sistema ya lo sabe por el selector de bandera que está a la izquierda.
+*   **Aviso Inteligente**: Si intentas escribir el "52" por error, el sistema te avisará con una pequeña notificación para recordarte que el país ya está seleccionado.
+*   **Internacionales**: Si atiendes a alguien de otro país (ej. USA +1), simplemente cámbialo en el selector de bandera y el sistema ajustará el envío de mensajes automáticamente.
+
+---
+
+## 📱 4. Agenda Diaria por WhatsApp
 Todas las mañanas recibirás un mensaje automático del **Bot de Parláre** con tu agenda:
 
 *   **Orden**: Las citas aparecen en orden cronológico (de la más temprano a la más tarde).
@@ -33,7 +43,7 @@ Todas las mañanas recibirás un mensaje automático del **Bot de Parláre** con
 
 ---
 
-## 🔍 4. Búsqueda de Pacientes
+## 🔍 5. Búsqueda de Pacientes
 Ahora el buscador del lado izquierdo es más inteligente:
 *   No importa si escribes con **MAYÚSCULAS** o **minúsculas**.
 *   No importa si olvidas los **acentos** (puedes escribir "jose" y encontrará a "José").
@@ -43,4 +53,4 @@ Ahora el buscador del lado izquierdo es más inteligente:
 ## 🆘 ¿Necesitas ayuda?
 Si algo no funciona o ves que el botón de Google sigue en rojo después de intentar conectarte, contacta a Soporte Técnico.
 
-*Última actualización: 07 de Mayo, 2026*
+*Última actualización: 13 de Mayo, 2026*
