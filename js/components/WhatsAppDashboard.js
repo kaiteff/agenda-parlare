@@ -109,7 +109,7 @@ export const WhatsAppDashboard = {
                             }
                         });
                         const result = await response.json();
-                        alert(`Resultado: Se procesaron ${result.results.length} citas.`);
+                        alert(`Resultado: Se enviaron ${result.sent || 0} recordatorios y se saltaron ${result.skipped || 0}.`);
                     } catch (err) {
                         console.error("Error enviando recordatorios:", err);
                         alert("Error al conectar con el servidor de WhatsApp.");

@@ -558,12 +558,16 @@ def send_reminders():
                     'name': p.get('name')
                 }
 
-        # 3. Obtener citas de mañana
+        # 3. Obtener citas de mañana (con rango extendido para capturar desfases UTC)
         mx_now = datetime.now(MX_TZ)
         tomorrow = mx_now + timedelta(days=1)
         day_str = tomorrow.strftime('%Y-%m-%d')
+        
+        # Consultamos un rango más amplio (de mañana a pasado mañana) y filtramos en Python
+        # Esto atrapa citas como "2026-05-15T00:00:00Z" que realmente son las 6pm del 14 en México
         start_iso = f"{day_str}T00:00:00"
-        end_iso = f"{day_str}T23:59:59"
+        next_day = tomorrow + timedelta(days=1)
+        end_iso = f"{next_day.strftime('%Y-%m-%d')}T08:00:00"
 
         apts_ref = db.collection('appointments')
         query = apts_ref.where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
@@ -584,10 +588,15 @@ def send_reminders():
             if not patient_info:
                 skipped_count += 1
                 continue
-            
+
             # Formatear hora y filtrar horario Parláre (8am-8pm)
             try:
                 dt = parse_mx_datetime(apt['date'])
+                
+                # 🛡️ VALIDACIÓN: Solo procesar si la fecha local de México es realmente mañana
+                if dt.date() != tomorrow.date():
+                    continue
+
                 # 🛡️ GUARDIA: Solo enviar recordatorios dentro del horario Parláre
                 if not (8 <= dt.hour <= 20):
                     print(f"⏰ Cita fuera de horario Parláre ({dt.hour}h) para {patient_name}. Recordatorio omitido.")
