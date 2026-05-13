@@ -162,20 +162,27 @@ export function isFutureOrToday(date) {
     return checkDate >= today;
 }
 
+// Cache del formateador para máximo rendimiento en bucles
+const mxHourFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Mexico_City',
+    hour: 'numeric',
+    hour12: false
+});
+
 /**
- * Valida que una fecha esté dentro del horario laboral (9:00 - 20:00)
+ * Valida que una fecha esté dentro del horario laboral (8:00 - 20:00)
  * @param {string|Date} date - Fecha a validar
  * @returns {boolean} - true si está dentro del horario
  */
 export function isWithinWorkingHours(date) {
     const checkDate = new Date(date);
-    // Blindaje robusto: Obtener la hora real en Ciudad de México sin importar el dispositivo
+    // Blindaje robusto: Obtener la hora real en Ciudad de México
     try {
-        const mxHour = parseInt(new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'America/Mexico_City',
-            hour: 'numeric',
-            hour12: false
-        }).format(checkDate), 10);
+        const mxHour = parseInt(mxHourFormatter.format(checkDate), 10);
+        
+        // 8 AM a 8 PM
+        return mxHour >= 8 && mxHour <= 20;
+    } catch (e) {
         
         // 8 AM a 8 PM (última cita permitida inicia a las 7 PM / 19:00)
         // Si el usuario quiere permitir el slot de las 8 PM, entonces <= 20.

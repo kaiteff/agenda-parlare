@@ -387,6 +387,17 @@ export const Header = {
                     adminSettingsBtn.classList.remove('hidden');
                     adminSettingsBtn.classList.add('flex');
                 }
+
+                // MOSTRAR BÓVEDA DE SOPORTE (Solo Daniel)
+                const supportVaultBtn = document.getElementById('openSupportVaultBtn');
+                if (supportVaultBtn) {
+                    if (AuthManager.currentUser?.email === 'rodriguezd.danielrob@gmail.com') {
+                        supportVaultBtn.classList.remove('hidden');
+                        supportVaultBtn.classList.add('md:flex');
+                    } else {
+                        supportVaultBtn.classList.add('hidden');
+                    }
+                }
             } else {
                 selectorContainer.classList.add('hidden');
                 selectorContainer.classList.remove('md:flex');
@@ -652,6 +663,20 @@ export const Header = {
                     AdminSettingsModal.open();
                 } catch (err) {
                     console.error("Error abriendo Configuración:", err);
+                }
+                return;
+            }
+
+            // 8. Botón Bóveda de Soporte (Daniel Only)
+            const supportBtn = e.target.closest('#openSupportVaultBtn');
+            if (supportBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    const { SupportVault } = await import('../modules/support/SupportVault.js');
+                    SupportVault.open();
+                } catch (err) {
+                    console.error("Error abriendo Bóveda de Soporte:", err);
                 }
                 return;
             }

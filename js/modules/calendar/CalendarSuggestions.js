@@ -8,6 +8,8 @@ import { CalendarUI } from './CalendarUI.js';
 import { checkSlotConflict, isNotSunday } from '../../utils/validators.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { TimeManager } from '../../utils/TimeManager.js';
+import { db, addDoc, collection } from '../../firebase.js';
+import { AuthManager } from '../../managers/AuthManager.js';
 
 
 export const CalendarSuggestions = {
@@ -114,6 +116,18 @@ export const CalendarSuggestions = {
                 }
 
                 CalendarUI.renderBusySlots(localISOTime.split('T')[0]);
+                
+                // LOG PARA SOPORTE: Registrar sugerencia aceptada
+                try {
+                    addDoc(collection(db, 'support_suggestions'), {
+                        patientName,
+                        suggestedDate: nextDate.toISOString(),
+                        acceptedAt: new Date().toISOString(),
+                        acceptedBy: AuthManager.currentUser?.email || 'Unknown',
+                        patternCount: maxCount
+                    });
+                } catch (e) { console.warn("No se pudo registrar log de soporte", e); }
+
                 div.remove();
             };
 
