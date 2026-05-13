@@ -7,6 +7,8 @@ import { CalendarState } from './CalendarState.js';
 import { CalendarUI } from './CalendarUI.js';
 import { checkSlotConflict, isNotSunday } from '../../utils/validators.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
+import { TimeManager } from '../../utils/TimeManager.js';
+
 
 export const CalendarSuggestions = {
 
@@ -100,8 +102,8 @@ export const CalendarSuggestions = {
             `;
 
             div.querySelector('button').onclick = () => {
-                const offset = nextDate.getTimezoneOffset() * 60000;
-                const localISOTime = (new Date(nextDate - offset)).toISOString().slice(0, 16);
+                const localISOTime = TimeManager.toFirestore(nextDate);
+
                 CalendarState.dom.appointmentDateInput.value = localISOTime;
 
                 // Activar recurrencia automáticamente si el patrón es fuerte (>1 vez)
@@ -151,9 +153,7 @@ export const CalendarSuggestions = {
             const li = document.createElement('li');
 
             // Verificación de conflicto para cada fecha recurrente
-            const offset = d.getTimezoneOffset() * 60000;
-            const iso = (new Date(d - offset)).toISOString();
-
+            const iso = TimeManager.toFirestore(d);
             const isConflict = checkSlotConflict(iso, CalendarState.appointments);
 
             li.className = `text-xs flex justify-between items-center p-1 rounded ${isConflict ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'}`;
@@ -213,8 +213,7 @@ export const CalendarSuggestions = {
                 if (d <= now) continue;
 
                 // Verificar conflicto (usando ISOString local manual para asegurar fecha correcta)
-                const offset = d.getTimezoneOffset() * 60000;
-                const iso = (new Date(d - offset)).toISOString();
+                const iso = TimeManager.toFirestore(d);
 
                 if (!checkSlotConflict(iso, CalendarState.appointments)) {
                     candidates.push({ date: d, label: `${labelPrefix} ${formatTime12h(h)}` });
@@ -251,8 +250,7 @@ export const CalendarSuggestions = {
         chip.className = `${bgClass} px-3 py-1 rounded-full text-xs cursor-pointer border transition-colors whitespace-nowrap`;
         chip.textContent = label;
         chip.onclick = () => {
-            const offset = dateObj.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(dateObj - offset)).toISOString().slice(0, 16);
+            const localISOTime = TimeManager.toFirestore(dateObj);
             CalendarState.dom.appointmentDateInput.value = localISOTime;
             CalendarUI.renderBusySlots(localISOTime.split('T')[0]);
         };

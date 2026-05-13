@@ -14,6 +14,8 @@ import { GoogleAuthService } from './GoogleAuthService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { Logger } from '../../utils/Logger.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
+import { TimeManager } from '../../utils/TimeManager.js';
+
 
 const log = Logger.create('GCalService');
 
@@ -163,9 +165,7 @@ export const GoogleCalendarService = {
     _formatMXDateTime(dateInput, appointmentId = 'unknown') {
         let d;
         if (typeof dateInput === 'string') {
-            // JS parses ISO strings with 'Z' as UTC and without 'Z' as Local Time.
-            // This properly handles both scenarios (e.g., from CalendarSuggestions and standard Calendar UI).
-            d = new Date(dateInput);
+            d = TimeManager.fromDate(dateInput);
         } else {
             d = dateInput;
         }

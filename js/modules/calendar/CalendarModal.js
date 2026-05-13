@@ -16,6 +16,8 @@ import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
+import { TimeManager } from '../../utils/TimeManager.js';
+
 
 
 export const CalendarModal = {
@@ -136,7 +138,8 @@ export const CalendarModal = {
         // Set date
         const date = new Date(dateStr + 'T00:00:00');
         date.setHours(hour);
-        const localISOTime = this._getLocalISOStringFormat(date);
+        const localISOTime = TimeManager.toFirestore(date);
+
         if (dom.appointmentDateInput) dom.appointmentDateInput.value = localISOTime;
         
         const selectedTherapist = AuthManager.getSelectedTherapist();
@@ -194,7 +197,8 @@ export const CalendarModal = {
 
         // Date
         const date = new Date(ev.date);
-        const localISOTime = this._getLocalISOStringFormat(date);
+        const localISOTime = TimeManager.toFirestore(date);
+
         if (dom.appointmentDateInput) dom.appointmentDateInput.value = localISOTime;
 
         // CORRECCIÓN: Si el costo es 0, intentar jalar del perfil
@@ -903,7 +907,8 @@ export const CalendarModal = {
 
     selectSlot(dateObj) {
         // Actualizar hidden input con formato ISO local
-        const localISOTime = this._getLocalISOStringFormat(dateObj);
+        const localISOTime = TimeManager.toFirestore(dateObj);
+
 
         const hiddenInput = CalendarState.dom.appointmentDateInput || document.getElementById('appointmentDate');
         const isSchoolVisit = document.querySelector('input[name="appointmentType"]:checked')?.value === 'school';
@@ -975,8 +980,7 @@ export const CalendarModal = {
     },
 
     _getLocalISOStringFormat(dateObj) {
-        const offset = dateObj.getTimezoneOffset() * 60000;
-        return (new Date(dateObj - offset)).toISOString().slice(0, 16);
+        return TimeManager.toFirestore(dateObj);
     },
 
     async _processRecurrenceCreation(appointmentData, dateStrArray) {
@@ -990,7 +994,8 @@ export const CalendarModal = {
             for (let i = 0; i < dateStrArray.length; i++) {
                 const offsetObj = new Date(date);
                 offsetObj.setHours(offsetObj.getHours() + i);
-                const iso = this._getLocalISOStringFormat(offsetObj);
+                const iso = TimeManager.toFirestore(offsetObj);
+
                 if (!checkSlotConflict(iso, CalendarState.appointments)) {
                     await CalendarData.createEvent({ ...appointmentData, date: iso });
                 }
