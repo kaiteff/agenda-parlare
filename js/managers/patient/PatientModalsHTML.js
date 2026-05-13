@@ -93,7 +93,7 @@ export const PatientModalsHTML = {
                                     <option value="502">🇬🇹 +502</option>
                                     <option value="51">🇵🇪 +51</option>
                                 </select>
-                                <input type="tel" id="newPatientPhone" placeholder="33 2495 5791"
+                                <input type="tel" id="newPatientPhone" placeholder="33 2495 5791" maxlength="10"
                                     class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm">
                             </div>
                             <label class="flex items-center gap-2 mt-2 cursor-pointer">
@@ -210,7 +210,7 @@ export const PatientModalsHTML = {
                                         <option value="502">🇬🇹 +502</option>
                                         <option value="51">🇵🇪 +51</option>
                                     </select>
-                                    <input type="tel" id="editPatientPhone"
+                                    <input type="tel" id="editPatientPhone" maxlength="10"
                                         class="flex-1 min-w-0 border rounded px-3 py-2 text-sm" placeholder="33 2495 5791">
                                 </div>
                                 <label class="flex items-center gap-2 mt-2 cursor-pointer">

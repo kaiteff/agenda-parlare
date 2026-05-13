@@ -122,13 +122,17 @@ export const PatientActions = {
         const formattedLastName = _toProperCase(lastName);
         const fullName = `${formattedFirstName} ${formattedLastName}`.trim();
 
-        // Obtener teléfono con país
+        // Obtener teléfono y país por separado
         const countryCode = document.getElementById('newPatientCountryCode')?.value || '52';
         let phoneDigits = phone.replace(/\D/g, '');
-        if (phoneDigits.length === 10 && countryCode === '52' && !phoneDigits.startsWith('52')) {
-            phoneDigits = '52' + phoneDigits; // Legacy compatibility
-        } else if (phoneDigits.length > 0 && !phoneDigits.startsWith(countryCode)) {
-            phoneDigits = countryCode + phoneDigits;
+
+        // Si el usuario escribió el código de país por error al inicio (ej: 5233...), lo removemos
+        // Solo si después de quitarlo quedan 10 dígitos (para México)
+        if (countryCode === '52' && phoneDigits.startsWith('52') && phoneDigits.length > 10) {
+            phoneDigits = phoneDigits.substring(2);
+        } else if (phoneDigits.startsWith(countryCode) && phoneDigits.length > 8) {
+             // Caso general para otros países si el número es largo
+             phoneDigits = phoneDigits.substring(countryCode.length);
         }
 
         try {
@@ -144,6 +148,7 @@ export const PatientActions = {
                 defaultCost, 
                 clinicFee, 
                 phone: phoneDigits, 
+                countryCode: countryCode, // Nuevo: Guardar por separado
                 parentName: _toProperCase(parentName), 
                 wantsWhatsapp,
                 birthday 
@@ -629,14 +634,20 @@ export const PatientActions = {
             if (updates.assignedSubthemes !== undefined) profileUpdates.assignedSubthemes = updates.assignedSubthemes;
             if (updates.birthday !== undefined) profileUpdates.birthday = updates.birthday;
 
-            // Handle phone with country code
+            // Handle phone with country code (Normalizado)
             if (updates.phone !== undefined) {
                 const countryCode = document.getElementById('editPatientCountryCode')?.value || '52';
                 let phoneDigits = updates.phone.replace(/\D/g, '');
-                if (phoneDigits.length > 0 && !phoneDigits.startsWith(countryCode)) {
-                    phoneDigits = countryCode + phoneDigits;
+                
+                // Limpieza: Si incluyeron el prefijo por error
+                if (countryCode === '52' && phoneDigits.startsWith('52') && phoneDigits.length > 10) {
+                    phoneDigits = phoneDigits.substring(2);
+                } else if (phoneDigits.startsWith(countryCode) && phoneDigits.length > 8) {
+                    phoneDigits = phoneDigits.substring(countryCode.length);
                 }
+
                 profileUpdates.phone = phoneDigits;
+                profileUpdates.countryCode = countryCode;
             }
 
             await updateDoc(doc(db, 'patientProfiles', profileId), profileUpdates);

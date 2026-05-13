@@ -25,6 +25,7 @@ import { AuthManager } from '../AuthManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ScheduleManager } from '../ScheduleManager.js';
 import { SettingsManager } from '../SettingsManager.js';
+import { ToastService } from '../../utils/ToastService.js';
 
 /**
  * Gestión de modales
@@ -115,6 +116,17 @@ export const PatientModals = {
 
             console.log('✅ PatientModals: Modal de nuevo paciente abierto (Standard Mode)');
         });
+
+        // VALIDACIÓN: Avisar si escriben 52 al inicio
+        if (phoneInput) {
+            phoneInput.oninput = (e) => {
+                const val = e.target.value;
+                const countryCode = document.getElementById('newPatientCountryCode')?.value || '52';
+                if (countryCode === '52' && val.startsWith('52')) {
+                    ToastService.info("💡 Detectamos un '52' al inicio. El país ya está seleccionado, recuerda usar solo los 10 dígitos.", 3000);
+                }
+            };
+        }
     },
 
     /**
@@ -657,7 +669,31 @@ export const PatientModals = {
             document.getElementById('editPatientClinicFee').value = patient.clinicFee || 250;
         }
         if (document.getElementById('editPatientPhone')) {
-            document.getElementById('editPatientPhone').value = patient.phone || '';
+            let phoneVal = patient.phone || '';
+            let countryVal = patient.countryCode || '52';
+
+            // RETROCOMPATIBILIDAD: Si el teléfono guardado incluye el 52 (legacy)
+            if (countryVal === '52' && phoneVal.startsWith('52') && phoneVal.length > 10) {
+                phoneVal = phoneVal.substring(2);
+            } else if (phoneVal.startsWith(countryVal) && phoneVal.length > 8) {
+                phoneVal = phoneVal.substring(countryVal.length);
+            }
+
+            document.getElementById('editPatientPhone').value = phoneVal;
+            
+            // Cargar el selector de país
+            if (document.getElementById('editPatientCountryCode')) {
+                document.getElementById('editPatientCountryCode').value = countryVal;
+            }
+
+            // VALIDACIÓN: Avisar si escriben 52 al inicio
+            document.getElementById('editPatientPhone').oninput = (e) => {
+                const val = e.target.value;
+                const currentCountry = document.getElementById('editPatientCountryCode')?.value || '52';
+                if (currentCountry === '52' && val.startsWith('52')) {
+                    ToastService.info("💡 Detectamos un '52' al inicio. El país ya está seleccionado, recuerda usar solo los 10 dígitos.", 3000);
+                }
+            };
         }
         if (document.getElementById('editPatientWantsWhatsapp')) {
             document.getElementById('editPatientWantsWhatsapp').checked = patient.wantsWhatsapp !== false;

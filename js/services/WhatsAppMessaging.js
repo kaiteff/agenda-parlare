@@ -91,10 +91,20 @@ export const WhatsAppMessaging = {
                 break;
         }
 
-        // 5. Preparar Teléfono
+        // 5. Preparar Teléfono (Normalizado: Pais + Número)
         let phoneDigits = profile?.phone || '';
+        const countryCode = profile?.countryCode || '52';
+
         if (phoneDigits) {
             phoneDigits = phoneDigits.replace(/\D/g, '');
+            // Si el número guardado no tiene el código de país al inicio, se lo ponemos
+            if (!phoneDigits.startsWith(countryCode)) {
+                phoneDigits = countryCode + phoneDigits;
+            } else if (phoneDigits.length === 10) {
+                // Caso especial: El número local de 10 dígitos empieza igual que el país (ej: 52...)
+                // Le falta el prefijo de país real
+                phoneDigits = countryCode + phoneDigits;
+            }
         }
 
         // 6. Preguntar al usuario cómo enviar
@@ -188,9 +198,7 @@ export const WhatsAppMessaging = {
 
     _sendViaManual(phone, template, appointmentId = null, type = 'reminder') {
         let phoneDigits = phone;
-        if (phoneDigits && !phoneDigits.startsWith('52') && phoneDigits.length === 10) {
-            phoneDigits = '52' + phoneDigits;
-        }
+        // La limpieza ya se hizo en sendMessage, aquí solo aseguramos que no esté vacío
 
         const encodedMsg = encodeURIComponent(template);
         const url = phoneDigits 

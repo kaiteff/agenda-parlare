@@ -36,6 +36,7 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             lastName: normalizeName(lastName),
             therapist: therapist,
             phone: options.phone || '',
+            countryCode: options.countryCode || '52', // Nuevo campo
             isActive: true,
             dateAdded: serverTimestamp(),
             dateInactivated: null,

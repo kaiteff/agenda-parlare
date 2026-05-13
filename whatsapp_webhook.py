@@ -263,10 +263,15 @@ def notify_receptionist(patient_name, action_type, date_str="Mañana", hour_str=
 
 # ── Helpers ──────────────────────────────────────────────────────────
 def normalize_phone(phone):
+    """Limpia el teléfono dejando solo los dígitos significativos (normalmente los últimos 10)"""
     digits = re.sub(r'\D', '', str(phone))
-    if digits.startswith('521'): digits = digits[3:]
-    elif digits.startswith('52'): digits = digits[2:]
-    return digits[-10:]
+    # Si es un número de México con prefijos redundantes de Twilio/Meta, los limpiamos
+    if len(digits) > 10:
+        if digits.startswith('521'): digits = digits[3:]
+        elif digits.startswith('52'): digits = digits[2:]
+        # Para otros países, si mide más de 10, intentamos quedarnos con los últimos 10 
+        # (Ajustar si tienen pacientes con números de distinta longitud)
+    return digits[-10:] if len(digits) >= 10 else digits
 
 def find_patients_by_identifier(phone, bsuid=None):
     found = []
@@ -555,6 +560,7 @@ def send_reminders():
             if name_norm and p.get('phone') and p.get('wantsWhatsapp', True) is not False:
                 phone_map[name_norm] = {
                     'phone': normalize_phone(p.get('phone')),
+                    'countryCode': str(p.get('countryCode', '52')), # Default 52
                     'name': p.get('name')
                 }
 
@@ -606,7 +612,7 @@ def send_reminders():
             except:
                 hour_str = "horario pendiente"
 
-            dest = f"whatsapp:+52{patient_info['phone']}"
+            dest = f"whatsapp:+{patient_info['countryCode']}{patient_info['phone']}"
             therapist = apt.get('therapist', 'Diana').title()
             
             msg_body = (
