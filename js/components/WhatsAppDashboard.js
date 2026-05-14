@@ -62,9 +62,7 @@ export const WhatsAppDashboard = {
                         <div class="flex items-start justify-between gap-1 py-0.5 border-b border-red-100 last:border-0">
                             <span class="text-[10px] font-semibold text-red-800">${a.name?.split(' ').slice(0,2).join(' ') || '?'}</span>
                             <span class="text-[9px] text-red-500 shrink-0">
-                                ${a.cancelledBy === 'WhatsApp' ? '🤖 WA' : 
-                                  (a.cancelledBy && a.cancelledBy !== 'Manual') ? `🧑 ${a.cancelledBy.split('@')[0]}` : 
-                                  a.updatedBy ? `🧑 ${a.updatedBy.split('@')[0]}` : '—'}
+                                ${this._formatStaffName(a.cancelledBy || a.updatedBy)}
                             </span>
                         </div>
                     `).join('')}
@@ -126,6 +124,22 @@ export const WhatsAppDashboard = {
                 };
             }
         }
+    },
+    
+    _formatStaffName(id) {
+        if (!id) return '—';
+        if (id === 'WhatsApp' || id === 'Robot Parláre') return '🤖 WA';
+        
+        const clean = id.split('@')[0].toLowerCase();
+        const mapping = {
+            'yaritzajocgo': '👱‍♀️ Yari',
+            'lopezcarpio7': '👩‍⚕️ Diana',
+            'sam': '👩‍⚕️ Sam',
+            'vero': '👩‍⚕️ Vero',
+            'daniel': '👨‍💻 Daniel'
+        };
+        
+        return mapping[clean] || `🧑 ${clean}`;
     },
 
     _calculateStats(view) {

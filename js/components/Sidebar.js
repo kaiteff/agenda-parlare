@@ -236,6 +236,25 @@ export const Sidebar = {
     },
 
     /**
+     * Traduce IDs técnicos a nombres amigables
+     */
+    _formatStaffName(id) {
+        if (!id) return '—';
+        if (id === 'WhatsApp' || id === 'Robot Parláre') return '🤖 WA';
+        
+        const clean = id.split('@')[0].toLowerCase();
+        const mapping = {
+            'yaritzajocgo': '👱‍♀️ Yari',
+            'lopezcarpio7': '👩‍⚕️ Diana',
+            'sam': '👩‍⚕️ Sam',
+            'vero': '👩‍⚕️ Vero',
+            'daniel': '👨‍💻 Daniel'
+        };
+        
+        return mapping[clean] || `🧑 ${clean}`;
+    },
+
+    /**
      * Genera el HTML para una tarjeta de paciente
      */
     _generatePatientCard(p) {
@@ -294,7 +313,7 @@ export const Sidebar = {
         }
 
         const cancelLabel = p.isCancelled 
-            ? `<span class="text-[8px] px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-md ml-2 uppercase font-black tracking-tighter">X ${p.cancelledBy || '?' }</span>` 
+            ? `<span class="text-[8px] px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-md ml-2 uppercase font-black tracking-tighter">X ${this._formatStaffName(p.cancelledBy)}</span>` 
             : '';
 
         let whatsAppStatus = '';
