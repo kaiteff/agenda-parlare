@@ -640,12 +640,10 @@ def send_reminders():
                 # El SID de la plantilla de recordatorio
                 reminder_template_sid = 'HXa1dc17f5edd3b774ef3ab3b92088035b'
                 
-                # Variables para la plantilla (Asegúrate que coincidan con Meta)
-                # 1: Fecha (Mañana), 2: Hora, 3: Terapeuta
+                # Variables para la plantilla (Coinciden con Meta: 1=Fecha, 2=Hora)
                 variables = {
                     "1": tomorrow.strftime('%d/%b'),
-                    "2": hour_str,
-                    "3": therapist
+                    "2": hour_str
                 }
 
                 twilio_client.messages.create(
