@@ -134,7 +134,8 @@ export const WhatsAppDashboard = {
         const mapping = {
             'yaritzajocgo': '👱‍♀️ Yari',
             'lopezcarpio7': '👩‍⚕️ Diana',
-            'sam': '👩‍⚕️ Sam',
+            'sammygtz90': '👩‍⚕️ Sammy',
+            'sam': '👩‍⚕️ Sammy',
             'vero': '👩‍⚕️ Vero',
             'daniel': '👨‍💻 Daniel'
         };
