@@ -152,9 +152,9 @@ export const HelpManual = {
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
                                 <p>¿Quieres saber quién hizo cambios? Al abrir cualquier cita verás la sección de <strong>Auditoría</strong>:</p>
                                 <ul class="list-disc ml-5 space-y-1">
+                                    <li><strong>Identificación Staff:</strong> Ahora verás nombres reales (👱‍♀️ Yari, 👩‍⚕️ Diana, 👩‍⚕️ Sammy, etc.) en lugar de correos técnicos.</li>
                                     <li><strong>Confirmado por:</strong> Muestra quién confirmó la cita y a qué hora.</li>
-                                    <li><strong>Cancelado por:</strong> Indica si fue el robot de WhatsApp o Recepción.</li>
-                                    <li><strong>Reagendado:</strong> Si la cita se movió, aquí verás el origen.</li>
+                                    <li><strong>Cancelado por:</strong> Indica si fue el robot de WhatsApp (🤖 WA) o un miembro del staff.</li>
                                 </ul>
                             </div>
                         </details>
@@ -164,12 +164,16 @@ export const HelpManual = {
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
                                 <h3 class="text-gray-800 font-bold flex items-center gap-3">
                                     <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">M</span>
-                                    Mensajes Diarios (WhatsApp)
+                                    Mensajes de WhatsApp y Bot
                                 </h3>
                                 <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </summary>
-                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-2 animate-fade-in">
-                                <p>Cada mañana a las 8 AM recibes tu reporte. Iconos rápidos:</p>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <div class="bg-cyan-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-cyan-800 mb-1">❌ Flujo de Cancelación</h4>
+                                    <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong> para solicitar el justificante médico. Esto permite que Yari gestione cada caso personalmente.</p>
+                                </div>
+                                <p>Iconos rápidos en tu reporte de las 8 AM:</p>
                                 <ul class="list-none space-y-1">
                                     <li>✅ = Paciente ya confirmó.</li>
                                     <li>⏳ = Sigue pendiente de responder.</li>
