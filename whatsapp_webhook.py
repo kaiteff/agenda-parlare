@@ -463,12 +463,30 @@ def webhook():
                     try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
                     except: pass
                     dt = parse_mx_datetime(next_apt['date'])
-                    day_str = dt.strftime('%A %d/%b').capitalize()
+                    
+                    # Formato natural: "Jueves 15 de Mayo"
+                    day_name = dt.strftime('%A').capitalize()
+                    day_num = dt.strftime('%d')
+                    month_name = dt.strftime('%B').capitalize()
+                    day_str = f"{day_name} {day_num} de {month_name}"
+                    
                     hour_str = dt.strftime('%I:%M %p').lstrip('0')
-                    resp.message(f"Hola, tu próxima sesión en Parláre está programada para el *{day_str} a las {hour_str}*. Si deseas reagendar o tienes dudas, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+                    
+                    # Enviar plantilla oficial de próxima cita
+                    twilio_client.messages.create(
+                        from_=config.get('twilio_whatsapp_from'),
+                        to=from_num,
+                        content_sid='HXe500a927cfbef3321fc0ba7ae7aa86d7',
+                        content_variables=json.dumps({
+                            "1": day_str,
+                            "2": hour_str
+                        })
+                    )
+                    return "", 200
                 except Exception as e:
-                    print(f"⚠️ Error formateando fecha: {e}")
+                    print(f"⚠️ Error enviando plantilla proxima cita: {e}")
                     resp.message("Hola, no encontramos citas agendadas para el día de mañana. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
+                    return str(resp), 200
             else:
                 resp.message("Hola, no encontramos citas futuras agendadas para tu número. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
             return str(resp), 200
