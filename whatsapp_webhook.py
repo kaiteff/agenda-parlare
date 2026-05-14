@@ -484,7 +484,21 @@ def webhook():
                 })
                 update_google_sheet(a, "CONFIRMADO")
                 update_google_calendar(a, "CONFIRMADO")
-            resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
+            
+            # Enviar plantilla oficial de confirmación
+            try:
+                twilio_client.messages.create(
+                    from_=config.get('twilio_whatsapp_from'),
+                    to=from_num,
+                    content_sid='HX079c41d2222032d6c3ab41f44c7272f7',
+                    content_variables=json.dumps({})
+                )
+            except Exception as e:
+                print(f"⚠️ Error enviando plantilla confirmacion: {e}")
+                resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
+                return str(resp), 200
+            
+            return "", 200
         elif any(word in msg_body for word in CANCEL_KEYWORDS):
             print("🚫 Cancelación recibida")
             for a in apts:
