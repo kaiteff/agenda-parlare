@@ -6,8 +6,33 @@
 
 import { db, collection, query, orderBy, limit, getDocs } from '../../firebase.js';
 import { ModalService } from '../../utils/ModalService.js';
+import { AuthManager } from '../../managers/AuthManager.js';
 
 export const SupportVault = {
+    /**
+     * Inicializa el módulo y controla la visibilidad según el usuario
+     */
+    async init() {
+        console.log('🛡️ SupportVault: Inicializando...');
+        this._checkVisibility();
+    },
+
+    _checkVisibility() {
+        const email = AuthManager.getEmail();
+        const isDaniel = email === 'rodriguezd.danielrob@gmail.com';
+        
+        const btn = document.getElementById('openSupportVaultBtn');
+        if (btn) {
+            if (isDaniel) {
+                btn.classList.remove('hidden');
+                btn.classList.add('md:flex');
+            } else {
+                btn.classList.add('hidden');
+                btn.classList.remove('md:flex');
+            }
+        }
+    },
+
     async open() {
         const modalId = 'supportVaultModal';
         if (document.getElementById(modalId)) return;

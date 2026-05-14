@@ -388,16 +388,6 @@ export const Header = {
                     adminSettingsBtn.classList.add('flex');
                 }
 
-                // MOSTRAR BÓVEDA DE SOPORTE (Solo Daniel)
-                const supportVaultBtn = document.getElementById('openSupportVaultBtn');
-                if (supportVaultBtn) {
-                    if (AuthManager.currentUser?.email === 'rodriguezd.danielrob@gmail.com') {
-                        supportVaultBtn.classList.remove('hidden');
-                        supportVaultBtn.classList.add('md:flex');
-                    } else {
-                        supportVaultBtn.classList.add('hidden');
-                    }
-                }
             } else {
                 selectorContainer.classList.add('hidden');
                 selectorContainer.classList.remove('md:flex');
