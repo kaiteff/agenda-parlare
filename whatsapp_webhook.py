@@ -249,13 +249,11 @@ def notify_receptionist(patient_name, action_type, date_str="Mañana", hour_str=
         wa_link = f"wa.me/{phone}" if phone else "No disponible"
 
         # Armar el contenido de la variable {{3}} de la plantilla
-        # Formato compacto para no exceder el límite de caracteres de la variable
         detalle = (
-            f"{icon} CANCELACION de {patient_name}  "
-            f"Cita: {date_str} {hour_str}  "
-            f"Terapeuta: {therapist}  "
-            f"Escribir al paciente: {wa_link}  "
-            f"Dar seguimiento para reagendar o cobro segun politica."
+            f"{icon} CANCELACIÓN: {patient_name}  "
+            f"Cita: {date_str} {hour_str} ({therapist})  "
+            f"ACCION: Solicitar justificante y reagendar.  "
+            f"📱 Escribir: {wa_link}"
         )
 
         twilio_client.messages.create(
@@ -521,7 +519,7 @@ def webhook():
                     clean_phone
                 )
             
-            resp.message("Entendido. Hemos cancelado tu sesión. 📞 Si deseas reagendar, puedes escribirnos directamente aquí o llamarnos al 3315196702. ¡Bonito día!")
+            resp.message("Entendido. Hemos cancelado tu sesión. 📞 Recepción se pondrá en contacto contigo a la brevedad para el seguimiento de tu justificante y reagendar. ¡Bonito día!")
         else:
             resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
         
