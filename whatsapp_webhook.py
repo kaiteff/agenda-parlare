@@ -232,32 +232,43 @@ def update_google_calendar(appointment, status_text):
         print(f"❌ Error Sync Calendar: {e}")
 
 def notify_receptionist(patient_name, action_type, date_str="Mañana", hour_str="", therapist="Diana", phone=""):
-    """Notifica a Yari (Recepción) sobre acciones críticas de pacientes con detalles completos"""
+    """
+    Notifica a Yari (Recepción) sobre cancelaciones vía WhatsApp.
+    USA PLANTILLA OFICIAL DE META (content_sid) para garantizar entrega
+    sin depender de la ventana de conversación activa de 24 horas.
+    """
     try:
         # Número de Yari (Central Parláre)
         yari_num = "whatsapp:+523315196702"
-        
-        icon = "❌" if "CANCELAR" in action_type.upper() else "📞"
-        
-        # Crear link directo de WhatsApp para que Yari responda al paciente
-        wa_link = f"https://wa.me/{phone}" if phone else "No disponible"
+        # Plantilla oficial aprobada por Meta (misma del reporte diario)
+        TEMPLATE_SID = 'HX28a1f7c6ccbb2b507f9764b098c44779'
 
-        msg = (
-            f"📢 *Aviso de Recepción*\n\n"
-            f"{icon} *{action_type.upper()}* DETECTADA\n"
-            f"👤 *Paciente:* {patient_name}\n"
-            f"📅 *Cita:* {date_str} a las {hour_str}\n"
-            f"👩‍⚕️ *Terapeuta:* {therapist}\n\n"
-            f"Favor de dar seguimiento para reagendar o aplicar políticas de cobro según corresponda.\n\n"
-            f"📱 *Escribir al paciente:* {wa_link}"
+        icon = "❌" if "CANCELAR" in action_type.upper() else "📞"
+
+        # Crear link directo de WhatsApp para que Yari responda al paciente
+        wa_link = f"wa.me/{phone}" if phone else "No disponible"
+
+        # Armar el contenido de la variable {{3}} de la plantilla
+        # Formato compacto para no exceder el límite de caracteres de la variable
+        detalle = (
+            f"{icon} CANCELACION de {patient_name}  "
+            f"Cita: {date_str} {hour_str}  "
+            f"Terapeuta: {therapist}  "
+            f"Escribir al paciente: {wa_link}  "
+            f"Dar seguimiento para reagendar o cobro segun politica."
         )
-        
+
         twilio_client.messages.create(
             from_=config.get('twilio_whatsapp_from'),
             to=yari_num,
-            body=msg
+            content_sid=TEMPLATE_SID,
+            content_variables=json.dumps({
+                "1": "Yari",
+                "2": date_str,
+                "3": detalle
+            })
         )
-        print(f"📩 Notificación detallada enviada a Yari para: {patient_name}")
+        print(f"📩 Notificación (plantilla) enviada a Yari para cancelación de: {patient_name}")
     except Exception as e:
         print(f"⚠️ Error notificando a Yari: {e}")
 
