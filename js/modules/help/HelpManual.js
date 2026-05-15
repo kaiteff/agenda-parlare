@@ -188,19 +188,23 @@ export const HelpManual = {
                                 <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </summary>
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <div class="bg-blue-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-blue-800 mb-1">🤖 Envíos Manuales Seguros</h4>
+                                    <p>Al abrir una cita y dar clic en "Enviar WhatsApp" -> <strong>Clínica (Auto)</strong>, el sistema usa plantillas oficiales de Meta. Esto garantiza que el mensaje llegue, incluso si hace semanas que el paciente no te escribe.</p>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-purple-800 mb-1">⏰ Recordatorios Automáticos</h4>
+                                    <p>Todos los días a las 8 PM, el sistema envía los recordatorios de mañana usando una plantilla con <strong>botones interactivos</strong> (Confirmar, Cancelar, Recepción). Si un papá responde "gracias", el bot contestará amablemente.</p>
+                                </div>
                                 <div class="bg-cyan-50 p-4 rounded-xl">
-                                    <h4 class="font-bold text-cyan-800 mb-1">❌ Flujo de Cancelación</h4>
-                                    <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong> para solicitar el justificante médico. Esto permite que Yari gestione cada caso personalmente.</p>
+                                    <h4 class="font-bold text-cyan-800 mb-1">❌ Flujos de Cancelación</h4>
+                                    <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong>. Además, la Bitácora guarda qué texto exacto recibió cada padre.</p>
                                 </div>
-                                <div class="bg-green-50 p-4 rounded-xl">
-                                    <h4 class="font-bold text-green-800 mb-1">📱 Bitácora de WhatsApp (Yari)</h4>
-                                    <p>En el panel de <strong>Bitácora</strong> (icono de lista en el panel de pacientes), ahora existe una pestaña dedicada a <strong>WhatsApp</strong>. Aquí puedes ver el texto exacto enviado a los padres para confirmar horarios y evitar confusiones.</p>
-                                </div>
-                                <p>Iconos rápidos en tu reporte de las 8 AM:</p>
+                                <p>Iconos rápidos en tu agenda y barra lateral:</p>
                                 <ul class="list-none space-y-1">
-                                    <li>✅ = Paciente ya confirmó.</li>
-                                    <li>⏳ = Sigue pendiente de responder.</li>
-                                    <li>📩 = Recordatorio enviado con éxito.</li>
+                                    <li>✅ = Paciente ya confirmó (manual o automático).</li>
+                                    <li>⏳ = Sigue pendiente de confirmar asistencia.</li>
+                                    <li>📩 = El mensaje de WhatsApp ya fue enviado y entregado.</li>
                                 </ul>
                             </div>
                         </details>
