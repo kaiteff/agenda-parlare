@@ -1,45 +1,54 @@
-# 🚀 Plan de Trabajo - Próxima Sesión
+# 🚀 Plan de Trabajo - Actualizado (15 Mayo 2026)
 
-Este documento detalla las prioridades y pasos técnicos para las siguientes mejoras del sistema Parláre.
+Este documento detalla el estado actual del sistema Parláre y las prioridades para las siguientes sesiones.
 
 ---
 
-## 💎 Prioridad 1: Sistema de Justificantes y Seguimiento de Yari
-**Objetivo**: Automatizar la captura de motivos de cancelación y dar herramientas de auditoría a Yari y Diana.
+## ✅ Completado Recientemente (¡Listo!)
+*   **Migración a Templates de Meta**: 
+    *   Recordatorios automáticos de 8 AM con botones interactivos (`recordatorio_con_botones2`).
+    *   Recordatorios manuales desde el frontend (`copy_info_proxima_cita`).
+    *   Notificación de cancelaciones a Yari.
+*   **Bitácora y Trazabilidad**: 
+    *   Pestaña dedicada de WhatsApp para que Recepción lea los mensajes enviados.
+    *   Identificación humana del staff en los historiales.
+*   **Corrección de Bugs Críticos**:
+    *   Guardia contra duplicados (evitando sobrecarga a Google Calendar / 429 Quota Exceeded).
+    *   Ajuste de zona horaria (Drift UTC) en métricas y envíos diarios.
+    *   Respuestas humanas automatizadas ("¡De nada!").
+
+---
+
+## 💎 Prioridad 1: Flujo Completo de Justificantes (Archivos Multimedia)
+**Objetivo**: Permitir que los padres envíen su justificante médico por WhatsApp y Yari pueda auditarlo desde el sistema.
 
 ### Pasos a seguir:
-1.  **Lógica del Bot**: 
-    *   Modificar el flujo de cancelación para abrir una "ventana de escucha" de 15 min.
-    *   Preguntar explícitamente por el motivo y/o justificante médico.
-2.  **Manejo de Media (Fotos)**:
-    *   Habilitar la descarga de imágenes desde Twilio.
-    *   Vincular la URL de la imagen al documento de la cita en Firebase.
-3.  **Alertas a Yari**:
-    *   Notificación inmediata de "Cancelación en proceso".
-    *   Alerta de seguimiento si no se recibe motivo en 15 minutos.
-4.  **UI Pacientes**:
-    *   Crear pestaña "Historial de Compromiso" en el perfil del paciente.
-    *   Listado de razones y visualización de fotos/justificantes.
+1.  **Recepción de Imágenes en Bot**:
+    *   Activar la "ventana de escucha" cuando el bot detecte una cancelación.
+    *   Habilitar el webhook de Twilio para procesar mensajes tipo `Media` (imágenes/PDFs).
+2.  **Almacenamiento y Vinculación**:
+    *   Descargar la foto temporalmente y subirla a Firebase Storage.
+    *   Vincular la URL de descarga al registro de la cita cancelada.
+3.  **UI Control de Justificantes (Para Yari)**:
+    *   Añadir botón/columna en la agenda para que Yari vea el justificante.
+    *   Opción para marcar justificante como "Validado" o "Rechazado" (cobro pendiente).
 
 ---
 
-## ✉️ Prioridad 2: Estandarización de Respuestas y Plantillas (Templates)
-**Objetivo**: Asegurar la entrega del 100% de los mensajes a padres mediante Twilio Content API.
+## 📈 Prioridad 2: Panel de "Historial de Compromiso" (Pacientes)
+**Objetivo**: Dar visibilidad rápida sobre el nivel de asistencia y cancelaciones previas de un paciente.
 
 ### Pasos a seguir:
-1.  **Inventario de Mensajes**: Listar todas las interacciones actuales (Confirmación, Recordatorio, Aviso de Cancelación).
-2.  **Migración a Templates**:
-    *   Diseñar las plantillas en la consola de Twilio para evitar el bloqueo de la "ventana de 24 horas".
-    *   Definir variables `{{1}}`, `{{2}}`, etc., para personalizar con nombres y horarios.
-3.  **Refactorización del Bot**:
-    *   Sustituir el envío de texto plano por llamadas a `content_sid`.
-    *   Implementar "Fallbacks" por si una plantilla falla.
+1.  **UI en Perfil de Paciente**:
+    *   Crear pestaña "Historial de Compromiso".
+    *   Mostrar % de asistencia.
+    *   Listado histórico de razones de cancelación y visualización de fotos/justificantes de ese paciente.
 
 ---
 
-## 🛠️ Prioridad 3: Mantenimiento y Calidad
-*   **Limpieza de Google Calendar**: Verificar que no queden eventos duplicados tras los cambios de hoy.
-*   **Optimización de Carga**: Revisar si el Sidebar carga rápido con la nueva búsqueda sin acentos.
+## 🛠️ Prioridad 3: Mantenimiento y Optimizaciones
+*   **Dashboard de Control de Finanzas**: Validar que la nueva separación de comisiones (Clínica vs. Terapeuta) arroje los totales correctos a fin de quincena.
+*   **Optimización de Carga del Calendario**: Evaluar lazy-loading si la base de datos de citas crece significativamente.
 
 ---
-*Última actualización: 07 de Mayo, 2026*
+*Última actualización: 15 de Mayo, 2026*
