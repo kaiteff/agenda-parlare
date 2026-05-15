@@ -101,16 +101,10 @@ export const AuditPanel = {
 
         try {
             const logsRef = collection(db, 'audit_logs');
-            let q;
             
-            if (this.activeTab === 'whatsapp') {
-                q = query(logsRef, where('action', '==', 'WHATSAPP_REMINDER'), orderBy('timestamp', 'desc'), limit(50));
-            } else {
-                // For 'general', we might want to exclude WHATSAPP_REMINDER if there are many
-                // But for now, let's just use the main query and maybe filter in JS if needed
-                q = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
-            }
-            
+            // Para evitar pedir un Índice Compuesto en Firebase (que tarda en crearse),
+            // traemos los últimos 100 y filtramos en memoria.
+            const q = query(logsRef, orderBy('timestamp', 'desc'), limit(100));
             const querySnapshot = await getDocs(q);
 
             list.innerHTML = '';
@@ -124,22 +118,30 @@ export const AuditPanel = {
             if (cleanupBtn) cleanupBtn.classList.toggle('hidden', !isAdmin);
 
             if (querySnapshot.empty) {
-                list.innerHTML = `<div class="text-center py-10 text-gray-400">No hay registros de ${this.activeTab === 'whatsapp' ? 'mensajes enviados' : 'actividad'} aún.</div>`;
+                list.innerHTML = `<div class="text-center py-10 text-gray-400">No hay registros de actividad aún.</div>`;
                 return;
             }
 
+            let count = 0;
             querySnapshot.forEach((doc) => {
                 const log = doc.data();
                 
-                // Client-side filtering for 'general' tab to exclude WHATSAPP_REMINDER
-                if (this.activeTab === 'general' && log.action === 'WHATSAPP_REMINDER') return;
+                // Filtrado manual en memoria
+                if (this.activeTab === 'whatsapp') {
+                    if (log.action !== 'WHATSAPP_REMINDER') return;
+                } else {
+                    if (log.action === 'WHATSAPP_REMINDER') return;
+                }
 
+                if (count >= 50) return; // Limitar visualmente
+                
                 const card = this.createLogCard(log);
                 list.appendChild(card);
+                count++;
             });
 
-            if (list.children.length === 0) {
-                list.innerHTML = '<div class="text-center py-10 text-gray-400">No hay registros en esta categoría.</div>';
+            if (count === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-gray-400">No hay registros de ${this.activeTab === 'whatsapp' ? 'mensajes' : 'actividad'} recientes en esta categoría.</div>`;
             }
 
         } catch (error) {
