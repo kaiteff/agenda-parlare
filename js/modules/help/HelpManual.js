@@ -173,6 +173,10 @@ export const HelpManual = {
                                     <h4 class="font-bold text-cyan-800 mb-1">❌ Flujo de Cancelación</h4>
                                     <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong> para solicitar el justificante médico. Esto permite que Yari gestione cada caso personalmente.</p>
                                 </div>
+                                <div class="bg-green-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-green-800 mb-1">📱 Bitácora de WhatsApp (Yari)</h4>
+                                    <p>En el panel de <strong>Bitácora</strong> (icono de lista en el panel de pacientes), ahora existe una pestaña dedicada a <strong>WhatsApp</strong>. Aquí puedes ver el texto exacto enviado a los padres para confirmar horarios y evitar confusiones.</p>
+                                </div>
                                 <p>Iconos rápidos en tu reporte de las 8 AM:</p>
                                 <ul class="list-none space-y-1">
                                     <li>✅ = Paciente ya confirmó.</li>

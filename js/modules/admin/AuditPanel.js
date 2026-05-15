@@ -3,7 +3,7 @@
  * Visualización de la bitácora de auditoría para Administradores
  */
 
-import { db, collection, query, orderBy, limit, getDocs } from '../../firebase.js';
+import { db, collection, query, orderBy, limit, getDocs, where } from '../../firebase.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { AuditService } from '../../services/AuditService.js';
 import { ModalService } from '../../utils/ModalService.js';
