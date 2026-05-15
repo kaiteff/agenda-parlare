@@ -86,8 +86,8 @@ export const WhatsAppMessaging = {
             case 'payment':
                 template = `Hola, te saludamos de Parláre. 💳 Te recordamos que la sesión del día ${dateStr} se encuentra pendiente de pago. ¡Gracias por tu apoyo!`;
                 break;
-            default: // reminder
-                template = `${intro}Te recordamos la cita programada para el día ${dateStr} a las ${timeStr} con ${therapistName}. ¡Te esperamos!`;
+            default: // reminder (info_proxima_cita)
+                template = `Hola, tu próxima sesión en Parláre está para el ${dateStr} a las ${timeStr}.\n¡Te esperamos!`;
                 break;
         }
 
@@ -129,7 +129,7 @@ export const WhatsAppMessaging = {
             } else if (type === 'reschedule') {
                 vars = { "1": therapistName, "2": dateStr, "3": timeStr };
             } else if (type === 'reminder') {
-                vars = { "1": dateStr, "2": timeStr, "3": therapistName };
+                vars = { "1": dateStr, "2": timeStr };
             } else {
                 vars = { "1": dateStr, "2": timeStr };
             }
@@ -153,7 +153,7 @@ export const WhatsAppMessaging = {
 
         // DICCIONARIO DE PLANTILLAS (Aquí es donde pondrás los SIDs de Meta)
         const TEMPLATE_SIDS = {
-            'reminder': 'HXa1dc17f5edd3b774ef3ab3b92088035b', 
+            'reminder': 'HXe500a927cfbef3321fc0ba7ae7aa86d7', // copy_info_proxima_cita
             'cancel': 'PONER_AQUI_SID_CANCELACION',
             'reschedule': 'HX9de65123a2d3b426f0b644ef2593d53e',
             'no-show': 'HX91155fde499d8551099df309515b1c68',
