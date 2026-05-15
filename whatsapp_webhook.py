@@ -445,12 +445,20 @@ def webhook():
 
         # PALABRAS CLAVE AMPLIADAS
         RECEPTION_KEYWORDS = ['3', 'recepcion', 'yari', 'recepcionista', 'hablar con recepcion', 'hablar con recepsion', 'duda', 'pregunta']
-        CONFIRM_KEYWORDS = ['1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro']
+        CONFIRM_KEYWORDS = ['1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro', 'sale']
         CANCEL_KEYWORDS = ['2', 'cancelar', 'no', 'cancelado', 'no puedo', 'no asistiremos', 'no asistira']
+        THANKS_KEYWORDS = ['gracias', 'mil gracias', 'muchas gracias', 'te lo agradezco', 'agradezco', 'grx']
 
         if any(word in msg_body for word in RECEPTION_KEYWORDS):
             print("📞 Solicitud de recepción detectada")
             resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
+            return str(resp), 200
+
+        # Si solo están dando las gracias y no están confirmando/cancelando
+        has_action = any(w in msg_body for w in CONFIRM_KEYWORDS + CANCEL_KEYWORDS)
+        if any(w in msg_body for w in THANKS_KEYWORDS) and not has_action:
+            print("🙏 Agradecimiento recibido")
+            resp.message("¡De nada! Que tengas un muy bonito día. 😊")
             return str(resp), 200
 
         apts = find_tomorrow_appointments([p['name'] for p in patients])
