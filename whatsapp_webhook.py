@@ -692,13 +692,14 @@ def send_reminders():
 
             # Enviar usando Plantilla Oficial de Meta (Para asegurar entrega)
             try:
-                # El SID de la plantilla de recordatorio
-                reminder_template_sid = 'HXa1dc17f5edd3b774ef3ab3b92088035b'
+                # El SID de la nueva plantilla con botones
+                reminder_template_sid = 'HX100149d5295d1839864ad33cc9e73567'
                 
-                # Variables para la plantilla (Coinciden con Meta: 1=Fecha, 2=Hora)
+                # Variables para la plantilla (1=Fecha, 2=Hora, 3=Terapeuta)
                 variables = {
                     "1": tomorrow.strftime('%d/%b'),
-                    "2": hour_str
+                    "2": hour_str,
+                    "3": therapist
                 }
 
                 twilio_client.messages.create(
