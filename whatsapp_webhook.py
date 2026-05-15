@@ -670,11 +670,13 @@ def send_reminders():
                     continue
                 hour_str = dt.strftime('%I:%M %p').lstrip('0')
                 # Usamos la fecha real de la cita para el mensaje
-                date_str = dt.strftime('%d/%b')
+                meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+                date_str = f"{dt.day} de {meses[dt.month]}"
             except Exception as parse_e:
                 print(f"⚠️ Error parseando fecha para {patient_name}: {parse_e}")
                 hour_str = "horario pendiente"
-                date_str = tomorrow.strftime('%d/%b')
+                meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+                date_str = f"{tomorrow.day} de {meses[tomorrow.month]}"
 
             dest = f"whatsapp:+{patient_info['countryCode']}{patient_info['phone']}"
             therapist = apt.get('therapist', 'Diana').title()
@@ -697,7 +699,7 @@ def send_reminders():
                 
                 # Variables para la plantilla (1=Fecha, 2=Hora, 3=Terapeuta)
                 variables = {
-                    "1": tomorrow.strftime('%d/%b'),
+                    "1": date_str,
                     "2": hour_str,
                     "3": therapist
                 }
