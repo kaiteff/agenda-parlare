@@ -10,6 +10,8 @@ import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 
 export const AuditPanel = {
+    activeTab: 'general',
+
     async export() {
         if (!AuthManager.isAdmin()) return;
         const btn = document.getElementById('exportAuditBtn');
@@ -71,13 +73,44 @@ export const AuditPanel = {
 
         const modal = document.getElementById('auditLogModal');
         const list = document.getElementById('auditLogList');
+        const tabContainer = document.getElementById('auditTabs');
         
         if (modal) modal.classList.remove('hidden');
         if (list) list.innerHTML = '<div class="text-center py-10 text-gray-400 italic animate-pulse">Consultando historial...</div>';
 
+        // Setup tab listeners only once
+        if (tabContainer && !tabContainer._listenersAttached) {
+            tabContainer._listenersAttached = true;
+            tabContainer.onclick = (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                
+                this.activeTab = btn.dataset.tab;
+                
+                // Update UI
+                tabContainer.querySelectorAll('button').forEach(b => {
+                    b.classList.remove('text-blue-600', 'border-blue-600');
+                    b.classList.add('text-gray-400', 'border-transparent');
+                });
+                btn.classList.add('text-blue-600', 'border-blue-600');
+                btn.classList.remove('text-gray-400', 'border-transparent');
+                
+                this.open(); // Re-render with filter
+            };
+        }
+
         try {
             const logsRef = collection(db, 'audit_logs');
-            const q = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
+            let q;
+            
+            if (this.activeTab === 'whatsapp') {
+                q = query(logsRef, where('action', '==', 'WHATSAPP_REMINDER'), orderBy('timestamp', 'desc'), limit(50));
+            } else {
+                // For 'general', we might want to exclude WHATSAPP_REMINDER if there are many
+                // But for now, let's just use the main query and maybe filter in JS if needed
+                q = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
+            }
+            
             const querySnapshot = await getDocs(q);
 
             list.innerHTML = '';
@@ -91,15 +124,23 @@ export const AuditPanel = {
             if (cleanupBtn) cleanupBtn.classList.toggle('hidden', !isAdmin);
 
             if (querySnapshot.empty) {
-                list.innerHTML = '<div class="text-center py-10 text-gray-400">No hay registros de actividad aún.</div>';
+                list.innerHTML = `<div class="text-center py-10 text-gray-400">No hay registros de ${this.activeTab === 'whatsapp' ? 'mensajes enviados' : 'actividad'} aún.</div>`;
                 return;
             }
 
             querySnapshot.forEach((doc) => {
                 const log = doc.data();
+                
+                // Client-side filtering for 'general' tab to exclude WHATSAPP_REMINDER
+                if (this.activeTab === 'general' && log.action === 'WHATSAPP_REMINDER') return;
+
                 const card = this.createLogCard(log);
                 list.appendChild(card);
             });
+
+            if (list.children.length === 0) {
+                list.innerHTML = '<div class="text-center py-10 text-gray-400">No hay registros en esta categoría.</div>';
+            }
 
         } catch (error) {
             console.error('❌ Error cargando logs:', error);
@@ -133,6 +174,12 @@ export const AuditPanel = {
                 </p>
                 ${log.details?.patientName ? `<p class="text-[10px] text-indigo-600 font-semibold mt-1">🏷️ Paciente: ${log.details.patientName}</p>` : ''}
                 ${log.details?.therapist ? `<p class="text-[10px] text-gray-500 italic">Agenda: ${log.details.therapist}</p>` : ''}
+                
+                ${log.action === 'WHATSAPP_REMINDER' && log.details?.message ? `
+                    <div class="mt-2 p-2 bg-green-50 border border-green-100 rounded-lg text-[10px] text-green-800 whitespace-pre-wrap font-mono leading-tight">
+                        ${log.details.message}
+                    </div>
+                ` : ''}
             </div>
         `;
 
@@ -146,6 +193,7 @@ export const AuditPanel = {
             case 'DELETE_PERMANENT': return { bg: 'bg-red-100', text: 'text-red-600', icon: '🗑' };
             case 'CANCEL': return { bg: 'bg-orange-100', text: 'text-orange-600', icon: '✕' };
             case 'PAYMENT': return { bg: 'bg-emerald-100', text: 'text-emerald-600', icon: '💰' };
+            case 'WHATSAPP_REMINDER': return { bg: 'bg-green-100', text: 'text-green-600', icon: '📱' };
             default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: '•' };
         }
     },
@@ -157,6 +205,7 @@ export const AuditPanel = {
             case 'DELETE_PERMANENT': return 'eliminó permanentemente un registro';
             case 'CANCEL': return 'canceló una cita';
             case 'PAYMENT': return log.details?.isPaid ? 'marcó como PAGADA una cita' : 'quitó el estado de pagado';
+            case 'WHATSAPP_REMINDER': return 'envió recordatorio automático por WhatsApp';
             default: return 'realizó una acción';
         }
     }

@@ -636,12 +636,31 @@ def send_reminders():
                 skipped_count += 1
                 continue
 
+            # 🛡️ GUARDIA: Evitar duplicados si ya se envió un recordatorio HOY
+            last_sent = apt.get('lastReminderSentAt')
+            if last_sent:
+                try:
+                    # Convertir Timestamp de Firestore a datetime de México
+                    if hasattr(last_sent, 'to_datetime'):
+                        last_sent_dt = last_sent.to_datetime().astimezone(MX_TZ)
+                    else:
+                        last_sent_dt = last_sent.astimezone(MX_TZ)
+                        
+                    if last_sent_dt.date() == mx_now.date():
+                        print(f"⏭️ Ya se envió un recordatorio hoy para {patient_name} ({last_sent_dt.strftime('%H:%M')})")
+                        skipped_count += 1
+                        continue
+                except Exception as guard_e:
+                    print(f"⚠️ Error en guardia de duplicados: {guard_e}")
+
             # Formatear hora y filtrar horario Parláre (8am-8pm)
             try:
                 dt = parse_mx_datetime(apt['date'])
                 
                 # 🛡️ VALIDACIÓN: Solo procesar si la fecha local de México es realmente mañana
                 if dt.date() != tomorrow.date():
+                    print(f"⏩ Saltando cita de hoy/ayer ({dt.date()}) para {patient_name}")
+                    skipped_count += 1
                     continue
 
                 # 🛡️ GUARDIA: Solo enviar recordatorios dentro del horario Parláre
@@ -650,16 +669,20 @@ def send_reminders():
                     skipped_count += 1
                     continue
                 hour_str = dt.strftime('%I:%M %p').lstrip('0')
-            except:
+                # Usamos la fecha real de la cita para el mensaje
+                date_str = dt.strftime('%d/%b')
+            except Exception as parse_e:
+                print(f"⚠️ Error parseando fecha para {patient_name}: {parse_e}")
                 hour_str = "horario pendiente"
+                date_str = tomorrow.strftime('%d/%b')
 
             dest = f"whatsapp:+{patient_info['countryCode']}{patient_info['phone']}"
             therapist = apt.get('therapist', 'Diana').title()
             
             msg_body = (
                 f"🏥 *Parláre - Recordatorio de Cita*\n\n"
-                f"Hola, te recordamos la cita programada para mañana "
-                f"*{tomorrow.strftime('%d/%b')}* a las *{hour_str}* con *{therapist}*.\n\n"
+                f"Hola, te recordamos la cita programada para "
+                f"*{date_str}* a las *{hour_str}* con *{therapist}*.\n\n"
                 f"Responde:\n"
                 f"1️⃣ *OK* para confirmar\n"
                 f"2️⃣ *NO* para cancelar\n"
@@ -692,8 +715,28 @@ def send_reminders():
                         'lastReminderType': 'AUTO_CRON',
                         'lastReminderBy': 'Robot Parláre'
                     })
+                    
+                    # 6. Registrar en Bitácora (Auditoría) para que Yari pueda verlo
+                    log_entry = {
+                        'timestamp': firestore.SERVER_TIMESTAMP,
+                        'action': 'WHATSAPP_REMINDER',
+                        'entityType': 'APPOINTMENT',
+                        'entityId': doc.id,
+                        'details': {
+                            'patientName': patient_name,
+                            'therapist': therapist,
+                            'phone': dest,
+                            'appointmentDate': apt['date'],
+                            'message': msg_body
+                        },
+                        'userEmail': 'system',
+                        'userName': 'Robot Parláre',
+                        'userRole': 'system'
+                    }
+                    db.collection('audit_logs').add(log_entry)
+                    
                 except Exception as db_e:
-                    print(f"⚠️ Error actualizando Firestore para {patient_name}: {db_e}")
+                    print(f"⚠️ Error actualizando Firestore/Audit para {patient_name}: {db_e}")
 
                 sent_count += 1
             except Exception as e:
@@ -719,11 +762,17 @@ def send_daily_summary():
 
     try:
         mx_now = datetime.now(MX_TZ)
-        day_str = mx_now.strftime('%Y-%m-%d')
-        start_iso, end_iso = f"{day_str}T00:00:00", f"{day_str}T23:59:59"
+        today_str = mx_now.strftime('%Y-%m-%d')
+        
+        # 🛡️ FIX: Consultamos un rango más amplio (hoy hasta mañana temprano) para capturar drift UTC
+        # Citas de hoy a las 6pm se guardan como Mañana 00:00 UTC
+        start_iso = f"{today_str}T00:00:00"
+        tomorrow_dt = mx_now + timedelta(days=1)
+        end_iso = f"{tomorrow_dt.strftime('%Y-%m-%d')}T08:00:00"
+        
         errors = []
         
-        # 2. Consultar citas de HOY
+        # 2. Consultar citas
         apts_ref = db.collection('appointments')
         query = apts_ref.where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
         
@@ -733,6 +782,14 @@ def send_daily_summary():
         for doc in query:
             a = doc.to_dict()
             if a.get('isCancelled'): continue
+            
+            try:
+                dt = parse_mx_datetime(a['date'])
+                # Solo incluir si la fecha local de México es realmente HOY
+                if dt.date() != mx_now.date():
+                    continue
+            except:
+                continue
             
             # Limpiar y normalizar el nombre del terapeuta
             raw_t = str(a.get('therapist', 'diana')).strip().lower()

@@ -392,7 +392,12 @@ export const MainModals = {
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
+                    <div class="px-6 py-2 bg-gray-50 border-b border-gray-100 flex gap-4" id="auditTabs">
+                        <button data-tab="general" class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-blue-600 border-b-2 border-blue-600 transition-all">General</button>
+                        <button data-tab="whatsapp" class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-gray-600 border-b-2 border-transparent transition-all">WhatsApp</button>
+                    </div>
                     <div class="flex-1 overflow-y-auto p-4 bg-gray-50 scroller">
+
                         <div id="auditLogList" class="space-y-3">
                             <!-- Dynamically populated -->
                             <div class="text-center py-10 text-gray-400 italic">Cargando registros...</div>

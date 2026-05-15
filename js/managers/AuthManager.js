@@ -30,7 +30,7 @@ const ROLES = {
     },
     receptionist: {
         label: 'Recepción',
-        permissions: ['view_schedule', 'create_appointment', 'manage_payments', 'manage_schedule', 'view_all_patients', 'edit_own_records', 'switch_therapist_view', 'manage_blocks']
+        permissions: ['view_schedule', 'create_appointment', 'manage_payments', 'manage_schedule', 'view_all_patients', 'edit_own_records', 'switch_therapist_view', 'manage_blocks', 'view_audit']
     }
 };
 
