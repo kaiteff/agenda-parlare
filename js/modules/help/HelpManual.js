@@ -57,6 +57,25 @@ export const HelpManual = {
                             </div>
                         </details>
 
+                        <!-- B. Bitácora -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center text-sm">B</span>
+                                    Bitácora de Auditoría (Historial)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <p>Este panel (icono de lista arriba de la lista de pacientes) permite auditar todo lo que pasa en el sistema:</p>
+                                <ul class="list-disc ml-5 space-y-2">
+                                    <li><strong>Pestaña General:</strong> Verás quién creó, canceló o marcó como pagada una cita.</li>
+                                    <li><strong>Pestaña WhatsApp:</strong> Sección exclusiva para ver los recordatorios enviados por el Bot. Puedes leer el mensaje exacto para confirmar horarios.</li>
+                                    <li><strong>Identificación Staff:</strong> Los movimientos aparecen con el nombre de quien los hizo (👱‍♀️ Yari, 👩‍⚕️ Diana, etc).</li>
+                                </ul>
+                            </div>
+                        </details>
+
                         <!-- B. Búsqueda -->
                         <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
