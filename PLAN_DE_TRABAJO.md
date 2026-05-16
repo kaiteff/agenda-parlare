@@ -49,6 +49,26 @@ Este documento detalla el estado actual del sistema Parláre y las prioridades p
 ## 🛠️ Prioridad 3: Mantenimiento y Optimizaciones
 *   **Dashboard de Control de Finanzas**: Validar que la nueva separación de comisiones (Clínica vs. Terapeuta) arroje los totales correctos a fin de quincena.
 *   **Optimización de Carga del Calendario**: Evaluar lazy-loading si la base de datos de citas crece significativamente.
+*   **Optimización del Nuke de Calendario (Forward-only Sync)**: Modificar `nukeAndRebuildAll` en `GoogleCalendarService.js`. En lugar de borrar 1 año de historial, hacer que la limpieza y sincronización comience estrictamente desde el **lunes de la semana en curso** hacia el futuro. Esto evitará tiempos largos de recarga, ahorrará cuota de Google API y dejará intacto el historial visual de las terapeutas en Google Calendar.
+
+---
+
+## 📱 Prioridad 4: Transformación a App Móvil Nativa (Capacitor)
+**Objetivo**: Convertir la SPA actual en aplicaciones para Android e iOS de forma escalonada, minimizando riesgos operativos.
+
+### Plan de Integración en Fases:
+*   **Fase 1: Preparación Base (En proceso)**: Instalar entorno Capacitor, configurar script de empaquetado (`www/`) y generar carpetas `android/` e `ios/`.
+*   **Fase 2: Pruebas de Concepto**: Abrir la app localmente en un emulador de Android Studio para verificar que Firebase, logins y UI funcionen correctamente en un WebView nativo.
+*   **Fase 3: Diseño y Branding**: Generar Iconos de App y pantallas de carga (Splash Screens) premium.
+*   **Fase 4: Configuración OTA**: Integrar el sistema de "Over The Air" updates para permitir actualizaciones instantáneas sin pasar por la tienda en cada cambio menor.
+*   **Fase 5: Despliegue en Tiendas**: Compilación final de instalables (`.aab` y `.ipa`) y subida a Google Play Console y Apple App Store Connect.
+
+---
+
+## 🔍 Supervisión Post-Despliegue (Cosas para Revisar)
+*   **Monitoreo del Cronjob (8:00 PM)**: Revisar mañana en el dashboard de Render/Twilio que el job de esta noche no haya arrojado Error 500 y haya procesado correctamente todas las citas usando el nuevo SID con botones.
+*   **Control de Errores 429**: Confirmar que los bloques `try/except` están mitigando con éxito las ráfagas de confirmaciones y ya no aparece el mensaje "Quota exceeded" para los papás.
+*   **Bitácora de Recepción**: Confirmar con Yari que la nueva pestaña de WhatsApp está cargando sus envíos diarios correctamente.
 
 ---
 *Última actualización: 15 de Mayo, 2026*
