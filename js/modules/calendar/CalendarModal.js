@@ -172,6 +172,7 @@ export const CalendarModal = {
         dom.eventModal.classList.remove('hidden');
         dom.eventModal.style.setProperty('display', 'flex', 'important');
         dom.eventModal.style.setProperty('z-index', '9999', 'important');
+        document.body.classList.add('overflow-hidden');
         dom.patientSearchInput.focus();
     },
 
@@ -454,6 +455,7 @@ export const CalendarModal = {
         dom.eventModal.classList.remove('hidden');
         dom.eventModal.style.setProperty('display', 'flex', 'important');
         dom.eventModal.style.setProperty('z-index', '9999', 'important');
+        document.body.classList.add('overflow-hidden');
     },
 
     closeModal() {
@@ -461,6 +463,11 @@ export const CalendarModal = {
         if (dom.eventModal) {
             dom.eventModal.classList.add('hidden');
             dom.eventModal.style.setProperty('display', 'none', 'important');
+        }
+        const otherModalOpen = document.getElementById('receptionControlModal') && !document.getElementById('receptionControlModal').classList.contains('hidden');
+        const moreSheetOpen = document.getElementById('mobileMoreSheet') && !document.getElementById('mobileMoreSheet').classList.contains('hidden');
+        if (!otherModalOpen && !moreSheetOpen) {
+            document.body.classList.remove('overflow-hidden');
         }
         CalendarState.selectedEventId = null;
         console.log('🚪 CalendarModal: Modal cerrado correctamente');

@@ -3,6 +3,119 @@
 > Documento generado el **17 de Mayo de 2026** a partir de la revisión de `VISION_PARLARE_V2.md`, `resumen_sesion/RESUMEN_SESION_20260517.md`, `AI_RULES.md` y el código activo del repositorio.
 >
 > Objetivo: entender la arquitectura actual y decidir el camino hacia una app móvil espectacular (Android + iPhone) con visión SaaS (clonar para otras clínicas).
+>
+> **Este archivo es el documento vivo de la estrategia móvil.** Cualquier asistente de IA (Cursor) debe **actualizarlo al terminar cada sesión** que toque UI móvil, responsive, Capacitor o decisiones de producto. Ver también `AI_RULES.md` → Regla de Oro 3.
+
+---
+
+## Dónde vamos (resumen en una mirada)
+
+```
+HOY ──────────────────────────────────────────────────────────────► FUTURO
+
+[Fase 1: UI móvil en WEB]          [Fase 2: SaaS datos]     [Fase 3: Capacitor]    [Fase 4: OTA]
+ ✅ Fundamentos CSS                  ⏳ Firestore config       ⏳ android/ ios/       ⏳ Parches sin tienda
+ ✅ Bottom nav (Agenda/Pacientes…)  ⏳ Terapeutas dinámicos  ⏳ Iconos/splash       ⏳ App Store / Play
+ ✅ Modal cita = bottom-sheet        ⏳ White-label CSS
+ ⏳ Toolbar calendario móvil
+ ⏳ HelpManual + modales paciente (opcional Sprint 2)
+```
+
+**Decisión estratégica cerrada:** Opción **A — Capacitor** (misma SPA web optimizada para touch), no reescribir en React Native/Flutter por ahora. Ver [Bitácora de decisiones](#bitácora-de-decisiones).
+
+**Siguiente paso de código:** Paso 3 — toolbar del calendario en `index.html`.
+
+---
+
+## Bitácora de decisiones
+
+| Fecha | Decisión | Motivo | Alternativa descartada |
+|-------|----------|--------|------------------------|
+| May 2026 | **Capacitor** como camino a Play Store / App Store | Una sola codebase con la web; OTA de UI; encaja con Master Template SaaS; menor tiempo que reescribir | React Native / Flutter (doble mantenimiento, meses de reimplementar calendario) |
+| May 2026 | **Fase 1 antes que Capacitor** | La web debe sentirse app en móvil (nav + modales) antes de empaquetar WebView | Envolver desktop tal cual (mala UX en celular) |
+| May 2026 | Breakpoint **`md` (768px)** | Ya usado en Header/Sidebar; coherente en todo el proyecto | Breakpoint custom solo para móvil |
+| May 2026 | **`MobileNav.js` centralizado** | Evitar duplicar lógica drawer entre hamburguesa y bottom nav | onclick sueltos en cada componente |
+| May 2026 | **`#eventModal` = bottom-sheet en &lt; md** | Mismo patrón que `ReceptionControl`; pulgar, 92dvh, sin zoom iOS en inputs | Modal centrado pequeño en móvil |
+| May 2026 | **Validación usuario:** bottom nav “espectacular” en producción | Confirmado en dispositivo real + deploy Hosting | — |
+
+---
+
+## Registro de avance y qué hacer ahora
+
+> **Última sesión de implementación:** Sprint 1 — Pasos 0, 1 y **2** de la Fase 1 (UI móvil en web).
+>
+> **Validación:** Barra inferior probada y aprobada por el usuario. CSS compilado y **subido a Firebase Hosting**.
+
+### Lo que ya llevamos hecho
+
+| Área | Qué se hizo |
+|------|-------------|
+| **Decisión estratégica** | Opción A: Capacitor + misma SPA web, con visión SaaS documentada. |
+| **Paso 0 — Fundamentos** | `--bottom-nav-height`, `.touch-target`, safe-areas, `.pb-bottom-nav`, estilos de barra inferior en `index.css`. Tokens en `tailwind.config.js`. Padding inferior en el layout (`index.html`). |
+| **Paso 1 — Bottom nav** | Nuevos `js/utils/MobileNav.js` y `js/components/MobileBottomNav.js`. Inyección en `ComponentManager.js`. Header usa `MobileNav` para el menú hamburguesa. |
+| **Navegación móvil** | 4 tabs (o 3 si el usuario no es admin/recepción): **Agenda**, **Pacientes**, **Recepción**, **Más** (sheet con Corte, Reportes, Manual, etc.). Solo visible en `< md` (768px). **Validado en producción.** |
+| **Paso 2 — Modal de cita** | `#eventModal` como bottom-sheet: `items-end`, `h-[92dvh]`, `rounded-t-3xl`, inputs `text-base`/`py-3.5`, botones `min-h-[48px]`, animación `eventSheetSlideUp`, `overflow-hidden` en body vía `CalendarModal.js`. |
+| **Compilación / deploy** | `npm run build` → `dist/output.css`. Usuario confirmó deploy a **Firebase Hosting**. |
+
+**Archivos tocados (Sprint 1 completo hasta Paso 2):**
+
+```
+tailwind.config.js
+index.css
+index.html
+js/utils/MobileNav.js
+js/components/MobileBottomNav.js
+js/components/ComponentManager.js
+js/components/Header.js
+js/components/MainModals.js          ← Paso 2: #eventModal responsive
+js/modules/calendar/CalendarModal.js ← Paso 2: bloqueo scroll body
+dist/output.css
+```
+
+**Archivos creados / modificados en sesiones anteriores (contexto):** justificantes médicos + Firebase Storage (`RESUMEN_SESION_20260517.md`).
+
+### Lo que falta en Fase 1 (código)
+
+| Paso | Descripción | Estado |
+|------|-------------|--------|
+| 0 | Fundamentos CSS / Tailwind | ✅ Hecho |
+| 1 | `MobileBottomNav` + `MobileNav` | ✅ Hecho |
+| 2 | Modal de citas `#eventModal` touch-friendly | ✅ Hecho |
+| 3 | Toolbar del calendario en móvil | ⏳ Pendiente |
+
+Fases posteriores (sin empezar): SaaS en Firestore → Capacitor → OTA.
+
+---
+
+### Qué debes hacer tú (checklist actual)
+
+#### ✅ Hecho por el usuario (confirmado)
+
+- [x] Probar barra inferior en móvil — **aprobada**
+- [x] `npm run build` + deploy **Firebase Hosting** (modal de cita incluido si se desplegó después del Paso 2)
+
+#### ⏳ Pendiente recomendado
+
+| Tarea | Prioridad | Notas |
+|-------|-----------|--------|
+| Probar **modal de cita** en móvil (abrir/editar cita) | Alta | Sheet desde abajo, botones grandes, sin zoom en inputs |
+| Actualizar `HelpManual.js` | Media | Barra inferior + modal tipo sheet (regla `AI_RULES.md`) |
+| `git commit` / `push` del Paso 2 si aún no está en GitHub | Media | `git add` selectivo de `MainModals.js`, `CalendarModal.js`, `index.css`, `dist/output.css` |
+| Resumen de sesión `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md` | Baja | Opcional al cerrar sesión |
+
+#### Siguiente desarrollo (cuando digas “adelante”)
+
+**Paso 3** — Toolbar del calendario en `index.html`: botones prev/hoy/next más grandes, `#statusMsg` oculto o compacto en móvil.
+
+Comando sugerido a Cursor: *“Implementa el Paso 3 del análisis móvil”*.
+
+#### Pruebas rápidas (referencia)
+
+| Prueba | Móvil (&lt; 768px) | Desktop |
+|--------|-------------------|---------|
+| Bottom nav | Visible | Oculta |
+| Modal cita | Sheet 92dvh, slide-up | Centrado max-w-lg |
+| Cerrar modal | ✕ o tap fuera; scroll body restaurado | Igual |
 
 ---
 
@@ -214,11 +327,14 @@ El estado **hardcoded** actual:
 
 | Archivo | Qué hace hoy en móvil |
 |---------|------------------------|
-| `index.html` | `viewport-fit=cover`; scroll horizontal del grid (`min-w-[700px]`); mini-calendario oculto hasta `xl`; botón saltar a fecha (`md:hidden`) |
-| `js/components/Header.js` | Menú hamburguesa (`md:hidden`) que abre el sidebar como drawer |
+| `index.html` | `viewport-fit=cover`; `pb-bottom-nav md:pb-0` en layout; scroll horizontal del grid; botón fecha móvil |
+| `js/components/MobileBottomNav.js` | **Nuevo:** barra Agenda / Pacientes / Recepción / Más (`md:hidden`) |
+| `js/utils/MobileNav.js` | **Nuevo:** abrir/cerrar sidebar, sheet “Más”, estado de tab activo |
+| `js/components/Header.js` | Menú hamburguesa → `MobileNav.showPatients()` |
 | `js/components/Sidebar.js` | Drawer fijo `w-80`, oculto con `-translate-x-full` fuera de `md` |
 | `js/components/ComponentManager.js` | Overlay `#sidebarOverlay` para cerrar el drawer en móvil |
-| `js/components/MainModals.js` | Modal de cita `#eventModal`: `max-w-lg`, `h-[85vh]`; `genericModal` con patrón bottom-sheet en `sm` |
+| `js/components/MainModals.js` | `#eventModal`: bottom-sheet móvil (`#eventModalPanel`, 92dvh, touch); centrado en `md+` |
+| `js/modules/calendar/CalendarModal.js` | `overflow-hidden` en body al abrir/cerrar modal de cita |
 | `js/modules/reception/ReceptionControl.js` | **Referencia gold:** modal `h-full` en móvil, `sm:rounded-2xl` en desktop |
 | `index.css` | `100dvh`, animaciones de modal, transición del sidebar, estilos de impresión |
 
@@ -226,8 +342,8 @@ El estado **hardcoded** actual:
 
 - **Breakpoint dominante:** `md` (768px) = móvil vs escritorio.
 - **`sm` (640px):** solo en algunos modales (`genericModal`, `ReceptionControl`).
-- **`tailwind.config.js`:** sin tokens móviles centralizados (safe-area, altura de bottom nav).
-- **Problema de UX actual:** en móvil la navegación principal es “abrir el sidebar entero” (~320px). Funciona en tablet, pero **no** es el patrón de app (agenda + pacientes + acciones al alcance del pulgar).
+- **`tailwind.config.js`:** incluye `bottom-nav`, safe-area padding y variable `--bottom-nav-height` en `index.css`.
+- **UX móvil (Sprint 1):** barra inferior + drawer + **modal de cita en bottom-sheet**. Pendiente: toolbar del calendario (Paso 3).
 
 ### Orden de implementación (Sprint 1)
 
@@ -266,30 +382,19 @@ El estado **hardcoded** actual:
 
 **Header en móvil:** simplificar; dejar usuario + campana + sync; mover Corte/Reportes/Soporte al tab “Más”.
 
-#### Paso 2 — Modal de citas touch-friendly (alto impacto)
+#### Paso 2 — Modal de citas touch-friendly ✅ IMPLEMENTADO
 
-**Archivo principal:** `js/components/MainModals.js` → bloque `#eventModal` (~líneas 45–204).
+**Archivos:** `js/components/MainModals.js`, `js/modules/calendar/CalendarModal.js`, `index.css` (`eventSheetSlideUp`, `#eventModalFooter` safe-area).
 
-**Patrón a copiar:** `ReceptionControl.js` (sheet desde abajo en móvil).
-
-```html
-<!-- Esquema objetivo -->
-<div id="eventModal" class="... flex items-end md:items-center p-0 md:p-4">
-  <div class="w-full md:max-w-lg h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl ...">
-```
-
-| Elemento | Desktop | Móvil |
-|----------|---------|--------|
-| Contenedor | Centrado, `p-4` | `items-end`, sin padding lateral |
-| Panel | `max-w-lg`, `rounded-3xl` | `w-full`, `rounded-t-3xl`, `h-[92dvh]` |
-| Inputs / selects | `py-2` | `py-3.5 text-base` (evita zoom automático en iOS) |
-| Radios tipo cita | `flex gap-4` | `flex-col gap-2` en `< md` |
-| Footer botones | `py-2` | `min-h-[48px]`, `touch-manipulation`, sticky + safe-area |
-| Botón cerrar | Icono pequeño | Área táctil 44×44 (`p-3 -m-1`) |
-
-**Opcional:** en `CalendarModal.js`, al abrir: `document.body.classList.add('overflow-hidden')` (mejor en Capacitor).
-
-`genericModal` ya está razonable; unificar clases `.touch-target` en botones.
+| Elemento | Desktop (`md+`) | Móvil (`< md`) — implementado |
+|----------|-----------------|-------------------------------|
+| Contenedor `#eventModal` | Centrado, `p-4` | `items-end`, `p-0`, backdrop blur |
+| Panel `#eventModalPanel` | `max-w-lg`, `h-[85vh]`, `rounded-3xl` | Ancho completo, `h-[92dvh]`, `rounded-t-3xl`, animación slide-up |
+| Handle | — | Barra superior gris |
+| Inputs / selects | `text-sm`, `py-2` | `text-base`, `py-3.5` (anti-zoom iOS) |
+| Radios tipo cita | Fila | Tarjetas apiladas, radios 20px |
+| Footer `#eventModalFooter` | Botones compactos | `min-h-[48px]`, safe-area inferior |
+| Body scroll | — | Bloqueado al abrir (`CalendarModal.js`) |
 
 #### Paso 3 — Toolbar del calendario en móvil
 
@@ -332,19 +437,18 @@ Sprint 2 (Fase 1 continuación)
 
 1. `Header.inject(appContent)`
 2. `Sidebar.inject(mainLayout)`
-3. `PatientModalsHTML.inject(appContent)`
-4. `MainModals.inject(appContent)`
-5. `injectMobileOverlay(appContent)`
-
-**Propuesta:** insertar `MobileBottomNav.inject(appContent)` después del sidebar (paso 2.5), antes de modales.
+3. `MobileBottomNav.inject(appContent)` + `MobileBottomNav.init()`
+4. `PatientModalsHTML.inject(appContent)`
+5. `MainModals.inject(appContent)`
+6. `injectMobileOverlay(appContent)`
 
 ### Estado de implementación Fase 1
 
 | Paso | Descripción | Estado |
 |------|-------------|--------|
-| 0 | Fundamentos CSS / Tailwind | Pendiente |
-| 1 | `MobileBottomNav` + `MobileNav` | Pendiente |
-| 2 | `#eventModal` touch-friendly | Pendiente |
+| 0 | Fundamentos CSS / Tailwind | ✅ Implementado |
+| 1 | `MobileBottomNav` + `MobileNav` | ✅ Implementado |
+| 2 | `#eventModal` touch-friendly | ✅ Implementado |
 | 3 | Toolbar calendario móvil | Pendiente |
 
 ---
@@ -368,4 +472,4 @@ Sprint 2 (Fase 1 continuación)
 
 ---
 
-*Última actualización: 17 de Mayo de 2026 — Añadido plan detallado Fase 1 (UI móvil en web).*
+*Última actualización: 17 de Mayo de 2026 — Regla de mantenimiento documento vivo; Pasos 0–2 implementados y validados (bottom nav en Hosting); siguiente: Paso 3 toolbar calendario.*

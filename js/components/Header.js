@@ -528,11 +528,8 @@ export const Header = {
                 return;
             }
 
-            // 3. Botón Menú Hamburguesa (Mobile)
+            // 3. Botón Menú Hamburguesa (Mobile) → lista de pacientes
             const mobileMenuBtn = e.target.closest('#mobileMenuBtn');
-            const overlay = document.getElementById('sidebarOverlay');
-            const sidebar = document.getElementById('mainSidebar');
-
             if (mobileMenuBtn) {
                 e.preventDefault();
                 MobileNav.showPatients();

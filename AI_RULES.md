@@ -9,6 +9,16 @@ Cada vez que realices un cambio en la interfaz, funcionalidad principal o flujo 
 ## 📐 REGLA DE ORO 2: Actualización del Documento de Visión
 Cada vez que se implemente una mejora importante, se descubra un bug crítico o surja una nueva idea de arquitectura, **DEBES actualizar `VISION_PARLARE_V2.md`**. Este documento es el contexto vivo del proyecto para cualquier asistente de IA (Cursor, etc.).
 
+## 📱 REGLA DE ORO 3: Actualización del Análisis Móvil
+Cada sesión que toque la **estrategia móvil**, la **UI responsive**, **Capacitor** o decisiones de producto sobre la app, **DEBES actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`** al cierre de la tarea. Es el mapa de dónde vamos.
+
+### Qué actualizar en ANALISIS_ESTRATEGIA_MOVIL.md:
+- Sección **«Registro de avance y qué hacer ahora»** (hecho / pendiente / checklist del usuario).
+- Tabla **«Estado de implementación Fase 1»** y pasos de roadmap.
+- **«Bitácora de decisiones»** si hubo una decisión nueva (ej. elegir Capacitor vs Flutter).
+- Archivos modificados y comandos de deploy relevantes.
+- Fecha en el pie del documento.
+
 ### Qué actualizar en VISION_PARLARE_V2.md:
 - Nuevas reglas críticas aprendidas de bugs reales.
 - Cambios en IDs de servicios (Sheets, Calendar, Firebase).
@@ -26,6 +36,7 @@ Cada vez que se implemente una mejora importante, se descubra un bug crítico o 
 Al finalizar cualquier tarea o sesión, se deben ejecutar obligatoriamente los siguientes pasos:
 1. **Manual Check**: Verificar si los cambios realizados requieren actualizar el manual de ayuda en `js/modules/help/HelpManual.js`.
 2. **Vision Check**: Verificar si los cambios o ideas de la sesión requieren actualizar `VISION_PARLARE_V2.md` (nuevas reglas, IDs, decisiones de arquitectura, optimizaciones).
+2b. **Mobile Strategy Check**: Si la sesión incluyó trabajo móvil o decisiones de app, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.
 3. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (esto dispara la actualización automática del bot en Render).
 4. **Firebase Deploy**: Desplegar la versión web a Firebase Hosting si hubo cambios en el frontend.
 5. **ZIP Backup**: Crear un respaldo comprimido de la sesión (ej: `Backup_Parlare_YYYYMMDD_Final.zip`).

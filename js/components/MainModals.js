@@ -42,24 +42,25 @@ export const MainModals = {
                 </div>
             </div>
 
-            <!-- 2. APPOINTMENT / EVENT MODAL -->
-            <div id="eventModal" onclick="if(event.target === this) import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="hidden fixed inset-0 z-[9000] flex items-center justify-center bg-black bg-opacity-50 p-4">
-                <div class="bg-white w-full max-w-lg h-[85vh] rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
-                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
-                        <h3 id="modalTitle" class="text-xl font-bold tracking-tight">Detalles de Cita</h3>
-                        <button onclick="import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="p-2 -mr-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
+            <!-- 2. APPOINTMENT / EVENT MODAL (bottom-sheet móvil) -->
+            <div id="eventModal" onclick="if(event.target === this) import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="hidden fixed inset-0 z-[9000] flex items-end md:items-center justify-center bg-black/50 backdrop-blur-[2px] md:backdrop-blur-none p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+                <div id="eventModalPanel" class="bg-white w-full max-w-none md:max-w-lg h-[92dvh] md:h-[85vh] max-h-[92dvh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
+                    <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
+                    <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-center gap-3 bg-white flex-shrink-0">
+                        <h3 id="modalTitle" class="text-lg md:text-xl font-bold tracking-tight truncate pr-2">Detalles de Cita</h3>
+                        <button type="button" onclick="import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
-                    <div class="flex-1 overflow-y-auto p-6 space-y-6 scroller min-h-0 bg-white">
-                        <div class="flex gap-4">
-                            <label class="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-700"><input type="radio" name="appointmentType" value="patient" checked class="text-blue-600 focus:ring-blue-500 w-4 h-4"><span>Paciente</span></label>
-                            <label class="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-700"><input type="radio" name="appointmentType" value="school" class="text-blue-600 focus:ring-blue-500 w-4 h-4"><span>Escuela / Exterior</span></label>
-                            <label class="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-700"><input type="radio" name="appointmentType" value="block" class="text-red-600 focus:ring-red-500 w-4 h-4"><span>Inhabilitar Hora</span></label>
+                    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 md:space-y-6 scroller min-h-0 bg-white overscroll-contain">
+                        <div class="flex flex-col gap-2.5 md:flex-row md:gap-4 md:flex-wrap">
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 text-sm cursor-pointer font-medium text-gray-700 touch-manipulation"><input type="radio" name="appointmentType" value="patient" checked class="text-blue-600 focus:ring-blue-500 w-5 h-5 md:w-4 md:h-4"><span>Paciente</span></label>
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 text-sm cursor-pointer font-medium text-gray-700 touch-manipulation"><input type="radio" name="appointmentType" value="school" class="text-blue-600 focus:ring-blue-500 w-5 h-5 md:w-4 md:h-4"><span>Escuela / Exterior</span></label>
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 text-sm cursor-pointer font-medium text-gray-700 touch-manipulation"><input type="radio" name="appointmentType" value="block" class="text-red-600 focus:ring-red-500 w-5 h-5 md:w-4 md:h-4"><span>Inhabilitar Hora</span></label>
                         </div>
                         <div class="relative">
                             <label id="patientSearchLabel" class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente</label>
-                            <input type="text" id="patientSearch" placeholder="Buscar o escribir nombre..." class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none">
+                            <input type="text" id="patientSearch" placeholder="Buscar o escribir nombre..." class="w-full px-4 py-3.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg outline-none focus:ring-2 focus:ring-blue-100 touch-manipulation">
                             <div id="patientSuggestions" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 mt-1"></div>
                             
                             <!-- Hidden but indexed for naming logic -->
@@ -72,13 +73,13 @@ export const MainModals = {
                             <div class="mt-4">
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp</label>
                                 <div class="flex gap-2">
-                                    <select id="patientCountryCode" class="w-24 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"><option value="52">🇲🇽 +52</option><option value="1">🇺🇸 +1</option><option value="custom">Otro</option></select>
-                                    <input type="tel" id="patientCustomPhone" placeholder="Número de celular..." class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <select id="patientCountryCode" class="w-28 md:w-24 px-2 py-3.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg bg-gray-50 touch-manipulation"><option value="52">🇲🇽 +52</option><option value="1">🇺🇸 +1</option><option value="custom">Otro</option></select>
+                                    <input type="tel" id="patientCustomPhone" placeholder="Número de celular..." class="flex-1 px-4 py-3.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg touch-manipulation">
                                 </div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none"><option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option></select></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-3.5 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation"><option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option></select></div>
                             <div>
                                 <div class="flex items-center justify-between mb-1">
                                     <label class="block text-xs font-bold text-gray-500 uppercase">Costo Total ($)</label>
@@ -87,7 +88,7 @@ export const MainModals = {
                                         Ajuste Manual
                                     </button>
                                 </div>
-                                <input type="number" id="cost" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-100 outline-none" placeholder="0.00">
+                                <input type="number" id="cost" class="w-full px-3 py-3.5 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation" placeholder="0.00">
                             </div>
                         </div>
 
@@ -124,9 +125,9 @@ export const MainModals = {
                             
                             <p class="text-[9px] text-slate-400 leading-tight">* Usa estos campos solo para casos de relevos o acuerdos especiales de pago.</p>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="isRecurring" class="w-4 h-4 text-blue-600 rounded border-gray-300"><label for="isRecurring" class="text-sm text-gray-700 select-none">Agendar sesiones recurrentes</label>
-                        </div>
+                        <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 cursor-pointer touch-manipulation">
+                            <input type="checkbox" id="isRecurring" class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300"><span class="text-sm text-gray-700 select-none">Agendar sesiones recurrentes</span>
+                        </label>
                         <div id="recurringSection" class="hidden bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col gap-3">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-bold text-blue-800 uppercase">Configuración</span>
@@ -142,7 +143,7 @@ export const MainModals = {
                         <!-- Reschedule & Slots -->
                         <div id="rescheduleSection" class="hidden space-y-3 pt-4 border-t border-gray-100">
                              <label class="block text-xs font-bold text-gray-500 uppercase">Sugerencias (Hora)</label>
-                             <div id="rescheduleOptions" class="grid grid-cols-4 gap-2"></div>
+                             <div id="rescheduleOptions" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
                         </div>
 
                         <!-- Busy Slots (Debug/Info) -->
@@ -175,8 +176,8 @@ export const MainModals = {
                                         <span id="justificationFileName" class="truncate font-medium text-gray-700">archivo.png</span>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button type="button" id="viewJustificationBtn" class="px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-bold transition-all">Ver</button>
-                                        <button type="button" id="removeJustificationBtn" class="px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 font-bold transition-all">Quitar</button>
+                                        <button type="button" id="viewJustificationBtn" class="min-h-[44px] px-3 py-2 touch-manipulation bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-bold transition-all">Ver</button>
+                                        <button type="button" id="removeJustificationBtn" class="min-h-[44px] px-3 py-2 touch-manipulation bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold transition-all">Quitar</button>
                                     </div>
                                 </div>
                             </div>
@@ -189,14 +190,14 @@ export const MainModals = {
                             <p id="rescheduledByLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span> <span></span></p>
                         </div>
                     </div>
-                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-3xl">
+                    <div id="eventModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:shadow-none">
                         <div class="grid grid-cols-2 gap-3">
-                            <button id="confirmBtn" class="col-span-2 bg-blue-50 text-blue-700 py-2 rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2 mb-1">✓ Confirmar Asistencia</button>
-                            <button id="saveBtn" class="col-span-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-md">Guardar Cita</button>
-                            <div class="col-span-2 flex gap-2">
-                                <button id="payBtn" class="hidden flex-1 bg-green-100 text-green-700 py-2 rounded-lg hover:bg-green-200 font-semibold">Pagado</button>
-                                <button id="cancelBtn" class="hidden flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 font-semibold">Cancelar Cita</button>
-                                <button id="deleteBtn" class="hidden flex-1 bg-red-100 text-red-700 py-2 rounded-lg hover:bg-red-200 font-semibold">Eliminar</button>
+                            <button type="button" id="confirmBtn" class="col-span-2 min-h-[48px] touch-manipulation bg-blue-50 text-blue-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2">✓ Confirmar Asistencia</button>
+                            <button type="button" id="saveBtn" class="col-span-2 min-h-[48px] touch-manipulation bg-blue-600 text-white py-3 md:py-2.5 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-700 font-bold shadow-md">Guardar Cita</button>
+                            <div class="col-span-2 flex flex-col sm:flex-row gap-2">
+                                <button type="button" id="payBtn" class="hidden flex-1 min-h-[48px] touch-manipulation bg-green-100 text-green-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-green-200 font-semibold">Pagado</button>
+                                <button type="button" id="cancelBtn" class="hidden flex-1 min-h-[48px] touch-manipulation bg-gray-100 text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-200 font-semibold">Cancelar Cita</button>
+                                <button type="button" id="deleteBtn" class="hidden flex-1 min-h-[48px] touch-manipulation bg-red-100 text-red-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-red-200 font-semibold">Eliminar</button>
                             </div>
                         </div>
                     </div>

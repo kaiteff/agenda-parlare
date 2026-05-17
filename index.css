@@ -197,6 +197,34 @@ header::after {
     padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
+/* ── Appointment modal: bottom sheet en móvil ───── */
+@keyframes eventSheetSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0.85;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 767px) {
+    #eventModal:not(.hidden) #eventModalPanel {
+        animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+}
+
+#eventModalFooter {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+    #eventModalFooter {
+        padding-bottom: 1rem;
+    }
+}
+
 @media (min-width: 768px) {
     #mainBottomNav,
     #mobileMoreOverlay,
