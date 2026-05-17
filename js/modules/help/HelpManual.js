@@ -178,6 +178,36 @@ export const HelpManual = {
                             </div>
                         </details>
 
+                        <!-- J. Justificación Médica -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-emerald-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm">J</span>
+                                    Justificación Médica (Inasistencias)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <p>Para inasistencias por salud de los pacientes, el sistema permite cargar justificantes médicos para evitar que se aplique el cargo de la sesión:</p>
+                                <div class="bg-emerald-50 p-4 rounded-xl space-y-2">
+                                    <h4 class="font-bold text-emerald-800 flex items-center gap-1.5">
+                                        <span class="text-emerald-500 font-bold">✓</span> Cómo Justificar una Inasistencia:
+                                    </h4>
+                                    <ul class="list-disc ml-5 space-y-1.5 text-emerald-950 font-medium">
+                                        <li>Abre la cita cancelada en el calendario.</li>
+                                        <li>Verás la sección **"Justificante Médico"** (con fondo rojizo tenue).</li>
+                                        <li>Activa la casilla **"Inasistencia Justificada (No cobrar)"**; esto se guardará de forma instantánea.</li>
+                                        <li>Arrastra el justificante (imagen o PDF) o haz clic en la zona de subida (caja punteada) para subirlo directamente a Firebase Storage de forma gratuita.</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-indigo-50 p-4 rounded-xl space-y-1">
+                                    <h4 class="font-bold text-indigo-800">🔍 Auditoría Visual Rápida:</h4>
+                                    <p>Las citas justificadas se mostrarán en el historial del paciente con un distintivo esmeralda premium: **`💚 Justificada`** en lugar del botón rojo normal de cancelada, permitiendo ver a simple vista qué inasistencias no deben cobrarse.</p>
+                                </div>
+                                <p class="text-xs text-gray-400 italic">Nota: Para cumplir con las políticas de ahorro de datos, los justificantes almacenados en el sistema se eliminan de forma automática a los 120 días de antigüedad.</p>
+                            </div>
+                        </details>
+
                         <!-- M. Mensajes WhatsApp -->
                         <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none">

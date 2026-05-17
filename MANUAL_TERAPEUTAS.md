@@ -55,6 +55,15 @@ Dentro de cada cita puedes ver quién hizo cambios:
 </details>
 
 <details>
+<summary><b>💚 J. Justificación Médica (Inasistencias)</b></summary>
+
+Para inasistencias por salud de los pacientes, el sistema permite cargar justificantes médicos para evitar que se aplique el cargo de la sesión:
+*   **Cómo Justificar:** Abre la cita cancelada en el calendario, activa la casilla **"Inasistencia Justificada (No cobrar)"** (se guarda instantáneamente) y arrastra o haz clic en la zona punteada para subir el justificante (imagen o PDF) directamente a Firebase Storage de forma gratuita.
+*   **Auditoría Visual:** Las citas justificadas aparecerán en el historial de citas del paciente con una etiqueta verde premium: **`💚 Justificada`** en lugar de la etiqueta roja de cancelada normal.
+*   **Ahorro de Espacio:** Para mantenernos siempre en el plan gratuito de Storage (5GB), los justificantes médicos se eliminan de forma automática del servidor al cumplir los **120 días de antigüedad**.
+</details>
+
+<details>
 <summary><b>📱 M. Mensajes Diarios (WhatsApp)</b></summary>
 
 Cada mañana a las 8 AM recibes tu reporte. Iconos:
@@ -91,4 +100,4 @@ Cuando veas `~~D~~ / S`:
 ## 🆘 ¿Necesitas ayuda?
 Si algo no funciona, contacta a Soporte Técnico.
 
-*Última actualización: 13 de Mayo, 2026*
+*Última actualización: 17 de Mayo, 2026*
