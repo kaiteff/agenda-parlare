@@ -32,6 +32,29 @@ import { ToastService } from '../../utils/ToastService.js';
  */
 export const PatientModals = {
 
+    /**
+     * Bloquea o libera el scroll del body según modales abiertos (coordina con calendario y bottom nav).
+     * @param {boolean} lock
+     * @private
+     */
+    _syncBodyScroll(lock) {
+        if (lock) {
+            document.body.classList.add('overflow-hidden');
+            return;
+        }
+        const patientModalIds = ['newPatientModal', 'patientHistoryModal', 'inactivePatientsModal', 'sessionNoteModal'];
+        const patientOpen = patientModalIds.some((id) => {
+            const el = document.getElementById(id);
+            return el && !el.classList.contains('hidden');
+        });
+        const eventOpen = document.getElementById('eventModal') && !document.getElementById('eventModal').classList.contains('hidden');
+        const receptionOpen = document.getElementById('receptionControlModal') && !document.getElementById('receptionControlModal').classList.contains('hidden');
+        const moreSheetOpen = document.getElementById('mobileMoreSheet') && !document.getElementById('mobileMoreSheet').classList.contains('hidden');
+        if (!patientOpen && !eventOpen && !receptionOpen && !moreSheetOpen) {
+            document.body.classList.remove('overflow-hidden');
+        }
+    },
+
     // ==========================================
     // MODAL DE NUEVO PACIENTE
     // ==========================================
@@ -108,13 +131,13 @@ export const PatientModals = {
             modal.classList.remove('hidden');
             modal.style.display = 'flex';
             modal.style.zIndex = '9999';
+            this._syncBodyScroll(true);
 
-            // Asegurar que el input tenga foco
             if (firstNameInput) {
                 setTimeout(() => firstNameInput.focus(), 50);
             }
 
-            console.log('✅ PatientModals: Modal de nuevo paciente abierto (Standard Mode)');
+            console.log('✅ PatientModals: Modal de nuevo paciente abierto');
         });
 
         // VALIDACIÓN: Avisar si escriben 52 al inicio
@@ -138,6 +161,7 @@ export const PatientModals = {
             modal.classList.add('hidden');
             modal.style.setProperty('display', 'none', 'important');
         });
+        this._syncBodyScroll(false);
         console.log('✅ PatientModals: Modal de nuevo paciente cerrado (' + modals.length + ' instancias)');
     },
 
@@ -172,6 +196,7 @@ export const PatientModals = {
         dom.patientHistoryModal.classList.remove('hidden');
         dom.patientHistoryModal.style.display = 'flex';
         dom.patientHistoryModal.style.zIndex = '9500';
+        this._syncBodyScroll(true);
 
         // Guardar paciente seleccionado
         PatientState.setSelectedPatient(patient);
@@ -372,6 +397,7 @@ export const PatientModals = {
             dom.patientHistoryModal.classList.add('hidden');
             dom.patientHistoryModal.style.display = 'none';
         }
+        this._syncBodyScroll(false);
 
         // Ocultar sección de edición si estaba visible
         if (dom.patientEditSection) {
@@ -994,6 +1020,7 @@ export const PatientModals = {
         const closeThis = () => {
             modal.classList.add('hidden');
             modal.style.display = 'none';
+            this._syncBodyScroll(false);
         };
         if (closeBtn) closeBtn.onclick = closeThis;
         if (cancelBtn) cancelBtn.onclick = closeThis;
@@ -1067,6 +1094,7 @@ export const PatientModals = {
         renderThemesList();
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
+        this._syncBodyScroll(true);
     },
 
     // ==========================================
@@ -1090,8 +1118,10 @@ export const PatientModals = {
         // Renderizar lista
         this._renderInactivePatients(inactivePatients);
 
-        // Mostrar modal
         dom.inactivePatientsModal.classList.remove('hidden');
+        dom.inactivePatientsModal.style.display = 'flex';
+        dom.inactivePatientsModal.style.zIndex = '9800';
+        this._syncBodyScroll(true);
 
         console.log('✅ PatientModals: Modal de inactivos abierto');
     },
@@ -1104,7 +1134,9 @@ export const PatientModals = {
 
         if (dom.inactivePatientsModal) {
             dom.inactivePatientsModal.classList.add('hidden');
+            dom.inactivePatientsModal.style.display = 'none';
         }
+        this._syncBodyScroll(false);
 
         console.log('✅ PatientModals: Modal de inactivos cerrado');
     },

@@ -464,9 +464,14 @@ export const CalendarModal = {
             dom.eventModal.classList.add('hidden');
             dom.eventModal.style.setProperty('display', 'none', 'important');
         }
+        const patientModalIds = ['newPatientModal', 'patientHistoryModal', 'inactivePatientsModal', 'sessionNoteModal'];
+        const patientOpen = patientModalIds.some((id) => {
+            const el = document.getElementById(id);
+            return el && !el.classList.contains('hidden');
+        });
         const otherModalOpen = document.getElementById('receptionControlModal') && !document.getElementById('receptionControlModal').classList.contains('hidden');
         const moreSheetOpen = document.getElementById('mobileMoreSheet') && !document.getElementById('mobileMoreSheet').classList.contains('hidden');
-        if (!otherModalOpen && !moreSheetOpen) {
+        if (!patientOpen && !otherModalOpen && !moreSheetOpen) {
             document.body.classList.remove('overflow-hidden');
         }
         CalendarState.selectedEventId = null;

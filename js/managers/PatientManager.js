@@ -91,6 +91,10 @@ export const PatientManager = {
         if (dom.closeNewPatientModalBtn) {
             dom.closeNewPatientModalBtn.onclick = () => PatientModals.closeNewPatient();
         }
+        const cancelNewPatientBtn = document.getElementById('cancelNewPatientBtn');
+        if (cancelNewPatientBtn) {
+            cancelNewPatientBtn.onclick = () => PatientModals.closeNewPatient();
+        }
 
         if (dom.saveNewPatientBtn) {
             dom.saveNewPatientBtn.onclick = async (e) => {
@@ -363,4 +367,5 @@ if (typeof window !== 'undefined') {
     window.closePatientHistoryModal = () => PatientModals.closeHistory();
     window.openNewPatientModal = () => PatientModals.openNewPatient();
     window.closeNewPatientModal = () => PatientModals.closeNewPatient();
+    window.closeInactivePatientsModal = () => PatientModals.closeInactivePatients();
 }

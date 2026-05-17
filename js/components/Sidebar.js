@@ -20,17 +20,17 @@ export const Sidebar = {
             <div class="p-4 border-b border-gray-100 bg-white sticky top-0 z-10">
                 <div id="patientsHeader"></div>
                 <div class="relative mt-3 group">
-                    <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="absolute left-3 top-3 md:top-2.5 w-5 h-5 md:w-4 md:h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
-                    <input type="text" id="searchInput" placeholder="Buscar paciente..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                    <input type="search" id="searchInput" placeholder="Buscar paciente..." autocomplete="off" enterkeyhint="search" class="w-full pl-10 md:pl-9 pr-4 py-3.5 md:py-2 text-base md:text-sm bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none touch-manipulation">
                 </div>
                 
                 <!-- Pestañas de Tiempo -->
                 <div class="flex p-1 bg-gray-100 rounded-lg mt-3" id="sidebarTabs">
-                    <button data-tab="today" class="flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all bg-white shadow-sm text-blue-600">Hoy</button>
-                    <button data-tab="tomorrow" class="flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50">Mañana</button>
-                    <button data-tab="all" class="flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50">Todos</button>
+                    <button type="button" data-tab="today" class="flex-1 py-2.5 md:py-1.5 min-h-[44px] md:min-h-0 text-[10px] font-bold uppercase rounded-md transition-all bg-white shadow-sm text-blue-600 touch-manipulation">Hoy</button>
+                    <button type="button" data-tab="tomorrow" class="flex-1 py-2.5 md:py-1.5 min-h-[44px] md:min-h-0 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50 touch-manipulation">Mañana</button>
+                    <button type="button" data-tab="all" class="flex-1 py-2.5 md:py-1.5 min-h-[44px] md:min-h-0 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50 touch-manipulation">Todos</button>
                 </div>
             </div>
 
@@ -193,7 +193,7 @@ export const Sidebar = {
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                             </button>
                         ` : ''}
-                        <button id="addNewPatientBtn" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-all active:scale-95" title="Nuevo Paciente">
+                        <button type="button" id="addNewPatientBtn" class="touch-target touch-manipulation p-2.5 md:p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl md:rounded-lg shadow-sm transition-all active:scale-95" title="Nuevo Paciente" aria-label="Nuevo paciente">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
                         </button>
                     </div>

@@ -726,6 +726,10 @@ video {
   top: 0.625rem;
 }
 
+.top-3 {
+  top: 0.75rem;
+}
+
 .top-4 {
   top: 1rem;
 }
@@ -826,11 +830,6 @@ video {
 .mx-1 {
   margin-left: 0.25rem;
   margin-right: 0.25rem;
-}
-
-.mx-2 {
-  margin-left: 0.5rem;
-  margin-right: 0.5rem;
 }
 
 .mx-auto {
@@ -1058,10 +1057,6 @@ video {
   height: 85vh;
 }
 
-.h-\[90svh\] {
-  height: 90svh;
-}
-
 .h-\[92dvh\] {
   height: 92dvh;
 }
@@ -1105,10 +1100,6 @@ video {
 
 .max-h-\[70vh\] {
   max-height: 70vh;
-}
-
-.max-h-\[80vh\] {
-  max-height: 80vh;
 }
 
 .max-h-\[85vh\] {
@@ -1165,6 +1156,10 @@ video {
 
 .w-2 {
   width: 0.5rem;
+}
+
+.w-20 {
+  width: 5rem;
 }
 
 .w-24 {
@@ -2567,10 +2562,6 @@ video {
   padding-left: 2rem;
 }
 
-.pl-9 {
-  padding-left: 2.25rem;
-}
-
 .pr-2 {
   padding-right: 0.5rem;
 }
@@ -3624,8 +3615,47 @@ header::after {
 }
 
 @media (max-width: 767px) {
-  #eventModal:not(.hidden) #eventModalPanel {
+  #eventModal:not(.hidden) #eventModalPanel,
+    #newPatientModal:not(.hidden) #newPatientModalPanel,
+    #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
+    #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel {
     animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  #mainSidebar #searchInput {
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+    font-size: 1rem;
+    border-radius: 0.75rem;
+  }
+
+  #mainSidebar .relative.group > svg {
+    top: 0.875rem;
+  }
+
+  #mainSidebar #sidebarTabs button {
+    min-height: 44px;
+    font-size: 0.65rem;
+  }
+
+  #mainSidebar #addNewPatientBtn,
+    #mainSidebar #viewAuditLogBtn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+#newPatientModalFooter,
+#patientHistoryModalFooter,
+#inactivePatientsModalFooter {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  #newPatientModalFooter,
+    #patientHistoryModalFooter,
+    #inactivePatientsModalFooter {
+    padding-bottom: 1rem;
   }
 }
 
@@ -4358,9 +4388,8 @@ header::after {
     position: relative;
   }
 
-  .md\:mx-0 {
-    margin-left: 0px;
-    margin-right: 0px;
+  .md\:top-2\.5 {
+    top: 0.625rem;
   }
 
   .md\:block {
@@ -4395,6 +4424,10 @@ header::after {
     min-height: 0px;
   }
 
+  .md\:w-16 {
+    width: 4rem;
+  }
+
   .md\:w-24 {
     width: 6rem;
   }
@@ -4419,8 +4452,20 @@ header::after {
     min-width: 100%;
   }
 
+  .md\:max-w-2xl {
+    max-width: 42rem;
+  }
+
+  .md\:max-w-4xl {
+    max-width: 56rem;
+  }
+
   .md\:max-w-lg {
     max-width: 32rem;
+  }
+
+  .md\:max-w-md {
+    max-width: 28rem;
   }
 
   .md\:translate-x-0 {
@@ -4478,6 +4523,10 @@ header::after {
     border-radius: 0.5rem;
   }
 
+  .md\:rounded-xl {
+    border-radius: 0.75rem;
+  }
+
   .md\:rounded-b-3xl {
     border-bottom-right-radius: 1.5rem;
     border-bottom-left-radius: 1.5rem;
@@ -4489,6 +4538,10 @@ header::after {
 
   .md\:bg-transparent {
     background-color: transparent;
+  }
+
+  .md\:p-2 {
+    padding: 0.5rem;
   }
 
   .md\:p-4 {
@@ -4516,6 +4569,11 @@ header::after {
   .md\:px-4 {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .md\:px-5 {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
   }
 
   .md\:px-6 {
@@ -4550,6 +4608,10 @@ header::after {
 
   .md\:pb-0 {
     padding-bottom: 0px;
+  }
+
+  .md\:pl-9 {
+    padding-left: 2.25rem;
   }
 
   .md\:text-\[10px\] {
