@@ -37,8 +37,14 @@ Al finalizar cualquier tarea o sesión, se deben ejecutar obligatoriamente los s
 1. **Manual Check**: Verificar si los cambios realizados requieren actualizar el manual de ayuda en `js/modules/help/HelpManual.js`.
 2. **Vision Check**: Verificar si los cambios o ideas de la sesión requieren actualizar `VISION_PARLARE_V2.md` (nuevas reglas, IDs, decisiones de arquitectura, optimizaciones).
 2b. **Mobile Strategy Check**: Si la sesión incluyó trabajo móvil o decisiones de app, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.
-3. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (esto dispara la actualización automática del bot en Render).
-4. **Firebase Deploy**: Desplegar la versión web a Firebase Hosting si hubo cambios en el frontend.
+3. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (el código del bot en Render ya es obsoleto, ahora corre 100% en Firebase).
+4. **Despliegues en Vivo (Firebase Deploy)**:
+   * **Si los cambios fueron en el Frontend (interfaz web/móvil):**
+     `firebase deploy --only hosting`
+   * **Si los cambios fueron en el Backend (Webhook, Crons, o Trigger en `functions/`):**
+     `firebase deploy --only functions`
+   * **Si los cambios incluyeron Frontend y Backend simultáneamente:**
+     `firebase deploy`
 5. **ZIP Backup**: Crear un respaldo comprimido de la sesión (ej: `Backup_Parlare_YYYYMMDD_Final.zip`).
 6. **Resumen de Sesión**: Crear el archivo de cierre en `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`.
 ## 💻 ENTORNO DE DESARROLLO: Cursor.sh (Desde 17 de Mayo 2026)
