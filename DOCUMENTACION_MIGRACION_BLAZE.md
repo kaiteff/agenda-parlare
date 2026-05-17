@@ -128,4 +128,38 @@ Si durante la prueba de 5 minutos detectamos algún comportamiento extraño en l
 3. **¡Listo!** El sistema vuelve a operar a través de Render de forma instantánea en menos de 10 segundos, asegurando que ningún paciente se quede sin atención.
 
 ---
+
+## 🔍 Gotchas y Resoluciones Comunes (Errores de Permisos GCP)
+
+Durante la implementación real de la migración en el Centro Parláre, se identificaron y resolvieron los siguientes comportamientos y errores críticos de Google Cloud Platform (GCP) que ocurren por defecto en proyectos de Firebase nuevos:
+
+### 1. Error de Permisos en Cloud Build (Build failed with status: FAILURE)
+* **El Problema:** Al ejecutar `firebase deploy --only functions`, la compilación falla con el mensaje `Could not build the function due to a missing permission on the build service account`. Esto ocurre porque las nuevas políticas de seguridad de GCP no asignan el permiso de construcción a la cuenta de servicio por defecto de Compute.
+* **La Solución:**
+  1. Entrar al panel de [Google Cloud IAM](https://console.cloud.google.com/iam-admin/iam?project=taconotaco-d94fc).
+  2. Identificar la fila con la cuenta de servicio de Compute: `40563362456-compute@developer.gserviceaccount.com` (en otras clínicas, usar el número de proyecto correspondiente).
+  3. Editar los permisos de esa cuenta (ícono del lápiz ✏️).
+  4. Hacer clic en **"Agregar otro rol"** (Add another role).
+  5. Seleccionar el rol: **`Cloud Build Service Account`** (Cuenta de servicio de Cloud Build) y hacer clic en **Guardar**.
+  6. Reintentar el despliegue tras 15 segundos.
+
+### 2. Error local de Análisis de Credenciales en Firebase CLI (DefaultCredentialsError)
+* **El Problema:** Al lanzar `firebase deploy`, la CLI importa `main.py` de forma local para analizar su configuración. Como tu máquina de desarrollo no cuenta con credenciales activas del servidor de GCP, instanciar Firestore de forma global con `db = firestore.client()` detona un crash que interrumpe la compilación.
+* **La Solución (Implementada en `functions/main.py`):**
+  Se inyectó un **Proxy Dinámico (`FirestoreProxy`)** para retrasar la inicialización de Firestore:
+  ```python
+  class FirestoreProxy:
+      def __getattr__(self, name):
+          if not firebase_admin._apps:
+              firebase_admin.initialize_app()
+          return getattr(firestore.client(), name)
+  db = FirestoreProxy()
+  ```
+  Esto permite que la CLI compile el código localmente sin credenciales, y la conexión real a Firestore se realice de forma transparente solo cuando la Cloud Function se ejecute activamente en los servidores de Google.
+
+### 3. Solicitud de Retención de Contenedores (Cleanup Policy)
+* **El Problema:** Al desplegar por primera vez funciones de 2da generación en Python, Firebase CLI detecta que no hay una política de purga de imágenes y pregunta: `How many days do you want to keep container images before they're deleted?`. Si no se eliminan las imágenes antiguas, Google Cloud podría realizar micro-cargos mensuales de almacenamiento.
+* **La Solución:** Escribir **`1`** y presionar **Enter**. Esto crea una regla automática nativa para borrar las imágenes compiladas de Artifact Registry en 24 horas, asegurando que tu almacenamiento acumulado se mantenga siempre dentro del rango de **$0 USD**.
+
+---
 *Documento de Control y Estrategia V2 — Diseñado para asegurar la continuidad de negocio y la escalabilidad técnica hacia un SaaS agnóstico.*
