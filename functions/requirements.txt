@@ -1,0 +1,7 @@
+firebase-functions
+firebase-admin~=6.4.0
+twilio~=9.0.0
+pytz
+google-api-python-client
+google-auth
+google-auth-oauthlib
