@@ -96,6 +96,8 @@ export const MobileNav = {
         overlay.classList.remove('hidden');
         sheet.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
+
+        import('./GoogleSyncUI.js').then((m) => m.GoogleSyncUI.renderStatus());
     },
 
     closeMoreSheet() {

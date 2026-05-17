@@ -175,6 +175,22 @@ header::after {
     height: 100dvh;
 }
 
+/* En móvil el bottom nav (z-70) tapa el drawer si el aside usa inset-y-0 a 100dvh */
+@media (max-width: 767px) {
+    #mainSidebar {
+        bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+        height: auto;
+    }
+
+    #mainSidebar #sidebarFooter {
+        flex-shrink: 0;
+    }
+
+    #mainSidebar #patientsList {
+        padding-bottom: 0.5rem;
+    }
+}
+
 #sidebarOverlay {
     transition: opacity 0.2s ease;
 }
@@ -237,6 +253,29 @@ header::after {
     #mainSidebar #viewAuditLogBtn {
         min-height: 44px;
         min-width: 44px;
+    }
+
+    #mainSidebar #sidebarFooter button {
+        min-height: 44px;
+    }
+
+    #calendarToolbar {
+        padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    }
+
+    #calendarToolbar #currentMonthLabel {
+        max-width: 9.5rem;
+    }
+
+    main > .flex-1.overflow-y-auto {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+@media (min-width: 768px) {
+    #calendarToolbar #currentMonthLabel {
+        max-width: none;
     }
 }
 

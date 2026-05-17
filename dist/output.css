@@ -612,6 +612,18 @@ video {
   }
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 .pointer-events-none {
   pointer-events: none;
 }
@@ -989,10 +1001,6 @@ video {
   display: none;
 }
 
-.h-0 {
-  height: 0px;
-}
-
 .h-1 {
   height: 0.25rem;
 }
@@ -1118,6 +1126,10 @@ video {
   min-height: 0px;
 }
 
+.min-h-\[1\.125rem\] {
+  min-height: 1.125rem;
+}
+
 .min-h-\[44px\] {
   min-height: 44px;
 }
@@ -1132,10 +1144,6 @@ video {
 
 .min-h-screen {
   min-height: 100vh;
-}
-
-.w-0 {
-  width: 0px;
 }
 
 .w-1\.5 {
@@ -1219,12 +1227,12 @@ video {
   min-width: 0px;
 }
 
-.min-w-\[140px\] {
-  min-width: 140px;
-}
-
 .min-w-\[300px\] {
   min-width: 300px;
+}
+
+.min-w-\[44px\] {
+  min-width: 44px;
 }
 
 .min-w-\[700px\] {
@@ -1245,6 +1253,10 @@ video {
 
 .max-w-4xl {
   max-width: 56rem;
+}
+
+.max-w-\[9\.5rem\] {
+  max-width: 9.5rem;
 }
 
 .max-w-lg {
@@ -2316,6 +2328,12 @@ video {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+.from-slate-50 {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(248 250 252 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
 .to-blue-700 {
   --tw-gradient-to: #1d4ed8 var(--tw-gradient-to-position);
 }
@@ -2350,6 +2368,10 @@ video {
 
 .to-teal-600 {
   --tw-gradient-to: #0d9488 var(--tw-gradient-to-position);
+}
+
+.to-white {
+  --tw-gradient-to: #fff var(--tw-gradient-to-position);
 }
 
 .bg-clip-text {
@@ -3191,14 +3213,32 @@ video {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-\[0_0_6px_rgba\(234\2c 179\2c 8\2c 0\.5\)\] {
+  --tw-shadow: 0 0 6px rgba(234,179,8,0.5);
+  --tw-shadow-colored: 0 0 6px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .shadow-\[0_0_8px_rgba\(239\2c 68\2c 68\2c 0\.4\)\] {
   --tw-shadow: 0 0 8px rgba(239,68,68,0.4);
   --tw-shadow-colored: 0 0 8px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-\[0_0_8px_rgba\(239\2c 68\2c 68\2c 0\.45\)\] {
+  --tw-shadow: 0 0 8px rgba(239,68,68,0.45);
+  --tw-shadow-colored: 0 0 8px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .shadow-\[0_0_8px_rgba\(34\2c 197\2c 94\2c 0\.5\)\] {
   --tw-shadow: 0 0 8px rgba(34,197,94,0.5);
+  --tw-shadow-colored: 0 0 8px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.shadow-\[0_0_8px_rgba\(34\2c 197\2c 94\2c 0\.55\)\] {
+  --tw-shadow: 0 0 8px rgba(34,197,94,0.55);
   --tw-shadow-colored: 0 0 8px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
@@ -3577,6 +3617,23 @@ header::after {
   height: 100dvh;
 }
 
+/* En móvil el bottom nav (z-70) tapa el drawer si el aside usa inset-y-0 a 100dvh */
+
+@media (max-width: 767px) {
+  #mainSidebar {
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    height: auto;
+  }
+
+  #mainSidebar #sidebarFooter {
+    flex-shrink: 0;
+  }
+
+  #mainSidebar #patientsList {
+    padding-bottom: 0.5rem;
+  }
+}
+
 #sidebarOverlay {
   transition: opacity 0.2s ease;
 }
@@ -3642,6 +3699,29 @@ header::after {
     #mainSidebar #viewAuditLogBtn {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  #mainSidebar #sidebarFooter button {
+    min-height: 44px;
+  }
+
+  #calendarToolbar {
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  }
+
+  #calendarToolbar #currentMonthLabel {
+    max-width: 9.5rem;
+  }
+
+  main > .flex-1.overflow-y-auto {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  #calendarToolbar #currentMonthLabel {
+    max-width: none;
   }
 }
 
@@ -4448,6 +4528,10 @@ header::after {
     min-width: 0px;
   }
 
+  .md\:min-w-\[140px\] {
+    min-width: 140px;
+  }
+
   .md\:min-w-full {
     min-width: 100%;
   }
@@ -4466,6 +4550,14 @@ header::after {
 
   .md\:max-w-md {
     max-width: 28rem;
+  }
+
+  .md\:flex-1 {
+    flex: 1 1 0%;
+  }
+
+  .md\:flex-none {
+    flex: none;
   }
 
   .md\:translate-x-0 {
@@ -4501,6 +4593,14 @@ header::after {
     align-items: center;
   }
 
+  .md\:justify-start {
+    justify-content: flex-start;
+  }
+
+  .md\:justify-between {
+    justify-content: space-between;
+  }
+
   .md\:gap-3 {
     gap: 0.75rem;
   }
@@ -4519,8 +4619,16 @@ header::after {
     border-radius: 1.5rem;
   }
 
+  .md\:rounded-full {
+    border-radius: 9999px;
+  }
+
   .md\:rounded-lg {
     border-radius: 0.5rem;
+  }
+
+  .md\:rounded-md {
+    border-radius: 0.375rem;
   }
 
   .md\:rounded-xl {
@@ -4538,6 +4646,10 @@ header::after {
 
   .md\:bg-transparent {
     background-color: transparent;
+  }
+
+  .md\:p-1\.5 {
+    padding: 0.375rem;
   }
 
   .md\:p-2 {
@@ -4612,6 +4724,10 @@ header::after {
 
   .md\:pl-9 {
     padding-left: 2.25rem;
+  }
+
+  .md\:text-right {
+    text-align: right;
   }
 
   .md\:text-\[10px\] {

@@ -82,7 +82,7 @@ export const Header = {
                         </select>
                     </div>
 
-                    <button id="googleSyncBtn" class="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border">
+                    <button id="googleSyncBtn" class="hidden md:flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border">
                         <div id="syncIndicator" class="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
                         <span id="syncStatusText">Google Sync</span>
                     </button>
@@ -225,44 +225,7 @@ export const Header = {
      * Renderiza y monitorea el estado de Google Auth Sync
      */
     _renderGoogleSyncStatus() {
-        const btn = document.getElementById('googleSyncBtn');
-        const indicator = document.getElementById('syncIndicator');
-        const statusText = document.getElementById('syncStatusText');
-        if (!btn || !indicator || !statusText) return;
-
-        const updateUI = () => {
-            const { GoogleAuthService } = SyncService; // Oops, better use the service directly
-            import('../services/google/GoogleAuthService.js').then(m => {
-                const health = m.GoogleAuthService.getTokenHealth();
-                if (health.isValid) {
-                    indicator.className = "w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
-                    statusText.textContent = "Google OK";
-                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-green-200 bg-green-50 text-green-700";
-                } else if (health.hasToken) {
-                    indicator.className = "w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse";
-                    statusText.textContent = "Reconectar Google";
-                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-yellow-200 bg-yellow-50 text-yellow-700 animate-pulse";
-                } else {
-                    indicator.className = "w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse";
-                    statusText.textContent = "Google Off";
-                    btn.className = "flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border border-red-200 bg-red-50 text-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.2)]";
-                }
-
-                // Mostrar/Ocultar botón de Sincronización Total
-                const forceSyncBtn = document.getElementById('forceSyncAllBtn');
-                if (forceSyncBtn) {
-                    if (health.isValid && AuthManager.currentUser?.email === 'rodriguezd.danielrob@gmail.com') {
-                        forceSyncBtn.classList.remove('hidden');
-                    } else {
-                        forceSyncBtn.classList.add('hidden');
-                    }
-                }
-            });
-        };
-
-        // Poll every 30 seconds
-        updateUI();
-        setInterval(updateUI, 30000);
+        import('../utils/GoogleSyncUI.js').then((m) => m.GoogleSyncUI.initPolling());
     },
 
     /**
@@ -336,51 +299,45 @@ export const Header = {
     _renderTherapistSelector() {
         const selectorContainer = document.getElementById('therapistSelectorContainer');
         const selector = document.getElementById('therapistFilter');
+        const mobileWrap = document.getElementById('calendarTherapistFilterWrap');
+        const mobileSelector = document.getElementById('therapistFilterMobile');
+
+        const applyTherapistChange = (newTherapist) => {
+            AuthManager.setSelectedTherapist(newTherapist);
+            if (selector) selector.value = newTherapist;
+            if (mobileSelector) mobileSelector.value = newTherapist;
+            if (window.PatientManager) window.PatientManager.render();
+            if (typeof window.renderCalendar === 'function') window.renderCalendar();
+        };
 
         if (selectorContainer && selector) {
             if (AuthManager.can('switch_therapist_view')) {
                 selectorContainer.classList.remove('hidden');
                 selectorContainer.classList.add('md:flex');
+                if (mobileWrap) mobileWrap.classList.remove('hidden');
 
                 const currentUser = AuthManager.currentUser;
                 const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'receptionist';
 
-                // RESTRICCIÓN: Si es terapeuta, solo puede verse a sí mismo o 'Todas'
-                if (!isStaff) {
-                    const myId = currentUser?.therapist || 'diana';
-                    const myName = myId.charAt(0).toUpperCase() + myId.slice(1);
-                    
-                    selector.innerHTML = `
-                        <option value="${myId}">${myName}</option>
-                        <option value="all">Todas</option>
-                    `;
-                } else {
-                    // Admins ven todo
-                    selector.innerHTML = `
-                        <option value="diana">Diana</option>
-                        <option value="sam">Sam</option>
-                        <option value="vero">Vero</option>
-                        <option value="all">Todas</option>
-                    `;
+                const optionsHtml = !isStaff
+                    ? (() => {
+                        const myId = currentUser?.therapist || 'diana';
+                        const myName = myId.charAt(0).toUpperCase() + myId.slice(1);
+                        return `<option value="${myId}">${myName}</option><option value="all">Todas</option>`;
+                    })()
+                    : `<option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option><option value="all">Todas</option>`;
+
+                selector.innerHTML = optionsHtml;
+                if (mobileSelector) mobileSelector.innerHTML = optionsHtml;
+
+                const selected = AuthManager.getSelectedTherapist();
+                selector.value = selected;
+                if (mobileSelector) mobileSelector.value = selected;
+
+                selector.onchange = (e) => applyTherapistChange(e.target.value);
+                if (mobileSelector) {
+                    mobileSelector.onchange = (e) => applyTherapistChange(e.target.value);
                 }
-
-                selector.value = AuthManager.getSelectedTherapist();
-
-                // Asignar evento de cambio
-                selector.onchange = (e) => {
-                    const newTherapist = e.target.value;
-                    AuthManager.setSelectedTherapist(newTherapist);
-
-                    // Recargar lista de pacientes (Sidebar)
-                    if (window.PatientManager) {
-                        window.PatientManager.render();
-                    }
-
-                    // Recargar calendario
-                    if (typeof window.renderCalendar === 'function') {
-                        window.renderCalendar();
-                    }
-                };
 
                 // Mostrar botón de configuración si es admin
                 const adminSettingsBtn = document.getElementById('adminSettingsBtn');
@@ -392,6 +349,7 @@ export const Header = {
             } else {
                 selectorContainer.classList.add('hidden');
                 selectorContainer.classList.remove('md:flex');
+                if (mobileWrap) mobileWrap.classList.add('hidden');
             }
         }
     },
@@ -536,45 +494,14 @@ export const Header = {
                 return;
             }
 
-            // 5. Botón Google Sync (Manual / Sincronización activa)
-            const googleSyncBtn = e.target.closest('#googleSyncBtn');
-            if (googleSyncBtn) {
+            // 5. Google Sync (header desktop + fila en menú Más móvil)
+            const googleSyncTrigger =
+                e.target.closest('#googleSyncBtn') || e.target.closest('#mobileMoreGoogleSync');
+            if (googleSyncTrigger) {
                 e.preventDefault();
                 e.stopPropagation();
-                try {
-                    const { GoogleAuthService } = await import('../services/google/GoogleAuthService.js');
-                    const { GoogleCalendarService } = await import('../services/google/GoogleCalendarService.js');
-                    
-                    const health = GoogleAuthService.getTokenHealth();
-                    
-                    if (health.isValid) {
-                        // SI YA ESTÁ CONECTADO: Sincronizar citas actuales
-                        const confirmed = await ModalService.confirm(
-                            "Sincronización Total",
-                            "¿Deseas sincronizar todas las citas visibles en esta pantalla con tu Google Calendar?<br><small>(Esto creará los eventos que falten)</small>",
-                            "Sí, Sincronizar",
-                            "Cancelar"
-                        );
-                        
-                        if (confirmed) {
-                            googleSyncBtn.disabled = true;
-                            googleSyncBtn.classList.add('opacity-50', 'animate-pulse');
-                            
-                            await GoogleCalendarService.syncWeek(CalendarState.appointments);
-                            
-                            googleSyncBtn.disabled = false;
-                            googleSyncBtn.classList.remove('opacity-50', 'animate-pulse');
-                        }
-                    } else {
-                        // SI NO ESTÁ CONECTADO: Iniciar sesión
-                        await GoogleAuthService.ensureToken(true);
-                        this._renderGoogleSyncStatus();
-                        ToastService.success("Google Calendar conectado. Ahora puedes hacer clic de nuevo para sincronizar.");
-                    }
-                } catch (err) {
-                    console.error("Manual Google Sync/Login failed:", err);
-                    ToastService.error("Error en la sincronización con Google.");
-                }
+                const { GoogleSyncUI } = await import('../utils/GoogleSyncUI.js');
+                await GoogleSyncUI.handleClick(googleSyncTrigger);
                 return;
             }
 

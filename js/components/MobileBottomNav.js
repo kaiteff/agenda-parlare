@@ -84,6 +84,19 @@ export const MobileBottomNav = {
 
         items.push({ id: 'mobileMoreLogout', label: 'Cerrar Sesión', icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1', color: 'text-red-600', danger: true });
 
+        const googleSyncRow = `
+            <button type="button" id="mobileMoreGoogleSync" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation border border-gray-100 bg-gradient-to-r from-slate-50 to-white mb-2">
+                <span class="flex-shrink-0 w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+                    <span id="mobileGoogleSyncIndicator" class="w-3 h-3 rounded-full bg-gray-400" aria-hidden="true"></span>
+                </span>
+                <span class="flex-1 text-left min-w-0">
+                    <span class="text-sm font-bold text-gray-800 block">Conexión Google Sync</span>
+                    <span id="mobileGoogleSyncSubtext" class="text-xs text-gray-500 truncate">Verificando…</span>
+                </span>
+                <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        `;
+
         const listHtml = items.map((item) => `
             <button type="button" id="${item.id}" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation ${item.danger ? 'mt-2 border-t border-gray-100' : ''}">
                 <span class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center ${item.color}">
@@ -110,6 +123,7 @@ export const MobileBottomNav = {
                 <p class="text-xs text-gray-500">Accesos rápidos de la clínica</p>
             </div>
             <div class="flex-1 overflow-y-auto scroller px-3 pb-4 space-y-1">
+                ${googleSyncRow}
                 ${listHtml}
             </div>
         `;
