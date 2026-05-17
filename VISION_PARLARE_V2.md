@@ -248,6 +248,24 @@ Para que este proyecto sea un motor de negocio escalable, Cursor debe seguir est
 - **Arquitectura de Master Template:** El repositorio debe tratarse como una "Plantilla Maestra". Las mejoras generales (ej. nuevas integraciones de IA) deben ser modulares para que puedan "inyectarse" fácilmente en clones de otros clientes.
 - **Rol del Desarrollador (SaaS Provider):** Daniel actúa como el proveedor de la plataforma. La IA debe priorizar la creación de herramientas de diagnóstico y logs que permitan a Daniel dar soporte técnico rápido sin entrar a la lógica de negocio de cada clínica.
 
+#### 🤖 Estrategia de Replicación del Bot y Cronjobs en Firebase Functions:
+Para asegurar que el backend y el Bot de WhatsApp sean 100% replicables sin modificar código duro en cada clonación:
+1. **Puntos de Enlace Webhook Dinámicos:**
+   - Cada nueva clínica tiene su propio número de WhatsApp de Twilio.
+   - El webhook de Twilio de cada clínica apuntará a su Cloud Function específica de Firebase: `https://<region>-<id-proyecto-firebase>.cloudfunctions.net/whatsapp_bot`.
+   - Las funciones Cloud se despliegan automáticamente al ejecutar `firebase deploy`, creando la URL única sin configuración manual.
+2. **Variables de Entorno y Secrets (Google Secret Manager):**
+   - Las credenciales sensibles (ej. `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`) nunca irán escritas en el código.
+   - Se guardarán en el gestor de secretos nativo de Firebase/Google Cloud: `firebase functions:secrets:set TWILIO_AUTH_TOKEN="valor"`.
+   - El código del bot lee estas variables de manera agnóstica (`os.environ.get("TWILIO_AUTH_TOKEN")`).
+3. **Parámetros Clínicos en Firestore (/config/clinic):**
+   - Teléfonos de terapeutas, plantillas de mensajes, comisiones y calendarios se guardarán en un documento maestro de Firestore bajo la ruta `/config/clinic`.
+   - El bot de la Cloud Function lee dinámicamente este documento en cada mensaje. Así, la misma plantilla maestra de código funciona para cualquier clínica, adaptándose en milisegundos a sus terapeutas y reglas.
+4. **Ciclo de Vida del Cronjob (Google Cloud Scheduler):**
+   - Las tareas programadas (`/cron/reminders`, `/cron/daily-summary`) se declaran mediante decoradores en el código Python de Firebase:
+     `@on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City")`
+   - Al hacer `firebase deploy`, Google Cloud Scheduler crea e inicializa automáticamente los crons nativos en el nuevo proyecto de la clínica, eliminando la necesidad de dar de alta cronjobs manuales en plataformas externas. Costo final: $0.
+
 ## 🌟 Módulos Avanzados (Roadmap Funcional)
 Para diferenciar la aplicación y maximizar el ahorro de tiempo, se proponen los siguientes módulos para la V2:
 
