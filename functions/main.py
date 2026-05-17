@@ -26,9 +26,14 @@ from googleapiclient.discovery import build
 
 # ── 1. Inicialización Global y Secretos ────────────────────────────────────
 
-if not firebase_admin._apps:
-    firebase_admin.initialize_app()
-db = firestore.client()
+# Proxy Dinámico para evitar que Firebase CLI falle al analizar el archivo localmente
+class FirestoreProxy:
+    def __getattr__(self, name):
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app()
+        return getattr(firestore.client(), name)
+
+db = FirestoreProxy()
 
 MX_TZ = pytz.timezone('America/Mexico_City')
 
