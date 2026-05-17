@@ -9,10 +9,38 @@
 
 :root {
     --header-height: 64px;
+    --bottom-nav-height: 4.5rem;
     --primary: #3b82f6;
     --primary-hover: #2563eb;
     --success: #10b981;
     --danger: #ef4444;
+}
+
+@layer utilities {
+    .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .touch-manipulation {
+        touch-action: manipulation;
+    }
+
+    .pb-bottom-nav {
+        padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+
+    .pt-safe-top {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .pb-safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .modal-sheet-mobile {
+        @apply w-full max-h-[92dvh] rounded-t-3xl md:max-w-lg md:max-h-[85vh] md:rounded-3xl;
+    }
 }
 
 body {
@@ -149,6 +177,32 @@ header::after {
 
 #sidebarOverlay {
     transition: opacity 0.2s ease;
+}
+
+/* ── Mobile bottom navigation (Fase 1) ─────────── */
+#mainBottomNav {
+    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#mainBottomNav .bottom-nav-item.is-active {
+    color: #2563eb;
+}
+
+#mainBottomNav .bottom-nav-item.is-active .bottom-nav-icon-wrap {
+    background-color: #eff6ff;
+}
+
+#mobileMoreSheet {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+    #mainBottomNav,
+    #mobileMoreOverlay,
+    #mobileMoreSheet {
+        display: none !important;
+    }
 }
 
 /* ── Print Styles ─────────────────────────────── */

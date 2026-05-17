@@ -10,6 +10,7 @@ import { logoutUser, db, collectionPath, collection, query, where, onSnapshot } 
 import { CalendarState } from '../modules/calendar/CalendarState.js';
 import { SyncService } from '../services/SyncService.js';
 import { ToastService } from '../utils/ToastService.js';
+import { MobileNav } from '../utils/MobileNav.js';
 
 export const Header = {
 
@@ -25,7 +26,7 @@ export const Header = {
         header.innerHTML = `
             <div class="h-full px-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <button id="mobileMenuBtn" onclick="toggleSidebarMobile()" class="md:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 rounded-lg">
+                    <button type="button" id="mobileMenuBtn" class="md:hidden p-2 -ml-2 text-gray-600 hover:text-blue-600 rounded-lg touch-target touch-manipulation" aria-label="Abrir menú de pacientes">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                     </button>
                     <div id="userInfo" class="flex items-center gap-3"></div>
@@ -532,33 +533,10 @@ export const Header = {
             const overlay = document.getElementById('sidebarOverlay');
             const sidebar = document.getElementById('mainSidebar');
 
-            if (mobileMenuBtn && sidebar && overlay) {
-                console.log('📱 Menú móvil clickeado. Estado actual:', sidebar.classList.contains('-translate-x-full') ? 'Cerrado' : 'Abierto');
-                // Toggle sidebar
-                const isClosed = sidebar.classList.contains('-translate-x-full');
-                if (isClosed) {
-                    sidebar.classList.remove('-translate-x-full');
-                    sidebar.classList.add('translate-x-0');
-                    overlay.classList.remove('hidden');
-                    overlay.style.setProperty('display', 'block', 'important');
-                } else {
-                    sidebar.classList.add('-translate-x-full');
-                    sidebar.classList.remove('translate-x-0');
-                    overlay.classList.add('hidden');
-                    overlay.style.setProperty('display', 'none', 'important');
-                }
-            }
-
-            // 4. Click en Overlay para cerrar sidebar
-            if (e.target.id === 'sidebarOverlay') {
-                console.log('🌑 Click en overlay para cerrar sidebar');
-                const sidebar = document.getElementById('mainSidebar');
-                if (sidebar) {
-                    sidebar.classList.add('-translate-x-full');
-                    sidebar.classList.remove('translate-x-0');
-                }
-                e.target.classList.add('hidden');
-                e.target.style.setProperty('display', 'none', 'important');
+            if (mobileMenuBtn) {
+                e.preventDefault();
+                MobileNav.showPatients();
+                return;
             }
 
             // 5. Botón Google Sync (Manual / Sincronización activa)

@@ -242,6 +242,12 @@ Para que esta aplicación sea vendible o replicable para otras clínicas de mane
 4. **White-Labeling:** Centralizar logos, nombres de clínica y paletas de colores en variables CSS y objetos de configuración para permitir el cambio de identidad visual sin tocar el código.
 5. **Panel de Onboarding / Setup Wizard:** Crear una interfaz administrativa inicial donde el nuevo cliente pueda vincular sus propios recursos de Google (OAuth, IDs de Sheets) de forma guiada.
 
+#### 📱 Estrategia de Distribución y Monetización SaaS (Opción A - App Única)
+Para que el modelo de negocio sea altamente rentable y con costo de soporte $0, el proyecto seguirá la **Opción A (App Única Multiclínica)**:
+1. **Distribución en Tiendas (App Única):** Se subirá una sola aplicación oficial de Parláre a las tiendas de Google Play y App Store. Al iniciar sesión, el sistema detecta a qué organización pertenece el usuario (`clinicId`) y personaliza toda la interfaz (logo, colores, terapeutas y pacientes) de forma dinámica. Esto evita la inmanejable pesadilla de compilar y subir una app distinta para cada cliente en las tiendas.
+2. **Monetización por Asientos (Seat-Based Pricing):** El modelo cobrará una mensualidad base según el límite de terapeutas permitidos. Desde su panel, el administrador puede invitar a terapeutas por correo. Si supera el límite contratado, la app solicita una actualización automática a través de **Stripe** antes de enviar la invitación por correo.
+3. **Seguridad y Aislamiento (Multitenancy en Firestore):** Todos los documentos de citas y pacientes tendrán de forma obligatoria el campo `clinicId` (ej. `clinicId: "clinica_pancha"`). Mediante **Reglas de Seguridad en Firestore**, blindamos el acceso para asegurar que ningún usuario pueda leer ni modificar datos de otras clínicas.
+
 #### 🛠️ Filosofía de Desarrollo SaaS (Para Cursor)
 Para que este proyecto sea un motor de negocio escalable, Cursor debe seguir estos principios:
 - **Autonomía Administrativa (No-Code para el cliente):** El cliente final (dueño de la clínica) debe poder configurar costos, comisiones, horarios y staff desde un panel interno sin intervención del desarrollador. El código nunca debe tener precios "hardcoded".
@@ -298,4 +304,4 @@ Al comenzar cualquier sesión de desarrollo:
 3. Preguntar al usuario qué tarea o bug tiene hoy.
 
 ---
-*Última actualización: 16 de Mayo, 2026 — Incluye reglas aprendidas de bugs reales, arquitectura del código y visión estratégica V2.*
+*Última actualización: 17 de Mayo, 2026 — Añadido blueprint para la Opción A SaaS (Distribución, Asientos con Stripe y Firestore Multitenancy).*

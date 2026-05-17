@@ -6,6 +6,7 @@ import { MainModals } from './MainModals.js';
 import { PatientModalsHTML } from '../managers/patient/PatientModalsHTML.js';
 import { Sidebar } from './Sidebar.js';
 import { Header } from './Header.js';
+import { MobileBottomNav } from './MobileBottomNav.js';
 
 export const ComponentManager = {
     async init() {
@@ -24,6 +25,10 @@ export const ComponentManager = {
 
         // 2. Inyectar Sidebar (Dentro del mainLayout, antes del <main>)
         Sidebar.inject(mainLayout);
+
+        // 2b. Barra de navegación inferior (solo móvil)
+        MobileBottomNav.inject(appContent);
+        MobileBottomNav.init();
 
         // 3. Inyectar Modales de Paciente (En la raíz de la App)
         PatientModalsHTML.inject(appContent);
