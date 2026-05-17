@@ -11,7 +11,7 @@ import pytz
 # Firebase & Functions
 import firebase_admin
 from firebase_admin import firestore
-from firebase_functions import https_fn, options, scheduler_fn
+from firebase_functions import https_fn, options, scheduler_fn, firestore_fn
 from firebase_functions.params import SecretParam
 
 # Twilio
@@ -453,3 +453,31 @@ def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
                 }).execute()
                 db.collection('appointments').document(a['_id']).update({'googleEventId': created_ev['id']})
             except: pass
+
+# ── 7. Gatillos de Base de Datos (Firestore Triggers) ─────────────────────
+
+@firestore_fn.on_document_created(document="patientProfiles/{patientId}", secrets=ALL_SECRETS)
+def on_patient_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) -> None:
+    try:
+        snap = event.data
+        if not snap: return
+        data = snap.to_dict()
+        if not data: return
+        
+        phone = data.get('phone')
+        wants_wa = data.get('wantsWhatsapp', True)
+        if not phone or not wants_wa: return
+        
+        name = data.get('name', 'Paciente').strip()
+        first_name = name.split(' ')[0] if name else 'Paciente'
+        dest = f"whatsapp:+52{normalize_phone(phone)}"
+        
+        get_twilio_client().messages.create(
+            from_=TWILIO_WHATSAPP_FROM, to=dest,
+            content_sid='HX2ce20d173330363b2db700bc02e66204',
+            content_variables=json.dumps({"1": first_name})
+        )
+        print(f"🎉 Mensaje de bienvenida enviado exitosamente a: {name}")
+    except Exception as e:
+        print(f"❌ Error en trigger de bienvenida: {e}")
+
