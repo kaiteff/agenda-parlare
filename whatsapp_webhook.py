@@ -559,7 +559,7 @@ def webhook():
                     clean_phone
                 )
             
-            resp.message("Entendido. Hemos cancelado tu sesión. 📞 Recepción se pondrá en contacto contigo a la brevedad para el seguimiento de tu justificante y reagendar. ¡Bonito día!")
+            resp.message("Cita cancelada. ¡Esperamos que todo esté bien en casa! 😊 Para apoyarte a que no se aplique el cargo de esta inasistencia y poder reagendar lo antes posible, por favor envíale tu justificante médico a Yari de Recepción aquí: https://wa.me/523315196702. ¡Te mandamos un abrazo!")
         else:
             resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
         
