@@ -501,9 +501,15 @@ export const PatientModals = {
         let statusTextColor = '';
 
         if (apt.isCancelled) {
-            statusClass = 'bg-red-50 border-red-200 opacity-75';
-            statusText = '❌ Cancelada';
-            statusTextColor = 'text-red-600';
+            if (apt.justified) {
+                statusClass = 'bg-emerald-50 border-emerald-200 opacity-80';
+                statusText = '💚 Justificada';
+                statusTextColor = 'text-emerald-700 font-bold';
+            } else {
+                statusClass = 'bg-red-50 border-red-200 opacity-75';
+                statusText = '❌ Cancelada';
+                statusTextColor = 'text-red-600';
+            }
         } else if (apt.isPaid) {
             statusClass = 'bg-green-50 border-green-200';
             statusText = '✓ Pagada';

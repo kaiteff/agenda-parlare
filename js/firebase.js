@@ -4,6 +4,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, getDocs, getDoc, setDoc, orderBy, limit, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -30,6 +32,8 @@ export let patientProfiles = [];
 // Variables que se inicializarán después
 export let db = null;
 export let userId = null;
+export let storage = null;
+
 
 // Variable para almacenar la instancia de auth
 let authInstance = null;
@@ -75,6 +79,8 @@ export async function initializeFirebase(onAuthCallback) {
         
         authInstance = auth;
         db = getFirestore(app);
+        storage = getStorage(app);
+
 
         console.log("✅ Firebase inicializado correctamente");
         console.log("🔐 authInstance:", authInstance ? "OK" : "NULL");
@@ -147,5 +153,7 @@ export async function logoutUser() {
     }
 }
 
-// Exportar funciones de Firestore
+// Exportar funciones de Firestore y Storage
 export { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp, getDocs, getDoc, setDoc, orderBy, limit, where, writeBatch };
+export { ref, uploadBytes, getDownloadURL, deleteObject };
+

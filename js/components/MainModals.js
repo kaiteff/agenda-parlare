@@ -151,6 +151,37 @@ export const MainModals = {
                             <div id="busySlotsList" class="space-y-1 text-[10px] text-gray-500 italic scroller max-h-24"></div>
                         </div>
 
+                        <!-- Justification Section (Only visible for cancelled appointments) -->
+                        <div id="justificationSection" class="hidden pt-4 border-t border-gray-100 space-y-3 bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                            <h4 class="text-xs font-bold text-red-800 uppercase flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Justificante Médico
+                            </h4>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="isJustified" class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+                                <span class="text-sm font-semibold text-gray-700 select-none">Inasistencia Justificada (No cobrar)</span>
+                            </label>
+                            
+                            <div id="justificationUploadArea" class="space-y-2 mt-2">
+                                <div id="justificationDropZone" class="border-2 border-dashed border-red-200 rounded-xl p-4 text-center cursor-pointer bg-white hover:bg-gray-50 hover:border-blue-400 transition-all flex flex-col items-center justify-center gap-1">
+                                    <svg class="w-8 h-8 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4v12"></path></svg>
+                                    <span class="text-xs font-bold text-red-700">Cargar Justificante Opcional</span>
+                                    <span class="text-[10px] text-gray-400">Arrastra aquí o haz clic (JPG, PNG, PDF - Máx 5MB)</span>
+                                    <input type="file" id="justificationFileInput" class="hidden" accept="image/*,.pdf">
+                                </div>
+                                <div id="justificationFilePreview" class="hidden flex items-center justify-between bg-white border border-red-200 rounded-xl p-2.5 text-xs shadow-sm">
+                                    <div class="flex items-center gap-2 truncate">
+                                        <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <span id="justificationFileName" class="truncate font-medium text-gray-700">archivo.png</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="button" id="viewJustificationBtn" class="px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 font-bold transition-all">Ver</button>
+                                        <button type="button" id="removeJustificationBtn" class="px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 font-bold transition-all">Quitar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Audit Info -->
                         <div id="appointmentAuditInfo" class="hidden pt-4 border-t border-gray-100 space-y-1 text-[10px] text-gray-400">
                             <p id="confirmedAtLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span> <span></span></p>

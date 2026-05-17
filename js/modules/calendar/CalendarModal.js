@@ -28,6 +28,7 @@ export const CalendarModal = {
     init() {
         this.bindEvents();
         this.bindGridEvents();
+        this.setupJustificationEvents();
     },
 
     bindEvents() {
@@ -357,6 +358,68 @@ export const CalendarModal = {
             dom.cancelBtn.className = "flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors font-semibold";
         }
 
+        // JUSTIFICACIÓN MÉDICA (Solo si la cita está cancelada)
+        if (dom.justificationSection) {
+            if (ev.isCancelled) {
+                dom.justificationSection.classList.remove('hidden');
+                dom.isJustified.checked = ev.justified || false;
+                
+                // Si ya tiene un archivo subido
+                if (ev.justificationUrl) {
+                    dom.justificationUploadArea.classList.add('hidden');
+                    dom.justificationFilePreview.classList.remove('hidden');
+                    dom.justificationFileName.textContent = ev.justificationFileName || "Justificante Médico";
+                    
+                    dom.viewJustificationBtn.onclick = () => window.open(ev.justificationUrl, '_blank');
+                    dom.removeJustificationBtn.onclick = async () => {
+                        if (confirm("¿Estás seguro de quitar este justificante médico?")) {
+                            LoaderService.show("Eliminando archivo...");
+                            try {
+                                const { ref, deleteObject, storage, doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                                
+                                // Eliminar de Storage
+                                const fileRef = ref(storage, ev.justificationUrl);
+                                await deleteObject(fileRef);
+                                
+                                // Limpiar Firestore
+                                const docRef = doc(db, collectionPath, ev.id);
+                                await updateDoc(docRef, {
+                                    justificationUrl: null,
+                                    justificationFileName: null,
+                                    justified: false,
+                                    justifiedAt: null,
+                                    justifiedBy: null
+                                });
+                                
+                                // Actualizar estado local
+                                ev.justificationUrl = null;
+                                ev.justificationFileName = null;
+                                ev.justified = false;
+                                ev.justifiedAt = null;
+                                ev.justifiedBy = null;
+                                
+                                dom.isJustified.checked = false;
+                                dom.justificationUploadArea.classList.remove('hidden');
+                                dom.justificationFilePreview.classList.add('hidden');
+                                ToastService.success("Justificante eliminado correctamente");
+                            } catch (err) {
+                                console.error("Error al borrar justificante:", err);
+                                ToastService.error("No se pudo eliminar el archivo: " + err.message);
+                            } finally {
+                                LoaderService.hide();
+                            }
+                        }
+                    };
+                } else {
+                    // Si no tiene archivo subido
+                    dom.justificationUploadArea.classList.remove('hidden');
+                    dom.justificationFilePreview.classList.add('hidden');
+                }
+            } else {
+                dom.justificationSection.classList.add('hidden');
+            }
+        }
+
         // Smart Suggestion (Best Pattern)
         const canEdit = AuthManager.canEditItem(ev);
         if (canEdit) {
@@ -401,6 +464,174 @@ export const CalendarModal = {
         }
         CalendarState.selectedEventId = null;
         console.log('🚪 CalendarModal: Modal cerrado correctamente');
+    },
+
+    setupJustificationEvents() {
+        const dom = CalendarState.dom;
+        if (!dom.justificationDropZone || !dom.justificationFileInput) return;
+
+        // 1. Clic para seleccionar archivo
+        dom.justificationDropZone.onclick = (e) => {
+            e.stopPropagation();
+            dom.justificationFileInput.click();
+        };
+
+        // 2. Drag & Drop visual
+        dom.justificationDropZone.ondragover = (e) => {
+            e.preventDefault();
+            dom.justificationDropZone.classList.add('bg-red-100', 'border-blue-400');
+        };
+
+        dom.justificationDropZone.ondragleave = () => {
+            dom.justificationDropZone.classList.remove('bg-red-100', 'border-blue-400');
+        };
+
+        dom.justificationDropZone.ondrop = (e) => {
+            e.preventDefault();
+            dom.justificationDropZone.classList.remove('bg-red-100', 'border-blue-400');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleJustificationUpload(files[0]);
+            }
+        };
+
+        // 3. Selección directa por input
+        dom.justificationFileInput.onchange = (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+                this.handleJustificationUpload(files[0]);
+            }
+        };
+
+        // 4. Guardado instantáneo al cambiar checkbox "Justificado"
+        if (dom.isJustified) {
+            dom.isJustified.onchange = async () => {
+                const eventId = CalendarState.selectedEventId;
+                if (!eventId) return;
+                const ev = CalendarState.appointments.find(a => a.id === eventId);
+                if (!ev) return;
+
+                const isChecked = dom.isJustified.checked;
+                LoaderService.show("Guardando justificación...");
+                try {
+                    const { doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+                    const docRef = doc(db, collectionPath, eventId);
+                    
+                    const updateObj = {
+                        justified: isChecked,
+                        justifiedAt: isChecked ? new Date().toISOString() : null,
+                        justifiedBy: isChecked ? (AuthManager.currentUser?.email || 'unknown') : null
+                    };
+                    await updateDoc(docRef, updateObj);
+                    
+                    ev.justified = isChecked;
+                    ev.justifiedAt = updateObj.justifiedAt;
+                    ev.justifiedBy = updateObj.justifiedBy;
+
+                    ToastService.success(isChecked ? "Cita marcada como justificada (No Cobrar) 💚" : "Cita marcada como inasistencia regular ❌");
+                } catch (err) {
+                    console.error("Error al actualizar justificación:", err);
+                    dom.isJustified.checked = !isChecked; // Revertir visualmente
+                    ToastService.error("Error: " + err.message);
+                } finally {
+                    LoaderService.hide();
+                }
+            };
+        }
+    },
+
+    async handleJustificationUpload(file) {
+        const dom = CalendarState.dom;
+        const eventId = CalendarState.selectedEventId;
+        if (!eventId) return;
+
+        const ev = CalendarState.appointments.find(a => a.id === eventId);
+        if (!ev) return;
+
+        // Validación de tamaño (Máx 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            ToastService.warn("El justificante supera el límite de 5MB");
+            return;
+        }
+
+        LoaderService.show("Subiendo justificante médico...");
+        try {
+            const { storage, ref, uploadBytes, getDownloadURL, doc, updateDoc, db, collectionPath } = await import('../../firebase.js');
+            
+            // Nombre de archivo con timestamp único
+            const fileExtension = file.name.split('.').pop();
+            const fileName = `justificantes/${eventId}_${Date.now()}.${fileExtension}`;
+            const fileRef = ref(storage, fileName);
+
+            // Subir archivo a Firebase Storage
+            await uploadBytes(fileRef, file);
+            const downloadUrl = await getDownloadURL(fileRef);
+
+            // Guardar referencias en el documento de Firestore de la cita
+            const docRef = doc(db, collectionPath, eventId);
+            const updateObj = {
+                justificationUrl: downloadUrl,
+                justificationFileName: file.name,
+                justified: true,
+                justifiedAt: new Date().toISOString(),
+                justifiedBy: AuthManager.currentUser?.email || 'unknown'
+            };
+            await updateDoc(docRef, updateObj);
+
+            // Actualizar estado local en memoria
+            ev.justificationUrl = downloadUrl;
+            ev.justificationFileName = file.name;
+            ev.justified = true;
+            ev.justifiedAt = updateObj.justifiedAt;
+            ev.justifiedBy = updateObj.justifiedBy;
+
+            // Reflejar cambios visuales en el modal de forma interactiva
+            dom.isJustified.checked = true;
+            dom.justificationUploadArea.classList.add('hidden');
+            dom.justificationFilePreview.classList.remove('hidden');
+            dom.justificationFileName.textContent = file.name;
+
+            // Re-vincular botones de ver y eliminar
+            dom.viewJustificationBtn.onclick = () => window.open(downloadUrl, '_blank');
+            dom.removeJustificationBtn.onclick = async () => {
+                if (confirm("¿Estás seguro de quitar este justificante médico?")) {
+                    LoaderService.show("Eliminando archivo...");
+                    try {
+                        const { deleteObject } = await import('../../firebase.js');
+                        await deleteObject(fileRef);
+                        await updateDoc(docRef, {
+                            justificationUrl: null,
+                            justificationFileName: null,
+                            justified: false,
+                            justifiedAt: null,
+                            justifiedBy: null
+                        });
+                        ev.justificationUrl = null;
+                        ev.justificationFileName = null;
+                        ev.justified = false;
+                        ev.justifiedAt = null;
+                        ev.justifiedBy = null;
+
+                        dom.isJustified.checked = false;
+                        dom.justificationUploadArea.classList.remove('hidden');
+                        dom.justificationFilePreview.classList.add('hidden');
+                        ToastService.success("Justificante eliminado correctamente");
+                    } catch (e) {
+                        console.error("Error al eliminar justificante:", e);
+                        ToastService.error("No se pudo eliminar: " + e.message);
+                    } finally {
+                        LoaderService.hide();
+                    }
+                }
+            };
+
+            ToastService.success("¡Justificante cargado y guardado correctamente! 🎉");
+        } catch (error) {
+            console.error("Error al subir justificante:", error);
+            ToastService.error("Error al subir justificante: " + error.message);
+        } finally {
+            LoaderService.hide();
+        }
     },
 
     populatePatientSuggestions(query) {
