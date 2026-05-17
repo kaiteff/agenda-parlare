@@ -1,0 +1,131 @@
+# 🛡️ Plan de Migración Serverless: Firebase Blaze & Functions (Python)
+### (Guía Técnica y Protocolo "Cero Riesgo" para Clonación SaaS)
+
+Este documento detalla la estrategia de ingeniería para migrar el backend de la agenda (el bot de WhatsApp de Twilio y los cronjobs diarios) desde **Render** a **Firebase Cloud Functions (Python)** en el plan de pago por uso Firebase Blaze.
+
+---
+
+## 🗺️ Mapa de Arquitectura: Render (Actual) vs. Firebase Blaze (Futuro)
+
+```mermaid
+graph TD
+    subgraph Servidor Actual (Render)
+        A[whatsapp_webhook.py] -->|Flask App| B[Webhook /webhook]
+        A -->|API| C[Send Message /api/send-message]
+        D[Cronjobs Externos] -->|Peticiones HTTP 8 AM| E[/cron/reminders]
+        D -->|Peticiones HTTP 9 PM| F[/cron/daily-summary]
+    end
+
+    subgraph Serverless Nativo (Firebase Blaze)
+        G[functions/main.py] -->|HTTPS Trigger| H[Cloud Function: whatsapp_webhook]
+        G -->|HTTPS Trigger| I[Cloud Function: send_message_api]
+        J[Cloud Scheduler] -->|Cron Oficial 8 AM| K[Cloud Function: send_reminders_cron]
+        J -->|Cron Oficial 9 PM| L[Cloud Function: daily_summary_cron]
+    end
+    
+    style Servidor Actual (Render) fill:#fee2e2,stroke:#ef4444,stroke-width:2px
+    style Serverless Nativo (Firebase Blaze) fill:#dcfce7,stroke:#22c55e,stroke-width:2px
+```
+
+---
+
+## 🎯 Ventajas del Camino A (Serverless en Python)
+1. **Costo Real de Operación $0:** Firebase Functions en plan Blaze regala **2 millones de ejecuciones de funciones** y **3 descargas de Scheduler al mes**. No pagarás nada por el bot.
+2. **Cero Mantenimiento de Servidores:** Olvídate de caídas en Render, cuotas de inactividad o configuraciones manuales. Google administra la infraestructura de forma automática.
+3. **Credenciales 100% Seguras:** Las llaves de Twilio y tokens de Google se guardan en **Google Secret Manager** y se inyectan en tiempo de ejecución, eliminando vulnerabilidades en el repositorio.
+4. **Clonación SaaS Automatizada:** En una nueva clínica, ejecutar `firebase deploy` creará instantáneamente toda la web móvil, base de datos, bot de WhatsApp y cronjobs de forma automatizada y aislada.
+
+---
+
+## 📋 Protocolo de Transición Híbrido "Cero Riesgo" (Paso a Paso)
+
+Para garantizar la estabilidad operativa del Centro Parláre, la migración se hará en paralelo. **Render seguirá encendido en todo momento hasta validar que Firebase funciona al 100%.**
+
+### Paso 1: Preparación (Dueño de la Clínica)
+1. Entra a la consola de Firebase (`https://console.firebase.google.com/`).
+2. En la parte inferior izquierda, haz clic en **"Upgrade"** y selecciona el **Plan Blaze** (Pago por uso).
+   > *Nota: Firebase te pedirá asociar una tarjeta de crédito. No te preocupes, el tráfico actual de Parláre está al 0.01% del límite gratuito de Blaze, por lo que el cargo mensual seguirá siendo de $0.*
+
+### Paso 2: Inicialización de Functions en la Computadora
+Desde la terminal en `d:\agbc\Ag_Pa`, iniciaremos el entorno de funciones en Python ejecutando:
+```bash
+firebase init functions
+```
+* Seleccionar **Python** como lenguaje.
+* Responder **No** al sobreescribir archivos existentes si pregunta.
+* Esto creará un directorio `/functions` con `main.py` y `requirements.txt`.
+
+### Paso 3: Definición del Código Serverless
+#### A. Dependencias (`functions/requirements.txt`):
+```text
+firebase-functions~=2.0
+firebase-admin~=6.0
+twilio~=8.0
+pytz
+google-api-python-client
+google-auth
+google-auth-oauthlib
+```
+
+#### B. Funciones en `functions/main.py`:
+Implementaremos la lógica actual adaptándola a los decoradores oficiales de Firebase de 2da generación:
+* **El Webhook:**
+  ```python
+  from firebase_functions import https_fn, options
+  
+  @https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["POST", "OPTIONS"]))
+  def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
+      # Lógica idéntica de Twilio, parsing de req.form y búsquedas en Firestore
+  ```
+* **Los Recordatorios Programados (Scheduler):**
+  ```python
+  from firebase_functions import scheduler_fn
+  
+  @scheduler_fn.on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City")
+  def send_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
+      # Lógica idéntica del recordatorio de las 8 AM
+  ```
+
+### Paso 4: Registro de Secretos Seguros
+En lugar de escribir tokens en archivos JSON o variables de entorno de Render, registramos las llaves directamente en Firebase:
+```bash
+firebase functions:secrets:set TWILIO_SID="tu_sid"
+firebase functions:secrets:set TWILIO_TOKEN="tu_token"
+firebase functions:secrets:set GOOGLE_REFRESH_TOKEN="tu_refresh_token"
+firebase functions:secrets:set GOOGLE_CLIENT_ID="tu_client_id"
+firebase functions:secrets:set GOOGLE_CLIENT_SECRET="tu_client_secret"
+```
+
+### Paso 5: Despliegue en Paralelo
+Desplegamos la carpeta `/functions` sin tocar la web actual:
+```bash
+firebase deploy --only functions
+```
+Al finalizar, Firebase te entregará una URL única para tu webhook, por ejemplo:
+`https://us-central1-taconotaco-d94fc.cloudfunctions.net/whatsapp_webhook`
+
+---
+
+## 🧪 Plan de Pruebas y Validación (Fase Híbrida)
+
+1. **Prueba Aislada (Postman / Consola):**
+   * Enviaremos una petición de prueba simulada a la URL de la Cloud Function para validar que busque correctamente en la base de datos de Firestore.
+2. **Switch Rápido de WhatsApp (Twilio Webhook):**
+   * Entraremos a la consola de Twilio y en la sección de WhatsApp Sandbox / Número Activo, cambiaremos la URL del Webhook de Render por la nueva URL de la Cloud Function de Firebase.
+   * **La Prueba:** Enviaremos un mensaje de WhatsApp (ej: *"Sí, confirmo"*) desde un teléfono real.
+   * **Validación:** Confirmamos que la cita se marque en Firestore en tiempo real y que el semáforo de Google cambie a verde.
+3. **Monitoreo de Logs:**
+   * Abriremos la consola de Firebase en la pestaña "Functions -> Logs" para verificar que no haya crashes ni desfases de zona horaria.
+
+---
+
+## 🛡️ Protocolo de Rollback Instantáneo (Plan de Retorno)
+
+Si durante la prueba de 5 minutos detectamos algún comportamiento extraño en la Cloud Function:
+1. **Acción de Reversión:** Entramos a la consola de Twilio de inmediato.
+2. **Restaurar URL:** Reemplazamos la URL de la Cloud Function de Firebase con la URL antigua de Render (que ha permanecido encendida):
+   `https://agenda-parlare-webhook.onrender.com/webhook`
+3. **¡Listo!** El sistema vuelve a operar a través de Render de forma instantánea en menos de 10 segundos, asegurando que ningún paciente se quede sin atención.
+
+---
+*Documento de Control y Estrategia V2 — Diseñado para asegurar la continuidad de negocio y la escalabilidad técnica hacia un SaaS agnóstico.*
