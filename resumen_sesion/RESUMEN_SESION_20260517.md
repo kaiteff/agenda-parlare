@@ -3,7 +3,7 @@
 ## 🎯 Objetivo Principal
 1. **Flujo de Justificantes Médicos (Completado):** Implementar la gestión, carga en Firebase Storage ($0 USD) y ciclo de vida de 120 días para archivos comprobantes de inasistencia (evitando cobros y protegiendo el almacenamiento gratuito de 5GB).
 2. **Fase 1: UI Móvil en Web (Completado):** Modernizar toda la SPA web de Agenda Parláre para que se vea y se sienta como una aplicación móvil nativa premium de alta escala ($10,000 USD), optimizando interacciones táctiles en pantallas pequeñas (< 768px).
-3. **Estrategia SaaS & Blaze (Planificado):** Diseñar y formalizar la arquitectura serverless para el bot de WhatsApp (Firebase Cloud Functions en Python) y los recordatorios automáticos (Google Cloud Scheduler), listos para clonar sin dependencias externas.
+3. **Fase 2: Migración a Serverless (Completado):** Transitionar el bot de WhatsApp, las notificaciones masivas de citas, los reportes diarios de terapeutas y la sincronización de calendarios a **Firebase Cloud Functions (Python)** y **Google Cloud Scheduler** bajo el plan Blaze, logrando costos fijos de **$0 USD** mensuales y un despliegue 100% automatizado libre de Render.
 
 ---
 
@@ -24,17 +24,24 @@
   * Consolidación del indicador de sincronización en **`js/utils/GoogleSyncUI.js`**.
   * Reubicación del semáforo e inicio de sesión de **Google Sync** dentro del menú deslizante de **"Más opciones"** en celulares, integrando un punto dinámico con brillo animado según el estado del token de Google.
 
-### 3. Planificación y Documentación del Camino A (Serverless SaaS)
-* **Estrategia en el Cerebro de la IA (`VISION_PARLARE_V2.md`):** Formalización de la Opción A SaaS (distribución en una sola app multiclínica unificada, cobro de asientos por Stripe y aislamiento seguro mediante reglas Firestore con `clinicId`).
-* **Hoja de Ruta Técnica (`DOCUMENTACION_MIGRACION_BLAZE.md`):** Creación del plan paso a paso y protocolo "Cero Riesgo" (híbrido en paralelo) para migrar a Firebase Functions en Python, inyectar variables con Google Secret Manager y automatizar cronjobs con Google Cloud Scheduler.
+### 3. Migración Serverless a Firebase Cloud Functions 2nd Gen (Python)
+* **Seguridad Directa en Secret Manager:** Se blindó el proyecto migrando las llaves de Twilio y los tokens OAuth de Google a **Google Secret Manager** (`TWILIO_SID`, `TWILIO_TOKEN`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) para que nunca existan en repositorios ni código estático.
+* **Backend de Funciones y Tareas Programadas (`functions/main.py`):**
+  * Se migró la ruta del bot de Twilio a la Cloud Function `@https_fn.on_request` (`whatsapp_webhook`), conectándose de forma nativa a Firestore.
+  * Se configuraron 3 crons independientes con `@scheduler_fn.on_schedule`: `send_reminders_cron` (8:00 AM), `daily_summary_cron` (9:00 PM) y `server_calendar_sync` (1:00 AM lunes) eliminando la necesidad de UptimeRobot o crons externos.
+* **Resolución del Bug de Análisis Local (`FirestoreProxy`):** Se diseñó un proxy de acceso dinámico a Firestore para evitar crashes locales de credenciales en `firebase deploy` provocados por la importación estática de la CLI de Firebase.
+* **Mensaje de Bienvenida Autónomo (`on_patient_created`):** Se integró un Firestore Trigger (`@firestore_fn.on_document_created`) que escucha la creación de perfiles de pacientes en Firestore y dispara un WhatsApp automático de bienvenida usando el template oficial `HX2ce20d173330363b2db700bc02e66204`.
 
 ---
 
 ## 🔒 Control de Versiones & DevOps (Entregables)
-1. **Compilaciones de Estilos:** Ejecutados comandos `npm run build` para consolidar todas las nuevas clases táctiles y responsive en `dist/output.css`.
-2. **Backups Seguros en GitHub:** staged, committed y pushed todos los cambios a la rama `main` en tiempo real.
-   * **Commit Mobile UI (Step 1-2):** `362c7a6` - *feat: implement touch-friendly event modal and bottom-sheet layout (Step 2)*
-   * **Commit Mobile UI (Step 3):** `4172353` - *feat: implement touch-friendly patient profile, search, and creation modals (Step 3)*
-   * **Commit Mobile UI (Step 4):** `44627e6` - *feat: optimize calendar toolbar and integrate dynamic Google Sync into mobile More sheet (Step 4)*
-   * **Commit Blaze Plan:** `29bbe76` - *docs: create serverless migration blueprint (DOCUMENTACION_MIGRACION_BLAZE.md)*
-3. **Despliegues en Vivo (Firebase Hosting):** Realizados deploys incrementales a producción (`firebase deploy --only hosting`) tras cada Sprint. La versión móvil en vivo ya es 100% interactiva en `https://taconotaco-d94fc.web.app`.
+1. **GitHub Sincronizado:** Todos los entregables compilados e implementados fueron subidos exitosamente a la rama `main` en tiempo real:
+   * **Mobile UI (Fase 1):** Commits `362c7a6`, `4172353` y `44627e6`.
+   * **Serverless Backend (Fase 2):** Commit `c9010d0` (Migración), `2ebc25c` (Proxy Firestore), `f0078d0` (Guía de gotchas GCP) y `d0dba55` (Bienvenida trigger).
+2. **Despliegues en Vivo (Firebase):**
+   * **Frontend:** Implementado al 100% en Firebase Hosting en [taconotaco-d94fc.web.app](https://taconotaco-d94fc.web.app).
+   * **Backend:** Desplegado con éxito total en Cloud Functions con URLs maestras en producción.
+3. **Retiro de Render:** Se desactivaron y apagaron formalmente todos los servicios antiguos en Render y crons de monitoreo HTTP externos, consolidando la operación clínica entera bajo costo $0 de Firebase.
+
+---
+*Resumen de Cierre de Sesión — Control de Roadmap V2. Sistemas 100% funcionales y listos para clonación SaaS.*
