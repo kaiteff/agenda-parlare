@@ -613,6 +613,24 @@ export const PatientModals = {
             `;
         }
 
+        // Justificante Médico en Historial
+        let justificationHtml = '';
+        if (apt.justified && apt.justificationUrl) {
+            justificationHtml = `
+                <div class="flex items-center justify-between text-xs mt-2 border-t pt-2 border-emerald-200/50">
+                    <div class="text-emerald-800 font-medium flex items-center gap-1.5 min-w-0">
+                        <svg class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span class="truncate block text-[10px] text-emerald-700" title="${apt.justificationFileName || 'Comprobante'}">${apt.justificationFileName || 'Comprobante Médico'}</span>
+                    </div>
+                    <button type="button" 
+                            class="px-2 py-0.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-[10px] font-bold shadow-sm transition-all flex items-center gap-1 flex-shrink-0"
+                            onclick="event.stopPropagation(); window.open('${apt.justificationUrl}', '_blank')">
+                        Ver Justificante 📄
+                    </button>
+                </div>
+            `;
+        }
+
         aptEl.innerHTML = `
             <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center gap-2">
@@ -626,6 +644,7 @@ export const PatientModals = {
                 </div>
             </div>
             ${footerHtml}
+            ${justificationHtml}
         `;
 
         dom.patientHistoryList.appendChild(aptEl);
