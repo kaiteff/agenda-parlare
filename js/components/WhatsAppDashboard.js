@@ -102,7 +102,7 @@ export const WhatsAppDashboard = {
                     LoaderService.show("Enviando recordatorios...");
                     
                     try {
-                        const response = await fetch('https://parlare-webhook.onrender.com/cron/reminders?key=parlare_secret_2026', {
+                        const response = await fetch('https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_reminders_api?key=parlare_secret_2026', {
                             method: 'GET',
                             mode: 'cors',
                             headers: {

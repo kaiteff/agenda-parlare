@@ -176,7 +176,7 @@ export const WhatsAppMessaging = {
                 payload.template_sid = sid;
             }
 
-            const response = await fetch('https://parlare-webhook.onrender.com/api/send-message', {
+            const response = await fetch('https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_message_api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

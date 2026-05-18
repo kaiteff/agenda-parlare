@@ -32,6 +32,13 @@
 * **Resolución del Bug de Análisis Local (`FirestoreProxy`):** Se diseñó un proxy de acceso dinámico a Firestore para evitar crashes locales de credenciales en `firebase deploy` provocados por la importación estática de la CLI de Firebase.
 * **Mensaje de Bienvenida Autónomo (`on_patient_created`):** Se integró un Firestore Trigger (`@firestore_fn.on_document_created`) que escucha la creación de perfiles de pacientes en Firestore y dispara un WhatsApp automático de bienvenida usando el template oficial `HX2ce20d173330363b2db700bc02e66204`.
 
+### 4. Hotfix Post-Migración: Recordatorios Manuales e Integración de URLs (Noche)
+* **Lógica Centralizada de Recordatorios:** Se extrajo la lógica de `send_reminders_cron` a un método helper reutilizable `execute_send_reminders()` para evitar duplicidad de código.
+* **Restauración del Disparador Manual (`send_reminders_api`):** Se implementó una nueva Cloud Function HTTPS `@https_fn.on_request` (`send_reminders_api`) que expone de manera segura (validando `key=parlare_secret_2026`) el envío de recordatorios. Esto permite que el botón **"Re-enviar Recordatorios"** del dashboard de WhatsApp funcione perfectamente bajo la arquitectura Serverless.
+* **Actualización de URLs Defunciones de Render:** Se refactorizaron los archivos de frontend `WhatsAppDashboard.js` y `WhatsAppMessaging.js` reemplazando los fetch a la antigua URL de Render (`parlare-webhook.onrender.com`) por las nuevas rutas HTTP de Firebase Cloud Functions (`send_reminders_api` y `send_message_api`), garantizando que tanto los envíos automáticos manuales rápidos como los masivos funcionen sin caídas.
+* **Restauración del Reporte Maestro a Yari:** Se re-integró la generación y envío del reporte diario unificado de citas para la recepcionista Yari al final del cronjob nocturno `daily_summary_cron` (9:00 PM), asegurando la visibilidad administrativa de la clínica.
+* **Prueba en Vivo Exitosa:** Se ejecutó una llamada manual al nuevo endpoint a las 9:18 PM hora México, logrando enviar de inmediato el recordatorio programado pendiente para mañana a la paciente `Ainoa Fernández` de forma exitosa.
+
 ---
 
 ## 🔒 Control de Versiones & DevOps (Entregables)

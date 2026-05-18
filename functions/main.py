@@ -340,51 +340,163 @@ def send_message_api(req: https_fn.Request) -> https_fn.Response:
 
 # ── 6. Tareas Programadas Automáticas (Cloud Scheduler) ───────────────────
 
-@scheduler_fn.on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
-def send_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
+def execute_send_reminders():
+    """Lógica centralizada para enviar recordatorios automáticos de citas para el día de mañana"""
     mx_now = datetime.now(MX_TZ)
     tomorrow = mx_now + timedelta(days=1)
+    day_str = tomorrow.strftime('%Y-%m-%d')
     
     profiles = db.collection('patientProfiles').stream()
     phone_map = {p.to_dict().get('name', '').strip().lower(): p.to_dict() for p in profiles if p.to_dict().get('phone') and p.to_dict().get('wantsWhatsapp', True)}
 
-    start_iso = f"{tomorrow.strftime('%Y-%m-%d')}T00:00:00"
+    start_iso = f"{day_str}T00:00:00"
     end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
 
+    sent_count = 0
+    skipped_count = 0
+    skipped_details = []
+    errors = []
+
     for doc in query:
         apt = doc.to_dict()
-        if apt.get('isCancelled') or apt.get('confirmed'): continue
+        if apt.get('isCancelled') or apt.get('confirmed'):
+            skipped_details.append({
+                'name': apt.get('name', ''),
+                'therapist': apt.get('therapist', 'diana'),
+                'reason': 'already_confirmed' if apt.get('confirmed') else 'cancelled',
+                'date': apt.get('date', '')
+            })
+            continue
+            
         p_name = apt.get('name', '')
         p_info = phone_map.get(p_name.strip().lower())
-        if not p_info: continue
-
-        last_sent = apt.get('lastReminderSentAt')
-        if last_sent and (last_sent.to_datetime() if hasattr(last_sent, 'to_datetime') else last_sent).astimezone(MX_TZ).date() == mx_now.date():
+        if not p_info:
+            skipped_details.append({
+                'name': p_name,
+                'therapist': apt.get('therapist', 'diana'),
+                'reason': 'no_profile_or_phone_or_wantsWhatsapp_false',
+                'date': apt.get('date', '')
+            })
+            skipped_count += 1
             continue
+
+        # 🛡️ GUARDIA: Evitar duplicados si ya se envió un recordatorio hoy
+        last_sent = apt.get('lastReminderSentAt')
+        if last_sent:
+            try:
+                if hasattr(last_sent, 'to_datetime'):
+                    last_sent_dt = last_sent.to_datetime().astimezone(MX_TZ)
+                else:
+                    last_sent_dt = last_sent.astimezone(MX_TZ)
+                if last_sent_dt.date() == mx_now.date():
+                    skipped_details.append({
+                        'name': p_name,
+                        'therapist': apt.get('therapist', 'diana'),
+                        'reason': 'already_sent_today',
+                        'date': apt.get('date', '')
+                    })
+                    skipped_count += 1
+                    continue
+            except Exception as guard_e:
+                print(f"⚠️ Error en guardia de duplicados: {guard_e}")
 
         try:
             dt = parse_mx_datetime(apt['date'])
-            if dt.date() != tomorrow.date() or not (8 <= dt.hour <= 20): continue
+            # 🛡️ VALIDACIÓN: Solo procesar si la fecha local de México es realmente mañana y está en horario
+            if dt.date() != tomorrow.date() or not (8 <= dt.hour <= 20):
+                skipped_details.append({
+                    'name': p_name,
+                    'therapist': apt.get('therapist', 'diana'),
+                    'reason': 'date_mismatch_or_outside_business_hours',
+                    'date': apt.get('date', '')
+                })
+                skipped_count += 1
+                continue
+                
             meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
             date_str = f"{dt.day} de {meses[dt.month]}"
             hour_str = dt.strftime('%I:%M %p').lstrip('0')
             therapist = apt.get('therapist', 'Diana').title()
             
+            dest = f"whatsapp:+{p_info.get('countryCode', '52')}{normalize_phone(p_info['phone'])}"
+            
             get_twilio_client().messages.create(
-                from_=TWILIO_WHATSAPP_FROM, to=f"whatsapp:+{p_info.get('countryCode', '52')}{normalize_phone(p_info['phone'])}",
+                from_=TWILIO_WHATSAPP_FROM, to=dest,
                 content_sid='HX100149d5295d1839864ad33cc9e73567',
                 content_variables=json.dumps({"1": date_str, "2": hour_str, "3": therapist})
             )
+            
+            # Registrar en Firestore
             db.collection('appointments').document(doc.id).update({
-                'lastReminderSentAt': firestore.SERVER_TIMESTAMP, 'lastReminderType': 'AUTO_CRON'
+                'lastReminderSentAt': firestore.SERVER_TIMESTAMP,
+                'lastReminderType': 'AUTO_CRON',
+                'lastReminderBy': 'Robot Parláre'
             })
+            
+            # Registrar en Bitácora (Auditoría) para que Yari pueda verlo
+            try:
+                log_entry = {
+                    'timestamp': firestore.SERVER_TIMESTAMP,
+                    'action': 'WHATSAPP_REMINDER',
+                    'entityType': 'APPOINTMENT',
+                    'entityId': doc.id,
+                    'details': {
+                        'patientName': p_name,
+                        'therapist': therapist,
+                        'phone': dest,
+                        'appointmentDate': apt['date'],
+                        'message': f"Recordatorio enviado a {p_name}"
+                    },
+                    'userEmail': 'system',
+                    'userName': 'Robot Parláre',
+                    'userRole': 'system'
+                }
+                db.collection('audit_logs').add(log_entry)
+            except Exception as db_e:
+                print(f"⚠️ Error actualizando Firestore/Audit para {p_name}: {db_e}")
+                
+            sent_count += 1
             print(f"✅ Recordatorio enviado a {p_name}")
         except Exception as e:
+            errors.append(f"Error {p_name}: {str(e)}")
             print(f"⚠️ Error enviando a {p_name}: {e}")
+
+    return {
+        'sent': sent_count,
+        'skipped': skipped_count,
+        'skipped_details': skipped_details,
+        'errors': errors,
+        'date': day_str
+    }
+
+@scheduler_fn.on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+def send_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
+    """Cronjob programado para ejecutarse todos los días a las 8:00 AM hora México"""
+    result = execute_send_reminders()
+    print(f"⏰ Cron de recordatorios ejecutado: {result}")
+
+@https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["GET", "POST", "OPTIONS"]), secrets=ALL_SECRETS)
+def send_reminders_api(req: https_fn.Request) -> https_fn.Response:
+    """Endpoint HTTPS que permite disparar manualmente los recordatorios desde el panel de control"""
+    if req.method == "OPTIONS":
+        return https_fn.Response(status=204)
+        
+    key = req.args.get('key') or (req.get_json(silent=True) or {}).get('key')
+    if key != 'parlare_secret_2026':
+        return https_fn.Response(json.dumps({'error': 'Unauthorized'}), status=401, mimetype='application/json')
+        
+    try:
+        result = execute_send_reminders()
+        return https_fn.Response(json.dumps(result), status=200, mimetype='application/json')
+    except Exception as e:
+        return https_fn.Response(json.dumps({'error': str(e)}), status=500, mimetype='application/json')
 
 @scheduler_fn.on_schedule(schedule="0 21 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
+    """Cronjob programado para ejecutarse todos los días a las 9:00 PM hora México.
+    Envía resúmenes individuales a las terapeutas y un reporte maestro a Recepción (Yari).
+    """
     mx_now = datetime.now(MX_TZ)
     start_iso = f"{mx_now.strftime('%Y-%m-%d')}T00:00:00"
     end_iso = f"{(mx_now + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
@@ -404,6 +516,7 @@ def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
 
     for t_key in by_therapist: by_therapist[t_key].sort(key=lambda x: x.get('date', ''))
     
+    # 1. Enviar reportes a terapeutas individuales
     for t_key, list_apts in by_therapist.items():
         if not list_apts or not THERAPIST_PHONES.get(t_key): continue
         items = []
@@ -421,7 +534,49 @@ def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
                 content_sid='HX28a1f7c6ccbb2b507f9764b098c44779',
                 content_variables=json.dumps({"1": t_key.capitalize(), "2": mx_now.strftime('%d/%b'), "3": "  /  ".join(items) if items else "Sin citas"})
             )
+            print(f"✅ Reporte individual enviado a {t_key.capitalize()}")
         except Exception as e: print(f"❌ Error reporte {t_key}: {e}")
+
+    # 2. Enviar Reporte Maestro a Yari (Recepción)
+    yari_phone = THERAPIST_PHONES.get('reception')
+    if yari_phone:
+        try:
+            master_items = []
+            total_apts = 0
+            for t_key in ['diana', 'sam', 'vero']:
+                list_apts = by_therapist[t_key]
+                t_section = f"*{t_key.upper()}*: "
+                if not list_apts:
+                    t_section += "Sin citas"
+                else:
+                    sub_items = []
+                    for a in list_apts:
+                        try:
+                            dt = parse_mx_datetime(a['date'])
+                            if not (8 <= dt.hour <= 20): continue
+                            time = dt.strftime('%I:%M%p').lstrip('0').lower()
+                        except:
+                            time = "??:??"
+                        status_icon = "✅" if a.get('confirmed') else "⏳"
+                        sub_items.append(f"{time} {a.get('name')} {status_icon}")
+                        total_apts += 1
+                    t_section += " | ".join(sub_items)
+                master_items.append(t_section)
+            
+            final_content = "  //  ".join(master_items) + f"  >> Total: {total_apts}"
+            
+            get_twilio_client().messages.create(
+                from_=TWILIO_WHATSAPP_FROM, to=f"whatsapp:+{yari_phone}",
+                content_sid='HX28a1f7c6ccbb2b507f9764b098c44779',
+                content_variables=json.dumps({
+                    "1": "Yari",
+                    "2": mx_now.strftime('%d/%b'),
+                    "3": final_content
+                })
+            )
+            print("✅ Reporte Maestro enviado a Yari.")
+        except Exception as e:
+            print(f"❌ Error enviando reporte maestro a Yari: {e}")
 
 @scheduler_fn.on_schedule(schedule="0 1 * * 1", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
