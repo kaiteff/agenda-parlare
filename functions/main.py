@@ -24,6 +24,13 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
+from whatsapp_optin import (
+    WELCOME_OPTIN_CONTENT_SID,
+    handle_optin_interactive,
+    parse_interactive_payload,
+    patient_accepts_automated_whatsapp,
+)
+
 # ── 1. Inicialización Global y Secretos ────────────────────────────────────
 
 # Proxy Dinámico para evitar que Firebase CLI falle al analizar el archivo localmente
@@ -195,7 +202,8 @@ def find_patients_by_identifier(phone, bsuid=None):
         docs = db.collection('patientProfiles').where('whatsappBSUID', '==', bsuid).stream()
         for doc in docs:
             if doc.id not in found_ids and doc.to_dict().get('isActive', True):
-                found.append({'id': doc.id, 'name': doc.to_dict().get('name', '')})
+                data = doc.to_dict()
+                found.append(_patient_match_from_doc(doc.id, data))
                 found_ids.add(doc.id)
         if found: return found
 
@@ -207,7 +215,8 @@ def find_patients_by_identifier(phone, bsuid=None):
             docs = db.collection('patientProfiles').where('phone', '==', variant).stream()
             for doc in docs:
                 if doc.id not in found_ids and doc.to_dict().get('isActive', True):
-                    found.append({'id': doc.id, 'name': doc.to_dict().get('name', '')})
+                    data = doc.to_dict()
+                    found.append(_patient_match_from_doc(doc.id, data))
                     found_ids.add(doc.id)
                     if bsuid and not doc.to_dict().get('whatsappBSUID'):
                         docs_to_update.append(doc.reference)
@@ -217,6 +226,15 @@ def find_patients_by_identifier(phone, bsuid=None):
                 try: ref.update({'whatsappBSUID': bsuid})
                 except: pass
     return found
+
+def _patient_match_from_doc(doc_id, data):
+    return {
+        'id': doc_id,
+        'name': data.get('name', ''),
+        'therapist': data.get('therapist', 'diana'),
+        'phone': data.get('phone', ''),
+        'countryCode': data.get('countryCode', '52'),
+    }
 
 def find_tomorrow_appointments(patient_names):
     tomorrow = datetime.now(MX_TZ) + timedelta(days=1)
@@ -243,10 +261,32 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
         msg_body = req.form.get('Body', '').strip().lower()
         from_num = req.form.get('From', '')
         bsuid = req.form.get('ExternalUserId', '')
-        print(f"📥 Recibido de {from_num}: {msg_body}")
+        raw_payload = req.form.get('ButtonPayload') or req.form.get('button_payload') or req.form.get('ListId') or req.form.get('list_id')
+        if raw_payload:
+            raw_payload = str(raw_payload).strip().lower()
+        else:
+            raw_payload = msg_body
+
+        print(f"📥 Recibido de {from_num}: body={msg_body} raw_payload={raw_payload}")
 
         resp = MessagingResponse()
+
+        # 1. Procesar payloads del Optimizador de Espacios (Fase B)
+        if raw_payload in ('offer_yes', 'offer_no'):
+            from space_optimizer import handle_space_offer_interactive
+            reply = handle_space_offer_interactive(db, from_num, raw_payload)
+            if reply:
+                resp.message(reply)
+            return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
         patients = find_patients_by_identifier(from_num, bsuid)
+        optin_payload = parse_interactive_payload(req.form)
+
+        if optin_payload:
+            reply = handle_optin_interactive(db, patients, optin_payload, from_num)
+            if reply:
+                resp.message(reply)
+            return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
         if not patients:
             norm_from = normalize_phone(from_num)
@@ -347,7 +387,14 @@ def execute_send_reminders():
     day_str = tomorrow.strftime('%Y-%m-%d')
     
     profiles = db.collection('patientProfiles').stream()
-    phone_map = {p.to_dict().get('name', '').strip().lower(): p.to_dict() for p in profiles if p.to_dict().get('phone') and p.to_dict().get('wantsWhatsapp', True)}
+    phone_map = {}
+    for p in profiles:
+        data = p.to_dict()
+        if not data.get('phone') or not data.get('wantsWhatsapp', True):
+            continue
+        if not patient_accepts_automated_whatsapp(data):
+            continue
+        phone_map[data.get('name', '').strip().lower()] = data
 
     start_iso = f"{day_str}T00:00:00"
     end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
@@ -375,7 +422,7 @@ def execute_send_reminders():
             skipped_details.append({
                 'name': p_name,
                 'therapist': apt.get('therapist', 'diana'),
-                'reason': 'no_profile_or_phone_or_wantsWhatsapp_false',
+                'reason': 'no_profile_phone_optin_or_wantsWhatsapp',
                 'date': apt.get('date', '')
             })
             skipped_count += 1
@@ -629,10 +676,21 @@ def on_patient_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot])
         
         get_twilio_client().messages.create(
             from_=TWILIO_WHATSAPP_FROM, to=dest,
-            content_sid='HX2ce20d173330363b2db700bc02e66204',
+            content_sid=WELCOME_OPTIN_CONTENT_SID,
             content_variables=json.dumps({"1": first_name})
         )
-        print(f"🎉 Mensaje de bienvenida enviado exitosamente a: {name}")
+        snap.reference.update({
+            'recurrentOptIn': 'pending',
+            'recurrentOptInUpdatedAt': firestore.SERVER_TIMESTAMP,
+        })
+        print(f"🎉 bienvenida_con_optin enviado a: {name} (recurrentOptIn=pending)")
     except Exception as e:
         print(f"❌ Error en trigger de bienvenida: {e}")
+
+# Recibos digitales de reembolso (Fase A — Paso 2)
+from receipt_generator import on_appointment_receipt_trigger  # noqa: F401, E402
+
+# Optimizador de espacios (Fase B)
+from space_optimizer import on_appointment_cancelled_trigger  # noqa: F401, E402
+
 

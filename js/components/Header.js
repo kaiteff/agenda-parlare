@@ -33,7 +33,10 @@ export const Header = {
                 </div>
 
                 <div class="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-2 pointer-events-none">
-                    <span class="text-lg font-bold text-gray-800 tracking-tight">Agenda Parlare</span>
+                    <img src="assets/parlare-logo.png" alt="Parláre" class="h-8 w-auto object-contain opacity-95" height="32" />
+                </div>
+                <div class="md:hidden flex-1 flex justify-center min-w-0 pointer-events-none px-8">
+                    <img src="assets/parlare-logo.png" alt="Parláre" class="h-7 w-auto max-h-8 object-contain" height="28" />
                 </div>
 
                 <div class="flex items-center gap-2 md:gap-3">

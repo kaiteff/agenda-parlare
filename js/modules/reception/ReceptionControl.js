@@ -13,9 +13,12 @@ import { ToastService } from '../../utils/ToastService.js';
 import { CalendarData } from '../calendar/CalendarData.js';
 import { PatientModals } from '../../managers/patient/PatientModals.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
+import { ReceptionAlertsService } from '../../services/ReceptionAlertsService.js';
 
 export const ReceptionControl = {
     isInitialized: false,
+    _alertsUnsub: null,
+    _openAlerts: [],
 
     async init() {
         if (this.isInitialized) return;
@@ -68,8 +71,9 @@ export const ReceptionControl = {
 
     injectHTML() {
         const html = `
-        <div id="receptionControlModal" onclick="if(event.target === this) document.getElementById('receptionControlModal').classList.add('hidden')" class="hidden fixed inset-0 z-[9900] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm sm:p-4">
-            <div class="bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-6xl sm:h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+        <div id="receptionControlModal" onclick="if(event.target === this) document.getElementById('receptionControlModal').classList.add('hidden')"         class="hidden fixed inset-0 z-[9900] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4">
+            <div class="bg-white w-full max-w-none md:max-w-6xl h-[92dvh] md:h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+                <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
                 <!-- Header -->
                 <div class="p-6 bg-indigo-600 text-white flex justify-between items-center bg-gradient-to-r from-indigo-600 to-blue-700">
                     <div>
@@ -124,8 +128,16 @@ export const ReceptionControl = {
                     </div>
                 </div>
 
+                <div id="receptionAlertsPanel" class="hidden border-b border-red-200 bg-red-50 px-4 py-3 flex-shrink-0">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <h3 class="text-xs font-black uppercase text-red-800 tracking-wide">Seguimiento manual WhatsApp</h3>
+                        <span id="receptionAlertsCount" class="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-full">0</span>
+                    </div>
+                    <div id="receptionAlertsList" class="space-y-2 max-h-32 overflow-y-auto scroller text-sm"></div>
+                </div>
+
                 <!-- Table Container with Horizontal Scroll for Mobile -->
-                <div class="flex-1 overflow-auto scroller">
+                <div class="flex-1 overflow-auto scroller min-h-0">
                     <div class="min-w-[800px] md:min-w-0">
                         <table class="w-full text-left">
                             <thead class="sticky top-0 bg-white z-10">
@@ -146,7 +158,7 @@ export const ReceptionControl = {
             </div>
         </div>
         `;
-        document.body.insertAdjacentHTML('beforeend', html);
+        document.body.insertAdjacentHTML('beforeend', html.replace(/<motion/g, '<div').replace(/<\/motion>/g, '</div>'));
     },
 
     bindEvents() {
@@ -224,11 +236,80 @@ export const ReceptionControl = {
 
     open() {
         document.getElementById('receptionControlModal').classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        this._startAlertsListener();
         this.render();
+        this._renderAlerts();
     },
 
     close() {
         document.getElementById('receptionControlModal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        if (this._alertsUnsub) {
+            this._alertsUnsub();
+            this._alertsUnsub = null;
+        }
+    },
+
+    _startAlertsListener() {
+        if (this._alertsUnsub) return;
+        this._alertsUnsub = ReceptionAlertsService.subscribeOpen((alerts) => {
+            this._openAlerts = alerts;
+            this._renderAlerts();
+        });
+    },
+
+    _renderAlerts() {
+        const panel = document.getElementById('receptionAlertsPanel');
+        const list = document.getElementById('receptionAlertsList');
+        const countEl = document.getElementById('receptionAlertsCount');
+        if (!panel || !list) return;
+
+        const alerts = this._openAlerts || [];
+        if (countEl) countEl.textContent = String(alerts.length);
+
+        if (alerts.length === 0) {
+            panel.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        panel.classList.remove('hidden');
+        list.innerHTML = alerts.map((a) => `
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-white border border-red-100 rounded-xl p-3 shadow-sm">
+                <div class="min-w-0 flex-1">
+                    <p class="font-bold text-gray-900 truncate">${a.patientName || 'Paciente'}</p>
+                    <p class="text-[11px] text-red-700 mt-0.5">${a.message || 'Rechazó recordatorios por WhatsApp'}</p>
+                    <p class="text-[10px] text-gray-500">Terapeuta: ${(a.therapist || '—').toString().toUpperCase()} · Tel: ${a.phone || '—'}</p>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    <button type="button" data-open-patient="${a.patientId || ''}" data-patient-name="${(a.patientName || '').replace(/"/g, '&quot;')}" class="px-3 py-2 min-h-[40px] text-[10px] font-bold uppercase rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 touch-manipulation">Ver ficha</button>
+                    <button type="button" data-resolve-alert="${a.id}" class="px-3 py-2 min-h-[40px] text-[10px] font-bold uppercase rounded-lg bg-red-600 text-white touch-manipulation">Atendido</button>
+                </div>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('[data-resolve-alert]').forEach((btn) => {
+            btn.onclick = async () => {
+                try {
+                    await ReceptionAlertsService.markResolved(btn.getAttribute('data-resolve-alert'));
+                    ToastService.success('Alerta marcada como atendida');
+                } catch (e) {
+                    ToastService.error('No se pudo cerrar la alerta');
+                }
+            };
+        });
+
+        list.querySelectorAll('[data-open-patient]').forEach((btn) => {
+            btn.onclick = () => {
+                const id = btn.getAttribute('data-open-patient');
+                const name = btn.getAttribute('data-patient-name');
+                if (id && typeof window.openPatientHistoryById === 'function') {
+                    this.close();
+                    window.openPatientHistoryById(id);
+                }
+            };
+        });
     },
 
     async render() {

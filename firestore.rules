@@ -66,6 +66,11 @@ service cloud.firestore {
       allow write: if isSuper();
     }
 
+    // Alertas para Recepción (opt-out WhatsApp, etc.)
+    match /reception_alerts/{alertId} {
+      allow read, write: if isSuper();
+    }
+
     // Default para las demás colecciones (Fallback)
     match /{document=**} {
       allow read, write: if isSuper();

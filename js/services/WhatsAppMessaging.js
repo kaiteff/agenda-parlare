@@ -6,6 +6,7 @@
 import { AuthManager } from '../managers/AuthManager.js';
 import { PatientState } from '../managers/patient/PatientState.js';
 import { db, updateDoc, doc, serverTimestamp } from '../firebase.js';
+import { WHATSAPP_TEMPLATES } from '../config/whatsappTemplates.js';
 
 export const WhatsAppMessaging = {
 
@@ -71,7 +72,7 @@ export const WhatsAppMessaging = {
 
         switch (type) {
             case 'cancel':
-                template = `${intro}Te informo que la sesión de ${patientName} programada para hoy ${dateStr} a las ${timeStr} con ${therapistName} ha sido CANCELADA. Quedamos a tus órdenes para cualquier duda.`;
+                template = `${intro}Te informamos que la sesión programada para el día ${dateStr} a las ${timeStr} con la terapeuta ${therapistName} ha sido CANCELADA. Quedamos a tus órdenes para cualquier duda.`;
                 break;
             case 'reschedule':
                 template = `${intro}Te confirmo que hemos REAGENDADO la cita con ${therapistName} para el día ${dateStr} a las ${timeStr}. ¡Nos vemos pronto!`;
@@ -120,14 +121,16 @@ export const WhatsAppMessaging = {
         if (mode === true) {
             // AUTOMÁTICO (Twilio)
             let vars = {};
-            if (type === 'welcome') {
-                vars = { "1": appointment.schedule };
+            if (type === 'welcome' || type === 'welcome_optin') {
+                vars = { "1": appointment.schedule || "tu horario asignado" };
             } else if (type === 'no-show') {
                 vars = { "1": timeStr }; 
             } else if (type === 'payment') {
                 vars = { "1": dateStr };
             } else if (type === 'reschedule') {
                 vars = { "1": therapistName, "2": dateStr, "3": timeStr };
+            } else if (type === 'cancel') {
+                vars = { "1": dateStr, "2": timeStr, "3": therapistName };
             } else if (type === 'reminder') {
                 vars = { "1": dateStr, "2": timeStr };
             } else {
@@ -151,13 +154,14 @@ export const WhatsAppMessaging = {
         const { ToastService } = await import('../utils/ToastService.js');
         ToastService.info('Enviando vía Twilio...');
 
-        // DICCIONARIO DE PLANTILLAS (Aquí es donde pondrás los SIDs de Meta)
+        const optinSid = WHATSAPP_TEMPLATES.BIENVENIDA_CON_OPTIN.contentSid;
         const TEMPLATE_SIDS = {
             'reminder': 'HXe500a927cfbef3321fc0ba7ae7aa86d7', // copy_info_proxima_cita
-            'cancel': 'PONER_AQUI_SID_CANCELACION',
+            'cancel': 'HX7493af9c40a5df17d33ca598f043f2ba',
             'reschedule': 'HX9de65123a2d3b426f0b644ef2593d53e',
             'no-show': 'HX91155fde499d8551099df309515b1c68',
-            'welcome': 'HX2ce20d173330363b2db700bc02e66204',
+            'welcome': optinSid,
+            'welcome_optin': optinSid,
             'payment': 'HXfe0923442618a0fae3018d17b9c33909'
         };
 

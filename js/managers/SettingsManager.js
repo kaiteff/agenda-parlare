@@ -154,9 +154,9 @@ export const SettingsManager = {
                 }
             ],
             baseCosts: {
-                diana: { cost: 800, fee: 250 },
-                sam: { cost: 800, fee: 250 },
-                vero: { cost: 800, fee: 400 }
+                diana: { cost: 800, fee: 250, professionalLicense: '', graduationInstitution: '' },
+                sam: { cost: 800, fee: 250, professionalLicense: '', graduationInstitution: '' },
+                vero: { cost: 800, fee: 400, professionalLicense: '', graduationInstitution: '' }
             }
         };
         await this.saveConfig(defaults);

@@ -5,3 +5,5 @@ pytz
 google-api-python-client
 google-auth
 google-auth-oauthlib
+jinja2~=3.1.0
+xhtml2pdf~=0.2.16

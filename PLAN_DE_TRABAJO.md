@@ -1,10 +1,42 @@
-# 🚀 Plan de Trabajo - Actualizado (15 Mayo 2026)
+# 🚀 Plan de Trabajo - Actualizado (18 Mayo 2026)
 
-Este documento detalla el estado actual del sistema Parláre y las prioridades para las siguientes sesiones.
+Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva y justificantes médicos, y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
 ---
 
 ## ✅ Completado Recientemente (¡Listo!)
+
+*   **Fase A: Recibos Digitales de Reembolso (SGMM) — 100% Listo**:
+    *   **Paso 1 (UI + Firestore):** Inputs `professionalLicense` y `graduationInstitution` en Configuración de Terapeutas, y casilla `autoGenerate` + `tutorName` en Pacientes. Todo en gris (disabled) listo para SaaS.
+    *   **Paso 2 (Cloud Function PDF):** Función serverless `on_appointment_receipt_trigger` en Python. Genera PDFs premium inyectando datos clínicos dinámicos y los almacena en Firebase Storage ante el pago de citas (`isPaid`). Test local en `venv` completado con 0 errores y desplegado con éxito a Firebase Blaze.
+*   **Fase 1 Móvil: Interfaz Web Responsiva Espectacular**: 
+    *   Estructura global de barra de navegación inferior (`MobileBottomNav.js`) táctil con Safe Areas.
+    *   Modal de Citas (`#eventModal`) convertido en una bottom-sheet deslizable y bloqueador de scroll de fondo.
+    *   Modal de Ficha de Pacientes y expediente convertido en bottom-sheets responsivas táctiles.
+    *   Búsqueda y barra lateral (Sidebar) rediseñada para celulares.
+    *   Acceso administrativo a la **Configuración de Clínica** y **Control Maestro** integrado al menú "Más" en móvil.
+    *   **Modo Un Día**: Grid responsivo de 2 columnas, pestañas táctiles e interactivas de Lunes a Sábado, y toggle "Día | Semana" en la barra de herramientas.
+*   **Onboarding / Pop-up de Bienvenida (`NewFeatureAlert.js`)**:
+    *   Pop-up informativo premium con difuminado de fondo (`backdrop-blur-md`) y cabecera con degradado.
+    *   Expiración automática de 3 días (Regla 4) para evitar fatiga en el staff.
+    *   Doble opción de descarte: "Cerrar aviso" (temporal) y "¡No volver a mostrar!" (permanente en `localStorage`).
+*   **Flujo Completo de Justificantes Médicos (Multimedia)**:
+    *   Inyección en la interfaz para que Yari y terapeutas puedan subir comprobantes de inasistencia médica.
+    *   Guardado físico del archivo en Firebase Storage y marcado visual del paciente con la insignia esmeralda **"Justificada"** (evitando cobros indebidos).
+*   **Fase C: Consentimiento WhatsApp (Opt-In/Opt-Out) — Código listo, Meta en revisión**:
+    *   Campo `recurrentOptIn` (`pending` / `accepted` / `rejected`) en `patientProfiles`.
+    *   Semáforo visual en ficha del paciente (badge táctil).
+    *   Plantilla **`bienvenida_con_optin`** SID `HX08f74d9b520b85acfbf9e678e434b1f6` en backend y frontend.
+    *   Webhook: `optin_yes` / `optin_no` → Firestore + alertas `reception_alerts` para Yari.
+    *   Crons de recordatorio solo si `recurrentOptIn === 'accepted'`.
+    *   **Pendiente:** aprobación Meta + `firebase deploy` de functions y hosting.
+*   **Batch UX (Antigravity / mayo 2026) — Implementado**:
+    *   Logo oficial Parláre (`assets/parlare-logo.png`) en login, header, favicon y `manifest.webmanifest`.
+    *   Semáforo WhatsApp en **lista de pacientes** (sidebar) + panel **Seguimiento manual** en Control Maestro (`reception_alerts`).
+    *   Control Maestro en móvil como bottom-sheet (`92dvh`).
+    *   Onboarding `NewFeatureAlert` v9 (`parlare_onboarding_v9_0`): Modo Día, opt-in, recibos.
+    *   Banners «SaaS Ready» (`saasReadyCopy.js`) en Configuración y ficha paciente.
+    *   Documentado para Antigravity en `ANALISIS_ESTRATEGIA_MOVIL.md` + manual `HelpManual.js`.
 *   **Migración a Templates de Meta**: 
     *   Recordatorios automáticos de 8 AM con botones interactivos (`recordatorio_con_botones2`).
     *   Recordatorios manuales desde el frontend (`copy_info_proxima_cita`).
@@ -12,6 +44,13 @@ Este documento detalla el estado actual del sistema Parláre y las prioridades p
 *   **Bitácora y Trazabilidad**: 
     *   Pestaña dedicada de WhatsApp para que Recepción lea los mensajes enviados.
     *   Identificación humana del staff en los historiales.
+*   **Fase B: Optimizador de Espacios ("Adelantar Cita") — 100% Listo y Desplegado**:
+    *   **Lógica del Trigger de Cancelación:** Cloud Function serverless en Python (`on_appointment_cancelled_trigger`) que monitorea cancelaciones dentro de la ventana de 8-24 horas de la cita.
+    *   **Búsqueda Inteligente de Candidatos:** Escanea en Firestore citas activas del mismo día, programadas más tarde con el mismo terapeuta, priorizando de atrás hacia adelante para comprimir la agenda.
+    *   **WhatsApp Autopilot:** Envío de oferta interactiva de WhatsApp mediante Twilio Content API a candidatos con `recurrentOptIn: 'accepted'`.
+    *   **Auto-Reagendamiento Webhook:** El primero en responder "Sí, adelantar" (payload `offer_yes`) es re-programado automáticamente en Firestore, Google Sheets y Google Calendar. Las demás ofertas competidoras expiran, y se envía una confirmación al paciente y una alerta a Yari.
+*   **Optimización del Nuke de Calendario (Forward-only Sync) — 100% Listo y Desplegado**:
+    *   Modificado `nukeAndRebuildAll` en `GoogleCalendarService.js`. En lugar de borrar y descargar 1 año de historial, ahora la sincronización limpia estrictamente desde el **lunes de la semana en curso** hacia el futuro (6 meses). Esto evita largos tiempos de recarga y protege de bloqueos 429 de cuota de API de Google.
 *   **Corrección de Bugs Críticos**:
     *   Guardia contra duplicados (evitando sobrecarga a Google Calendar / 429 Quota Exceeded).
     *   Ajuste de zona horaria (Drift UTC) en métricas y envíos diarios.
@@ -19,56 +58,95 @@ Este documento detalla el estado actual del sistema Parláre y las prioridades p
 
 ---
 
-## 💎 Prioridad 1: Flujo Completo de Justificantes (Archivos Multimedia)
-**Objetivo**: Permitir que los padres envíen su justificante médico por WhatsApp y Yari pueda auditarlo desde el sistema.
+## 💡 Propuestas opcionales — Frontend / UX (sin compromiso)
 
-### Pasos a seguir:
-1.  **Recepción de Imágenes en Bot**:
-    *   Activar la "ventana de escucha" cuando el bot detecte una cancelación.
-    *   Habilitar el webhook de Twilio para procesar mensajes tipo `Media` (imágenes/PDFs).
-2.  **Almacenamiento y Vinculación**:
-    *   Descargar la foto temporalmente y subirla a Firebase Storage.
-    *   Vincular la URL de descarga al registro de la cita cancelada.
-3.  **UI Control de Justificantes (Para Yari)**:
-    *   Añadir botón/columna en la agenda para que Yari vea el justificante.
-    *   Opción para marcar justificante como "Validado" o "Rechazado" (cobro pendiente).
+> Revisión mayo 2026. Las marcadas ✅ se implementaron en sesión 18 may; el resto es opcional.
+
+### Marca e identidad visual
+- [x] **Logo + favicon + PWA** — `assets/parlare-logo.png`, login, header, `manifest.webmanifest`.
+- [ ] **Favicon + icono de app** (tamaños 192/512 dedicados para tiendas): Hoy el login y header usan texto «Parláre» con gradiente; no hay `favicon.ico` ni `apple-touch-icon`. Mejoraría pestaña del navegador y preparación para Capacitor.
+
+### Consistencia de modales (móvil)
+- [x] **Control Maestro** como bottom-sheet (`92dvh`, pull-handle).
+- [ ] **Reportes / Corte de caja / Configuración**: auditar que todos sigan el patrón `items-end`, pull-handle y `92dvh` donde aplique.
+- [ ] Clase utilitaria única `.modal-sheet-mobile` ya existe en `index.css`; extender su uso y reducir HTML duplicado.
+
+### Visibilidad de funciones ya implementadas
+- [x] **Semáforo WhatsApp** en sidebar + ficha.
+- [x] **Panel `reception_alerts`** en Control Maestro.
+- [x] **`NewFeatureAlert` v9** (Modo Día, opt-in, recibos).
+
+### Campos «SaaS Ready» (cuando decidan activarlos)
+- [x] Banner explicativo en Configuración y recibos (`saasReadyCopy.js`).
+- [ ] Recibos de reembolso: cuando activen `autoGenerate` y PDF, enlace «Ver recibo» en citas pagadas usando `receiptPdfUrl`.
+
+### Lista de pacientes y agenda
+- [ ] **Estados vacíos** más claros (ilustración ligera + CTA «Agregar paciente» / «Ir a hoy»).
+- [ ] **Skeleton loaders** en sidebar y grid al cargar Firestore (ya existe `LoaderService.js`; uso irregular).
+- [ ] Modo **Semana** en desktop: revisar densidad de chips y contraste de citas pagadas vs pendientes (accesibilidad de color).
+
+### Deuda técnica menor (frontend)
+- [x] Comentarios aclarados: lista de pacientes = `Sidebar.js` (no `PatientUI.js`).
+- [ ] Centralizar tokens de color Parláre en `tailwind.config.js` (hoy hay mezcla de `blue-600`, `indigo-600` y variables CSS).
+
+### Accesibilidad y detalle premium
+- [ ] Revisión rápida de **focus trap** y cierre con Escape en modales grandes.
+- [ ] Reducir animaciones `animate-ping` del badge WhatsApp en listas largas (rendimiento en celulares viejos).
+
+### Priorización sugerida (para debatir)
+| Si quieren… | Empezar por… |
+|-------------|----------------|
+| Impacto inmediato para Yari | ✅ Hecho — validar en producción tras deploy |
+| Sensación «app premium» | Empty states, skeleton loaders; iconos 192/512 para tiendas |
+| Coherencia móvil | Auditoría Reportes / Corte como bottom-sheet |
+| Antes de Capacitor | Iconos tienda + prueba Capacitor en emulador Android |
 
 ---
 
-## 📈 Prioridad 2: Panel de "Historial de Compromiso" (Pacientes)
-**Objetivo**: Dar visibilidad rápida sobre el nivel de asistencia y cancelaciones previas de un paciente.
+## 💎 Prioridad 1: Transformación a App Móvil Nativa (Capacitor)
+**Objetivo**: Convertir la SPA responsiva en aplicaciones instalables para Android e iOS en las tiendas.
 
-### Pasos a seguir:
-1.  **UI en Perfil de Paciente**:
-    *   Crear pestaña "Historial de Compromiso".
-    *   Mostrar % de asistencia.
-    *   Listado histórico de razones de cancelación y visualización de fotos/justificantes de ese paciente.
-
----
-
-## 🛠️ Prioridad 3: Mantenimiento y Optimizaciones
-*   **Dashboard de Control de Finanzas**: Validar que la nueva separación de comisiones (Clínica vs. Terapeuta) arroje los totales correctos a fin de quincena.
-*   **Optimización de Carga del Calendario**: Evaluar lazy-loading si la base de datos de citas crece significativamente.
-*   **Optimización del Nuke de Calendario (Forward-only Sync)**: Modificar `nukeAndRebuildAll` en `GoogleCalendarService.js`. En lugar de borrar 1 año de historial, hacer que la limpieza y sincronización comience estrictamente desde el **lunes de la semana en curso** hacia el futuro. Esto evitará tiempos largos de recarga, ahorrará cuota de Google API y dejará intacto el historial visual de las terapeutas en Google Calendar.
-
----
-
-## 📱 Prioridad 4: Transformación a App Móvil Nativa (Capacitor)
-**Objetivo**: Convertir la SPA actual en aplicaciones para Android e iOS de forma escalonada, minimizando riesgos operativos.
-
-### Plan de Integración en Fases:
-*   **Fase 1: Preparación Base (En proceso)**: Instalar entorno Capacitor, configurar script de empaquetado (`www/`) y generar carpetas `android/` e `ios/`.
-*   **Fase 2: Pruebas de Concepto**: Abrir la app localmente en un emulador de Android Studio para verificar que Firebase, logins y UI funcionen correctamente en un WebView nativo.
+*   **Fase 1: Preparación Base (Completada en la Web)**: Toda la interfaz responsiva y táctil móvil está lista y desplegada.
+*   **Fase 2: Pruebas de Concepto**: Abrir la app localmente en un emulador de Android Studio para verificar que Firebase, logins y UI funcionen en un WebView nativo de Capacitor.
 *   **Fase 3: Diseño y Branding**: Generar Iconos de App y pantallas de carga (Splash Screens) premium.
-*   **Fase 4: Configuración OTA**: Integrar el sistema de "Over The Air" updates para permitir actualizaciones instantáneas sin pasar por la tienda en cada cambio menor.
+*   **Fase 4: Configuración de Actualizaciones Instantáneas (OTA)**: Integrar sistema de updates en vivo para no pasar por revisión de tiendas en cambios menores de UI.
 *   **Fase 5: Despliegue en Tiendas**: Compilación final de instalables (`.aab` y `.ipa`) y subida a Google Play Console y Apple App Store Connect.
 
 ---
 
-## 🔍 Supervisión Post-Despliegue (Cosas para Revisar)
-*   **Monitoreo del Cronjob (8:00 PM)**: Revisar mañana en el dashboard de Render/Twilio que el job de esta noche no haya arrojado Error 500 y haya procesado correctamente todas las citas usando el nuevo SID con botones.
-*   **Control de Errores 429**: Confirmar que los bloques `try/except` están mitigando con éxito las ráfagas de confirmaciones y ya no aparece el mensaje "Quota exceeded" para los papás.
-*   **Bitácora de Recepción**: Confirmar con Yari que la nueva pestaña de WhatsApp está cargando sus envíos diarios correctamente.
+## 🛠️ Prioridad 2: Finanzas y Sincronización Google Calendar
+*   **Dashboard de Control de Finanzas**: Validar que la nueva separación de comisiones (Clínica vs. Terapeuta) arroje los totales correctos a fin de quincena.
 
 ---
-*Última actualización: 15 de Mayo, 2026*
+
+## 🔍 Supervisión Post-Despliegue (Cosas para Monitorear)
+*   **Monitoreo del Autopilot (Fase B)**: Validar que ante cancelaciones de 8h-24h se creen los registros en `/space_offers` y se envíen los WhatsApps de forma correcta.
+*   **Monitoreo de Recibos Generados**: Validar que las citas marcadas como `isPaid` en Firestore con la casilla activa generen la propiedad `receiptPdfUrl` y suban correctamente el archivo PDF a Storage.
+*   **Monitoreo del Cronjob (8:00 PM)**: Revisar que los envíos automáticos de las 8:00 PM con botones no generen errores.
+*   **Control de Errores 429**: Validar que las llamadas a Google Calendar no se traslapen y generen bloqueos.
+
+---
+
+## ⏳ Falta (18 may 2026 — al retomar)
+
+- [ ] Deploy: `hosting`, `firestore:rules`, functions WhatsApp + recibos (comandos en `ANALISIS_ESTRATEGIA_MOVIL.md`).
+- [ ] Meta: plantilla `bienvenida_con_optin` aprobada.
+- [ ] Probar opt-in Sí/No en número real + panel alertas en Control Maestro.
+- [ ] Celular: logo, semáforo sidebar, Modo Un Día, Control Maestro sheet.
+- [ ] Recibos: cita pagada → `receiptPdfUrl` + PDF en Storage.
+- [ ] Índice Firestore `reception_alerts` solo si el listener marca error.
+
+## 💡 Sugerencias (opcional)
+
+- Enlace «Ver recibo» en citas pagadas.
+- Iconos PWA 192/512 + splash Capacitor.
+- Empty states y skeleton loaders.
+- Bottom-sheet móvil en Reportes / Corte de caja.
+- Colores de marca en `tailwind.config.js`.
+- Capacitor POC Android; después retirar Render.
+
+Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
+
+---
+*Última actualización: 18 de Mayo, 2026 — Cierre de sesión (Cursor + docs Antigravity)*
+

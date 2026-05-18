@@ -229,7 +229,8 @@ header::after {
     #eventModal:not(.hidden) #eventModalPanel,
     #newPatientModal:not(.hidden) #newPatientModalPanel,
     #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
-    #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel {
+    #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel,
+    #adminSettingsModal:not(.hidden) #adminSettingsModalPanel {
         animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -287,14 +288,16 @@ header::after {
 
 #newPatientModalFooter,
 #patientHistoryModalFooter,
-#inactivePatientsModalFooter {
+#inactivePatientsModalFooter,
+#adminSettingsModalFooter {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
     #newPatientModalFooter,
     #patientHistoryModalFooter,
-    #inactivePatientsModalFooter {
+    #inactivePatientsModalFooter,
+    #adminSettingsModalFooter {
         padding-bottom: 1rem;
     }
 }

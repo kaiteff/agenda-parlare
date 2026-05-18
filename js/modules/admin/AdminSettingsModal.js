@@ -6,6 +6,7 @@
 import { SettingsManager } from '../../managers/SettingsManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
+import { renderSaasReadyBanner, SAAS_READY_EXPLANATION } from '../../utils/saasReadyCopy.js';
 
 export const AdminSettingsModal = {
     id: 'adminSettingsModal',
@@ -44,8 +45,13 @@ export const AdminSettingsModal = {
         }
 
         const html = `
-            <div id="${this.id}" onclick="if(event.target===this) { this.classList.add('hidden'); this.style.display='none'; }" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-fade-in-up">
+            <div id="${this.id}" onclick="if(event.target===this) { this.classList.add('hidden'); this.style.display='none'; }" class="hidden fixed inset-0 z-[10000] flex md:items-center items-end justify-center bg-black bg-opacity-60 backdrop-blur-sm md:p-4 p-0">
+                <div id="adminSettingsModalPanel" class="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl md:h-[85vh] h-[92dvh] flex flex-col overflow-hidden animate-fade-in-up">
+                    
+                    <!-- Pull Handle for Mobile -->
+                    <div class="flex md:hidden justify-center pt-3 pb-1 flex-shrink-0 bg-gray-50/50">
+                        <span class="w-10 h-1 rounded-full bg-gray-200"></span>
+                    </div>
                     
                     <!-- Header -->
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -132,7 +138,7 @@ export const AdminSettingsModal = {
                     </div>
 
                     <!-- Footer -->
-                    <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
+                    <div id="adminSettingsModalFooter" class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
                         <button id="cancelAdminSettingsBtn" onclick="document.getElementById('adminSettingsModal').classList.add('hidden'); document.getElementById('adminSettingsModal').style.display='none';" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Cancelar</button>
                         <button id="saveAllSettingsBtn" class="px-8 py-2.5 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
                              <span>Guardar Todos los Cambios</span>
@@ -172,7 +178,7 @@ export const AdminSettingsModal = {
                     <div class="flex-1">
                          <input type="text" value="${theme.name}" class="text-lg font-black text-gray-800 bg-transparent border-b-2 border-transparent focus:border-blue-500 outline-none w-full transition-all" onchange="window.updateThemeName('${theme.id}', this.value)">
                     </div>
-                    <button class="ml-4 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100" onclick="window.removeTheme('${theme.id}')" title="Eliminar Tema Completo">
+                    <button class="ml-4 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100" onclick="window.removeTheme('${theme.id}')" title="Eliminar Tema Completo">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
@@ -278,8 +284,9 @@ export const AdminSettingsModal = {
         const container = document.getElementById('costsList');
         if (!container) return;
 
+        const saasBanner = renderSaasReadyBanner(SAAS_READY_EXPLANATION.profileNote);
         const therapists = ['diana', 'sam', 'vero'];
-        container.innerHTML = therapists.map(id => {
+        container.innerHTML = saasBanner + therapists.map(id => {
             const data = costs[id] || { cost: 500, fee: 250 };
             return `
                 <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
@@ -296,6 +303,24 @@ export const AdminSettingsModal = {
                             <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cuota Parláre Sugerida ($)</label>
                             <input type="number" value="${data.fee}" class="w-full bg-emerald-50 text-emerald-700 border-none rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-100 outline-none" onchange="window.updateBaseCost('${id}', 'fee', this.value)">
                         </div>
+                        <div class="border-t border-dashed border-gray-200 pt-4 space-y-3 opacity-50">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Perfil profesional</span>
+                                <span class="text-[9px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full shrink-0">SaaS Ready</span>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cédula Profesional</label>
+                                <input type="text" id="therapist_${id}_license" value="${(data.professionalLicense || '').replace(/"/g, '&quot;')}" disabled
+                                    placeholder="Pendiente de activación SaaS"
+                                    class="w-full bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Institución de Egreso</label>
+                                <input type="text" id="therapist_${id}_institution" value="${(data.graduationInstitution || '').replace(/"/g, '&quot;')}" disabled
+                                    placeholder="Pendiente de activación SaaS"
+                                    class="w-full bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium cursor-not-allowed">
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -305,6 +330,21 @@ export const AdminSettingsModal = {
             if (!SettingsManager.config.baseCosts[id]) SettingsManager.config.baseCosts[id] = {};
             SettingsManager.config.baseCosts[id][key] = parseFloat(val);
         };
+    },
+
+    _collectBaseCostsForSave() {
+        const therapists = ['diana', 'sam', 'vero'];
+        const baseCosts = JSON.parse(JSON.stringify(SettingsManager.config.baseCosts || {}));
+
+        therapists.forEach(id => {
+            if (!baseCosts[id]) baseCosts[id] = { cost: 500, fee: 250 };
+            const licenseEl = document.getElementById(`therapist_${id}_license`);
+            const institutionEl = document.getElementById(`therapist_${id}_institution`);
+            baseCosts[id].professionalLicense = licenseEl?.value?.trim() ?? baseCosts[id].professionalLicense ?? '';
+            baseCosts[id].graduationInstitution = institutionEl?.value?.trim() ?? baseCosts[id].graduationInstitution ?? '';
+        });
+
+        return baseCosts;
     },
 
     /**
@@ -386,7 +426,7 @@ export const AdminSettingsModal = {
             
             const result = await SettingsManager.saveConfig({
                 themes: SettingsManager.config.themes,
-                baseCosts: SettingsManager.config.baseCosts
+                baseCosts: this._collectBaseCostsForSave()
             });
 
             if (result.success) {

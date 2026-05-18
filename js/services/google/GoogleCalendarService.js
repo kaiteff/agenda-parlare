@@ -504,14 +504,20 @@ export const GoogleCalendarService = {
             return;
         }
 
-        const active = allAppointments.filter(a => !a.isCancelled);
-        log.info(`[NUKE] Iniciando Nuke Total. Citas en Firebase: ${active.length}`);
-        ToastService.info(`💣 Nuke Total: Borrando TODO Google Calendar...`);
-
-        // Rango amplio: 1 año atrás → 1 año adelante
+        // Rango optimizado (Forward-only): Desde el lunes de la semana actual hasta 6 meses al futuro
         const now = new Date();
-        const timeMin = new Date(now.getFullYear() - 1, 0, 1).toISOString();
-        const timeMax = new Date(now.getFullYear() + 1, 11, 31).toISOString();
+        const currentDay = now.getDay();
+        const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+        const mondayOfCurrentWeek = new Date(now);
+        mondayOfCurrentWeek.setDate(now.getDate() + diffToMonday);
+        mondayOfCurrentWeek.setHours(0, 0, 0, 0);
+
+        const active = allAppointments.filter(a => !a.isCancelled && new Date(a.date) >= mondayOfCurrentWeek);
+        log.info(`[NUKE] Iniciando Nuke Forward-only. Citas a recrear: ${active.length}`);
+        ToastService.info(`💣 Nuke Forward-only: Limpiando Google Calendar desde esta semana en adelante...`);
+
+        const timeMin = mondayOfCurrentWeek.toISOString();
+        const timeMax = new Date(mondayOfCurrentWeek.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString(); // 180 días adelante (aprox. 6 meses)
 
         // ── FASE 1: Borrar TODO en los 3 calendarios ─────────────────────────────
         let deleted = 0;

@@ -9,8 +9,22 @@ Cada vez que realices un cambio en la interfaz, funcionalidad principal o flujo 
 ## 📐 REGLA DE ORO 2: Actualización del Documento de Visión
 Cada vez que se implemente una mejora importante, se descubra un bug crítico o surja una nueva idea de arquitectura, **DEBES actualizar `VISION_PARLARE_V2.md`**. Este documento es el contexto vivo del proyecto para cualquier asistente de IA (Cursor, etc.).
 
-## 📱 REGLA DE ORO 3: Actualización del Análisis Móvil
-Cada sesión que toque la **estrategia móvil**, la **UI responsive**, **Capacitor** o decisiones de producto sobre la app, **DEBES actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`** al cierre de la tarea. Es el mapa de dónde vamos.
+## 📱 REGLA DE ORO 3: Actualización del Análisis Móvil (Antigravity)
+Cada sesión que toque la **estrategia móvil**, la **UI responsive**, **Capacitor**, **Cloud Functions / backend Firebase** (triggers, crons, recibos, Storage) o decisiones de producto sobre la app, **DEBES actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`** al cierre de la tarea.
+
+**Antigravity lee este archivo como mapa principal del roadmap** — si no se actualiza, el siguiente agente trabajará con contexto desactualizado. Regla Cursor: `.cursor/rules/analisis-estrategia-movil.mdc`.
+
+## 📢 REGLA DE ORO 4: Duración de Pop-ups Informativos (Novedades)
+Cada vez que se cree o actualice un pop-up de novedades o bienvenida (ej: `NewFeatureAlert.js`):
+1. **Expiración de 3 Días:** El pop-up debe dejar de mostrarse automáticamente después de 3 días a partir de su fecha de lanzamiento o creación para evitar fatiga visual y molestias en el staff.
+2. **Información Práctica:** El contenido del pop-up siempre debe actualizarse y redactarse con un enfoque claro en el beneficio y las instrucciones prácticas de uso para las terapeutas (Diana, Sam, Vero) y la recepcionista (Yari).
+3. **Persistencia Local:** Utilizar `localStorage` para evitar re-renderizaciones intrusivas una vez cerrado por el usuario dentro del periodo de validez.
+
+## 🗺️ REGLA DE ORO 5: Alineación del Roadmap y Check de Inicio de Sesión
+Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de arquitectura:
+1. **Lectura Obligatoria del Plan:** Todo asistente de IA (Antigravity, Cursor) **DEBE leer y comparar en su primer turno** los archivos `PLAN_DE_TRABAJO.md` y `ANALISIS_ESTRATEGIA_MOVIL.md` para entender con exactitud matemática el estado del proyecto, qué piezas ya están 100% listas/desplegadas y cuáles son las prioridades inmediatas.
+2. **Cero Duplicación de Esfuerzos:** No intentar proponer o reescribir funcionalidades que ya estén marcadas como completadas, evitando colisiones de código y desviaciones de la arquitectura SaaS.
+
 
 ### Qué actualizar en ANALISIS_ESTRATEGIA_MOVIL.md:
 - Sección **«Registro de avance y qué hacer ahora»** (hecho / pendiente / checklist del usuario).
@@ -32,11 +46,26 @@ Cada sesión que toque la **estrategia móvil**, la **UI responsive**, **Capacit
 - Nuevas secciones administrativas o de reportes.
 - Cualquier cambio que afecte cómo la terapeuta o Yari interactúan con la página.
 
+## 🏁 REGLA DE ORO 6: Cierre de sesión ("Vamos" / "Alistémonos")
+Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«alistémonos»**, **«cerramos»**, **«listo para irnos»** o frases similares, el asistente **DEBE actualizar la documentación viva antes de dar por terminada la sesión** — no basta con un resumen en el chat.
+
+**Checklist de archivos (obligatorio revisar y actualizar si hubo cambios en la sesión):**
+
+| Orden | Archivo | Para qué |
+|-------|---------|----------|
+| 1 | `js/modules/help/HelpManual.js` | Manual para terapeutas y Yari |
+| 2 | `ANALISIS_ESTRATEGIA_MOVIL.md` | Roadmap móvil + técnico (Antigravity) |
+| 3 | `PLAN_DE_TRABAJO.md` | Prioridades y ✅ completados |
+| 4 | `VISION_PARLARE_V2.md` | Reglas críticas, IDs, arquitectura |
+| 5 | `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md` | Bitácora breve de la sesión |
+
+Regla Cursor persistente: `.cursor/rules/cierre-sesion-documentacion.mdc`.
+
 ## 🚀 Protocolo de Despliegue ("Alistémonos para irnos")
-Al finalizar cualquier tarea o sesión, se deben ejecutar obligatoriamente los siguientes pasos:
+Al finalizar cualquier tarea o sesión (especialmente tras un «vamos» / «alistémonos»), se deben ejecutar obligatoriamente los siguientes pasos:
 1. **Manual Check**: Verificar si los cambios realizados requieren actualizar el manual de ayuda en `js/modules/help/HelpManual.js`.
 2. **Vision Check**: Verificar si los cambios o ideas de la sesión requieren actualizar `VISION_PARLARE_V2.md` (nuevas reglas, IDs, decisiones de arquitectura, optimizaciones).
-2b. **Mobile Strategy Check**: Si la sesión incluyó trabajo móvil o decisiones de app, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.
+2b. **Mobile Strategy Check (Antigravity)**: Si la sesión incluyó trabajo móvil, backend Firebase, recibos o decisiones de app/roadmap, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.
 3. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (el código del bot en Render ya es obsoleto, ahora corre 100% en Firebase).
 4. **Despliegues en Vivo (Firebase Deploy)**:
    * **Si los cambios fueron en el Frontend (interfaz web/móvil):**

@@ -57,6 +57,7 @@ export const MobileBottomNav = {
         if (isAdmin) {
             items.push({ id: 'mobileMoreCorte', label: 'Corte de Caja', icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', color: 'text-emerald-600' });
             items.push({ id: 'mobileMoreReports', label: 'Reportes Financieros', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', color: 'text-blue-600' });
+            items.push({ id: 'mobileMoreSettings', label: 'Configuración de Clínica', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', color: 'text-blue-600' });
         }
 
         if (showReception) {
@@ -188,6 +189,10 @@ export const MobileBottomNav = {
                 case 'mobileMoreReports':
                     MobileNav.closeMoreSheet();
                     document.getElementById('openReportsBtn')?.click();
+                    break;
+                case 'mobileMoreSettings':
+                    MobileNav.closeMoreSheet();
+                    (await import('../modules/admin/AdminSettingsModal.js')).AdminSettingsModal.open();
                     break;
                 case 'mobileMoreReception':
                     MobileNav.openReception();

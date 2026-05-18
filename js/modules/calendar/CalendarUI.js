@@ -28,13 +28,36 @@ export const CalendarUI = {
 
             grid.innerHTML = '';
 
-            const weekDays = [];
+            const isDayMode = CalendarState.viewMode === 'day';
+
+            const gridWrapper = grid.closest('.overflow-x-auto');
+            if (gridWrapper) {
+                if (isDayMode) {
+                    gridWrapper.classList.remove('overflow-x-auto');
+                    grid.classList.remove('min-w-[700px]');
+                    grid.classList.add('w-full');
+                } else {
+                    gridWrapper.classList.add('overflow-x-auto');
+                    grid.classList.add('min-w-[700px]');
+                    grid.classList.remove('w-full');
+                }
+            }
+
+            const allWeekDays = [];
             for (let i = 0; i < 7; i++) {
                 const day = addDays(CalendarState.currentDate, i);
                 if (day.getDay() !== 0) { // Excluir domingos si es necesario
-                    weekDays.push(day);
+                    allWeekDays.push(day);
                 }
             }
+
+            if (CalendarState.selectedDayIndex >= allWeekDays.length) {
+                CalendarState.selectedDayIndex = 0;
+            }
+
+            const weekDays = isDayMode
+                ? [allWeekDays[CalendarState.selectedDayIndex]]
+                : allWeekDays;
 
             const monthYear = CalendarState.currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
             if (monthLabel) monthLabel.textContent = monthYear;
@@ -42,9 +65,35 @@ export const CalendarUI = {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
+            if (isDayMode) {
+                const daySelector = document.createElement('div');
+                daySelector.className = "flex justify-between items-center bg-gray-50 p-1.5 rounded-xl border border-gray-200 gap-1 mb-3 mx-1";
+                const shortDayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                allWeekDays.forEach((dayDate, idx) => {
+                    const isActive = idx === CalendarState.selectedDayIndex;
+                    const btn = document.createElement('button');
+                    btn.type = "button";
+                    btn.className = `flex-1 py-2 text-xs font-bold rounded-lg transition-all touch-manipulation ${
+                        isActive
+                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                            : 'text-gray-500 hover:bg-gray-100'
+                    }`;
+                    btn.textContent = `${shortDayNames[idx]} ${dayDate.getDate()}`;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        CalendarState.selectedDayIndex = idx;
+                        this.renderCalendar(onEventClick, onEmptySlotClick);
+                    };
+                    daySelector.appendChild(btn);
+                });
+                grid.appendChild(daySelector);
+            }
+
             // Header Row
             const headerRow = document.createElement('div');
-            headerRow.className = "grid grid-cols-7 sticky top-0 bg-white z-20 border-b-2 border-gray-200";
+            headerRow.className = isDayMode
+                ? "grid grid-cols-2 sticky top-0 bg-white z-20 border-b-2 border-gray-200"
+                : "grid grid-cols-7 sticky top-0 bg-white z-20 border-b-2 border-gray-200";
 
             const emptyCell = document.createElement('div');
             emptyCell.className = "p-3 border-r border-gray-200 text-center sticky-corner";
@@ -115,7 +164,9 @@ export const CalendarUI = {
                 const row = document.createElement('div');
                 const rowColor = hour % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
                 const isCurrentHour = new Date().getHours() === hour;
-                row.className = `grid grid-cols-7 ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`;
+                row.className = isDayMode
+                    ? `grid grid-cols-2 ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`
+                    : `grid grid-cols-7 ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`;
 
                 const hourCell = document.createElement('div');
                 hourCell.className = `p-2 border-r border-b border-gray-200 text-right sticky-column ${isCurrentHour ? 'current-hour-cell' : ''}`;

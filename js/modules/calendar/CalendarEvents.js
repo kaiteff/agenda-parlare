@@ -9,6 +9,12 @@ import { CalendarUI } from './CalendarUI.js';
 import { CalendarModal } from './CalendarModal.js';
 import { MiniCalendar } from '../../components/MiniCalendar.js';
 import { getStartOfWeek, addDays } from '../../utils/dateUtils.js';
+
+/** Índice Lun–Sáb (0–5) para la vista diaria. */
+function getWorkdayIndex(date) {
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 ? 0 : dayOfWeek - 1;
+}
 import { WhatsAppDashboard } from '../../components/WhatsAppDashboard.js';
 
 export const CalendarEvents = {
@@ -16,6 +22,7 @@ export const CalendarEvents = {
 
     init() {
         console.log("CalendarEvents init started");
+        CalendarState.initViewMode();
         this.cacheDOM();
         this.setupMiniCalendar();
         this.bindEvents();
@@ -80,10 +87,12 @@ export const CalendarEvents = {
                 monthLabel: miniMonthLabel,
                 onDateSelect: (date) => {
                     CalendarState.currentWeekStart = getStartOfWeek(date);
+                    CalendarState.selectedDayIndex = getWorkdayIndex(date);
                     this.render();
                 },
                 onWeekSelect: (date) => {
                     CalendarState.currentWeekStart = getStartOfWeek(date);
+                    CalendarState.selectedDayIndex = getWorkdayIndex(date);
                     this.render();
                 }
             });
@@ -109,6 +118,7 @@ export const CalendarEvents = {
 
         if (todayBtn) todayBtn.onclick = () => {
             CalendarState.currentWeekStart = getStartOfWeek(new Date());
+            CalendarState.selectedDayIndex = getWorkdayIndex(new Date());
             this.render();
             if (this.miniCalendar) {
                 this.miniCalendar.currentMonth = new Date();
@@ -124,6 +134,7 @@ export const CalendarEvents = {
                 const date = new Date(e.target.value + 'T00:00:00'); // Evitar desfase de zona horaria
                 if (!isNaN(date.getTime())) {
                     CalendarState.currentWeekStart = getStartOfWeek(date);
+                    CalendarState.selectedDayIndex = getWorkdayIndex(date);
                     this.render();
                     if (this.miniCalendar) {
                         this.miniCalendar.currentMonth = date;
@@ -135,6 +146,37 @@ export const CalendarEvents = {
 
         // Los cierres de modal por click en backdrop ahora se manejan declarativamente 
         // en el HTML (onclick="if(event.target===this)...") para mayor robustez.
+
+        // Alternar vista Día / Semana (móvil)
+        const dayBtn = document.getElementById('toggleViewDayBtn');
+        const weekBtn = document.getElementById('toggleViewWeekBtn');
+
+        const updateToolbarViewButtons = () => {
+            if (!dayBtn || !weekBtn) return;
+            if (CalendarState.viewMode === 'day') {
+                dayBtn.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-white text-blue-600 shadow-sm border border-gray-100 touch-manipulation";
+                weekBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-gray-500 hover:bg-gray-200/50 touch-manipulation";
+            } else {
+                weekBtn.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-white text-blue-600 shadow-sm border border-gray-100 touch-manipulation";
+                dayBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-gray-500 hover:bg-gray-200/50 touch-manipulation";
+            }
+        };
+
+        if (dayBtn && weekBtn) {
+            updateToolbarViewButtons();
+
+            dayBtn.onclick = () => {
+                CalendarState.viewMode = 'day';
+                updateToolbarViewButtons();
+                this.render();
+            };
+
+            weekBtn.onclick = () => {
+                CalendarState.viewMode = 'week';
+                updateToolbarViewButtons();
+                this.render();
+            };
+        }
     },
 
     render() {

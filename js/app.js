@@ -18,6 +18,7 @@ import { WhatsAppDashboard } from './components/WhatsAppDashboard.js';
 import { ReceptionControl } from './modules/reception/ReceptionControl.js';
 import { ComponentManager } from './components/ComponentManager.js';
 import { SettingsManager } from './managers/SettingsManager.js';
+import { NewFeatureAlert } from './utils/NewFeatureAlert.js';
 
 const log = Logger.create('App');
 
@@ -99,6 +100,7 @@ async function initializeModules() {
             .catch(e => log.error('GoogleAuthService error:', e));
 
         log.success("Todos los módulos inicializados");
+        NewFeatureAlert.init(); // <-- NUEVO: Pop-up de bienvenida premium
     } catch (error) {
         log.error("Error crítico inicializando módulos", error);
     }

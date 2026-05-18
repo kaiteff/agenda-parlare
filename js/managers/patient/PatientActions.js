@@ -11,7 +11,7 @@
  * - Confirmación de citas
  * 
  * NO maneja:
- * - Renderizado (ver PatientUI.js)
+ * - Renderizado de lista (ver Sidebar.js → render())
  * - Filtrado (ver PatientFilters.js)
  * - Estado (ver PatientState.js)
  * 
@@ -19,7 +19,7 @@
  */
 
 import { db, updateDoc, doc, collectionPath, patientProfilesPath, collection, query, where, getDocs, getDoc } from '../../firebase.js';
-import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile } from '../../services/patientService.js';
+import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile, getReimbursementReceiptFromDom } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
 import { PatientModals } from './PatientModals.js';
@@ -151,7 +151,8 @@ export const PatientActions = {
                 countryCode: countryCode, // Nuevo: Guardar por separado
                 parentName: _toProperCase(parentName), 
                 wantsWhatsapp,
-                birthday 
+                birthday,
+                reimbursementReceipt: getReimbursementReceiptFromDom('newPatient')
             });
 
             if (result.success) {
@@ -421,10 +422,8 @@ export const PatientActions = {
 
             // Forzar re-render de la lista para actualizar UI inmediatamente
             // El listener de Firestore también lo hará, pero esto asegura actualización inmediata
-            const { PatientUI } = await import('./PatientUI.js');
-            setTimeout(() => {
-                PatientUI.renderList();
-            }, 100);
+            const { Sidebar } = await import('../../components/Sidebar.js');
+            setTimeout(() => Sidebar.render(), 100);
 
             return true;
 
@@ -630,9 +629,16 @@ export const PatientActions = {
             if (updates.clinicFee !== undefined) profileUpdates.clinicFee = updates.clinicFee;
             if (updates.parentName !== undefined) profileUpdates.parentName = _toProperCase(updates.parentName);
             if (updates.wantsWhatsapp !== undefined) profileUpdates.wantsWhatsapp = updates.wantsWhatsapp;
+            if (updates.recurrentOptIn !== undefined) profileUpdates.recurrentOptIn = updates.recurrentOptIn;
             if (updates.assignedThemes !== undefined) profileUpdates.assignedThemes = updates.assignedThemes;
             if (updates.assignedSubthemes !== undefined) profileUpdates.assignedSubthemes = updates.assignedSubthemes;
             if (updates.birthday !== undefined) profileUpdates.birthday = updates.birthday;
+            if (updates.reimbursementReceipt !== undefined) {
+                profileUpdates.reimbursementReceipt = {
+                    autoGenerate: updates.reimbursementReceipt.autoGenerate === true,
+                    tutorName: updates.reimbursementReceipt.tutorName || ''
+                };
+            }
 
             // Handle phone with country code (Normalizado)
             if (updates.phone !== undefined) {

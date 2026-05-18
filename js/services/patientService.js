@@ -10,6 +10,17 @@ import { ModalService } from '../utils/ModalService.js';
  * @param {Array} profiles - Lista de perfiles
  * @returns {Object|null} - Perfil encontrado o null
  */
+/**
+ * Lee campos preparatorios de recibo de reembolso desde el DOM (aunque estén disabled).
+ * @param {'newPatient'|'editPatient'} prefix
+ */
+export function getReimbursementReceiptFromDom(prefix) {
+    return {
+        autoGenerate: document.getElementById(`${prefix}ReimbursementAuto`)?.checked === true,
+        tutorName: document.getElementById(`${prefix}ReimbursementTutorName`)?.value?.trim() || ''
+    };
+}
+
 export function findPatientByName(name, profiles) {
     if (!name) return null;
     return profiles.find(p => p.name.toLowerCase() === name.toLowerCase().trim());
@@ -44,7 +55,13 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             defaultCost: options.defaultCost || 0,
             clinicFee: options.clinicFee !== undefined ? options.clinicFee : 250,
             parentName: options.parentName || '',
-            wantsWhatsapp: options.wantsWhatsapp !== false
+            wantsWhatsapp: options.wantsWhatsapp !== false,
+            recurrentOptIn: options.recurrentOptIn || 'pending',
+            birthday: options.birthday || '',
+            reimbursementReceipt: {
+                autoGenerate: options.reimbursementReceipt?.autoGenerate === true,
+                tutorName: options.reimbursementReceipt?.tutorName || ''
+            }
         };
 
         const docRef = await addDoc(collection(db, patientProfilesPath), profileData);

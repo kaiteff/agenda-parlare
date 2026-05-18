@@ -1,4 +1,32 @@
+import { renderSaasReadyBanner, SAAS_READY_EXPLANATION } from '../../utils/saasReadyCopy.js';
+
 export const PatientModalsHTML = {
+    /**
+     * Bloque UI preparatorio para recibos de reembolso (SaaS — deshabilitado).
+     * @param {'newPatient'|'editPatient'} prefix
+     */
+    _getReimbursementReceiptBlock(prefix) {
+        const autoId = `${prefix}ReimbursementAuto`;
+        const tutorId = `${prefix}ReimbursementTutorName`;
+        return `
+                    ${renderSaasReadyBanner(SAAS_READY_EXPLANATION.receiptNote)}
+                    <div class="rounded-xl border border-dashed border-indigo-200/80 bg-indigo-50/30 p-4 opacity-50">
+                        <p class="text-[10px] font-black uppercase tracking-wider text-indigo-600 mb-3">Recibo de reembolso <span class="text-indigo-400 font-normal normal-case">(SaaS Ready)</span></p>
+                        <label class="flex items-start gap-3 min-h-[44px] touch-manipulation cursor-not-allowed">
+                            <input type="checkbox" id="${autoId}" disabled
+                                class="mt-0.5 w-5 h-5 text-indigo-600 rounded border-gray-300 cursor-not-allowed flex-shrink-0">
+                            <span class="text-xs font-bold text-gray-600 leading-snug">Generar Recibo de Reembolso Automático</span>
+                        </label>
+                        <div class="mt-4">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Tutor para Recibo</label>
+                            <input type="text" id="${tutorId}" disabled
+                                placeholder="Ej: María Elena (Mamá)"
+                                class="w-full px-4 py-3.5 md:px-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed">
+                        </div>
+                        <p class="text-[10px] text-gray-500 italic mt-3 text-center">Interfaz en pausa — el PDF automático ya está en el servidor.</p>
+                    </div>`;
+    },
+
     /**
      * Inyecta los modales en el documento
      * @param {HTMLElement} container - Contenedor donde inyectar (default: document.body)
@@ -106,6 +134,8 @@ export const PatientModalsHTML = {
                     </div>
                     </div>
 
+                    ${this._getReimbursementReceiptBlock('newPatient')}
+
                     <div id="newPatientModalFooter" class="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex gap-3">
                         <button type="button" id="cancelNewPatientBtn"
                             class="flex-1 px-4 py-3 ${touchBtn} bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
@@ -124,7 +154,7 @@ export const PatientModalsHTML = {
                 <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
                 <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-200 flex flex-col md:flex-row md:justify-between md:items-start gap-2 md:gap-3 bg-white flex-shrink-0 relative">
                     <div id="patientHistoryTitle" class="min-w-0 w-full md:flex-1">
-                        <!-- Injected -->
+                        <!-- Inyectado: nombre, semáforo recurrentOptIn, botón bienvenida_con_optin -->
                     </div>
                     <div class="flex items-center gap-0.5 flex-shrink-0 absolute top-3 right-3 md:relative md:top-auto md:right-auto z-30 bg-white/95 md:bg-transparent rounded-full md:rounded-none shadow-sm md:shadow-none pl-0.5">
                         <div id="authDebugInfo" class="hidden md:flex text-[8px] text-gray-300 mr-2 flex-col text-right"></div>
@@ -209,6 +239,8 @@ export const PatientModalsHTML = {
                                 <input type="date" id="editPatientBirthday" class="${touchField}">
                             </div>
                         </div>
+
+                        ${this._getReimbursementReceiptBlock('editPatient')}
 
                         <div id="adminPatientThemesSection" class="mt-6 pt-4 border-t border-gray-100 hidden">
                              <h5 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Temas de Trabajo del Paciente (Plan Diana)</h5>
