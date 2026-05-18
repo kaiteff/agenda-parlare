@@ -113,6 +113,11 @@ def on_appointment_cancelled_trigger(
     event: firestore_fn.Event[firestore_fn.Change | None],
 ) -> None:
     """Monitorea cancelaciones de citas y activa la lista de espera Autopilot."""
+    # 🚨 AUTOPILOT PAUSADO TEMPORALMENTE EN PRODUCCIÓN PARA EVITAR FALSOS POSITIVOS
+    # Se reactivará en la siguiente fase tras implementar el sistema de confirmación Yari/Terapeuta.
+    logger.info("⏸️ Autopilot de Adelantos temporalmente pausado en producción.")
+    return
+
     from main import ALL_SECRETS, TWILIO_WHATSAPP_FROM
     
     change = event.data

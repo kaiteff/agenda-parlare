@@ -119,17 +119,20 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ---
 
-## 🔍 Supervisión Post-Despliegue (Cosas para Monitorear)
-*   **Monitoreo del Autopilot (Fase B)**: Validar que ante cancelaciones de 8h-24h se creen los registros en `/space_offers` y se envíen los WhatsApps de forma correcta.
-*   **Monitoreo de Recibos Generados**: Validar que las citas marcadas como `isPaid` en Firestore con la casilla activa generen la propiedad `receiptPdfUrl` y suban correctamente el archivo PDF a Storage.
-*   **Monitoreo del Cronjob (8:00 PM)**: Revisar que los envíos automáticos de las 8:00 PM con botones no generen errores.
-*   **Control de Errores 429**: Validar que las llamadas a Google Calendar no se traslapen y generen bloqueos.
+## ⏳ Falta y Siguientes Pasos (Waitlist Copilot - ¡Nuevo Diseño!)
 
----
+Actualmente, **el Autopilot de Adelantos está temporalmente pausado en producción (en `functions/space_optimizer.py`)** para evitar falsos positivos mientras Diana está de vacaciones o cuando las terapeutas tienen ausencias.
 
-## ⏳ Falta (18 may 2026 — al retomar)
+En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirmación Dual y Heurísticas Humanas**:
+- [ ] **Pausa y Control:** Mantener el trigger pausado hasta completar el flujo de doble confirmación.
+- [ ] **Confirmación Colaborativa (Yari 🆚 Terapeuta):**
+  - Al cancelar, se envía WhatsApp de opción simple a la terapeuta y una alerta web a Yari.
+  - Temporizador de **1 hora** de respuesta. Si nadie aprueba, expira sin mandar WhatsApp a los padres.
+  - El primero en confirmar (Yari en web o Terapeuta en WhatsApp) activa el envío de ofertas.
+- [ ] **Regla de Proximidad (Micro-Shifting):** Priorizar a pacientes cuyas citas originales tengan menos de 3-4 horas de desfase con la hora libre (ej: mover de 6pm a 5pm).
+- [ ] **Efecto Visual (Calendar Glow):** Al cancelarse una cita, hacer que la nueva casilla vacía "brille/destelle" en la agenda web de Yari con un sutil efecto de glow pulsante para llamar su atención visual de inmediato.
+- [ ] **Delay de Pensamiento (10 minutos):** Dar un margen de 10 minutos antes de cualquier acción automática para permitir cambios manuales o arrepentimientos de Yari.
 
-- [ ] Deploy: `hosting`, `firestore:rules`, functions WhatsApp + recibos (comandos en `ANALISIS_ESTRATEGIA_MOVIL.md`).
 - [ ] Meta: plantilla `bienvenida_con_optin` aprobada.
 - [ ] Probar opt-in Sí/No en número real + panel alertas en Control Maestro.
 - [ ] Celular: logo, semáforo sidebar, Modo Un Día, Control Maestro sheet.
