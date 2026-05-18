@@ -133,6 +133,7 @@ En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirma
 - [ ] **Efecto Visual (Calendar Glow):** Al cancelarse una cita, hacer que la nueva casilla vacía "brille/destelle" en la agenda web de Yari con un sutil efecto de glow pulsante para llamar su atención visual de inmediato.
 - [ ] **Delay de Pensamiento (10 minutos):** Dar un margen de 10 minutos antes de cualquier acción automática para permitir cambios manuales o arrepentimientos de Yari.
 
+- [ ] Calidad y Optimización: Revisar calidad de código, optimizar flujos lógicos y depurar posibles errores de código (debugging).
 - [ ] Meta: plantilla `bienvenida_con_optin` aprobada.
 - [ ] Probar opt-in Sí/No en número real + panel alertas en Control Maestro.
 - [ ] Celular: logo, semáforo sidebar, Modo Un Día, Control Maestro sheet.
