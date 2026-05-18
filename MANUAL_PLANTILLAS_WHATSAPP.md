@@ -121,6 +121,9 @@ graph TD
    * **Caso Agotado (Respuestas Posteriores):** Si un segundo paciente presiona el botón, el bot le responde de forma clara y amable: *"Lo sentimos, ese horario ya fue tomado por otro paciente. Tu cita se mantiene en su horario original."*
    * **Caso Declinado:** Si presiona **"No, gracias"**, el bot marca su oferta individual como `"declined"` para control interno, mantiene su horario intacto y le responde: *"Entendido. No te preocupes, tu sesión se mantiene programada en tu horario habitual..."*
 
+> [!WARNING]
+> **ESTADO ACTUAL EN PRODUCCIÓN (MAYO 2026):** El Autopilot está **temporalmente pausado** en el código de producción de Firebase para evitar falsos positivos o spam involuntario (por ejemplo, si Diana está de vacaciones o una terapeuta tiene una ausencia imprevista). En la siguiente etapa se reactivará como **Copiloto Colaborativo** agregando confirmación táctil de Yari y/o terapeuta con 1 hora de margen de respuesta y un sutil "Calendar Glow" visual en la casilla vacía.
+
 ---
 
 ## 🔍 Resumen Operativo para Recepción (Yari)

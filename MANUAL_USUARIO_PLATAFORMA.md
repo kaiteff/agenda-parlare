@@ -124,6 +124,9 @@ Ubicado en el panel administrativo de Daniel, el **Control Maestro** gestiona la
 
 ## 6. Monitoreo de Alertas del Autopilot (Waitlist)
 
+> [!WARNING]
+> **ESTADO DE OPERACIÓN EN PRODUCCIÓN (MAYO 2026):** El Autopilot está **temporalmente pausado** en el backend para prevenir envíos accidentales mientras Diana está de vacaciones o ante ausencias de terapeutas. En la próxima etapa técnica, se activará en formato **Copiloto Colaborativo** con confirmación dual (Yari/Terapeuta) y un temporizador de 1 hora.
+
 El **Optimizador de Espacios** trabaja de forma silenciosa en el backend, pero ofrece herramientas visuales para su supervisión.
 
 ### 📋 Gestión de Alertas en Recepción
