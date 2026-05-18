@@ -3,16 +3,49 @@
  * Modal interactivo con el manual de usuario de Parláre.
  */
 
-import { ModalService } from '../../utils/ModalService.js';
-
 export const HelpManual = {
-    open() {
-        const modalId = 'helpManualModal';
-        if (document.getElementById(modalId)) return;
+    MODAL_ID: 'helpManualModal',
+
+    close() {
+        const el = document.getElementById(this.MODAL_ID);
+        if (el) el.remove();
+        this._releaseBodyScroll();
+        if (this._escHandler) {
+            window.removeEventListener('keydown', this._escHandler);
+            this._escHandler = null;
+        }
+    },
+
+    _lockBodyScroll() {
+        document.body.classList.add('overflow-hidden');
+    },
+
+    _releaseBodyScroll() {
+        const ids = ['eventModal', 'newPatientModal', 'patientHistoryModal', 'inactivePatientsModal', 'sessionNoteModal', 'mobileMoreSheet'];
+        const otherOpen = ids.some((id) => {
+            const node = document.getElementById(id);
+            return node && !node.classList.contains('hidden');
+        });
+        if (!otherOpen) document.body.classList.remove('overflow-hidden');
+    },
+
+    async open() {
+        const modalId = this.MODAL_ID;
+        this.close();
+
+        try {
+            const { MobileNav } = await import('../../utils/MobileNav.js');
+            MobileNav.closeMoreSheet();
+            MobileNav.closeSidebar();
+        } catch (_) { /* noop */ }
 
         const html = `
-        <div id="${modalId}" onclick="if(event.target===this) this.remove()" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div class="bg-white w-full max-w-4xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-scale-up">
+        <div id="${modalId}" role="dialog" aria-modal="true" aria-labelledby="helpManualTitle"
+            class="fixed inset-0 z-[10050] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4">
+            <div id="helpManualPanel" class="bg-white w-full max-w-none md:max-w-4xl h-[92dvh] md:h-[85vh] max-h-[92dvh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden text-gray-800">
+                <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-t-3xl" aria-hidden="true">
+                    <span class="w-10 h-1 rounded-full bg-white/40"></span>
+                </div>
                 
                 <!-- Header -->
                 <div class="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex justify-between items-center shrink-0">
@@ -23,11 +56,11 @@ export const HelpManual = {
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-xl font-bold">Manual de Usuario</h2>
+                            <h2 id="helpManualTitle" class="text-lg md:text-xl font-bold">Manual de Usuario</h2>
                             <p class="text-blue-100 text-xs font-medium">Guía oficial del Sistema Parláre</p>
                         </div>
                     </div>
-                    <button id="closeHelpManualBtn" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <button type="button" id="closeHelpManualBtn" class="touch-target touch-manipulation p-3 hover:bg-white/10 rounded-full transition-colors" aria-label="Cerrar manual">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
@@ -301,20 +334,26 @@ export const HelpManual = {
 
         document.body.insertAdjacentHTML('beforeend', html);
 
-        // Bind events
-        document.getElementById('closeHelpManualBtn').onclick = () => {
-            const el = document.getElementById(modalId);
-            if (el) el.remove();
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.close();
+        });
+
+        document.getElementById('closeHelpManualBtn').onclick = () => this.close();
+
+        this._escHandler = (e) => {
+            if (e.key === 'Escape') this.close();
         };
-        
-        // Cerrar con escape
-        const onEsc = (e) => {
-            if (e.key === 'Escape') {
-                const el = document.getElementById(modalId);
-                if (el) el.remove();
-                window.removeEventListener('keydown', onEsc);
-            }
-        };
-        window.addEventListener('keydown', onEsc);
+        window.addEventListener('keydown', this._escHandler);
+
+        this._lockBodyScroll();
+        modal.style.display = 'flex';
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.openHelpManual = () => HelpManual.open();
+    window.closeHelpManualModal = () => HelpManual.close();
+}

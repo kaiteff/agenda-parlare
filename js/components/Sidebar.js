@@ -115,10 +115,9 @@ export const Sidebar = {
 
         const helpBtn = document.getElementById('openHelpManualBtn');
         if (helpBtn) {
-            helpBtn.onclick = () => {
-                import('../modules/help/HelpManual.js').then(m => {
-                    m.HelpManual.open();
-                });
+            helpBtn.onclick = async () => {
+                const { HelpManual } = await import('../modules/help/HelpManual.js');
+                await HelpManual.open();
             };
         }
 

@@ -46,7 +46,7 @@ export const ReceptionControl = {
         if (headerBtns) {
             const btnHtml = `
                 <button id="openReceptionControlBtn" 
-                    class="flex items-center gap-2 px-3 py-2 md:px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-all shadow-lg shadow-indigo-500/30">
+                    class="hidden md:flex items-center gap-2 px-3 py-2 md:px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-all shadow-lg shadow-indigo-500/30">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                     </svg>
@@ -62,26 +62,7 @@ export const ReceptionControl = {
             }
             
             document.getElementById('openReceptionControlBtn')?.addEventListener('click', () => this.open());
-            
-            // TAMBIÉN: Añadir al Sidebar para mayor facilidad en cel
-            const sidebarBtnHtml = `
-                <div class="px-2 py-4 border-b border-gray-100 md:hidden bg-indigo-50">
-                    <button id="sidebarReceptionBtn" class="w-full flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md shadow-indigo-200">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                        Abrir Control Maestro
-                    </button>
-                </div>
-            `;
-            const searchContainer = document.querySelector('#mainSidebar .p-4');
-            if (searchContainer) {
-                searchContainer.insertAdjacentHTML('beforebegin', sidebarBtnHtml);
-                document.getElementById('sidebarReceptionBtn')?.addEventListener('click', () => {
-                    // Cerrar sidebar primero
-                    document.getElementById('mainSidebar').classList.add('-translate-x-full');
-                    document.getElementById('sidebarOverlay').classList.add('hidden');
-                    this.open();
-                });
-            }
+            // Móvil: Control Maestro solo en menú «Más»
         }
     },
 

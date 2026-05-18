@@ -14,15 +14,6 @@ export const MobileBottomNav = {
 
         const showReception = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
 
-        const receptionTab = showReception ? `
-            <button type="button" data-tab="reception" class="bottom-nav-item flex-1 flex flex-col items-center justify-center gap-0.5 touch-target touch-manipulation text-gray-500 transition-colors" aria-label="Recepción">
-                <span class="bottom-nav-icon-wrap p-1.5 rounded-xl transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                </span>
-                <span class="text-[10px] font-bold uppercase tracking-wide">Recepción</span>
-            </button>
-        ` : '';
-
         const nav = document.createElement('nav');
         nav.id = 'mainBottomNav';
         nav.setAttribute('role', 'navigation');
@@ -42,7 +33,6 @@ export const MobileBottomNav = {
                     </span>
                     <span class="text-[10px] font-bold uppercase tracking-wide">Pacientes</span>
                 </button>
-                ${receptionTab}
                 <button type="button" data-tab="more" class="bottom-nav-item flex-1 flex flex-col items-center justify-center gap-0.5 touch-target touch-manipulation text-gray-500 transition-colors" aria-label="Más opciones">
                     <span class="bottom-nav-icon-wrap p-1.5 rounded-xl transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path></svg>
@@ -70,7 +60,13 @@ export const MobileBottomNav = {
         }
 
         if (showReception) {
-            items.push({ id: 'mobileMoreReception', label: 'Control Maestro', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', color: 'text-indigo-600' });
+            items.unshift({
+                id: 'mobileMoreReception',
+                label: 'Control Maestro',
+                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+                color: 'text-indigo-600',
+                highlight: true
+            });
         }
 
         items.push(
@@ -98,7 +94,7 @@ export const MobileBottomNav = {
         `;
 
         const listHtml = items.map((item) => `
-            <button type="button" id="${item.id}" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation ${item.danger ? 'mt-2 border-t border-gray-100' : ''}">
+            <button type="button" id="${item.id}" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation ${item.danger ? 'mt-2 border-t border-gray-100' : ''} ${item.highlight ? 'border border-indigo-100 bg-indigo-50/50' : ''}">
                 <span class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center ${item.color}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}"></path></svg>
                 </span>
@@ -152,9 +148,6 @@ export const MobileBottomNav = {
                 case 'patients':
                     MobileNav.showPatients();
                     break;
-                case 'reception':
-                    MobileNav.openReception();
-                    break;
                 case 'more':
                     if (MobileNav.activeTab === 'more' && !document.getElementById('mobileMoreSheet')?.classList.contains('hidden')) {
                         MobileNav.closeMoreSheet();
@@ -170,44 +163,56 @@ export const MobileBottomNav = {
         this._bindMoreSheetActions();
     },
 
-    async _bindMoreSheetActions() {
-        document.getElementById('mobileMoreCorte')?.addEventListener('click', async () => {
-            MobileNav.closeMoreSheet();
-            const { CorteDeCaja } = await import('../modules/reports/CorteDeCaja.js');
-            CorteDeCaja.open();
-        });
+    _bindMoreSheetActions() {
+        const sheet = document.getElementById('mobileMoreSheet');
+        if (!sheet || sheet.dataset.actionsBound === '1') return;
+        sheet.dataset.actionsBound = '1';
 
-        document.getElementById('mobileMoreReports')?.addEventListener('click', async () => {
-            MobileNav.closeMoreSheet();
-            document.getElementById('openReportsBtn')?.click();
-        });
+        sheet.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[id^="mobileMore"]');
+            if (!btn) return;
 
-        document.getElementById('mobileMoreReception')?.addEventListener('click', () => {
-            MobileNav.openReception();
-        });
+            e.preventDefault();
+            e.stopPropagation();
 
-        document.getElementById('mobileMoreHelp')?.addEventListener('click', async () => {
-            MobileNav.closeMoreSheet();
-            const { HelpManual } = await import('../modules/help/HelpManual.js');
-            HelpManual.open();
-        });
-
-        document.getElementById('mobileMoreSuggest')?.addEventListener('click', async () => {
-            MobileNav.closeMoreSheet();
-            const { SuggestionsModal } = await import('../modules/help/SuggestionsModal.js');
-            SuggestionsModal.open();
-        });
-
-        document.getElementById('mobileMoreSupport')?.addEventListener('click', async () => {
-            MobileNav.closeMoreSheet();
-            const { SupportVault } = await import('../modules/support/SupportVault.js');
-            SupportVault.open();
-        });
-
-        document.getElementById('mobileMoreLogout')?.addEventListener('click', async () => {
-            MobileNav.closeMoreSheet();
-            if (await ModalService.confirm('Cerrar Sesión', '¿Estás seguro que deseas salir?', 'Cerrar Sesión', 'Cancelar')) {
-                await logoutUser();
+            switch (btn.id) {
+                case 'mobileMoreGoogleSync': {
+                    const { GoogleSyncUI } = await import('../utils/GoogleSyncUI.js');
+                    await GoogleSyncUI.handleClick(btn);
+                    break;
+                }
+                case 'mobileMoreCorte':
+                    MobileNav.closeMoreSheet();
+                    (await import('../modules/reports/CorteDeCaja.js')).CorteDeCaja.open();
+                    break;
+                case 'mobileMoreReports':
+                    MobileNav.closeMoreSheet();
+                    document.getElementById('openReportsBtn')?.click();
+                    break;
+                case 'mobileMoreReception':
+                    MobileNav.openReception();
+                    break;
+                case 'mobileMoreHelp': {
+                    const { HelpManual } = await import('../modules/help/HelpManual.js');
+                    await HelpManual.open();
+                    break;
+                }
+                case 'mobileMoreSuggest':
+                    MobileNav.closeMoreSheet();
+                    (await import('../modules/help/SuggestionsModal.js')).SuggestionsModal.open();
+                    break;
+                case 'mobileMoreSupport':
+                    MobileNav.closeMoreSheet();
+                    (await import('../modules/support/SupportVault.js')).SupportVault.open();
+                    break;
+                case 'mobileMoreLogout':
+                    MobileNav.closeMoreSheet();
+                    if (await ModalService.confirm('Cerrar Sesión', '¿Estás seguro que deseas salir?', 'Cerrar Sesión', 'Cancelar')) {
+                        await logoutUser();
+                    }
+                    break;
+                default:
+                    break;
             }
         });
     }

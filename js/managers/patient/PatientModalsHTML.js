@@ -122,12 +122,12 @@ export const PatientModalsHTML = {
             <div id="patientHistoryModalPanel"
                 class="bg-white w-full max-w-none md:max-w-4xl h-[92dvh] md:h-[85vh] max-h-[92dvh] flex flex-col rounded-t-3xl md:rounded-xl shadow-2xl modal-panel overflow-hidden text-gray-800">
                 <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
-                <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-200 flex justify-between items-start gap-3 bg-white flex-shrink-0">
-                    <div class="flex items-center gap-3 min-w-0 flex-1" id="patientHistoryTitle">
+                <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-200 flex flex-col md:flex-row md:justify-between md:items-start gap-2 md:gap-3 bg-white flex-shrink-0 relative">
+                    <div id="patientHistoryTitle" class="min-w-0 w-full md:flex-1">
                         <!-- Injected -->
                     </div>
-                    <div class="flex items-center gap-0.5 flex-shrink-0">
-                        <div id="authDebugInfo" class="hidden text-[8px] text-gray-300 mr-2 flex-col text-right"></div>
+                    <div class="flex items-center gap-0.5 flex-shrink-0 absolute top-3 right-3 md:relative md:top-auto md:right-auto z-30 bg-white/95 md:bg-transparent rounded-full md:rounded-none shadow-sm md:shadow-none pl-0.5">
+                        <div id="authDebugInfo" class="hidden md:flex text-[8px] text-gray-300 mr-2 flex-col text-right"></div>
                         <button type="button" id="editPatientBtn"
                             class="touch-target touch-manipulation text-gray-400 hover:text-blue-600 p-3 rounded-full hover:bg-blue-50 transition-colors"
                             title="Editar Perfil" aria-label="Editar perfil">
