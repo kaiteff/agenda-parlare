@@ -219,6 +219,7 @@ Para llevar la aplicación a las tiendas de Google Play y Apple App Store sin re
   1. **Preparación (Cursor)**: Todo el empaquetado y la configuración de Capacitor se realizará dentro del editor Cursor usando las tecnologías web existentes. Capacitor generará automáticamente las carpetas nativas (`android/` e `ios/`).
   2. **Compilación y Tiendas (Android Studio / Xcode)**: Estas herramientas pesadas **no se usarán para programar**. Solo servirán como puente final para probar en emuladores y compilar los instalables finales (`.aab` o `.ipa`) para subir a las tiendas.
 - **Actualizaciones "Over The Air" (OTA)**: Para evitar el lento proceso de revisión de las tiendas al modificar la interfaz (HTML/JS/CSS), se implementará **Capacitor Updater** o **Ionic Appflow**. Esto permite empujar mejoras a los celulares de los usuarios de forma instantánea y en segundo plano. Solo se subirá una nueva versión a la tienda si se instalan plugins nativos nuevos (ej. cámara).
+- **Fundación de Marca y PWA (18 de Mayo, 2026)**: Implementación del logotipo oficial (`assets/parlare-logo.png`), favicon adaptativo, colores de interfaz de barra de estado (`theme-color`), y el archivo de manifiesto PWA (`manifest.webmanifest`). Esto sienta las bases estéticas e identitarias clave para la experiencia web móvil y la futura empaquetación nativa de Capacitor.
 
 ### Arquitectura Futura (100% Google Ecosystem)
 - **Firebase Blaze** (Plan de pago por uso): Necesario para Cloud Functions y Scheduler. El costo para este volumen de uso es prácticamente $0.
@@ -304,4 +305,4 @@ Al comenzar cualquier sesión de desarrollo:
 3. Preguntar al usuario qué tarea o bug tiene hoy.
 
 ---
-*Última actualización: 17 de Mayo, 2026 — Añadido blueprint para la Opción A SaaS (Distribución, Asientos con Stripe y Firestore Multitenancy).*
+*Última actualización: 18 de Mayo, 2026 — Adaptación móvil y acceso táctil al Panel de Configuración Administrativa (Firestore-driven) completado y documentado.*

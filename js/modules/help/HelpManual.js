@@ -148,6 +148,30 @@ export const HelpManual = {
                             </div>
                         </details>
 
+                        <!-- C. Configuración de Clínica -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm">C</span>
+                                    Configuración de Clínica (Administración)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
+                                <p>Este panel permite a las administradoras gestionar de forma dinámica la clínica:</p>
+                                <ul class="list-disc ml-5 space-y-2">
+                                    <li><strong>Acceso:</strong> Desde computadoras usando el icono de engrane ⚙️ en el menú superior derecho, o en celulares desde el menú <strong>Más → Configuración de Clínica</strong>.</li>
+                                    <li><strong>Temas y Metodología:</strong> Administra el catálogo global de temas, secciones (subtemas) y actividades de intervención. Al editar nombres o eliminar temas, los cambios se aplican de forma inmediata.</li>
+                                    <li><strong>Costos y Comisiones:</strong> Configura los costos sugeridos de sesión y las cuotas de recuperación de la clínica para cada terapeuta de manera independiente.</li>
+                                    <li><strong>Reportes Financieros Rápidos:</strong> Acceso rápido a los análisis de utilidad neta y rendimiento mensual.</li>
+                                </ul>
+                                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <h4 class="font-bold text-indigo-900 mb-1">🏷️ Campos «SaaS Ready» (en gris)</h4>
+                                    <p>Verás cédula profesional, institución de egreso y recibos de reembolso en gris con badge <strong>SaaS Ready</strong>. <strong>No está roto:</strong> el sistema ya guarda esos datos en la nube para cuando activen el módulo multi-clínica; Diana las habilitará desde administración.</p>
+                                </div>
+                            </div>
+                        </details>
+
                         <!-- C. Crear Paciente -->
                         <details open class="group bg-blue-50 rounded-2xl border border-blue-200 shadow-md overflow-hidden transition-all">
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none bg-white">
@@ -235,7 +259,7 @@ export const HelpManual = {
                                 </div>
                                 <div class="bg-indigo-50 p-4 rounded-xl space-y-1">
                                     <h4 class="font-bold text-indigo-800">🔍 Auditoría Visual Rápida:</h4>
-                                    <p>Las citas justificadas se mostrarán en el historial del paciente con un distintivo esmeralda premium: **`💚 Justificada`** en lugar del botón rojo normal de cancelada, permitiendo ver a simple vista qué inasistencias no deben cobrarse.</p>
+                                    <p>Las citas justificadas se mostrarán en el historial del paciente con un distintivo esmeralda premium: **«💚 Justificada»** en lugar del botón rojo normal de cancelada, permitiendo ver a simple vista qué inasistencias no deben cobrarse.</p>
                                 </div>
                                 <p class="text-xs text-gray-400 italic">Nota: Para cumplir con las políticas de ahorro de datos, los justificantes almacenados en el sistema se eliminan de forma automática a los 120 días de antigüedad.</p>
                             </div>
@@ -262,6 +286,24 @@ export const HelpManual = {
                                 <div class="bg-cyan-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-cyan-800 mb-1">❌ Flujos de Cancelación</h4>
                                     <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong>. Además, la Bitácora guarda qué texto exacto recibió cada padre.</p>
+                                </div>
+                                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                    <h4 class="font-bold text-amber-900 mb-2">🚦 Semáforo de consentimiento (Ficha del paciente)</h4>
+                                    <p class="mb-2">Al abrir el expediente verás un badge junto al botón <strong>Bienvenida</strong> que indica si el paciente aceptó recordatorios automáticos por WhatsApp:</p>
+                                    <ul class="list-none space-y-1.5 font-medium">
+                                        <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> <strong>WhatsApp Activo</strong> — Aceptó; el bot puede enviar recordatorios.</li>
+                                        <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> <strong>Pendiente de Respuesta</strong> — Se envió bienvenida con botones; aún no responde.</li>
+                                        <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> <strong>Seguimiento Manual</strong> — Rechazó bots; Yari debe contactar por teléfono (alerta en Recepción).</li>
+                                    </ul>
+                                    <p class="text-xs text-amber-800 mt-2 italic">Al crear un paciente nuevo, el sistema envía la plantilla <strong>bienvenida_con_optin</strong> con botones Sí/No para cumplir políticas anti-spam de Meta.</p>
+                                </div>
+                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                                    <h4 class="font-bold text-emerald-900 mb-2">📋 Lista de pacientes (barra lateral)</h4>
+                                    <p class="mb-2">Junto al nombre de cada paciente verás un <strong>punto de color</strong> (mismo significado que el badge de la ficha): verde = WhatsApp activo, amarillo = pendiente, rojo = seguimiento manual.</p>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                                    <h4 class="font-bold text-red-900 mb-2">🔔 Alertas en Control Maestro</h4>
+                                    <p class="mb-2">Si un padre responde <strong>No</strong> al opt-in, aparece una alerta. En <strong>Más → Control Maestro</strong> usa el panel <strong>Seguimiento manual WhatsApp</strong>: <strong>Ver ficha</strong> y <strong>Atendido</strong> cuando Yari ya gestionó el caso.</p>
                                 </div>
                                 <p>Iconos rápidos en tu agenda y barra lateral:</p>
                                 <ul class="list-none space-y-1">
