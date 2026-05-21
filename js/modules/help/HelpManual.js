@@ -103,7 +103,13 @@ export const HelpManual = {
                                 <p>En <strong>computadora</strong> usa el icono de lista arriba de Pacientes. En <strong>celular</strong>: pestaña <strong>Más → Bitácora de Auditoría</strong> (admin y recepción). Permite auditar todo lo que pasa en el sistema:</p>
                                 <ul class="list-disc ml-5 space-y-2">
                                     <li><strong>Pestaña General:</strong> Verás quién creó, canceló o marcó como pagada una cita.</li>
-                                    <li><strong>Pestaña WhatsApp:</strong> Recordatorios del bot; toca <strong>Ver mensaje completo</strong> para leer el texto exacto que recibió la familia.</li>
+                                    <li><strong>Pestaña WhatsApp (Historial de Bots):</strong> Muestra los recordatorios automáticos y manuales con sus estados:
+                                        <ul class="list-none ml-4 mt-1.5 space-y-1 text-xs">
+                                            <li>✅ <strong>Enviado (AM o PM):</strong> El recordatorio se entregó con éxito al celular del paciente.</li>
+                                            <li>⚠️ <strong>Saltado (Skipped):</strong> No se envió porque el paciente no tiene número registrado, no ha aceptado el opt-in, o tiene desactivado WhatsApp.</li>
+                                            <li>❌ <strong>Error:</strong> Falló el envío (ej. error de Twilio o número inexistente). Se muestra el detalle técnico para corregirlo.</li>
+                                        </ul>
+                                    </li>
                                     <li><strong>Identificación Staff:</strong> Los movimientos aparecen con el nombre de quien los hizo (👱‍♀️ Yari, 👩‍⚕️ Diana, etc).</li>
                                     <li><strong>Admin (Diana):</strong> <strong>Exportar a Excel</strong> y <strong>Limpiar App</strong> (más de 60 días). Exporta antes de limpiar si necesitas historial.</li>
                                 </ul>
