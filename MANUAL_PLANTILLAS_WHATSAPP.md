@@ -38,10 +38,10 @@ graph TD
 
 ### ⚙️ Funcionamiento Interno & Flujo:
 1. **Inyección de Variable:** `{{1}}` se inyecta con el **primer nombre del papá/mamá** (o del paciente) obtenido del formulario de registro.
-2. **Registro de Estado:** En Firestore, el perfil del paciente se inicializa con `recurrentOptIn: "pending"`.
+2. **Registro de Estado:** En Firestore, al registrar un paciente nuevo o enviar bienvenida manualmente, el perfil del paciente se inicializa con `recurrentOptIn: "pending"` y temporalmente se desactiva la casilla `wantsWhatsapp: false`.
 3. **Respuesta Interactiva:**
-   * **Si presiona "Sí, autorizo":** El webhook actualiza el perfil a `recurrentOptIn: "accepted"`. El sistema queda autorizado para enviarle recordatorios diarios automáticos. El bot responde: *"¡Gracias! ✅ Activaste los recordatorios de WhatsApp de Parláre. Te escribiremos solo para confirmar tus citas."*
-   * **Si presiona "No, prefiero manual":** El webhook actualiza el perfil a `recurrentOptIn: "rejected"`. El cronjob diario omitirá este número automáticamente. Además, **crea una alerta en tiempo real en la colección de recepción (`/reception_alerts`)** para que Yari gestione manualmente el caso. El bot responde: *"Entendido. No te enviaremos recordatorios automáticos..."*
+   * **Si presiona "Sí, autorizo":** El webhook actualiza el perfil a `recurrentOptIn: "accepted"` y **activa automáticamente** `wantsWhatsapp: true`. El bot responde: *"¡Gracias! ✅ Activaste los recordatorios de WhatsApp de Parláre. Te escribiremos solo para confirmar tus citas."*
+   * **Si presiona "No, prefiero manual":** El webhook actualiza el perfil a `recurrentOptIn: "rejected"` y asegura `wantsWhatsapp: false`. El bot responde: *"Entendido. No te enviaremos recordatorios automáticos..."*. Además, **crea una alerta en tiempo real en la colección de recepción (`/reception_alerts`)** para que Yari gestione manualmente el caso.
 
 ---
 
@@ -88,9 +88,10 @@ graph TD
    * `{{1}}` = Día de la cita (ej: *"Martes 19 de Mayo"*).
    * `{{2}}` = Hora de la cita (ej: *"5:30 PM"*).
 2. **Filtro de Seguridad:** El cronjob consulta Firestore antes de disparar. Solo envía el mensaje si:
-   * El paciente tiene `recurrentOptIn: "accepted"`.
+   * El paciente tiene activa la casilla de recordatorios (`wantsWhatsapp == true`) y **no** ha rechazado explícitamente el opt-in (`recurrentOptIn != 'rejected'`).
    * La cita no está cancelada (`isCancelled: false`).
    * La cita no ha sido confirmada previamente (`confirmed: false`).
+   * Adicionalmente, el bot no envía dos recordatorios el mismo día si ya se envió uno por la mañana.
 3. **Procesamiento de Respuestas:**
    * **Opción "1" (Confirmar):** El webhook de Parláre recibe la respuesta, marca la cita en Firestore como `confirmed: true`, actualiza la celda a color verde ("CONFIRMADO") en Google Sheets y en Google Calendar añade un `✅` en el título. Envía respuesta automática: *"¡Gracias! Se han confirmado las citas. ¡Nos vemos!"*
    * **Opción "2" (Cancelar):** El webhook marca la cita en Firestore como `isCancelled: true`, actualiza en Google Sheets y Google Calendar a color gris/cancelado y notifica en vivo a Yari. Envía respuesta automática: *"Cita cancelada. ¡Esperamos todo esté bien! 😊 Para reagendar... envía tu justificante médico a Yari aquí: https://wa.me/523315196702"*

@@ -1,4 +1,4 @@
-# 🚀 Plan de Trabajo - Actualizado (18 Mayo 2026)
+# 🚀 Plan de Trabajo - Actualizado (21 Mayo 2026)
 
 Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva y justificantes médicos, y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
@@ -6,6 +6,18 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Fase C: Consentimiento WhatsApp (Opt-In/Opt-Out) y Auditoría — 100% Listo y Desplegado (21 Mayo 2026)**:
+    *   **Configuración y Base de Datos:** Campo `recurrentOptIn` (`pending` / `accepted` / `rejected`) en `patientProfiles`. Inicialización automática de nuevos perfiles en `on_patient_created` con `wantsWhatsapp = false` y `recurrentOptIn = 'pending'`.
+    *   **Reglas de Consentimiento e Integración Backend/Frontend:**
+        *   Excepción automática para pacientes antiguos (con `wantsWhatsapp == true`) para evitar que queden bloqueados por el opt-in inicial.
+        *   Al presionar **Bienvenida** en el expediente, se fuerza `wantsWhatsapp = false` y `recurrentOptIn = 'pending'` para iniciar el proceso de consentimiento limpio.
+        *   Cuando el webhook recibe "Sí, autorizo", se activa la casilla automáticamente (`wantsWhatsapp = true`, `recurrentOptIn = 'accepted'`). Si responde "No", se desactiva (`wantsWhatsapp = false`, `recurrentOptIn = 'rejected'`) y genera alerta.
+        *   Si Yari activa manualmente la casilla en el expediente, los recordatorios automáticos se envían sin restricción de opt-in.
+    *   **Semáforo visual:** Integración de badge de estado en la ficha del paciente y punto de color en la lista del sidebar (`Sidebar.js`).
+    *   **Soporte Webhook:** `optin_yes` / `optin_no` actualiza base de datos y crea alertas en `reception_alerts` para Yari. Plantilla `bienvenida_con_optin` SID `HX08f74d9b520b85acfbf9e678e434b1f6` en producción.
+    *   **Trazabilidad en Bitácora (AuditPanel.js & Cloud Functions):**
+        *   Acciones de WhatsApp agrupadas en pestaña propia: `WHATSAPP_REMINDER` (mañana), `WHATSAPP_REMINDER_PM` (tarde/noche), `WHATSAPP_REMINDER_SKIPPED` (omitido), y `WHATSAPP_REMINDER_ERROR` (error).
+        *   Visualización del mensaje/error exacto colapsable/desplegable en la bitácora e indicación legible del horario de cita afectada.
 *   **Fase A: Recibos Digitales de Reembolso (SGMM) — 100% Listo**:
     *   **Paso 1 (UI + Firestore):** Inputs `professionalLicense` y `graduationInstitution` en Configuración de Terapeutas, y casilla `autoGenerate` + `tutorName` en Pacientes. Todo en gris (disabled) listo para SaaS.
     *   **Paso 2 (Cloud Function PDF):** Función serverless `on_appointment_receipt_trigger` en Python. Genera PDFs premium inyectando datos clínicos dinámicos y los almacena en Firebase Storage ante el pago de citas (`isPaid`). Test local en `venv` completado con 0 errores y desplegado con éxito a Firebase Blaze.
@@ -23,13 +35,6 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 *   **Flujo Completo de Justificantes Médicos (Multimedia)**:
     *   Inyección en la interfaz para que Yari y terapeutas puedan subir comprobantes de inasistencia médica.
     *   Guardado físico del archivo en Firebase Storage y marcado visual del paciente con la insignia esmeralda **"Justificada"** (evitando cobros indebidos).
-*   **Fase C: Consentimiento WhatsApp (Opt-In/Opt-Out) — Código listo, Meta en revisión**:
-    *   Campo `recurrentOptIn` (`pending` / `accepted` / `rejected`) en `patientProfiles`.
-    *   Semáforo visual en ficha del paciente (badge táctil).
-    *   Plantilla **`bienvenida_con_optin`** SID `HX08f74d9b520b85acfbf9e678e434b1f6` en backend y frontend.
-    *   Webhook: `optin_yes` / `optin_no` → Firestore + alertas `reception_alerts` para Yari.
-    *   Crons de recordatorio solo si `recurrentOptIn === 'accepted'`.
-    *   **Pendiente:** aprobación Meta + `firebase deploy` de functions y hosting.
 *   **Batch UX (Antigravity / mayo 2026) — Implementado**:
     *   Logo oficial Parláre (`assets/parlare-logo.png`) en login, header, favicon y `manifest.webmanifest`.
     *   Semáforo WhatsApp en **lista de pacientes** (sidebar) + panel **Seguimiento manual** en Control Maestro (`reception_alerts`).
@@ -137,11 +142,8 @@ En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirma
 
 - [ ] **Factorización del Backend (Plan en FACTORING_PLAN.md):** Seguir paso a paso el plan detallado en [FACTORING_PLAN.md](file:///d:/agbc/Ag_Pa/FACTORING_PLAN.md). Este archivo debe ser modificado y actualizado con cada cambio que hagamos si aún no se ha ejecutado la factorización completa.
 - [ ] Calidad y Optimización: Revisar calidad de código, optimizar flujos lógicos y depurar posibles errores de código (debugging).
-- [ ] Meta: plantilla `bienvenida_con_optin` aprobada.
-- [ ] Probar opt-in Sí/No en número real + panel alertas en Control Maestro.
-- [ ] Celular: logo, semáforo sidebar, Modo Un Día + Semana sin scroll X, columna hora, **Más → Bitácora**, Control Maestro sheet.
-- [ ] Recibos: cita pagada → `receiptPdfUrl` + PDF en Storage.
-- [ ] Índice Firestore `reception_alerts` solo si el listener marca error.
+- [ ] Recibos: cita pagada o reembolsable → verificar `receiptPdfUrl` + PDF en Storage.
+- [ ] Índice Firestore `reception_alerts` si el listener arroja error en consola.
 
 ## 💡 Sugerencias (opcional)
 
@@ -155,5 +157,4 @@ En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirma
 Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
 
 ---
-*Última actualización: 19 de Mayo, 2026 — Cierre sesión: calendario móvil, bitácora en Más, HelpManual, Regla Oro 7 docs siempre*
-
+*Última actualización: 21 de Mayo, 2026 — Cierre sesión: consentimientos WhatsApp, excepciones opt-in, bitácora enriquecida y HelpManual.*

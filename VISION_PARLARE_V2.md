@@ -142,6 +142,13 @@ Cada vez que se modifique la interfaz (nuevos botones, pestañas, flujos), actua
 - El campo `phone` debe tener exactamente 10 dígitos.
 - El `whatsapp_webhook.py` concatena ambos dinámicamente para armar el número completo.
 
+### 10. Reglas de Consentimiento y Opt-In de WhatsApp
+- **Bypass de Pacientes Antiguos (Legacy):** El bot de WhatsApp y las funciones programadas de recordatorios automáticos (8 AM y 8 PM) sólo bloquean envíos si `wantsWhatsapp` es explícitamente `false` o `recurrentOptIn` es `'rejected'`. Los pacientes preexistentes que tengan `wantsWhatsapp == true` y no tengan `'rejected'` pueden seguir recibiendo recordatorios.
+- **Creación de Pacientes Nuevos:** Se inicializa `wantsWhatsapp = false` y `recurrentOptIn = 'pending'` en la base de datos (mediante la Cloud Function `on_patient_created`) para asegurar que no se envíen recordatorios automáticos antes de su autorización.
+- **Acción Manual de Bienvenida:** Al dar clic en **Bienvenida** en el expediente, se fuerza `wantsWhatsapp = false` y `recurrentOptIn = 'pending'` para reiniciar el consentimiento y enviar la plantilla oficial de Meta con botones.
+- **Actualización vía Webhook:** Cuando el webhook interactivo recibe "Sí, autorizo" (`optin_yes`), actualiza Firestore con `wantsWhatsapp = true` y `recurrentOptIn = 'accepted'`. Si recibe "No, no autorizo" (`optin_no`), se establece `wantsWhatsapp = false` and `recurrentOptIn = 'rejected'`, inyectando una alerta en el panel de recepción (`reception_alerts`).
+- **Activación Manual de Consentimiento:** Si el personal de la clínica activa manualmente la casilla en la interfaz, esto anula la restricción y el bot puede enviar mensajes, permitiendo una transición rápida de pacientes históricos.
+
 ---
 
 ## 💰 Módulo de Finanzas (SheetService.js)

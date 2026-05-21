@@ -35,7 +35,8 @@ El calendario tiene funciones avanzadas para ahorrarte tiempo:
 
 1.  **¿Dónde empiezo?:** Haz clic en el botón azul con el símbolo **"+"** en la esquina superior derecha del panel de pacientes.
 2.  **Llenado:** Ingresa el nombre (el sistema pone mayúsculas solo), terapeuta, costo y el WhatsApp (10 dígitos).
-3.  **¿Qué pasa al finalizar?:** Al hacer clic en "Crear Paciente", el sistema lo guarda y **abre automáticamente la ventana de agendar** para su primera sesión. No tienes que buscarlo de nuevo.
+3.  **¿Qué pasa al finalizar?:** Al hacer clic en "Crear Paciente", el sistema lo guarda y **abre automáticamente la ventana de agendar** para su primera sesión. 
+    *   *Nota sobre WhatsApp:* Los pacientes nuevos inician con recordatorios automáticos desactivados (`wantsWhatsapp = false`) y estado de consentimiento `Pendiente`. Al crearse, el sistema les envía la plantilla de bienvenida solicitando su autorización. Cuando respondan "Sí, autorizo", el sistema activará automáticamente los recordatorios. Si necesitas activarlos inmediatamente sin esperar a la respuesta del WhatsApp (por ejemplo, con pacientes antiguos), puedes marcar la casilla manual "Recibir recordatorios automáticos" en la ficha del paciente.
 </details>
 
 <details>
@@ -93,6 +94,7 @@ Cuando veas `~~D~~ / S`:
 *   **Solo 10 Dígitos:** No pongas el "52" al inicio.
 *   **Bandera:** Elige el país antes de escribir el número.
 *   **Privacidad:** Los mensajes nunca llevan el nombre del paciente, solo fecha y hora.
+*   **Consentimiento (Opt-In):** Todo paciente nuevo o al que le envíes el mensaje de **Bienvenida** de forma manual iniciará con recordatorios inactivos. Se activarán solos en cuanto el papá/mamá responda autorizando al bot, o bien si tú activas manualmente la casilla "Recibir recordatorios automáticos" en su expediente.
 </details>
 
 ---
@@ -100,4 +102,4 @@ Cuando veas `~~D~~ / S`:
 ## 🆘 ¿Necesitas ayuda?
 Si algo no funciona, contacta a Soporte Técnico.
 
-*Última actualización: 17 de Mayo, 2026*
+*Última actualización: 21 de Mayo, 2026*

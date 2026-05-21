@@ -333,25 +333,29 @@ export const HelpManual = {
                                     <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong>. Además, la Bitácora guarda qué texto exacto recibió cada padre.</p>
                                 </div>
                                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                                    <h4 class="font-bold text-amber-900 mb-2">🚦 Semáforo de consentimiento (Ficha del paciente)</h4>
-                                    <p class="mb-2">Al abrir el expediente verás un badge junto al botón <strong>Bienvenida</strong> que indica si el paciente aceptó recordatorios automáticos por WhatsApp:</p>
-                                    <ul class="list-none space-y-1.5 font-medium">
-                                        <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> <strong>WhatsApp Activo</strong> — Aceptó; el bot puede enviar recordatorios.</li>
-                                        <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> <strong>Pendiente de Respuesta</strong> — Se envió bienvenida con botones; aún no responde.</li>
-                                        <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> <strong>Seguimiento Manual</strong> — Rechazó bots; Yari debe contactar por teléfono (alerta en Recepción).</li>
-                                    </ul>
-                                    <p class="text-xs text-amber-800 mt-2 italic">Al crear un paciente nuevo, el sistema envía la plantilla <strong>bienvenida_con_optin</strong> con botones Sí/No para cumplir políticas anti-spam de Meta.</p>
-                                </div>
-                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                                    <h4 class="font-bold text-emerald-900 mb-2">🔵 Punto de color en la lista de pacientes</h4>
-                                    <p class="mb-2">Junto al nombre de cada paciente en la barra lateral verás un <strong>pequeño punto de color</strong>. Indica si ese paciente tiene habilitados los recordatorios automáticos por WhatsApp:</p>
-                                    <ul class="list-none space-y-2 font-medium">
-                                        <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></span> <span><strong>Verde — WhatsApp Activo:</strong> Aceptó recibir recordatorios. El bot le escribirá automáticamente a las 8 AM y 8 PM el día anterior.</span></li>
-                                        <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0"></span> <span><strong>Naranja/Ámbar — Pendiente:</strong> Se le envió el mensaje de bienvenida con botones, pero <em>aún no ha respondido</em> si acepta o no. El bot <strong>sí le manda recordatorios</strong> mientras tanto.</span></li>
-                                        <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></span> <span><strong>Rojo — Seguimiento Manual:</strong> Rechazó los mensajes automáticos. Yari debe contactarle por teléfono; aparece alerta en Control Maestro.</span></li>
-                                    </ul>
-                                    <p class="text-xs text-emerald-800 mt-2 italic">💡 Si todos los pacientes de mañana tienen el punto <strong>naranja</strong>, es normal: significa que aún no han respondido el opt-in inicial, pero igual recibirán sus recordatorios automáticos.</p>
-                                </div>
+                                     <h4 class="font-bold text-amber-900 mb-2">🚦 Semáforo de consentimiento (Ficha del paciente)</h4>
+                                     <p class="mb-2">Al abrir el expediente verás un badge junto al botón <strong>Bienvenida</strong> que indica si el paciente aceptó recordatorios automáticos por WhatsApp:</p>
+                                     <ul class="list-none space-y-1.5 font-medium">
+                                         <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> <strong>WhatsApp Activo</strong> — Aceptó; el bot puede enviar recordatorios.</li>
+                                         <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> <strong>Pendiente de Respuesta</strong> — Se envió bienvenida con botones; aún no responde.</li>
+                                         <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> <strong>Seguimiento Manual</strong> — Rechazó bots; Yari debe contactar por teléfono (alerta en Recepción).</li>
+                                     </ul>
+                                     <p class="text-xs text-amber-800 mt-2 italic"><strong>Reglas de Consentimiento:</strong>
+                                         <br>• Al crear un paciente nuevo o presionar <strong>Bienvenida</strong>, se desactiva la casilla de recordatorios automáticos (`wantsWhatsapp = false`) y se envía la plantilla de bienvenida solicitando opt-in.
+                                         <br>• Cuando el paciente responde **"Sí, autorizo"**, el sistema <strong>activa la casilla automáticamente</strong> (`wantsWhatsapp = true`) y activa el bot.
+                                         <br>• Si activas la casilla manualmente en el expediente, los recordatorios se enviarán inmediatamente sin bloquear, facilitando la transición de pacientes antiguos.
+                                     </p>
+                                 </div>
+                                 <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                                     <h4 class="font-bold text-emerald-900 mb-2">🔵 Punto de color en la lista de pacientes</h4>
+                                     <p class="mb-2">Junto al nombre de cada paciente en la barra lateral verás un <strong>pequeño punto de color</strong>. Indica si ese paciente tiene habilitados los recordatorios automáticos por WhatsApp:</p>
+                                     <ul class="list-none space-y-2 font-medium">
+                                         <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></span> <span><strong>Verde — WhatsApp Activo:</strong> Aceptó recibir recordatorios. El bot le escribirá automáticamente a las 8 AM y 8 PM el día anterior.</span></li>
+                                         <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0"></span> <span><strong>Naranja/Ámbar — Pendiente:</strong> Se le envió el mensaje de bienvenida con botones, pero aún no ha respondido. Recibe recordatorios automáticos <em>solo si</em> la casilla de recordatorios está activa.</span></li>
+                                         <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></span> <span><strong>Rojo — Seguimiento Manual:</strong> Rechazó los mensajes automáticos. Yari debe contactarle por teléfono; aparece alerta en Control Maestro.</span></li>
+                                     </ul>
+                                     <p class="text-xs text-emerald-800 mt-2 italic">💡 Si un paciente de mañana tiene el punto <strong>naranja</strong> y quieres que le llegue recordatorio automático, asegúrate de activar la casilla de recordatorios en su ficha.</p>
+                                 </div>
                                 <div class="bg-red-50 p-4 rounded-xl border border-red-100">
                                     <h4 class="font-bold text-red-900 mb-2">🔔 Alertas en Control Maestro</h4>
                                     <p class="mb-2">Si un padre responde <strong>No</strong> al opt-in, aparece una alerta. En <strong>Más → Control Maestro</strong> usa el panel <strong>Seguimiento manual WhatsApp</strong>: <strong>Ver ficha</strong> y <strong>Atendido</strong> cuando Yari ya gestionó el caso.</p>

@@ -55,13 +55,21 @@ El panel izquierdo (en desktop) o el menú deslizable (en móvil) es el centro d
     *   **Teléfono Celular (10 dígitos):** Ingresa los 10 dígitos locales sin espacios. El sistema le añadirá de forma automática el prefijo internacional `52` de México.
     *   **Terapeuta Asignada:** Selecciona a quién pertenece el caso clínico (Diana, Sam o Vero).
     *   **Costo de la Sesión:** Tarifa personalizada acordada con el paciente.
-3.  Al guardar, se ejecuta el **Trigger de Bienvenida**: El paciente se guarda en Firestore y, de manera inmediata, **el bot de WhatsApp le envía la plantilla de bienvenida interactiva** para solicitar consentimiento.
+3.  Al guardar, se ejecuta el **Trigger de Bienvenida**: El paciente se guarda en Firestore con `wantsWhatsapp = false` y `recurrentOptIn = 'pending'`. De manera inmediata, **el bot de WhatsApp le envía la plantilla de bienvenida interactiva** para solicitar consentimiento.
 
 ### 🚦 Semáforo de Consentimiento WhatsApp (`recurrentOptIn`)
 En la lista de pacientes y dentro de cada ficha clínica, verás un indicador visual (badge/punto de color):
-*   🟢 **Verde (Aceptado):** El papá/mamá aceptó los recordatorios automáticos de WhatsApp. El cronjob diario de las 8:00 PM le enviará mensajes de confirmación de forma automática.
-*   🟡 **Amarillo (Pendiente):** Se le envió la plantilla de bienvenida pero aún no ha presionado ningún botón en su WhatsApp.
-*   🔴 **Rojo (Rechazado / Manual):** El paciente prefirió no recibir notificaciones automáticas o Yari desactivó la casilla. **¡Importante! El sistema bloqueará cualquier envío automático a este número para respetar su privacidad y evitar penalizaciones de Meta.**
+*   🟢 **Verde (Aceptado / WhatsApp Activo):** El papá/mamá aceptó los recordatorios automáticos de WhatsApp. El cronjob diario de las 8:00 AM y 8:00 PM le enviará mensajes de confirmación de forma automática.
+*   🟡 **Amarillo (Pendiente de Respuesta):** Se le envió la plantilla de bienvenida o el mensaje de opt-in, pero aún no ha respondido. 
+    *   *Nota:* Para pacientes nuevos, los recordatorios automáticos están desactivados por defecto (`wantsWhatsapp = false`) hasta que acepten. Para pacientes antiguos (legacy), si tienen la casilla activa, seguirán recibiendo recordatorios.
+*   🔴 **Rojo (Rechazado / Seguimiento Manual):** El paciente prefirió no recibir notificaciones automáticas o rechazó la invitación. El sistema bloquea de manera estricta cualquier envío automático a este número. Además, se genera automáticamente una alerta en el panel de Control Maestro para seguimiento manual por parte de Yari.
+
+### 🔌 Reglas y Casos Especiales de Consentimiento
+*   **Activación Automática (Opt-In):** Cuando el paciente responde "Sí, autorizo", el webhook de WhatsApp actualiza Firestore a `recurrentOptIn = 'accepted'` y **activa automáticamente la casilla de recordatorios** (`wantsWhatsapp = true`).
+*   **Excepción para Pacientes Antiguos (Legacy Bypass):** Si un paciente ya existía en el sistema y tiene activa la casilla de recordatorios automáticos (`wantsWhatsapp = true`), seguirá recibiendo recordatorios sin ser bloqueado, a menos que responda "No" al opt-in (lo que cambiaría su estado a `rejected` y desactivaría la casilla).
+*   **Activación Manual por el Staff:** Si Yari o la terapeuta activan manualmente la casilla "Recibir recordatorios automáticos" en la ficha del paciente, esta acción anula la restricción pendiente y permite enviar recordatorios de inmediato (ideal para dar de alta rápidamente a pacientes antiguos que ya otorgaron consentimiento verbal).
+*   **Re-envío de Bienvenida:** Presionar el botón manual **Bienvenida** en el expediente restablece el estado del paciente a `wantsWhatsapp = false` y `recurrentOptIn = 'pending'`, re-enviando la plantilla oficial de Meta con botones para iniciar un flujo de opt-in limpio.
+
 
 ---
 
