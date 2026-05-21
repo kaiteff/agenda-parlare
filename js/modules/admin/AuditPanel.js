@@ -244,8 +244,24 @@ export const AuditPanel = {
             case 'PAYMENT': return log.details?.isPaid ? 'marcó como PAGADA una cita' : 'quitó el estado de pagado';
             case 'WHATSAPP_REMINDER': return 'envió recordatorio automático (mañana) por WhatsApp';
             case 'WHATSAPP_REMINDER_PM': return 'envió recordatorio automático (tarde) por WhatsApp';
-            case 'WHATSAPP_REMINDER_SKIPPED': return `omitió el envío de recordatorio de WhatsApp (${log.details?.error || 'sin opt-in o desactivado'})`;
-            case 'WHATSAPP_REMINDER_ERROR': return `error al enviar recordatorio de WhatsApp: ${log.details?.error || ''}`;
+            case 'WHATSAPP_REMINDER_SKIPPED': {
+                let reason = log.details?.error || 'sin número o desactivado';
+                if (reason === 'no_profile_phone_optin_or_wantsWhatsapp') {
+                    reason = 'el paciente no tiene celular registrado o tiene los recordatorios desactivados';
+                } else if (reason === 'already_sent_today') {
+                    reason = 'ya se le envió recordatorio hoy';
+                } else if (reason === 'date_mismatch_or_outside_business_hours') {
+                    reason = 'cita en otra fecha o fuera de horario laboral';
+                }
+                return `omitió el envío de recordatorio de WhatsApp (${reason})`;
+            }
+            case 'WHATSAPP_REMINDER_ERROR': {
+                let errMsg = log.details?.error || '';
+                if (errMsg.includes('no_profile_phone_optin_or_wantsWhatsapp')) {
+                    errMsg = 'el paciente no tiene celular registrado o tiene los recordatorios desactivados';
+                }
+                return `error al enviar recordatorio de WhatsApp: ${errMsg}`;
+            }
             default: return 'realizó una acción';
         }
     }

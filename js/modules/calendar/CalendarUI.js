@@ -115,7 +115,7 @@ export const CalendarUI = {
 
             // Header Row
             const headerRow = document.createElement('div');
-            headerRow.className = `${rowGridClass} sticky top-0 bg-white z-20 border-b-2 border-gray-200`;
+            headerRow.className = `${rowGridClass} calendar-header-row sticky top-0 bg-white border-b-2 border-gray-200`;
 
             const emptyCell = document.createElement('div');
             emptyCell.className = `border-r border-gray-200 text-center sticky-corner ${isMobile ? 'py-1.5 px-0.5' : 'p-3'}`;
