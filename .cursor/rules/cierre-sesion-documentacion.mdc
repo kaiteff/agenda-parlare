@@ -42,12 +42,17 @@ Actualizar si hubo cambios en UI, flujos, botones, WhatsApp, pacientes, agenda, 
 
 Marcar ✅ lo completado en la sesión y ajustar prioridades siguientes.
 
-### 4. Visión técnica
+### 4. Arquitectura futura / escritorio
+**Archivo:** `ARQUITECTURA_FUTURA.md`
+
+Si hubo mejoras de agenda desktop, rendimiento o refactor planificado: tabla de prioridades, **registro de cambios** (qué, para qué, cómo revertir).
+
+### 5. Visión técnica
 **Archivo:** `VISION_PARLARE_V2.md`
 
 Solo si hubo: reglas críticas nuevas, IDs (Twilio SID, Sheets, Calendar), arquitectura, bugs importantes.
 
-### 5. Resumen de sesión (opcional pero recomendado)
+### 6. Resumen de sesión (opcional pero recomendado)
 **Archivo:** `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`
 
 Breve: qué se hizo, qué falta validar, comandos de deploy.

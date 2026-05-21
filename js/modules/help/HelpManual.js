@@ -153,14 +153,14 @@ export const HelpManual = {
                                     <h4 class="font-bold text-blue-800 mb-1">🔄 Reagendado Automático</h4>
                                     <p>Si cancelas una cita, el sistema te preguntará si quieres reagendar. Si dices que sí, automáticamente te llevará a la <strong>siguiente semana</strong> en el mismo horario para que no tengas que buscar el día manualmente.</p>
                                 </div>
-                                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 md:hidden">
-                                    <h4 class="font-bold text-indigo-900 mb-1">📱 Agenda en celular (Día / Semana)</h4>
-                                    <p class="mb-2">En la barra de la agenda verás <strong>Día</strong> y <strong>Semana</strong>:</p>
+                                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <h4 class="font-bold text-indigo-900 mb-1">📅 Agenda — vista Día / Semana</h4>
+                                    <p class="mb-2">En la barra de la agenda (celular y computadora) verás <strong>Día</strong> y <strong>Semana</strong> junto al botón <strong>Hoy</strong>:</p>
                                     <ul class="list-disc ml-5 space-y-1">
-                                        <li><strong>Día</strong> — Un solo día a la vez, con pestañas Lun–Sáb. Es la mejor opción para leer bien los nombres de los pacientes.</li>
-                                        <li><strong>Semana</strong> — Los seis días en pantalla sin deslizar de lado; los nombres van abreviados (ej. <code>S·Pedro</code>) para que quepan.</li>
+                                        <li><strong>Día</strong> — Un solo día a la vez, con pestañas Lun–Sáb debajo del encabezado. Ideal para leer nombres completos y trabajar citas con detalle.</li>
+                                        <li><strong>Semana</strong> — Los seis días laborables a la vez. En celular los nombres van abreviados (ej. <code>S·Pedro</code>); en computadora puedes desplazarte horizontalmente si hace falta.</li>
                                     </ul>
-                                    <p class="text-xs text-indigo-800 mt-2 italic">La columna de la izquierda muestra la hora en formato corto para dejar más espacio a las citas.</p>
+                                    <p class="text-xs text-indigo-800 mt-2 italic">En celular la columna de hora es más angosta. En computadora, al abrir la agenda suele mostrarse la semana completa; usa <strong>Día</strong> cuando quieras enfocarte en un solo día.</p>
                                 </div>
                             </div>
                         </details>

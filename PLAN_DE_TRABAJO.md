@@ -58,6 +58,10 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
     *   Modificado `nukeAndRebuildAll` en `GoogleCalendarService.js`. En lugar de borrar y descargar 1 año de historial, ahora la sincronización limpia estrictamente desde el **lunes de la semana en curso** hacia el futuro (6 meses). Esto evita largos tiempos de recarga y protege de bloqueos 429 de cuota de API de Google.
 *   **Bitácora de Auditoría en móvil y Detalle de WhatsApp (19 may)** — Entrada en **Más → Bitácora de Auditoría** (admin/recepción) con modal adaptado a bottom-sheet en celular. Muestra del horario de la cita enviada formateado legiblemente (`appointmentDate`) y bloque colapsable/desplegable interactivo (`💬 Ver mensaje completo`) para leer el mensaje de WhatsApp. Además, se actualizó la Cloud Function scheduler para guardar el mensaje completo real. Archivos: `AuditPanel.js`, `main.py`, `MainModals.js`, `MobileBottomNav.js`.
 *   **Hotfix calendario móvil (19 may)** — Columna hora angosta (~75%), vista Semana sin scroll horizontal, línea «ahora» solo sobre días, nombres compactos en semana. Archivos: `CalendarUI.js`, `CalendarEvents.js`, `index.css`, `dateUtils.js`, `index.html`.
+*   **Agenda escritorio — rendimiento UX (19 may)** — Ver detalle y reversión en [`ARQUITECTURA_FUTURA.md`](ARQUITECTURA_FUTURA.md):
+    *   ✅ **#1 Auto-scroll inteligente:** solo carga inicial y botón **Hoy** (`scrollToWorkHoursOnNextRender`); prev/next semana no mueve scroll.
+    *   ✅ **#2 Índice por slot:** `CalendarSlotIndex.js` — una pasada por citas visibles en lugar de `filter()` por celda.
+    *   ✅ **#3 Toggle Día \| Semana en desktop (`md+`)** — `#calendarViewToggle` visible en toolbar (`index.html`).
 *   **Corrección de Bugs Críticos**:
     *   Guardia contra duplicados (evitando sobrecarga a Google Calendar / 429 Quota Exceeded).
     *   Ajuste de zona horaria (Drift UTC) en métricas y envíos diarios.
@@ -92,9 +96,20 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 - [ ] **Skeleton loaders** en sidebar y grid al cargar Firestore (ya existe `LoaderService.js`; uso irregular).
 - [ ] Modo **Semana** en desktop: revisar densidad de chips y contraste de citas pagadas vs pendientes (accesibilidad de color).
 
+### Agenda escritorio — roadmap acordado
+
+> **Documento maestro (prioridades, registro de cambios, cómo revertir):** [`ARQUITECTURA_FUTURA.md`](ARQUITECTURA_FUTURA.md)  
+> Histórico refactor nov 2025: [`old/ARQUITECTURA_FUTURA.md`](old/ARQUITECTURA_FUTURA.md)
+
+| Prioridad | Ítems | Estado |
+|-----------|--------|--------|
+| **Alta** | Auto-scroll, índice slot, toggle Día desktop | 1–3 ✅ |
+| **Media** | Tooltips TODAS, query semana Firestore, grid CSS fijo, debounce snapshot, quitar pulse status, dividir `renderCalendar` | ⏳ cola |
+| **Premium** | Tokens Parláre + atajos teclado (← → semana, **H**) | 💎 después |
+
 ### Deuda técnica menor (frontend)
 - [x] Comentarios aclarados: lista de pacientes = `Sidebar.js` (no `PatientUI.js`).
-- [ ] Centralizar tokens de color Parláre en `tailwind.config.js` (hoy hay mezcla de `blue-600`, `indigo-600` y variables CSS).
+- [ ] Centralizar tokens de color Parláre en `tailwind.config.js` (hoy hay mezcla de `blue-600`, `indigo-600` y variables CSS) — ver **Premium** en `ARQUITECTURA_FUTURA.md`.
 
 ### Accesibilidad y detalle premium
 - [ ] Revisión rápida de **focus trap** y cierre con Escape en modales grandes.

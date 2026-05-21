@@ -37,7 +37,8 @@ export const CalendarEvents = {
             WhatsAppDashboard.render();
         });
 
-        // Render inicial
+        // Render inicial (único auto-scroll a horario laboral)
+        CalendarState.scrollToWorkHoursOnNextRender = true;
         this.render();
         console.log("CalendarEvents init done");
     },
@@ -119,6 +120,7 @@ export const CalendarEvents = {
         if (todayBtn) todayBtn.onclick = () => {
             CalendarState.currentWeekStart = getStartOfWeek(new Date());
             CalendarState.selectedDayIndex = getWorkdayIndex(new Date());
+            CalendarState.scrollToWorkHoursOnNextRender = true;
             this.render();
             if (this.miniCalendar) {
                 this.miniCalendar.currentMonth = new Date();

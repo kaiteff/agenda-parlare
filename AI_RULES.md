@@ -7,7 +7,7 @@ Cada vez que realices un cambio en la interfaz, funcionalidad principal o flujo 
 `js/modules/help/HelpManual.js`
 
 ## 📐 REGLA DE ORO 2: Actualización del Documento de Visión
-Cada vez que se implemente una mejora importante, se descubra un bug crítico o surja una nueva idea de arquitectura, **DEBES actualizar `VISION_PARLARE_V2.md`**. Este documento es el contexto vivo del proyecto para cualquier asistente de IA (Cursor, etc.).
+Cada vez que se implemente una mejora importante, se descubra un bug crítico o surja una nueva idea de arquitectura, **DEBES actualizar `VISION_PARLARE_V2.md`**. Es el **merge maestro** (✅ hecho + ⏳ pendiente + 🔜 visión); el detalle operativo sigue en `PLAN_DE_TRABAJO.md`, `ANALISIS_ESTRATEGIA_MOVIL.md` y `ARQUITECTURA_FUTURA.md`.
 
 ## 📱 REGLA DE ORO 3: Actualización del Análisis Móvil (Antigravity)
 Cada sesión que toque la **estrategia móvil**, la **UI responsive**, **Capacitor**, **Cloud Functions / backend Firebase** (triggers, crons, recibos, Storage) o decisiones de producto sobre la app, **DEBES actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`** al cierre de la tarea.
@@ -24,6 +24,7 @@ Cada vez que se cree o actualice un pop-up de novedades o bienvenida (ej: `NewFe
 Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de arquitectura:
 1. **Lectura Obligatoria del Plan:** Todo asistente de IA (Antigravity, Cursor) **DEBE leer y comparar en su primer turno** los archivos `PLAN_DE_TRABAJO.md` y `ANALISIS_ESTRATEGIA_MOVIL.md` para entender con exactitud matemática el estado del proyecto, qué piezas ya están 100% listas/desplegadas y cuáles son las prioridades inmediatas.
 2. **Cero Duplicación de Esfuerzos:** No intentar proponer o reescribir funcionalidades que ya estén marcadas como completadas, evitando colisiones de código y desviaciones de la arquitectura SaaS.
+3. **Refactor y escritorio:** Para roadmap de agenda desktop, rendimiento y deuda técnica gradual, leer y actualizar **`ARQUITECTURA_FUTURA.md`** (registro de cambios con **para qué** y **cómo revertir**). Histórico: `old/ARQUITECTURA_FUTURA.md`.
 
 
 ### Qué actualizar en ANALISIS_ESTRATEGIA_MOVIL.md:

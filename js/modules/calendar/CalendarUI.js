@@ -6,6 +6,7 @@
 import { CalendarState } from './CalendarState.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { addDays, formatDateLocal, formatTime12h, formatTime12hCompact } from '../../utils/dateUtils.js';
+import { buildCalendarSlotIndex, getEventsForSlot } from './CalendarSlotIndex.js';
 import { CalendarData } from './CalendarData.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
@@ -82,6 +83,14 @@ export const CalendarUI = {
             const weekDays = isDayMode
                 ? [allWeekDays[CalendarState.selectedDayIndex]]
                 : allWeekDays;
+
+            const visibleDateStrs = new Set();
+            weekDays.forEach((dayDate) => {
+                try {
+                    visibleDateStrs.add(formatDateLocal(dayDate));
+                } catch (_) { /* skip */ }
+            });
+            const slotIndex = buildCalendarSlotIndex(CalendarState.appointments, visibleDateStrs);
 
             const monthYear = CalendarState.currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
             if (monthLabel) monthLabel.textContent = monthYear;
@@ -218,15 +227,7 @@ export const CalendarUI = {
                         dateStr = "";
                     }
 
-                    const slotEvents = CalendarState.appointments.filter(p => {
-                        if (p.isCancelled) return false; // OCULTAR CANCELADOS DEL CALENDARIO PRINCIPAL
-                        
-                        const pDate = new Date(p.date);
-                        let pDateStr;
-                        try { pDateStr = formatDateLocal(pDate); } catch (e) { return false; }
-                        if (p.isFullDayBlock) return pDateStr === dateStr;
-                        return pDateStr === dateStr && pDate.getHours() === hour;
-                    });
+                    const slotEvents = getEventsForSlot(slotIndex, dateStr, hour);
 
                     const selectedTherapist = AuthManager.getSelectedTherapist();
                     const isViewAll = !selectedTherapist || selectedTherapist === 'all';
@@ -387,17 +388,17 @@ export const CalendarUI = {
             this.updateStatus("Error Render: " + e.message);
         }
 
-        // AUTO-SCROLL to 10 AM por default (Solicitud de Usuario)
-        setTimeout(() => {
-            const container = CalendarState.dom.calendarGrid?.closest('.scroller');
-            if (container) {
-                // Cada fila tiene un alto de h-16 (64px). 
-                // El calendario empieza a las 8:00 AM.
-                // Para ver 10:00 AM al tope, saltamos 8:00 AM y 9:00 AM (2 filas).
-                // 2 filas * 64px = 128px.
-                container.scrollTop = 128;
-            }
-        }, 150);
+        if (CalendarState.scrollToWorkHoursOnNextRender) {
+            CalendarState.scrollToWorkHoursOnNextRender = false;
+            setTimeout(() => {
+                const container = document.getElementById('calendarScrollWrap')?.closest('.scroller')
+                    || CalendarState.dom.calendarGrid?.closest('.scroller');
+                if (container) {
+                    // h-16 por fila; 8:00 y 9:00 → scroll para dejar ~10:00 visible
+                    container.scrollTop = 128;
+                }
+            }, 150);
+        }
     },
 
     renderEmptySlot(cell, dateStr, hour, onClick) {

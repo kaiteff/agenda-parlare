@@ -23,6 +23,7 @@ alwaysApply: true
 | 2 | `PLAN_DE_TRABAJO.md` | ✅ completado; ⏳/💡 si aplica |
 | 3 | `js/modules/help/HelpManual.js` | Si cambió algo que ve Diana, Sam, Vero o Yari |
 | 4 | `VISION_PARLARE_V2.md` | Solo arquitectura, IDs críticos o reglas nuevas |
+| 4b | `ARQUITECTURA_FUTURA.md` | Refactor gradual, agenda desktop, ítems alta/media/premium; **registro de cambios + reversión** |
 | 5 | `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md` | Opcional en tareas grandes |
 
 ## Al terminar la respuesta al usuario

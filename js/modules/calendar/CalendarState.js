@@ -14,6 +14,9 @@ export const CalendarState = {
     viewMode: 'week', // 'week' | 'day'
     selectedDayIndex: 0, // 0–5 (Lun–Sáb dentro de la semana actual)
 
+    /** Si true, el próximo renderCalendar hace scroll a ~10:00 (solo Hoy / carga inicial). */
+    scrollToWorkHoursOnNextRender: false,
+
     // Referencias DOM (se inicializan en init)
     dom: {
         grid: null,

@@ -1,8 +1,15 @@
 # 🚀 Visión y Estrategia: Agenda Parláre V2
 ### (Documento de Contexto para Asistente de IA / Cursor)
 
-> Este documento es el punto de partida para cualquier asistente de IA (Cursor, Copilot, etc.) que colabore en este proyecto.
-> Léelo completo antes de escribir una sola línea de código. Contiene las reglas del sistema, la arquitectura actual, errores conocidos y la hoja de ruta futura.
+> **Documento maestro de contexto** para Cursor, Antigravity y Copilot.
+> Combina **lo que ya está en producción (✅)**, **lo en curso o pausado (⏳)** y **la visión futura (🔜/💎)** — no sustituye el detalle operativo de los otros archivos vivos.
+>
+> | Documento | Para qué |
+> |-----------|----------|
+> | `PLAN_DE_TRABAJO.md` | Prioridades del equipo y ✅ recientes |
+> | `ANALISIS_ESTRATEGIA_MOVIL.md` | Roadmap móvil, deploy, **⏳ Falta** y **💡 Sugerencias** |
+> | `ARQUITECTURA_FUTURA.md` | Agenda desktop, refactor gradual, **registro de cambios + reversión** |
+> | `js/modules/help/HelpManual.js` | Manual para Diana, Sam, Vero y Yari |
 
 ---
 
@@ -14,9 +21,10 @@
 - **¿Qué hace?**: Agenda de citas, control de pagos, sincronización con Google Calendar (un calendario por terapeuta), envío de recordatorios por WhatsApp y registro de pagos en Google Sheets (uno por terapeuta).
 - **Firebase**: `taconotaco-d94fc` (Project ID). Es la única fuente de verdad. **Firebase siempre gana sobre Google Calendar y Google Sheets**.
 - **Hosting**: Firebase Hosting → `https://taconotaco-d94fc.web.app`
-- **Bot WhatsApp**: Python (Flask) desplegado en Render, vinculado a GitHub `main` (auto-deploy con cada `git push`).
+- **Backend principal**: **Firebase Cloud Functions** (Python) en `functions/` — webhook WhatsApp, crons de recordatorios, triggers (`on_patient_created`, recibos PDF, optimizador de espacios, opt-in).
+- **Render / Flask legacy**: `whatsapp_webhook.py` en raíz — **en retiro**; no asumir que sigue siendo la fuente del bot en producción. Despliegue actual: `firebase deploy --only functions:…`
 - **Repositorio**: `https://github.com/kaiteff/agenda-parlare` (rama `main`).
-- **Directorio local**: `g:\My Drive\AG`
+- **Plan Firebase**: **Blaze** (Functions + Storage + Scheduler).
 
 ---
 
@@ -25,36 +33,26 @@
 El frontend es una **Single Page Application (SPA)** en HTML + Vanilla JS (ES Modules) + Tailwind CSS compilado. Sin frameworks como React o Vue.
 
 ```
-g:\My Drive\AG
-├── index.html              # Esqueleto base de la SPA
-├── index.css               # Sistema de diseño, variables, animaciones premium
-├── serve.py                # Servidor local de desarrollo
-├── whatsapp_webhook.py     # Bot de WhatsApp (Flask/Python) → desplegado en Render
-├── firebase.json           # Configuración de Firebase Hosting
+Ag_Pa/  (repo local)
+├── index.html, index.css, dist/output.css
+├── serve.py                # Servidor local
+├── firebase.json
+├── functions/              # Cloud Functions Python (producción)
+│   ├── main.py             # Webhook, crons, triggers
+│   ├── whatsapp_optin.py, receipt_generator.py, space_optimizer.py
 ├── js/
-│   ├── app.js              # Punto de entrada y orquestador principal
-│   ├── firebase.js         # Config de Firebase + helpers de Auth y Firestore
-│   ├── components/         # UI modular (Header, Sidebar, Modales, WhatsAppDashboard)
-│   ├── managers/           # Lógica de negocio (AuthManager, PatientManager, etc.)
+│   ├── app.js, firebase.js
+│   ├── components/         # Header, Sidebar, MobileBottomNav, MainModals, MiniCalendar…
+│   ├── managers/         # AuthManager, PatientManager, CalendarManager
 │   ├── modules/
-│   │   ├── calendar/       # Grid, Drag & Drop, Modales de edición de citas
-│   │   ├── reports/        # FinancialReport.js, CorteDeCaja.js
-│   │   ├── admin/          # AdminSettingsModal.js, AuditPanel.js
-│   │   └── help/           # HelpManual.js ← SIEMPRE actualizar al cambiar UI
-│   ├── services/
-│   │   ├── google/
-│   │   │   ├── GoogleAuthService.js  # Autenticación GAPI + GIS (OAuth2)
-│   │   │   ├── GoogleCalendarService.js  # Sync de citas con Google Calendar
-│   │   │   └── SheetService.js       # Sync de pagos con Google Sheets
-│   │   ├── AuditService.js     # Motor de bitácora (registra acciones en Sheets)
-│   │   ├── SyncService.js      # Coordinador de guardados en lote
-│   │   └── NetworkMonitor.js   # Detector de conexión offline
-│   └── utils/
-│       ├── TimeManager.js      # ← CENTRAL. Toda la lógica de fechas pasa por aquí
-│       ├── ToastService.js     # Notificaciones no bloqueantes (reemplaza alert())
-│       ├── LoaderService.js    # Spinner global para operaciones largas
-│       └── Logger.js          # Logger con prefijos por módulo
+│   │   ├── calendar/       # CalendarUI, CalendarEvents, CalendarState, CalendarSlotIndex…
+│   │   ├── reports/, admin/, help/HelpManual.js
+│   ├── services/           # Google Calendar/Sheets, Audit, WhatsApp, reception_alerts
+│   └── utils/              # dateUtils, TimeManager, brandAssets, saasReadyCopy…
+└── assets/parlare-logo.png
 ```
+
+**Nota arquitectura pacientes:** la lista y búsqueda viven en **`js/components/Sidebar.js`**, no en `PatientUI.js` (solo aparece en backups/`old/`).
 
 ---
 
@@ -84,7 +82,62 @@ THERAPIST_CALENDARS: {
 ```javascript
 collectionPath = 'appointments'       // Citas
 patientProfilesPath = 'patientProfiles' // Perfiles de pacientes
+reception_alerts      // Alertas WhatsApp / seguimiento manual (Yari)
 ```
+
+### Plantilla WhatsApp crítica (opt-in)
+- `bienvenida_con_optin` — SID `HX08f74d9b520b85acfbf9e678e434b1f6` (`js/config/whatsappTemplates.js`)
+
+---
+
+## 📊 Estado consolidado (Mayo 2026)
+
+Leyenda: **✅** en producción o validado · **⏳** pendiente · **🔜** diseñado / pausado · **💎** premium / fase posterior
+
+### ✅ Producto core (listo)
+
+| Área | Qué incluye |
+|------|-------------|
+| Agenda | Grid semanal, drag & drop, modales, vista **Día \| Semana** (móvil + desktop), mini-calendario |
+| Pacientes | Sidebar, ficha, recurrentes, justificantes médicos → **Storage** + badge «Justificada» |
+| Pagos / Sheets | Comisiones clínica/terapeuta/planeación, sync `App_Data` |
+| Google Calendar | Sync por terapeuta; **nuke forward-only** (desde lunes de semana en curso → 6 meses) |
+| WhatsApp | Templates Meta, recordatorios AM/PM, webhook Functions, opt-in `recurrentOptIn`, semáforo + `reception_alerts` |
+| Recepción | Control Maestro, bitácora auditoría (desktop + **Más → Bitácora** en móvil) |
+| Recibos SGMM | UI «SaaS Ready» + trigger PDF `on_appointment_receipt_trigger` → Storage |
+| Adelantar cita | `on_appointment_cancelled_trigger` + ofertas WhatsApp (**autopilot** desplegado) |
+| Marca / PWA | Logo Parláre, favicon, `manifest.webmanifest`, onboarding `NewFeatureAlert` v9 |
+
+### ✅ Móvil — Fase 1 web responsiva (listo)
+
+Bottom nav (Agenda / Pacientes / Más), modales bottom-sheet (cita, ficha, Control Maestro, config), toolbar táctil, filtro terapeuta móvil, calendario compacto (columna hora, semana sin scroll X). Detalle: `ANALISIS_ESTRATEGIA_MOVIL.md`.
+
+### ✅ Agenda escritorio — alta prioridad (19 may, validado)
+
+| # | Mejora | Archivos clave |
+|---|--------|----------------|
+| 1 | Auto-scroll solo carga / **Hoy** | `CalendarState.scrollToWorkHoursOnNextRender` |
+| 2 | Índice citas por slot | `CalendarSlotIndex.js` |
+| 3 | Toggle **Día \| Semana** en `md+` | `#calendarViewToggle` en `index.html` |
+
+Registro y reversión: **`ARQUITECTURA_FUTURA.md`**.
+
+### ⏳ Pendiente cercano (acordado, no bloquea operación diaria)
+
+| Área | Ítem |
+|------|------|
+| Escritorio | Tooltips/nombres en vista TODAS; query Firestore por semana visible; debounce snapshot; grid CSS fijo; quitar `animate-pulse` fijo en `#statusMsg` |
+| Escritorio 💎 | Tokens color Parláre; atajos teclado (← →, **H**) |
+| Recibos | Enlace «Ver recibo» en citas pagadas (`receiptPdfUrl`); validación end-to-end en producción |
+| UX | Empty states, skeleton loaders; iconos 192/512; Reportes/Corte como bottom-sheet en móvil |
+| Waitlist | **Copiloto colaborativo** (confirmación dual Yari + terapeuta, delay 10 min, glow calendario) — autopilot pausado en `space_optimizer.py` |
+| Capacitor | POC Android → tiendas; retirar Render por completo |
+| Firestore | Índice compuesto `reception_alerts` si el listener falla en consola |
+| SaaS | Activar campos disabled (`autoGenerate` recibos, licencias, multitenancy) — ver sección futura |
+
+### 🔜 Visión V2 (aún no producto cerrado)
+
+Sync Calendar **quirúrgica** por trigger Firestore (sin depender del navegador), dashboard financiero nativo, multitenancy `clinicId`, Stripe por asientos, portal paciente, notas clínicas IA, landing pública. Detalle abajo en «Visión a Futuro».
 
 ---
 
@@ -113,15 +166,18 @@ git add js/services/SheetService.js && git commit -m "fix"
 La carpeta `old/backups_legacy/` contiene un repositorio Git anidado. `git add -A` falla con error fatal. Siempre hacer add por archivo o carpeta específica.
 
 ### 5. Protocolo de Despliegue Obligatorio
-Al terminar CUALQUIER tarea con cambios en el frontend:
 ```powershell
-# 1. Publicar a GitHub (activa auto-deploy del bot en Render):
-git add js/ruta/al/archivo.js; git commit -m "descripción clara"; git push origin main
+npm run build   # si hubo cambios en index.css / Tailwind
 
-# 2. OBLIGATORIO para actualizar la web (git push solo NO actualiza Hosting):
+# Frontend (SPA):
 firebase deploy --only hosting
+
+# Backend (según lo tocado):
+firebase deploy --only functions:whatsapp_webhook,functions:on_patient_created
+firebase deploy --only functions:on_appointment_receipt_trigger
+# … otras functions según el cambio
 ```
-Render (bot WhatsApp) se actualiza automáticamente con el `git push`. No requiere acción manual.
+`git push` **no** actualiza Hosting ni Functions por sí solo.
 
 ### 6. Actualizar el Manual del Usuario al Cambiar la UI
 Cada vez que se modifique la interfaz (nuevos botones, pestañas, flujos), actualizar:
@@ -140,14 +196,17 @@ Cada vez que se modifique la interfaz (nuevos botones, pestañas, flujos), actua
 ### 9. Teléfonos de Pacientes: Formato Separado
 - El `countryCode` (+52) se guarda SEPARADO del campo `phone` en Firestore.
 - El campo `phone` debe tener exactamente 10 dígitos.
-- El `whatsapp_webhook.py` concatena ambos dinámicamente para armar el número completo.
+- El backend (Cloud Functions) concatena ambos para Twilio.
 
-### 10. Reglas de Consentimiento y Opt-In de WhatsApp
-- **Bypass de Pacientes Antiguos (Legacy):** El bot de WhatsApp y las funciones programadas de recordatorios automáticos (8 AM y 8 PM) sólo bloquean envíos si `wantsWhatsapp` es explícitamente `false` o `recurrentOptIn` es `'rejected'`. Los pacientes preexistentes que tengan `wantsWhatsapp == true` y no tengan `'rejected'` pueden seguir recibiendo recordatorios.
-- **Creación de Pacientes Nuevos:** Se inicializa `wantsWhatsapp = false` y `recurrentOptIn = 'pending'` en la base de datos (mediante la Cloud Function `on_patient_created`) para asegurar que no se envíen recordatorios automáticos antes de su autorización.
-- **Acción Manual de Bienvenida:** Al dar clic en **Bienvenida** en el expediente, se fuerza `wantsWhatsapp = false` y `recurrentOptIn = 'pending'` para reiniciar el consentimiento y enviar la plantilla oficial de Meta con botones.
-- **Actualización vía Webhook:** Cuando el webhook interactivo recibe "Sí, autorizo" (`optin_yes`), actualiza Firestore con `wantsWhatsapp = true` y `recurrentOptIn = 'accepted'`. Si recibe "No, no autorizo" (`optin_no`), se establece `wantsWhatsapp = false` and `recurrentOptIn = 'rejected'`, inyectando una alerta en el panel de recepción (`reception_alerts`).
-- **Activación Manual de Consentimiento:** Si el personal de la clínica activa manualmente la casilla en la interfaz, esto anula la restricción y el bot puede enviar mensajes, permitiendo una transición rápida de pacientes históricos.
+### 10. Consentimiento y Opt-In de WhatsApp (`recurrentOptIn`)
+- **Pacientes legacy:** si `wantsWhatsapp == true` y no está `'rejected'`, los crons pueden seguir enviando recordatorios.
+- **Pacientes nuevos:** `on_patient_created` → `wantsWhatsapp = false`, `recurrentOptIn = 'pending'`.
+- **Bienvenida manual:** reinicia consentimiento (`pending`) y dispara plantilla Meta.
+- **Webhook:** `optin_yes` → `accepted`; `optin_no` → `rejected` + alerta en `reception_alerts`.
+- **UI:** semáforo en sidebar/ficha; panel Control Maestro para seguimiento manual.
+
+### 11. Documentación viva (cada cambio de código)
+Actualizar en la misma tarea: `ANALISIS_ESTRATEGIA_MOVIL.md`, `PLAN_DE_TRABAJO.md`, `HelpManual.js` si cambió UI; `ARQUITECTURA_FUTURA.md` si fue agenda desktop/refactor; este archivo si cambió arquitectura, IDs o reglas nuevas. Ver `AI_RULES.md` Reglas de Oro 6–7.
 
 ---
 
@@ -174,26 +233,12 @@ El sistema registra 10 columnas en la pestaña `App_Data` de cada Excel:
 
 ---
 
-## ⚡ Optimizaciones Pendientes
+## ⚡ Sincronización y rendimiento (hecho vs siguiente paso)
 
-### Forward-only Sync (Nuke Semanal Optimizado)
-**Estado: Pendiente de implementación.**
+### ✅ Forward-only Sync (Nuke Semanal Optimizado) — IMPLEMENTADO
+`nukeAndRebuildAll` en `GoogleCalendarService.js` ya limpia desde el **lunes de la semana en curso** hacia el futuro (~6 meses), no 1 año atrás. Reduce tiempo de sync y errores 429.
 
-Actualmente `nukeAndRebuildAll` en `GoogleCalendarService.js` borra y recrea 1 año de eventos (muy lento, consume mucha cuota de API). 
-
-**El plan:**
-1. Cambiar `timeMin` para que apunte al **Lunes de la semana en curso** (no 1 año atrás).
-2. Filtrar las citas de Firebase antes de inyectar:
-   ```javascript
-   const lunesDeEstaSemana = ... // Calcular el lunes de la semana actual a las 00:00
-   const citasRelevantes = allAppointments.filter(apt => apt.date >= lunesDeEstaSemana);
-   ```
-3. **Beneficio**: El historial pasado permanece intacto en Calendar (archivo visual), la sincronización tarda segundos en lugar de minutos y se eliminan los errores 429 por Quota.
-
-> [!NOTE]
-> **Con Firebase Blaze + Cloud Functions, el nuke puede volverse obsoleto por completo.** Ver sección siguiente.
-
-### Solución Definitiva con Cloud Functions (Firebase Blaze)
+### 🔜 Solución Definitiva con Cloud Functions (Firebase Blaze) — PENDIENTE
 Con el plan Blaze, la sincronización con Google Calendar deja de ser responsabilidad del navegador del usuario y pasa a ser responsabilidad de un servidor de Google (Cloud Function con Service Account).
 
 **Flujo actual (problemático):**
@@ -220,19 +265,24 @@ Esto elimina la necesidad de nukes masivos porque cada cambio en Firestore dispa
 - **Modo de uso**: Usar `@Codebase` para que la IA lea todo el proyecto y genere nuevas funcionalidades respetando los patrones existentes.
 
 ### Estrategia Móvil Nativa (Android & iOS)
-Para llevar la aplicación a las tiendas de Google Play y Apple App Store sin rehacer el código desde cero:
-- **Tecnología Base**: **Capacitor** (de Ionic). Se utilizará para "envolver" la SPA web actual (HTML/JS/CSS) en un WebView nativo.
-- **Flujo de Trabajo**:
-  1. **Preparación (Cursor)**: Todo el empaquetado y la configuración de Capacitor se realizará dentro del editor Cursor usando las tecnologías web existentes. Capacitor generará automáticamente las carpetas nativas (`android/` e `ios/`).
-  2. **Compilación y Tiendas (Android Studio / Xcode)**: Estas herramientas pesadas **no se usarán para programar**. Solo servirán como puente final para probar en emuladores y compilar los instalables finales (`.aab` o `.ipa`) para subir a las tiendas.
-- **Actualizaciones "Over The Air" (OTA)**: Para evitar el lento proceso de revisión de las tiendas al modificar la interfaz (HTML/JS/CSS), se implementará **Capacitor Updater** o **Ionic Appflow**. Esto permite empujar mejoras a los celulares de los usuarios de forma instantánea y en segundo plano. Solo se subirá una nueva versión a la tienda si se instalan plugins nativos nuevos (ej. cámara).
-- **Fundación de Marca y PWA (18 de Mayo, 2026)**: Implementación del logotipo oficial (`assets/parlare-logo.png`), favicon adaptativo, colores de interfaz de barra de estado (`theme-color`), y el archivo de manifiesto PWA (`manifest.webmanifest`). Esto sienta las bases estéticas e identitarias clave para la experiencia web móvil y la futura empaquetación nativa de Capacitor.
+| Fase | Estado |
+|------|--------|
+| **Fase 1 — SPA responsiva** | ✅ Desplegada (bottom nav, sheets, Modo Día, bitácora móvil) |
+| **Fase 2 — POC Capacitor** | ⏳ Emulador Android, login Firebase en WebView |
+| **Fase 3–5** | ⏳ Iconos 192/512, splash, OTA, tiendas |
+
+- **Tecnología:** **Capacitor** envuelve la misma SPA (HTML/JS/CSS).
+- **OTA:** Capacitor Updater / Appflow para UI sin pasar por revisión de tienda en cada cambio menor.
 
 ### Arquitectura Futura (100% Google Ecosystem)
-- **Firebase Blaze** (Plan de pago por uso): Necesario para Cloud Functions y Scheduler. El costo para este volumen de uso es prácticamente $0.
-- **Firebase Cloud Functions**: Migrar `whatsapp_webhook.py` (Flask) a una función nativa, eliminando la dependencia de Render.
-- **Google Cloud Scheduler**: Reemplazar los cronjobs externos con el cronómetro oficial de Google para los recordatorios de las 8 AM.
-- **Firebase Storage**: Almacenar justificantes médicos (imágenes/PDFs) enviados por WhatsApp.
+| Componente | Estado |
+|------------|--------|
+| **Firebase Blaze** | ✅ Activo |
+| **Cloud Functions** (webhook, crons, triggers) | ✅ Mayoría en `functions/` |
+| **Retirar Render / Flask** | ⏳ Pendiente cuando todo el bot esté en Functions |
+| **Cloud Scheduler** (recordatorios 8 AM) | ✅ Vía Functions |
+| **Firebase Storage** (justificantes, PDF recibos) | ✅ En uso |
+| **Sync Calendar por trigger Firestore** | 🔜 Reemplazaría nukes y sync desde navegador |
 
 ### Módulo de Finanzas (Opciones a Medida)
 La V2 ofrecerá al administrador la opción de elegir cómo llevar la contabilidad desde un panel de configuración:
@@ -281,11 +331,19 @@ Para asegurar que el backend y el Bot de WhatsApp sean 100% replicables sin modi
    - Al hacer `firebase deploy`, Google Cloud Scheduler crea e inicializa automáticamente los crons nativos en el nuevo proyecto de la clínica, eliminando la necesidad de dar de alta cronjobs manuales en plataformas externas. Costo final: $0.
 
 ## 🌟 Módulos Avanzados (Roadmap Funcional)
-Para diferenciar la aplicación y maximizar el ahorro de tiempo, se proponen los siguientes módulos para la V2:
 
-1. **Lista de Espera Inteligente (WhatsApp):**
-   - Al detectar una cancelación en la agenda, el sistema busca pacientes en lista de espera para ese horario.
-   - El bot envía una notificación automática ofreciendo el lugar; el primero en confirmar se queda con la cita y la agenda se actualiza sola.
+| Módulo | Estado | Notas |
+|--------|--------|-------|
+| **Adelantar cita / optimizador** | ✅ Autopilot desplegado · ⏳ Copiloto dual + heurísticas | Pausa temporal en `space_optimizer.py` |
+| **Lista de espera inteligente** | 🔜 | Extensión del flujo de cancelación |
+| **Asistente notas clínicas IA** | 🔜 | Dictado → nota SOAP/DAP |
+| **Portal del paciente** | 🔜 Opcional | Links WhatsApp; sujeto a dirección |
+| **Landing / Aparador digital** | 🔜 Opcional | Trauma-informed; solo pacientes registrados |
+
+Detalle de módulos propuestos:
+
+1. **Lista de Espera Inteligente (WhatsApp):** *(parcialmente cubierto por Fase B «Adelantar cita»)*
+   - Al cancelar, ofrecer hueco a candidatos con opt-in; primer «Sí» reagenda en Firestore, Sheets y Calendar.
 
 2. **Asistente de Notas Clínicas con IA:**
    - Permite a las terapeutas dictar un resumen de la sesión desde el móvil.
@@ -307,9 +365,11 @@ Para diferenciar la aplicación y maximizar el ahorro de tiempo, se proponen los
 ## 📋 Checklist de Inicio de Sesión
 
 Al comenzar cualquier sesión de desarrollo:
-1. Leer el `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md` más reciente.
-2. Iniciar servidor local: `python serve.py` en `g:\My Drive\AG`.
-3. Preguntar al usuario qué tarea o bug tiene hoy.
+1. Leer **`PLAN_DE_TRABAJO.md`** y **`ANALISIS_ESTRATEGIA_MOVIL.md`** (estado real y pendientes).
+2. Si toca agenda desktop o refactor: **`ARQUITECTURA_FUTURA.md`**.
+3. Opcional: `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md` más reciente.
+4. Servidor local: `python serve.py` en la raíz del repo.
+5. Confirmar con el usuario la tarea del día — **no reimplementar lo ya ✅** en la tabla «Estado consolidado».
 
 ---
-*Última actualización: 18 de Mayo, 2026 — Adaptación móvil y acceso táctil al Panel de Configuración Administrativa (Firestore-driven) completado y documentado.*
+*Última actualización: **19 de Mayo de 2026** — Fusión estado ✅/⏳/🔜 (móvil Fase 1, opt-in, recibos, agenda desktop 1–3, forward-only sync); mapa de documentos vivos; backend Functions como principal.*
