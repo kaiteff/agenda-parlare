@@ -1,0 +1,59 @@
+---
+description: Cierre de sesión + refuerzo docs vivos (ver también documentacion-viva-siempre)
+alwaysApply: true
+---
+
+# Cierre de sesión — documentación obligatoria
+
+> **Antes de esto:** en **cada** tarea con cambios ya debiste actualizar docs (`.cursor/rules/documentacion-viva-siempre.mdc`). El cierre es **repaso final**, no el único momento.
+
+Cuando el usuario indique que **terminan la sesión**, **van a desplegar** o **quieren dejar todo al día**, ejecuta este protocolo **sin que tengas que pedirlo de nuevo**.
+
+## Frases disparadoras (español)
+
+Interpreta como **cierre de sesión** mensajes como:
+
+- «vamos», «vámonos», «vamosno», «alistémonos», «alistemonos»
+- «cerramos», «cerrar sesión», «terminamos», «listo para irnos»
+- «actualiza el manual», «deja documentado», «para Antigravity»
+- «protocolo de despliegue», «regla de oro»
+
+Si la sesión tuvo cambios de código o producto, **no cierres solo con un resumen en chat**: actualiza los archivos vivos.
+
+## Checklist obligatorio (en orden)
+
+### 1. Manual de usuario
+**Archivo:** `js/modules/help/HelpManual.js`
+
+Actualizar si hubo cambios en UI, flujos, botones, WhatsApp, pacientes, agenda, recepción o configuración. Redactar para **Diana, Sam, Vero y Yari** (beneficio + pasos prácticos).
+
+### 2. Mapa móvil / roadmap (Antigravity)
+**Archivo:** `ANALISIS_ESTRATEGIA_MOVIL.md`
+
+- «Registro de avance y qué hacer ahora»
+- **«⏳ Falta»** (deploy, validación usuario, bloqueos externos) y **«💡 Sugerencias»** (opcional próximas sesiones) — obligatorio en cada cierre
+- «Dónde vamos» / timeline
+- Bitácora de decisiones (si aplica)
+- Archivos tocados + comandos `firebase deploy`
+- Fecha en el pie del documento
+
+### 3. Plan de trabajo
+**Archivo:** `PLAN_DE_TRABAJO.md`
+
+Marcar ✅ lo completado en la sesión y ajustar prioridades siguientes.
+
+### 4. Visión técnica
+**Archivo:** `VISION_PARLARE_V2.md`
+
+Solo si hubo: reglas críticas nuevas, IDs (Twilio SID, Sheets, Calendar), arquitectura, bugs importantes.
+
+### 5. Resumen de sesión (opcional pero recomendado)
+**Archivo:** `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`
+
+Breve: qué se hizo, qué falta validar, comandos de deploy.
+
+## Qué NO olvidar
+
+- No duplicar trabajo ya marcado como ✅ en `PLAN_DE_TRABAJO.md` / `ANALISIS_ESTRATEGIA_MOVIL.md`.
+- Mencionar al usuario qué archivos actualizaste y qué deploy falta.
+- Ver `AI_RULES.md` → Protocolo «Alistémonos para irnos».

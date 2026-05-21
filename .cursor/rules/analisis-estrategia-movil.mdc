@@ -1,0 +1,34 @@
+---
+description: Mantener ANALISIS_ESTRATEGIA_MOVIL.md al día (lectura Antigravity)
+alwaysApply: true
+---
+
+# Documento vivo — Antigravity / estrategia móvil
+
+**Antigravity y otros asistentes leen `ANALISIS_ESTRATEGIA_MOVIL.md` como mapa del proyecto.** Actualizarlo **en la misma tarea** en que hubo cambios (no solo al cerrar sesión). Ver `.cursor/rules/documentacion-viva-siempre.mdc`.
+
+## Cuándo actualizar (obligatorio)
+
+- UI móvil, responsive, Tailwind, bottom nav, modales, calendario
+- Capacitor, PWA, breakpoints (`md`, touch targets)
+- Cloud Functions, triggers Firestore, Storage, WhatsApp, crons (impacto producto)
+- Recibos de reembolso, configuración clínica, flujos de pago
+- Decisiones de roadmap, fases, pendientes de validación en celular
+
+## Qué secciones tocar
+
+1. **«Dónde vamos»** — línea de tiempo / checkmarks si cambió el estado global
+2. **«Registro de avance y qué hacer ahora»** — última sesión, tabla «Lo que ya llevamos hecho», **subsecciones «⏳ Falta» y «💡 Sugerencias»**, checklist usuario
+3. **«Bitácora de decisiones»** — fila nueva si hubo decisión técnica o de producto
+4. **Archivos modificados** — rutas concretas (`js/…`, `functions/…`)
+5. **Pie del documento** — fecha `*Última actualización…*`
+
+## Formato
+
+- Fechas: `18 May 2026` o `18 de Mayo de 2026` (coherente con el doc)
+- Estados: ✅ implementado | ⏳ pendiente | 🔜 próximo
+- Comandos deploy reales (`firebase deploy --only functions:…`)
+
+Ver también `AI_RULES.md` → Regla de Oro 3.
+
+Al cerrar sesión («vamos», «alistémonos», etc.), aplicar también `.cursor/rules/cierre-sesion-documentacion.mdc` (manual + PLAN_DE_TRABAJO + VISION).

@@ -51,6 +51,8 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
     *   **Auto-Reagendamiento Webhook:** El primero en responder "Sí, adelantar" (payload `offer_yes`) es re-programado automáticamente en Firestore, Google Sheets y Google Calendar. Las demás ofertas competidoras expiran, y se envía una confirmación al paciente y una alerta a Yari.
 *   **Optimización del Nuke de Calendario (Forward-only Sync) — 100% Listo y Desplegado**:
     *   Modificado `nukeAndRebuildAll` en `GoogleCalendarService.js`. En lugar de borrar y descargar 1 año de historial, ahora la sincronización limpia estrictamente desde el **lunes de la semana en curso** hacia el futuro (6 meses). Esto evita largos tiempos de recarga y protege de bloqueos 429 de cuota de API de Google.
+*   **Bitácora de Auditoría en móvil y Detalle de WhatsApp (19 may)** — Entrada en **Más → Bitácora de Auditoría** (admin/recepción) con modal adaptado a bottom-sheet en celular. Muestra del horario de la cita enviada formateado legiblemente (`appointmentDate`) y bloque colapsable/desplegable interactivo (`💬 Ver mensaje completo`) para leer el mensaje de WhatsApp. Además, se actualizó la Cloud Function scheduler para guardar el mensaje completo real. Archivos: `AuditPanel.js`, `main.py`, `MainModals.js`, `MobileBottomNav.js`.
+*   **Hotfix calendario móvil (19 may)** — Columna hora angosta (~75%), vista Semana sin scroll horizontal, línea «ahora» solo sobre días, nombres compactos en semana. Archivos: `CalendarUI.js`, `CalendarEvents.js`, `index.css`, `dateUtils.js`, `index.html`.
 *   **Corrección de Bugs Críticos**:
     *   Guardia contra duplicados (evitando sobrecarga a Google Calendar / 429 Quota Exceeded).
     *   Ajuste de zona horaria (Drift UTC) en métricas y envíos diarios.
@@ -133,10 +135,11 @@ En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirma
 - [ ] **Efecto Visual (Calendar Glow):** Al cancelarse una cita, hacer que la nueva casilla vacía "brille/destelle" en la agenda web de Yari con un sutil efecto de glow pulsante para llamar su atención visual de inmediato.
 - [ ] **Delay de Pensamiento (10 minutos):** Dar un margen de 10 minutos antes de cualquier acción automática para permitir cambios manuales o arrepentimientos de Yari.
 
+- [ ] **Factorización del Backend (Plan en FACTORING_PLAN.md):** Seguir paso a paso el plan detallado en [FACTORING_PLAN.md](file:///d:/agbc/Ag_Pa/FACTORING_PLAN.md). Este archivo debe ser modificado y actualizado con cada cambio que hagamos si aún no se ha ejecutado la factorización completa.
 - [ ] Calidad y Optimización: Revisar calidad de código, optimizar flujos lógicos y depurar posibles errores de código (debugging).
 - [ ] Meta: plantilla `bienvenida_con_optin` aprobada.
 - [ ] Probar opt-in Sí/No en número real + panel alertas en Control Maestro.
-- [ ] Celular: logo, semáforo sidebar, Modo Un Día, Control Maestro sheet.
+- [ ] Celular: logo, semáforo sidebar, Modo Un Día + Semana sin scroll X, columna hora, **Más → Bitácora**, Control Maestro sheet.
 - [ ] Recibos: cita pagada → `receiptPdfUrl` + PDF en Storage.
 - [ ] Índice Firestore `reception_alerts` solo si el listener marca error.
 
@@ -152,5 +155,5 @@ En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirma
 Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
 
 ---
-*Última actualización: 18 de Mayo, 2026 — Cierre de sesión (Cursor + docs Antigravity)*
+*Última actualización: 19 de Mayo, 2026 — Cierre sesión: calendario móvil, bitácora en Más, HelpManual, Regla Oro 7 docs siempre*
 

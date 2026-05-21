@@ -100,12 +100,14 @@ export const HelpManual = {
                                 <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </summary>
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
-                                <p>Este panel (icono de lista arriba de la lista de pacientes) permite auditar todo lo que pasa en el sistema:</p>
+                                <p>En <strong>computadora</strong> usa el icono de lista arriba de Pacientes. En <strong>celular</strong>: pestaña <strong>Más → Bitácora de Auditoría</strong> (admin y recepción). Permite auditar todo lo que pasa en el sistema:</p>
                                 <ul class="list-disc ml-5 space-y-2">
                                     <li><strong>Pestaña General:</strong> Verás quién creó, canceló o marcó como pagada una cita.</li>
-                                    <li><strong>Pestaña WhatsApp:</strong> Sección exclusiva para ver los recordatorios enviados por el Bot. Puedes leer el mensaje exacto para confirmar horarios.</li>
+                                    <li><strong>Pestaña WhatsApp:</strong> Recordatorios del bot; toca <strong>Ver mensaje completo</strong> para leer el texto exacto que recibió la familia.</li>
                                     <li><strong>Identificación Staff:</strong> Los movimientos aparecen con el nombre de quien los hizo (👱‍♀️ Yari, 👩‍⚕️ Diana, etc).</li>
+                                    <li><strong>Admin (Diana):</strong> <strong>Exportar a Excel</strong> y <strong>Limpiar App</strong> (más de 60 días). Exporta antes de limpiar si necesitas historial.</li>
                                 </ul>
+                                <p class="text-xs text-gray-500 italic">En celular el panel abre como hoja desde abajo; desliza o toca fuera para cerrar.</p>
                             </div>
                         </details>
 
@@ -144,6 +146,15 @@ export const HelpManual = {
                                 <div class="bg-blue-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-blue-800 mb-1">🔄 Reagendado Automático</h4>
                                     <p>Si cancelas una cita, el sistema te preguntará si quieres reagendar. Si dices que sí, automáticamente te llevará a la <strong>siguiente semana</strong> en el mismo horario para que no tengas que buscar el día manualmente.</p>
+                                </div>
+                                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 md:hidden">
+                                    <h4 class="font-bold text-indigo-900 mb-1">📱 Agenda en celular (Día / Semana)</h4>
+                                    <p class="mb-2">En la barra de la agenda verás <strong>Día</strong> y <strong>Semana</strong>:</p>
+                                    <ul class="list-disc ml-5 space-y-1">
+                                        <li><strong>Día</strong> — Un solo día a la vez, con pestañas Lun–Sáb. Es la mejor opción para leer bien los nombres de los pacientes.</li>
+                                        <li><strong>Semana</strong> — Los seis días en pantalla sin deslizar de lado; los nombres van abreviados (ej. <code>S·Pedro</code>) para que quepan.</li>
+                                    </ul>
+                                    <p class="text-xs text-indigo-800 mt-2 italic">La columna de la izquierda muestra la hora en formato corto para dejar más espacio a las citas.</p>
                                 </div>
                             </div>
                         </details>
@@ -265,6 +276,29 @@ export const HelpManual = {
                             </div>
                         </details>
 
+                        <!-- M. Menú Más (celular) -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200 md:hidden">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center text-sm">M</span>
+                                    Menú «Más» (celular)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <p>En la barra inferior, toca <strong>Más</strong> para ver accesos que en computadora están en el header o sidebar:</p>
+                                <ul class="list-disc ml-5 space-y-1.5">
+                                    <li><strong>Conexión Google Sync</strong> — semáforo y sincronizar calendario.</li>
+                                    <li><strong>Control Maestro</strong> — recepción/admin (alertas WhatsApp, panel de seguimiento manual).</li>
+                                    <li><strong>Corte de Caja / Reportes / Configuración</strong> — solo administradoras.</li>
+                                    <li><strong>Bitácora de Auditoría</strong> — admin y recepción (historial de cambios y WhatsApp).</li>
+                                    <li><strong>Manual de Usuario</strong> — esta guía.</li>
+                                    <li><strong>Enviar Sugerencia</strong> — ideas para mejorar el sistema.</li>
+                                </ul>
+                                <p class="text-xs text-gray-500">Navegación principal: <strong>Agenda</strong> (calendario) y <strong>Pacientes</strong> (lista y fichas).</p>
+                            </div>
+                        </details>
+
                         <!-- M. Mensajes WhatsApp -->
                         <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
@@ -279,10 +313,15 @@ export const HelpManual = {
                                     <h4 class="font-bold text-blue-800 mb-1">🤖 Envíos Manuales Seguros</h4>
                                     <p>Al abrir una cita y dar clic en "Enviar WhatsApp" -> <strong>Clínica (Auto)</strong>, el sistema usa plantillas oficiales de Meta. Esto garantiza que el mensaje llegue, incluso si hace semanas que el paciente no te escribe.</p>
                                 </div>
-                                <div class="bg-purple-50 p-4 rounded-xl">
-                                    <h4 class="font-bold text-purple-800 mb-1">⏰ Recordatorios Automáticos</h4>
-                                    <p>Todos los días a las 8 PM, el sistema envía los recordatorios de mañana usando una plantilla con <strong>botones interactivos</strong> (Confirmar, Cancelar, Recepción). Si un papá responde "gracias", el bot contestará amablemente.</p>
-                                </div>
+                                    <div class="bg-purple-50 p-4 rounded-xl">
+                                        <h4 class="font-bold text-purple-800 mb-1">⏰ Recordatorios Automáticos (8 AM y 8 PM)</h4>
+                                        <p>El día anterior a cada cita, el sistema envía <strong>hasta 2 recordatorios automáticos</strong> por WhatsApp usando plantillas con <strong>botones interactivos</strong> (Confirmar, Cancelar, Recepción):</p>
+                                        <ul class="list-none space-y-1.5 mt-2 font-medium">
+                                            <li class="flex items-start gap-2"><span class="mt-0.5 text-purple-500">🌅</span> <span><strong>8:00 AM</strong> — Primer recordatorio a todos los pacientes con cita mañana que no hayan confirmado.</span></li>
+                                            <li class="flex items-start gap-2"><span class="mt-0.5 text-purple-500">🌙</span> <span><strong>8:00 PM</strong> — Segundo recordatorio <em>solo</em> a quienes recibieron el de la mañana pero no contestaron.</span></li>
+                                        </ul>
+                                        <p class="mt-2 text-xs text-purple-700 italic">Si el paciente confirma o cancela en cualquier momento, no recibirá el siguiente recordatorio. Si no responde ninguno, Yari y Diana lo ven al día siguiente.</p>
+                                    </div>
                                 <div class="bg-cyan-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-cyan-800 mb-1">❌ Flujos de Cancelación</h4>
                                     <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong>. Además, la Bitácora guarda qué texto exacto recibió cada padre.</p>
@@ -298,8 +337,14 @@ export const HelpManual = {
                                     <p class="text-xs text-amber-800 mt-2 italic">Al crear un paciente nuevo, el sistema envía la plantilla <strong>bienvenida_con_optin</strong> con botones Sí/No para cumplir políticas anti-spam de Meta.</p>
                                 </div>
                                 <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                                    <h4 class="font-bold text-emerald-900 mb-2">📋 Lista de pacientes (barra lateral)</h4>
-                                    <p class="mb-2">Junto al nombre de cada paciente verás un <strong>punto de color</strong> (mismo significado que el badge de la ficha): verde = WhatsApp activo, amarillo = pendiente, rojo = seguimiento manual.</p>
+                                    <h4 class="font-bold text-emerald-900 mb-2">🔵 Punto de color en la lista de pacientes</h4>
+                                    <p class="mb-2">Junto al nombre de cada paciente en la barra lateral verás un <strong>pequeño punto de color</strong>. Indica si ese paciente tiene habilitados los recordatorios automáticos por WhatsApp:</p>
+                                    <ul class="list-none space-y-2 font-medium">
+                                        <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></span> <span><strong>Verde — WhatsApp Activo:</strong> Aceptó recibir recordatorios. El bot le escribirá automáticamente a las 8 AM y 8 PM el día anterior.</span></li>
+                                        <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0"></span> <span><strong>Naranja/Ámbar — Pendiente:</strong> Se le envió el mensaje de bienvenida con botones, pero <em>aún no ha respondido</em> si acepta o no. El bot <strong>sí le manda recordatorios</strong> mientras tanto.</span></li>
+                                        <li class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></span> <span><strong>Rojo — Seguimiento Manual:</strong> Rechazó los mensajes automáticos. Yari debe contactarle por teléfono; aparece alerta en Control Maestro.</span></li>
+                                    </ul>
+                                    <p class="text-xs text-emerald-800 mt-2 italic">💡 Si todos los pacientes de mañana tienen el punto <strong>naranja</strong>, es normal: significa que aún no han respondido el opt-in inicial, pero igual recibirán sus recordatorios automáticos.</p>
                                 </div>
                                 <div class="bg-red-50 p-4 rounded-xl border border-red-100">
                                     <h4 class="font-bold text-red-900 mb-2">🔔 Alertas en Control Maestro</h4>

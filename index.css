@@ -341,6 +341,63 @@ header::after {
     isolation: isolate;
 }
 
+/* Calendario móvil: columna hora más angosta (~75% de 4.5rem) + semana sin scroll X */
+@media (max-width: 767px) {
+    #calendarGrid {
+        --cal-time-col: 3.25rem;
+    }
+
+    #calendarGrid .sticky-column,
+    #calendarGrid .sticky-corner {
+        min-width: var(--cal-time-col) !important;
+        max-width: var(--cal-time-col) !important;
+        width: var(--cal-time-col) !important;
+        padding-left: 0.125rem !important;
+        padding-right: 0.125rem !important;
+    }
+
+    #calendarGrid .cal-grid-day {
+        display: grid;
+        grid-template-columns: var(--cal-time-col) minmax(0, 1fr);
+    }
+
+    #calendarGrid .cal-grid-week {
+        display: grid;
+        grid-template-columns: var(--cal-time-col) repeat(6, minmax(0, 1fr));
+    }
+
+    #calendarGrid.calendar-week-fit {
+        min-width: 0 !important;
+        width: 100%;
+    }
+
+    #calendarScrollWrap.calendar-week-fit {
+        overflow-x: hidden !important;
+    }
+
+    #calendarGrid.calendar-week-fit .cal-day-header-num {
+        font-size: 1rem;
+        line-height: 1.25rem;
+    }
+
+    #calendarGrid.calendar-week-fit .cal-day-header-name {
+        font-size: 0.625rem;
+    }
+
+    #calendarGrid.calendar-week-fit .cal-event-chip {
+        font-size: 0.5625rem;
+        line-height: 0.75rem;
+        padding-left: 0.125rem;
+        padding-right: 0.125rem;
+    }
+
+    /* Línea «ahora»: solo sobre columnas de días, no sobre la hora ni scroll X */
+    #calendarGrid .live-time-line {
+        left: var(--cal-time-col) !important;
+        width: calc(100% - var(--cal-time-col)) !important;
+    }
+}
+
 #calendarGrid .grid > div:not(.sticky-column):not(.sticky-corner) {
     position: relative;
     z-index: 1;

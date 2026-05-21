@@ -176,9 +176,40 @@ export const AuditPanel = {
                 </p>
                 ${log.details?.patientName ? `<p class="text-[10px] text-indigo-600 font-semibold mt-1">🏷️ Paciente: ${log.details.patientName}</p>` : ''}
                 ${log.details?.therapist ? `<p class="text-[10px] text-gray-500 italic">Agenda: ${log.details.therapist}</p>` : ''}
+                ${log.details?.appointmentDate ? (() => {
+                    try {
+                        const dateParts = log.details.appointmentDate.split('T');
+                        if (dateParts.length === 2) {
+                            const [dateStr, timeStr] = dateParts;
+                            const [year, month, day] = dateStr.split('-');
+                            const [hour, minute] = timeStr.split(':');
+                            
+                            const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                            const mesNombre = meses[parseInt(month, 10) - 1] || 'mes';
+                            
+                            let hr = parseInt(hour, 10);
+                            const ampm = hr >= 12 ? 'p.m.' : 'a.m.';
+                            hr = hr % 12;
+                            if (hr === 0) hr = 12;
+                            const minStr = minute.padStart(2, '0');
+                            
+                            const formatted = `${day}/${mesNombre} a las ${hr}:${minStr} ${ampm}`;
+                            return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: <span class="font-bold text-gray-800">${formatted}</span></p>`;
+                        }
+                        return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: ${log.details.appointmentDate}</p>`;
+                    } catch(e) {
+                        return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: ${log.details.appointmentDate}</p>`;
+                    }
+                })() : ''}
                 
                 ${log.action === 'WHATSAPP_REMINDER' && log.details?.message ? `
-                    <div class="mt-2 p-2 bg-green-50 border border-green-100 rounded-lg text-[10px] text-green-800 whitespace-pre-wrap font-mono leading-tight">
+                    <button 
+                        onclick="this.nextElementSibling.classList.toggle('hidden')" 
+                        class="mt-2 text-[9px] text-green-600 hover:text-green-700 font-bold flex items-center gap-0.5 cursor-pointer focus:outline-none"
+                    >
+                        💬 Ver mensaje completo
+                    </button>
+                    <div class="hidden mt-1.5 p-2 bg-green-50 border border-green-100 rounded-lg text-[10px] text-green-800 whitespace-pre-wrap font-mono leading-tight">
                         ${log.details.message}
                     </div>
                 ` : ''}

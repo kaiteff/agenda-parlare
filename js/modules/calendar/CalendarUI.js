@@ -5,7 +5,7 @@
 
 import { CalendarState } from './CalendarState.js';
 import { AuthManager } from '../../managers/AuthManager.js';
-import { addDays, formatDateLocal, formatTime12h } from '../../utils/dateUtils.js';
+import { addDays, formatDateLocal, formatTime12h, formatTime12hCompact } from '../../utils/dateUtils.js';
 import { CalendarData } from './CalendarData.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
@@ -29,19 +29,43 @@ export const CalendarUI = {
             grid.innerHTML = '';
 
             const isDayMode = CalendarState.viewMode === 'day';
+            const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-            const gridWrapper = grid.closest('.overflow-x-auto');
-            if (gridWrapper) {
+            const gridWrapper = document.getElementById('calendarScrollWrap') || grid.closest('.overflow-x-auto');
+            grid.classList.remove('calendar-week-fit');
+            if (gridWrapper) gridWrapper.classList.remove('calendar-week-fit');
+
+            if (isMobile) {
+                grid.classList.remove('min-w-[700px]');
+                grid.classList.add('w-full');
                 if (isDayMode) {
-                    gridWrapper.classList.remove('overflow-x-auto');
-                    grid.classList.remove('min-w-[700px]');
-                    grid.classList.add('w-full');
+                    grid.classList.remove('calendar-week-fit');
+                    if (gridWrapper) {
+                        gridWrapper.classList.remove('calendar-week-fit');
+                        gridWrapper.classList.remove('overflow-x-auto');
+                    }
                 } else {
-                    gridWrapper.classList.add('overflow-x-auto');
-                    grid.classList.add('min-w-[700px]');
-                    grid.classList.remove('w-full');
+                    grid.classList.add('calendar-week-fit');
+                    if (gridWrapper) {
+                        gridWrapper.classList.add('calendar-week-fit');
+                        gridWrapper.classList.remove('overflow-x-auto');
+                    }
                 }
+            } else if (isDayMode) {
+                if (gridWrapper) gridWrapper.classList.remove('overflow-x-auto');
+                grid.classList.remove('min-w-[700px]');
+                grid.classList.add('w-full');
+            } else {
+                if (gridWrapper) gridWrapper.classList.add('overflow-x-auto');
+                grid.classList.add('min-w-[700px]');
+                grid.classList.remove('w-full');
+                grid.classList.remove('calendar-week-fit');
             }
+
+            const rowGridClass = isMobile
+                ? (isDayMode ? 'cal-grid-day' : 'cal-grid-week')
+                : (isDayMode ? 'grid grid-cols-2' : 'grid grid-cols-7');
+            const weekMobileCompact = isMobile && !isDayMode;
 
             const allWeekDays = [];
             for (let i = 0; i < 7; i++) {
@@ -91,34 +115,40 @@ export const CalendarUI = {
 
             // Header Row
             const headerRow = document.createElement('div');
-            headerRow.className = isDayMode
-                ? "grid grid-cols-2 sticky top-0 bg-white z-20 border-b-2 border-gray-200"
-                : "grid grid-cols-7 sticky top-0 bg-white z-20 border-b-2 border-gray-200";
+            headerRow.className = `${rowGridClass} sticky top-0 bg-white z-20 border-b-2 border-gray-200`;
 
             const emptyCell = document.createElement('div');
-            emptyCell.className = "p-3 border-r border-gray-200 text-center sticky-corner";
-            emptyCell.innerHTML = '<div class="text-xs font-semibold text-gray-500 uppercase">Hora</div>';
+            emptyCell.className = `border-r border-gray-200 text-center sticky-corner ${isMobile ? 'py-1.5 px-0.5' : 'p-3'}`;
+            emptyCell.innerHTML = isMobile
+                ? '<div class="text-[9px] font-semibold text-gray-500 uppercase leading-tight">Hr</div>'
+                : '<div class="text-xs font-semibold text-gray-500 uppercase">Hora</div>';
             headerRow.appendChild(emptyCell);
 
             weekDays.forEach((dayDate) => {
                 const dayHeader = document.createElement('div');
                 const isToday = dayDate.getTime() === today.getTime();
-                dayHeader.className = `p-3 text-center border-r border-gray-200 last:border-r-0 ${isToday ? 'bg-blue-50' : ''}`;
+                const headerPad = isMobile && !isDayMode ? 'p-1' : 'p-3';
+                dayHeader.className = `${headerPad} text-center border-r border-gray-200 last:border-r-0 min-w-0 ${isToday ? 'bg-blue-50' : ''}`;
 
                 const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'short' });
                 const dayNum = dayDate.getDate();
                 let dateStr = "";
                 try { dateStr = formatDateLocal(dayDate); } catch(e) {}
-                
-                dayHeader.innerHTML = `
-                    <div class="flex items-center justify-center gap-1">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">${dayName}</div>
-                        <button class="day-block-btn text-gray-300 hover:text-red-500 transition-colors" title="Bloquear Día Completo" data-date="${dateStr}">
+
+                const blockBtn = isMobile && !isDayMode
+                    ? ''
+                    : `<button class="day-block-btn text-gray-300 hover:text-red-500 transition-colors" title="Bloquear Día Completo" data-date="${dateStr}">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                        </button>
+                        </button>`;
+
+                dayHeader.innerHTML = isMobile && !isDayMode
+                    ? `<div class="cal-day-header-name text-[10px] font-semibold text-gray-500 uppercase leading-tight">${dayName.slice(0, 3)}</div>
+                       <div class="cal-day-header-num text-base font-bold ${isToday ? 'text-blue-600' : 'text-gray-800'}">${dayNum}</div>`
+                    : `<div class="flex items-center justify-center gap-1">
+                        <div class="text-xs font-semibold text-gray-500 uppercase">${dayName}</div>
+                        ${blockBtn}
                     </div>
-                    <div class="text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-800'}">${dayNum}</div>
-                `;
+                    <div class="text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-800'}">${dayNum}</div>`;
                 headerRow.appendChild(dayHeader);
             });
 
@@ -164,19 +194,21 @@ export const CalendarUI = {
                 const row = document.createElement('div');
                 const rowColor = hour % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
                 const isCurrentHour = new Date().getHours() === hour;
-                row.className = isDayMode
-                    ? `grid grid-cols-2 ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`
-                    : `grid grid-cols-7 ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`;
+                row.className = `${rowGridClass} ${rowColor} ${isCurrentHour ? 'current-hour-row' : ''} relative`;
 
                 const hourCell = document.createElement('div');
-                hourCell.className = `p-2 border-r border-b border-gray-200 text-right sticky-column ${isCurrentHour ? 'current-hour-cell' : ''}`;
-                hourCell.innerHTML = `<span class="text-xs font-medium ${isCurrentHour ? 'text-blue-600' : 'text-gray-500'}">${formatTime12h(hour)}</span>`;
+                const hourPad = isMobile ? 'py-1 px-0.5' : 'p-2';
+                hourCell.className = `${hourPad} border-r border-b border-gray-200 text-right sticky-column ${isCurrentHour ? 'current-hour-cell' : ''}`;
+                const hourLabel = isMobile ? formatTime12hCompact(hour) : formatTime12h(hour);
+                const hourTextSize = isMobile ? 'text-[10px] leading-tight' : 'text-xs';
+                hourCell.innerHTML = `<span class="${hourTextSize} font-medium ${isCurrentHour ? 'text-blue-600' : 'text-gray-500'}">${hourLabel}</span>`;
                 row.appendChild(hourCell);
 
                 weekDays.forEach((dayDate) => {
                     const isToday = dayDate.getTime() === today.getTime();
                     const cell = document.createElement('div');
-                    cell.className = `h-16 border-r border-b border-gray-100 p-1 cursor-pointer hover:bg-blue-50/60 transition-colors relative group last:border-r-0 ${isToday ? 'bg-blue-50/40' : ''}`;
+                    const cellPad = weekMobileCompact ? 'p-0.5' : 'p-1';
+                    cell.className = `h-16 border-r border-b border-gray-100 ${cellPad} cursor-pointer hover:bg-blue-50/60 transition-colors relative group last:border-r-0 min-w-0 overflow-hidden ${isToday ? 'bg-blue-50/40' : ''}`;
 
                     let dateStr;
                     try {
@@ -226,7 +258,8 @@ export const CalendarUI = {
                                 }
                                 const chip = document.createElement('div');
                                 const canEdit = AuthManager.canEditItem(evt) || AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
-                                chip.className = `flex-1 flex items-center justify-center text-[10px] font-bold rounded border ${bgColor} transition-all truncate px-1 gap-1 ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}`;
+                                const chipSize = weekMobileCompact ? 'cal-event-chip text-[9px]' : 'text-[10px]';
+                                chip.className = `flex-1 flex items-center justify-center ${chipSize} font-bold rounded border ${bgColor} transition-all truncate px-0.5 gap-0.5 min-w-0 ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}`;
                                 if (canEdit) {
                                     chip.draggable = true;
                                     chip.ondragstart = (e) => { e.dataTransfer.setData("text/plain", evt.id); chip.style.opacity = '0.5'; };
@@ -243,6 +276,11 @@ export const CalendarUI = {
                                     content = `[${tInitial}] Bloqueado`;
                                 } else if (evt.isCancelled) {
                                     content = `<span class="line-through">[${tInitial}] ${therapistName}</span> <span class="text-[7px] font-black">X ${evt.cancelledBy || '?'}</span>`;
+                                } else if (weekMobileCompact) {
+                                    const firstName = canViewDetails && evt.name
+                                        ? evt.name.split(/\s+/)[0]
+                                        : therapistName.slice(0, 3);
+                                    content = canViewDetails ? `${tInitial}·${firstName}` : `${tInitial}`;
                                 } else {
                                     // INDICADOR DE RELEVO: Tachamos la original si hay planeadora diferente
                                     if (pInitial && pInitial !== tInitial) {
@@ -251,8 +289,12 @@ export const CalendarUI = {
                                         content = canViewDetails ? `[${tInitial}] ${therapistName}` : `[${tInitial}] Ocupado`;
                                     }
                                 }
-                                
-                                if (evt.confirmed && canViewDetails && !evt.isCancelled) content += ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
+
+                                if (evt.confirmed && canViewDetails && !evt.isCancelled) {
+                                    content += weekMobileCompact
+                                        ? '✓'
+                                        : ' <span class="bg-white/30 rounded-full w-3 h-3 flex items-center justify-center text-[8px]" title="Confirmado">✓</span>';
+                                }
                                 chip.innerHTML = content;
                                 chip.onclick = (e) => { e.stopPropagation(); if (onEventClick) onEventClick(evt); };
                                 container.appendChild(chip);
@@ -284,7 +326,8 @@ export const CalendarUI = {
                                     cardClasses = 'bg-white border-l-4 border-l-red-500 text-gray-700';
                                 }
                                 
-                                eventCard.className = `${heightClass} rounded-lg text-xs font-medium px-2 py-1 flex flex-col justify-center ${cardClasses} cursor-pointer transition-all`;
+                                const cardText = weekMobileCompact ? 'text-[10px] px-1 py-0.5' : 'text-xs px-2 py-1';
+                                eventCard.className = `${heightClass} rounded-lg ${cardText} font-medium flex flex-col justify-center min-w-0 overflow-hidden ${cardClasses} cursor-pointer transition-all`;
                                 if (canView) {
                                     eventCard.draggable = true;
                                     eventCard.ondragstart = (e) => { e.dataTransfer.setData("text/plain", evt.id); eventCard.style.opacity = '0.5'; };

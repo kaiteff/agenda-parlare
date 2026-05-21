@@ -177,6 +177,15 @@ export const CalendarEvents = {
                 this.render();
             };
         }
+
+        if (!this._calendarResizeBound) {
+            this._calendarResizeBound = true;
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => this.render(), 200);
+            });
+        }
     },
 
     render() {

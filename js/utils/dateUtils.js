@@ -160,3 +160,28 @@ export function formatTime12h(input) {
     const displayMinute = minute.toString().padStart(2, '0');
     return `${displayHour}:${displayMinute} ${period}.`;
 }
+
+/**
+ * Hora compacta para columna angosta en móvil (ej. "9a", "2:30p")
+ */
+export function formatTime12hCompact(input) {
+    let hour, minute = 0;
+
+    if (input instanceof Date) {
+        hour = input.getHours();
+        minute = input.getMinutes();
+    } else if (typeof input === 'number') {
+        hour = Math.floor(input);
+        minute = Math.round((input - hour) * 60);
+    } else {
+        return '';
+    }
+
+    const period = hour >= 12 ? 'p' : 'a';
+    let displayHour = hour % 12;
+    if (displayHour === 0) displayHour = 12;
+
+    if (minute === 0) return `${displayHour}${period}`;
+    const displayMinute = minute.toString().padStart(2, '0');
+    return `${displayHour}:${displayMinute}${period}`;
+}

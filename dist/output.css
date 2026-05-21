@@ -985,6 +985,10 @@ video {
   margin-top: 1.5rem;
 }
 
+.mt-1\.5 {
+  margin-top: 0.375rem;
+}
+
 .block {
   display: block;
 }
@@ -1489,6 +1493,10 @@ video {
 
 .resize-none {
   resize: none;
+}
+
+.resize {
+  resize: both;
 }
 
 .list-disc {
@@ -2678,6 +2686,11 @@ video {
   padding-bottom: 2rem;
 }
 
+.px-0\.5 {
+  padding-left: 0.125rem;
+  padding-right: 0.125rem;
+}
+
 .pb-0 {
   padding-bottom: 0px;
 }
@@ -3050,6 +3063,11 @@ video {
   color: rgb(6 95 70 / var(--tw-text-opacity, 1));
 }
 
+.text-emerald-900 {
+  --tw-text-opacity: 1;
+  color: rgb(6 78 59 / var(--tw-text-opacity, 1));
+}
+
 .text-emerald-950 {
   --tw-text-opacity: 1;
   color: rgb(2 44 34 / var(--tw-text-opacity, 1));
@@ -3249,6 +3267,11 @@ video {
 .text-red-800 {
   --tw-text-opacity: 1;
   color: rgb(153 27 27 / var(--tw-text-opacity, 1));
+}
+
+.text-red-900 {
+  --tw-text-opacity: 1;
+  color: rgb(127 29 29 / var(--tw-text-opacity, 1));
 }
 
 .text-rose-600 {
@@ -4010,6 +4033,65 @@ header::after {
   isolation: isolate;
 }
 
+/* Calendario móvil: columna hora más angosta (~75% de 4.5rem) + semana sin scroll X */
+
+@media (max-width: 767px) {
+  #calendarGrid {
+    --cal-time-col: 3.25rem;
+  }
+
+  #calendarGrid .sticky-column,
+    #calendarGrid .sticky-corner {
+    min-width: var(--cal-time-col) !important;
+    max-width: var(--cal-time-col) !important;
+    width: var(--cal-time-col) !important;
+    padding-left: 0.125rem !important;
+    padding-right: 0.125rem !important;
+  }
+
+  #calendarGrid .cal-grid-day {
+    display: grid;
+    grid-template-columns: var(--cal-time-col) minmax(0, 1fr);
+  }
+
+  #calendarGrid .cal-grid-week {
+    display: grid;
+    grid-template-columns: var(--cal-time-col) repeat(6, minmax(0, 1fr));
+  }
+
+  #calendarGrid.calendar-week-fit {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  #calendarScrollWrap.calendar-week-fit {
+    overflow-x: hidden !important;
+  }
+
+  #calendarGrid.calendar-week-fit .cal-day-header-num {
+    font-size: 1rem;
+    line-height: 1.25rem;
+  }
+
+  #calendarGrid.calendar-week-fit .cal-day-header-name {
+    font-size: 0.625rem;
+  }
+
+  #calendarGrid.calendar-week-fit .cal-event-chip {
+    font-size: 0.5625rem;
+    line-height: 0.75rem;
+    padding-left: 0.125rem;
+    padding-right: 0.125rem;
+  }
+
+  /* Línea «ahora»: solo sobre columnas de días, no sobre la hora ni scroll X */
+
+  #calendarGrid .live-time-line {
+    left: var(--cal-time-col) !important;
+    width: calc(100% - var(--cal-time-col)) !important;
+  }
+}
+
 #calendarGrid .grid > div:not(.sticky-column):not(.sticky-corner) {
   position: relative;
   z-index: 1;
@@ -4753,6 +4835,10 @@ header::after {
     max-height: 90vh;
   }
 
+  .md\:max-h-\[85vh\] {
+    max-height: 85vh;
+  }
+
   .md\:min-h-0 {
     min-height: 0px;
   }
@@ -4787,6 +4873,10 @@ header::after {
 
   .md\:min-w-full {
     min-width: 100%;
+  }
+
+  .md\:min-w-\[700px\] {
+    min-width: 700px;
   }
 
   .md\:max-w-2xl {

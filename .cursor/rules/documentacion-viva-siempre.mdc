@@ -1,0 +1,36 @@
+---
+description: Tras CADA cambio de código/producto, actualizar docs vivos (Antigravity). Siempre.
+alwaysApply: true
+---
+
+# Documentación viva — SIEMPRE (cada acción, no solo al cerrar)
+
+**Regla absoluta:** Si tocaste código, UI, functions, flujos o decisiones de producto, **actualiza los archivos vivos en la misma respuesta** — antes de dar la tarea por terminada. **No esperes** a que el usuario diga «alistémonos», «documenta» o «para Antigravity».
+
+## Cuándo aplica
+
+- Cualquier feature, fix, refactor con impacto visible o en backend
+- Cambios de botones, menús móvil, modales, agenda, WhatsApp, pacientes, recepción
+- Nuevos IDs (Twilio SID, Sheets), reglas Firestore, deploy de functions
+
+**Excepción:** solo preguntas o revisión sin cambios en repo → no actualizar docs.
+
+## Checklist mínimo (en la misma tarea)
+
+| Prioridad | Archivo | Qué actualizar |
+|-----------|---------|----------------|
+| 1 | `ANALISIS_ESTRATEGIA_MOVIL.md` | Tabla «Lo que ya llevamos hecho»; **⏳ Falta** y **💡 Sugerencias**; bitácora si hubo decisión; archivos + `firebase deploy`; pie con fecha |
+| 2 | `PLAN_DE_TRABAJO.md` | ✅ completado; ⏳/💡 si aplica |
+| 3 | `js/modules/help/HelpManual.js` | Si cambió algo que ve Diana, Sam, Vero o Yari |
+| 4 | `VISION_PARLARE_V2.md` | Solo arquitectura, IDs críticos o reglas nuevas |
+| 5 | `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md` | Opcional en tareas grandes |
+
+## Al terminar la respuesta al usuario
+
+Indica en una línea qué archivos de documentación actualizaste (o «sin cambios de producto, docs no aplican»).
+
+## Cierre de sesión
+
+Si además el usuario dice «vamos» / «alistémonos», aplica también `.cursor/rules/cierre-sesion-documentacion.mdc` (repaso final, sin duplicar ✅ ya marcados).
+
+Ver `AI_RULES.md` → Regla de Oro 7.

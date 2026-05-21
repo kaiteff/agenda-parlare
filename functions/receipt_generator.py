@@ -18,8 +18,6 @@ import firebase_admin
 import pytz
 from firebase_admin import firestore, storage
 from firebase_functions import firestore_fn, options
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-from xhtml2pdf import pisa
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +188,7 @@ def _load_logo_data_uri() -> str:
 
 
 def render_receipt_html(context: dict) -> str:
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATE_DIR)),
         autoescape=select_autoescape(["html", "xml"]),
@@ -199,6 +198,7 @@ def render_receipt_html(context: dict) -> str:
 
 
 def html_to_pdf_bytes(html: str) -> bytes:
+    from xhtml2pdf import pisa
     buffer = BytesIO()
     result = pisa.CreatePDF(html, dest=buffer, encoding="utf-8")
     if result.err:

@@ -413,9 +413,12 @@ export const MainModals = {
             </div>
 
             <!-- 6. AUDIT LOG MODAL -->
-            <div id="auditLogModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-50 p-4">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col modal-panel overflow-hidden">
-                    <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+            <div id="auditLogModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[11000] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4">
+                <div id="auditLogModalPanel" class="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] md:max-h-[85vh] flex flex-col modal-panel overflow-hidden">
+                    <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-slate-800 rounded-t-3xl" aria-hidden="true">
+                        <span class="w-10 h-1 rounded-full bg-white/40"></span>
+                    </div>
+                    <div class="bg-slate-800 px-4 md:px-6 py-4 flex justify-between items-center text-white">
                         <div>
                             <h3 class="text-xl font-bold">📋 Bitácora de Auditoría</h3>
                             <p class="text-slate-400 text-xs mt-0.5">Historial reciente de acciones en el sistema</p>

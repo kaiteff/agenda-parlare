@@ -70,6 +70,15 @@ export const MobileBottomNav = {
             });
         }
 
+        if (AuthManager.can('view_audit')) {
+            items.push({
+                id: 'mobileMoreAudit',
+                label: 'Bitácora de Auditoría',
+                icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+                color: 'text-slate-600'
+            });
+        }
+
         items.push(
             { id: 'mobileMoreHelp', label: 'Manual de Usuario', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-blue-500' },
             { id: 'mobileMoreSuggest', label: 'Enviar Sugerencia', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', color: 'text-orange-500' }
@@ -196,6 +205,10 @@ export const MobileBottomNav = {
                     break;
                 case 'mobileMoreReception':
                     MobileNav.openReception();
+                    break;
+                case 'mobileMoreAudit':
+                    MobileNav.closeMoreSheet();
+                    (await import('../modules/admin/AuditPanel.js')).AuditPanel.open();
                     break;
                 case 'mobileMoreHelp': {
                     const { HelpManual } = await import('../modules/help/HelpManual.js');

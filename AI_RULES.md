@@ -46,8 +46,15 @@ Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de ar
 - Nuevas secciones administrativas o de reportes.
 - Cualquier cambio que afecte cómo la terapeuta o Yari interactúan con la página.
 
+## 🏁 REGLA DE ORO 7: Documentación viva — SIEMPRE (cada acción)
+Tras **cualquier** cambio de código o producto, el asistente **DEBE actualizar los archivos vivos en la misma respuesta**, sin esperar a que el usuario lo pida. **Siempre, siempre, siempre** — no solo al cerrar sesión.
+
+Mínimo habitual: `ANALISIS_ESTRATEGIA_MOVIL.md` (incluye **⏳ Falta** y **💡 Sugerencias**), `PLAN_DE_TRABAJO.md`, y `HelpManual.js` si cambió la UI para el staff.
+
+Regla Cursor: `.cursor/rules/documentacion-viva-siempre.mdc` (`alwaysApply: true`).
+
 ## 🏁 REGLA DE ORO 6: Cierre de sesión ("Vamos" / "Alistémonos")
-Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«alistémonos»**, **«cerramos»**, **«listo para irnos»** o frases similares, el asistente **DEBE actualizar la documentación viva antes de dar por terminada la sesión** — no basta con un resumen en el chat.
+Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«alistémonos»**, **«cerramos»**, **«listo para irnos»** o frases similares, el asistente **DEBE hacer un repaso final** de la documentación viva — no basta con un resumen en el chat (la Regla 7 ya debió aplicarse en cada tarea).
 
 **Checklist de archivos (obligatorio revisar y actualizar si hubo cambios en la sesión):**
 
@@ -62,7 +69,7 @@ Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«ali
 Regla Cursor persistente: `.cursor/rules/cierre-sesion-documentacion.mdc`.
 
 ## 🚀 Protocolo de Despliegue ("Alistémonos para irnos")
-Al finalizar cualquier tarea o sesión (especialmente tras un «vamos» / «alistémonos»), se deben ejecutar obligatoriamente los siguientes pasos:
+Al finalizar **cualquier tarea** (Regla 7) y al cerrar sesión (Regla 6), se deben ejecutar obligatoriamente los siguientes pasos:
 1. **Manual Check**: Verificar si los cambios realizados requieren actualizar el manual de ayuda en `js/modules/help/HelpManual.js`.
 2. **Vision Check**: Verificar si los cambios o ideas de la sesión requieren actualizar `VISION_PARLARE_V2.md` (nuevas reglas, IDs, decisiones de arquitectura, optimizaciones).
 2b. **Mobile Strategy Check (Antigravity)**: Si la sesión incluyó trabajo móvil, backend Firebase, recibos o decisiones de app/roadmap, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.

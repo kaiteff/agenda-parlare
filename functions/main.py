@@ -380,6 +380,30 @@ def send_message_api(req: https_fn.Request) -> https_fn.Response:
 
 # ── 6. Tareas Programadas Automáticas (Cloud Scheduler) ───────────────────
 
+def _log_reminder_to_audit(doc_id, p_name, therapist, phone, appointment_date, action, message="", error=""):
+    """Registra acción de recordatorio en audit_logs (bitácora WhatsApp de Yari)"""
+    try:
+        log_entry = {
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'action': action,
+            'entityType': 'APPOINTMENT',
+            'entityId': doc_id or 'unknown',
+            'details': {
+                'patientName': p_name,
+                'therapist': therapist,
+                'phone': phone or '⚠️ SIN NÚMERO',
+                'appointmentDate': appointment_date,
+                'message': message,
+                'error': error
+            },
+            'userEmail': 'system',
+            'userName': 'Robot Parláre',
+            'userRole': 'system'
+        }
+        db.collection('audit_logs').add(log_entry)
+    except Exception as log_e:
+        print(f"⚠️ Error guardando en audit_log: {log_e}")
+
 def execute_send_reminders():
     """Lógica centralizada para enviar recordatorios automáticos de citas para el día de mañana"""
     mx_now = datetime.now(MX_TZ)
@@ -425,6 +449,13 @@ def execute_send_reminders():
                 'reason': 'no_profile_phone_optin_or_wantsWhatsapp',
                 'date': apt.get('date', '')
             })
+            _log_reminder_to_audit(
+                doc.id, p_name, apt.get('therapist', 'diana'),
+                None, apt.get('date', ''),
+                'WHATSAPP_REMINDER_SKIPPED',
+                message='⚠️ Paciente sin número, sin opt-in aceptado, o wantsWhatsapp=False',
+                error='no_profile_phone_optin_or_wantsWhatsapp'
+            )
             skipped_count += 1
             continue
 
@@ -482,32 +513,33 @@ def execute_send_reminders():
             })
             
             # Registrar en Bitácora (Auditoría) para que Yari pueda verlo
-            try:
-                log_entry = {
-                    'timestamp': firestore.SERVER_TIMESTAMP,
-                    'action': 'WHATSAPP_REMINDER',
-                    'entityType': 'APPOINTMENT',
-                    'entityId': doc.id,
-                    'details': {
-                        'patientName': p_name,
-                        'therapist': therapist,
-                        'phone': dest,
-                        'appointmentDate': apt['date'],
-                        'message': f"Recordatorio enviado a {p_name}"
-                    },
-                    'userEmail': 'system',
-                    'userName': 'Robot Parláre',
-                    'userRole': 'system'
-                }
-                db.collection('audit_logs').add(log_entry)
-            except Exception as db_e:
-                print(f"⚠️ Error actualizando Firestore/Audit para {p_name}: {db_e}")
+            msg_log = (
+                f"🏥 *Recordatorio de Cita (8 AM)*\n\n"
+                f"Hola, te recordamos la cita programada para "
+                f"*{date_str}* a las *{hour_str}* con *{therapist}*.\n\n"
+                f"Responde:\n"
+                f"1️⃣ *OK* para confirmar\n"
+                f"2️⃣ *NO* para cancelar\n"
+                f"3️⃣ *RECEPCIÓN* para dudas\n\n"
+                f"¡Te esperamos! 😊"
+            )
+            _log_reminder_to_audit(
+                doc.id, p_name, therapist, dest, apt['date'],
+                'WHATSAPP_REMINDER', message=msg_log
+            )
                 
             sent_count += 1
             print(f"✅ Recordatorio enviado a {p_name}")
         except Exception as e:
             errors.append(f"Error {p_name}: {str(e)}")
             print(f"⚠️ Error enviando a {p_name}: {e}")
+            _log_reminder_to_audit(
+                doc.id, p_name, apt.get('therapist', 'diana'),
+                p_info.get('phone', '') if p_info else '⚠️ SIN NÚMERO',
+                apt.get('date', ''),
+                'WHATSAPP_REMINDER_ERROR',
+                error=f"[8AM] {str(e)}"
+            )
 
     return {
         'sent': sent_count,
@@ -624,6 +656,134 @@ def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
             print("✅ Reporte Maestro enviado a Yari.")
         except Exception as e:
             print(f"❌ Error enviando reporte maestro a Yari: {e}")
+
+def execute_send_evening_reminders():
+    """Lógica 8 PM — segundo recordatorio a pacientes que recibieron el de 8 AM pero no confirmaron."""
+    mx_now = datetime.now(MX_TZ)
+    tomorrow = mx_now + timedelta(days=1)
+    day_str = tomorrow.strftime('%Y-%m-%d')
+
+    profiles = db.collection('patientProfiles').stream()
+    phone_map = {}
+    for p in profiles:
+        data = p.to_dict()
+        if not data.get('phone') or not data.get('wantsWhatsapp', True):
+            continue
+        if not patient_accepts_automated_whatsapp(data):
+            continue
+        phone_map[data.get('name', '').strip().lower()] = data
+
+    start_iso = f"{day_str}T00:00:00"
+    end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
+    query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+
+    sent_count = 0
+    skipped_count = 0
+    errors = []
+
+    for doc in query:
+        apt = doc.to_dict()
+
+        if apt.get('isCancelled') or apt.get('confirmed'):
+            skipped_count += 1
+            continue
+
+        p_name = apt.get('name', '')
+        p_info = phone_map.get(p_name.strip().lower())
+        if not p_info:
+            _log_reminder_to_audit(
+                doc.id, p_name, apt.get('therapist', 'diana'),
+                None, apt.get('date', ''),
+                'WHATSAPP_REMINDER_SKIPPED',
+                message='⚠️ Sin número, opt-in no aceptado, o wantsWhatsapp=False',
+                error='no_profile_phone_optin_or_wantsWhatsapp'
+            )
+            skipped_count += 1
+            continue
+
+        # 🛡️ Solo enviar si ya recibió el recordatorio de 8 AM hoy
+        last_sent = apt.get('lastReminderSentAt')
+        got_morning = False
+        if last_sent:
+            try:
+                last_sent_dt = last_sent.to_datetime().astimezone(MX_TZ) if hasattr(last_sent, 'to_datetime') else last_sent.astimezone(MX_TZ)
+                got_morning = last_sent_dt.date() == mx_now.date()
+            except Exception as e:
+                print(f"⚠️ Error leyendo lastReminderSentAt para {p_name}: {e}")
+
+        if not got_morning:
+            skipped_count += 1
+            continue
+
+        # 🛡️ GUARDIA: no enviar dos veces el de tarde
+        last_evening = apt.get('lastEveningReminderSentAt')
+        if last_evening:
+            try:
+                le_dt = last_evening.to_datetime().astimezone(MX_TZ) if hasattr(last_evening, 'to_datetime') else last_evening.astimezone(MX_TZ)
+                if le_dt.date() == mx_now.date():
+                    skipped_count += 1
+                    continue
+            except Exception as guard_e:
+                print(f"⚠️ Error en guardia duplicado PM: {guard_e}")
+
+        try:
+            dt = parse_mx_datetime(apt['date'])
+            if dt.date() != tomorrow.date() or not (8 <= dt.hour <= 20):
+                skipped_count += 1
+                continue
+
+            meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+            date_str = f"{dt.day} de {meses[dt.month]}"
+            hour_str = dt.strftime('%I:%M %p').lstrip('0')
+            therapist = apt.get('therapist', 'Diana').title()
+            dest = f"whatsapp:+{p_info.get('countryCode', '52')}{normalize_phone(p_info['phone'])}"
+
+            get_twilio_client().messages.create(
+                from_=TWILIO_WHATSAPP_FROM, to=dest,
+                content_sid='HX100149d5295d1839864ad33cc9e73567',
+                content_variables=json.dumps({"1": date_str, "2": hour_str, "3": therapist})
+            )
+
+            db.collection('appointments').document(doc.id).update({
+                'lastEveningReminderSentAt': firestore.SERVER_TIMESTAMP,
+                'lastReminderType': 'AUTO_CRON_PM',
+                'lastReminderBy': 'Robot Parláre'
+            })
+
+            msg_log = (
+                f"🌙 *Recordatorio de Tarde (8 PM)*\n\n"
+                f"Hola, te recordamos la cita programada para "
+                f"*{date_str}* a las *{hour_str}* con *{therapist}*.\n\n"
+                f"Responde:\n"
+                f"1️⃣ *OK* para confirmar\n"
+                f"2️⃣ *NO* para cancelar\n"
+                f"3️⃣ *RECEPCIÓN* para dudas\n\n"
+                f"¡Te esperamos! 😊"
+            )
+            _log_reminder_to_audit(
+                doc.id, p_name, therapist, dest, apt['date'],
+                'WHATSAPP_REMINDER_PM', message=msg_log
+            )
+
+            sent_count += 1
+            print(f"✅ Recordatorio tarde (8 PM) enviado a {p_name}")
+        except Exception as e:
+            errors.append(f"Error {p_name}: {str(e)}")
+            print(f"⚠️ Error enviando PM a {p_name}: {e}")
+            _log_reminder_to_audit(
+                doc.id, p_name, apt.get('therapist', 'diana'),
+                p_info.get('phone', ''), apt.get('date', ''),
+                'WHATSAPP_REMINDER_ERROR',
+                error=f"[8PM] {str(e)}"
+            )
+
+    return {'sent': sent_count, 'skipped': skipped_count, 'errors': errors, 'date': day_str, 'wave': 'evening'}
+
+@scheduler_fn.on_schedule(schedule="0 20 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+def send_evening_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
+    """Cronjob a las 8:00 PM — Segundo recordatorio para pacientes que no confirmaron el de 8 AM"""
+    result = execute_send_evening_reminders()
+    print(f"🌙 Cron tarde de recordatorios ejecutado: {result}")
 
 @scheduler_fn.on_schedule(schedule="0 1 * * 1", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
