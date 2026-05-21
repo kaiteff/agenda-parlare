@@ -172,4 +172,4 @@ En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirma
 Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
 
 ---
-*Última actualización: 21 de Mayo, 2026 — Cierre sesión: consentimientos WhatsApp, excepciones opt-in, bitácora enriquecida y HelpManual.*
+*Última actualización: 21 de Mayo, 2026 — Cierre «fuga»: opt-in WhatsApp (21 may) + agenda escritorio #1–#3 validada/documentada + `VISION_PARLARE_V2` merge + `ARQUITECTURA_FUTURA.md`.*

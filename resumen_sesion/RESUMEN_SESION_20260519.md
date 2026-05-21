@@ -20,6 +20,18 @@ npm run build
 firebase deploy --only hosting
 ```
 
+## Complemento (agenda escritorio + docs) — cierre sesión
+
+- **#1 Auto-scroll:** solo carga y **Hoy** — validado en producción.
+- **#2 Índice slot:** `CalendarSlotIndex.js` — validado en producción.
+- **#3 Toggle Día \| Semana en desktop:** `#calendarViewToggle` visible en toolbar.
+- **Docs:** `ARQUITECTURA_FUTURA.md` (nuevo); `VISION_PARLARE_V2.md` (merge ✅/⏳/🔜); `PLAN`, `ANALISIS`, `AI_RULES`, reglas Cursor.
+
+### Validar tras deploy hosting
+
+- [ ] PC: **Día** / **Semana** en toolbar; pestañas Lun–Sáb en modo Día
+- [ ] PC: prev/next semana sin salto de scroll; **Hoy** → ~10:00
+
 ## Próxima sesión
 
-Ver **⏳ Falta** y **💡 Sugerencias** en `ANALISIS_ESTRATEGIA_MOVIL.md`.
+Ver **⏳ Falta** y **💡 Sugerencias** en `ANALISIS_ESTRATEGIA_MOVIL.md` y roadmap media en `ARQUITECTURA_FUTURA.md`.

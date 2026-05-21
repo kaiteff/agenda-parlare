@@ -54,7 +54,7 @@ Leyenda: ✅ hecho | 🔜 en curso | ⏳ pendiente | 💎 premium (más adelante
 - [ ] Arrastrar cita a otro slot
 - [ ] Crear cita desde celda vacía
 - [x] Móvil: Día/Semana y scroll sin regresión
-- [ ] Desktop: toggle Día/Semana + pestañas Lun–Sáb en modo Día
+- [ ] Desktop: toggle Día/Semana + pestañas Lun–Sáb en modo Día (tras deploy hosting)
 
 ### Media impacto (acordado — todas en cola)
 
