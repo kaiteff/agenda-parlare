@@ -127,10 +127,11 @@ export const AuditPanel = {
                 const log = doc.data();
                 
                 // Filtrado manual en memoria
+                const isWhatsappAction = log.action && log.action.startsWith('WHATSAPP_');
                 if (this.activeTab === 'whatsapp') {
-                    if (log.action !== 'WHATSAPP_REMINDER') return;
+                    if (!isWhatsappAction) return;
                 } else {
-                    if (log.action === 'WHATSAPP_REMINDER') return;
+                    if (isWhatsappAction) return;
                 }
 
                 if (count >= 50) return; // Limitar visualmente
@@ -202,15 +203,15 @@ export const AuditPanel = {
                     }
                 })() : ''}
                 
-                ${log.action === 'WHATSAPP_REMINDER' && log.details?.message ? `
+                ${(log.action?.startsWith('WHATSAPP_') && (log.details?.message || log.details?.error)) ? `
                     <button 
                         onclick="this.nextElementSibling.classList.toggle('hidden')" 
                         class="mt-2 text-[9px] text-green-600 hover:text-green-700 font-bold flex items-center gap-0.5 cursor-pointer focus:outline-none"
                     >
-                        💬 Ver mensaje completo
+                        💬 Ver detalle
                     </button>
                     <div class="hidden mt-1.5 p-2 bg-green-50 border border-green-100 rounded-lg text-[10px] text-green-800 whitespace-pre-wrap font-mono leading-tight">
-                        ${log.details.message}
+                        ${log.details.message || log.details.error}
                     </div>
                 ` : ''}
             </div>
@@ -227,6 +228,9 @@ export const AuditPanel = {
             case 'CANCEL': return { bg: 'bg-orange-100', text: 'text-orange-600', icon: '✕' };
             case 'PAYMENT': return { bg: 'bg-emerald-100', text: 'text-emerald-600', icon: '💰' };
             case 'WHATSAPP_REMINDER': return { bg: 'bg-green-100', text: 'text-green-600', icon: '📱' };
+            case 'WHATSAPP_REMINDER_PM': return { bg: 'bg-teal-100', text: 'text-teal-600', icon: '📱' };
+            case 'WHATSAPP_REMINDER_SKIPPED': return { bg: 'bg-amber-100', text: 'text-amber-600', icon: '⚠️' };
+            case 'WHATSAPP_REMINDER_ERROR': return { bg: 'bg-red-100', text: 'text-red-600', icon: '🚨' };
             default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: '•' };
         }
     },
@@ -238,7 +242,10 @@ export const AuditPanel = {
             case 'DELETE_PERMANENT': return 'eliminó permanentemente un registro';
             case 'CANCEL': return 'canceló una cita';
             case 'PAYMENT': return log.details?.isPaid ? 'marcó como PAGADA una cita' : 'quitó el estado de pagado';
-            case 'WHATSAPP_REMINDER': return 'envió recordatorio automático por WhatsApp';
+            case 'WHATSAPP_REMINDER': return 'envió recordatorio automático (mañana) por WhatsApp';
+            case 'WHATSAPP_REMINDER_PM': return 'envió recordatorio automático (tarde) por WhatsApp';
+            case 'WHATSAPP_REMINDER_SKIPPED': return `omitió el envío de recordatorio de WhatsApp (${log.details?.error || 'sin opt-in o desactivado'})`;
+            case 'WHATSAPP_REMINDER_ERROR': return `error al enviar recordatorio de WhatsApp: ${log.details?.error || ''}`;
             default: return 'realizó una acción';
         }
     }

@@ -47,16 +47,22 @@ def parse_interactive_payload(req_form) -> str | None:
 def patient_accepts_automated_whatsapp(profile: dict) -> bool:
     if not profile.get("wantsWhatsapp", True):
         return False
-    return profile.get("recurrentOptIn", OPTIN_PENDING) == OPTIN_ACCEPTED
+    if profile.get("recurrentOptIn") == OPTIN_REJECTED:
+        return False
+    return True
 
 
 def update_patient_optin(db, patient_id: str, status: str) -> None:
-    db.collection("patientProfiles").document(patient_id).update(
-        {
-            "recurrentOptIn": status,
-            "recurrentOptInUpdatedAt": firestore.SERVER_TIMESTAMP,
-        }
-    )
+    updates = {
+        "recurrentOptIn": status,
+        "recurrentOptInUpdatedAt": firestore.SERVER_TIMESTAMP,
+    }
+    if status == OPTIN_ACCEPTED:
+        updates["wantsWhatsapp"] = True
+    elif status == OPTIN_REJECTED:
+        updates["wantsWhatsapp"] = False
+        
+    db.collection("patientProfiles").document(patient_id).update(updates)
 
 
 def create_reception_optout_alert(

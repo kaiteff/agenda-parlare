@@ -943,11 +943,12 @@ export const PatientModals = {
                     schedule: scheduleStr
                 }, 'welcome_optin');
                 await PatientActions.updatePatientProfile(patient.id, {
-                    recurrentOptIn: 'pending'
-                });
+                    recurrentOptIn: 'pending',
+                    wantsWhatsapp: false
+                }, patient.name);
                 const badge = document.getElementById('patientWhatsAppOptInBadge');
                 if (badge) {
-                    badge.outerHTML = renderWhatsAppOptInBadge({ ...patient, recurrentOptIn: 'pending' });
+                    badge.outerHTML = renderWhatsAppOptInBadge({ ...patient, recurrentOptIn: 'pending', wantsWhatsapp: false });
                 }
             };
         }

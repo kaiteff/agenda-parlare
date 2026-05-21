@@ -842,6 +842,7 @@ def on_patient_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot])
         snap.reference.update({
             'recurrentOptIn': 'pending',
             'recurrentOptInUpdatedAt': firestore.SERVER_TIMESTAMP,
+            'wantsWhatsapp': False,
         })
         print(f"🎉 bienvenida_con_optin enviado a: {name} (recurrentOptIn=pending)")
     except Exception as e:
