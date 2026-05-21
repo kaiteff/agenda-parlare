@@ -15,9 +15,11 @@
 
 ## Validar (usuario)
 
-- [ ] Confirmar que los nuevos pacientes inician con el semáforo en amarillo (pendiente) y casilla desactivada.
-- [ ] Confirmar que al recibir "Sí, autorizo" de un paciente de prueba, la casilla en el expediente se activa automáticamente a color verde.
+- [x] Confirmar que los nuevos pacientes inician con el semáforo en amarillo (pendiente) y casilla desactivada. (Validado en vivo por el usuario)
+- [x] Confirmar que al recibir "Sí, autorizo" de un paciente de prueba, la casilla en el expediente se activa automáticamente a color verde. (Validado en vivo por el usuario)
+- [x] Probar el toggle de Día / Semana en escritorio (PC) en producción. (Validado en vivo por el usuario)
 - [ ] Auditar los detalles de envíos y omisiones de WhatsApp en **Más → Bitácora de Auditoría** (Pestaña WhatsApp).
+
 
 ## Deploy
 

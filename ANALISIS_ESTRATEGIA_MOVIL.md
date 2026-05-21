@@ -117,12 +117,12 @@ firebase deploy --only hosting
 
 | # | Qué falta | Notas |
 |---|-----------|--------|
-| 1 | **Validación final de opt-in en producción** | Verificar el comportamiento con el número real en la clínica tras deploy. |
+| 1 | **Validación final de opt-in en producción** | ✅ Validado en vivo por el usuario (nuevos pacientes en amarillo, autorizados en verde). |
 | 2 | **Recibos end-to-end** | Paciente con `reimbursementReceipt.autoGenerate: true` → cita **Pagada** → comprobar `receiptPdfUrl` + PDF en Storage. |
 | 3 | **Copiloto Colaborativo (Waitlist / Adelantos)** | Implementar la confirmación dual (Yari + Terapeuta), delay de 10 min, glow de calendario y heurísticas (en pausa temporal). |
 | 4 | **Índice Firestore (si aplica)** | Si el listener de `reception_alerts` falla en consola: índice compuesto `status` + `createdAt`. |
-| 5 | **Toggle Día desktop en producción** | Tras `firebase deploy --only hosting`: probar Día/Semana en `md+` y citas/arrastre. |
-| 6 | **Agenda desktop — media prioridad** | Ver ítems 4–9 en `ARQUITECTURA_FUTURA.md` (tooltips, query semana, debounce…). |
+| 5 | **Toggle Día desktop en producción** | ✅ Validado en vivo por el usuario (probada la vista Día en PC). |
+| 6 | **Agenda desktop — media prioridad** | Ver ítems 4–9 en `ARQUITECTURA_FUTURA.md` (tooltips/hover, query semana, debounce…). |
 
 ### 💡 Sugerencias (opcional — próximas sesiones)
 
