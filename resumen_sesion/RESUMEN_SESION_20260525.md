@@ -1,36 +1,23 @@
-# Resumen de Sesión - 25 de Mayo de 2026
+# Resumen de Sesión — 25 de Mayo de 2026
 
-## 🎯 Objetivo Principal
-Implementar y reactivar el **Optimizador de Espacios (Autopilot)** evolucionándolo hacia un **Copiloto Colaborativo**, añadiendo protecciones y márgenes de acción manual para evitar envíos indeseados de notificaciones por cancelaciones de citas, respetando horarios de descanso y ventanas de proximidad.
+## 🎯 Objetivos Logrados
 
-## 🛠️ Cambios Realizados
+### 1. Sistema de Ausencias y Vacaciones (Fase 1)
+*   **UX Premium:** Añadimos atajos rápidos de fechas, tarjetas visuales de motivo de ausencia, confirmación dinámica y banner de "sin citas afectadas".
+*   **Fixes de Cierre:** Corregimos los imports relativos en `MainModals.js` para evitar errores MIME 404 en el servidor, y habilitamos cierre al dar click fuera del panel.
+*   **Nombres Personalizados:** El calendario ahora muestra los bloqueos con emojis representativos (`🏖️ Vacaciones`, `🏥 Ausencia Médica`, etc.).
 
-1.  **Reactivación del Trigger de Cancelaciones (`on_appointment_cancelled_trigger`):**
-    *   Se eliminó la pausa temporal que bloqueaba el Autopilot en producción (`space_optimizer.py`).
-2.  **Implementación del Freno Inicial (10 minutos):**
-    *   Al detectar una cancelación elegible (8 a 24 horas antes), el sistema ejecuta un `time.sleep(600)` (10 minutos) antes de continuar.
-    *   Tras el delay, se reevalúa la base de datos para asegurar que la cita sigue cancelada y nadie la ha retomado manualmente.
-3.  **Sistema de Quiet Hours (Horario Nocturno):**
-    *   Se definió el horario normal de operación de 7:00 AM a 9:59 PM.
-    *   Si una cancelación ocurre fuera de este horario (ej: 10:30 PM), la notificación de ofertas **no se envía**. En su lugar, la cancelación se guarda en la nueva colección `quiet_hours_pending`.
-4.  **Liberación Programada (CRON 8:00 AM):**
-    *   Se actualizó la función programada `release_quiet_hours_offers` en `main.py` (se ejecuta todos los días a las 8:00 AM).
-    *   Este CRON procesa las cancelaciones guardadas en `quiet_hours_pending` y dispara la lógica de búsqueda y envío de ofertas a los pacientes del día, sin volver a aplicar el delay de 10 minutos (ya que el tiempo ya ha transcurrido).
-5.  **Regla de Proximidad (Ventana de 2 horas):**
-    *   Al buscar pacientes candidatos para adelantar su cita, se excluyeron aquellos cuyas citas originales estén a menos de 2 horas del horario cancelado (ej: si cancelan a las 8 PM y son las 7 PM), evitando notificar a papás que no tendrían tiempo suficiente para llegar o prepararse.
-6.  **Refactorización y Reutilización:**
-    *   Se extrajo la lógica de búsqueda de candidatos y envío de mensajes de WhatsApp a la función independiente `process_autopilot_candidates` en `space_optimizer.py`, permitiendo ser llamada tanto por el trigger en tiempo real como por el CRON de las 8:00 AM.
-7.  **Documentación Actualizada:**
-    *   Se actualizó el archivo `MANUAL_USUARIO_PLATAFORMA.md` (Sección 6) para reflejar la reactivación del sistema y documentar las nuevas reglas de operación (Delay, Quiet Hours y Regla de Proximidad) para el conocimiento del staff de la clínica (Yari/Daniel).
-8.  **Gestión de Ausencias y Vacaciones — Fase 1 (Frontend Premium):**
-    *   Se reemplazó el `prompt()` nativo del navegador por un modal premium responsivo (`#absenceModal`) al hacer clic en el candado 🔒 de la agenda.
-    *   Implementación de `AbsenceModal.js` para permitir bloqueos por rangos de fechas (útil para vacaciones) y rangos horarios específicos.
-    *   **Detección de Conflictos en Tiempo Real:** El modal escanea y muestra visualmente las citas activas que coincidan con la terapeuta y rango de fechas/horas seleccionados antes de guardar.
-    *   **Permisos de Auto-Gestión:** Habilitado para que las terapeutas (Vero y Sam) inhabiliten sus propios días/horas (restringido a su agenda únicamente), mientras que Diana (Admin) y Yari (Recepción) pueden bloquear a cualquier terapeuta.
-    *   **Corrección de Bugs:** Corregido el bug en `CalendarModal.js` que marcaba los bloqueos de hora y día como visitas a la escuela (`isSchoolVisit: true`).
+### 2. Seguridad & Costo Cero ($0)
+*   **Paso 1 de Seguridad Desplegado:** Implementamos cabeceras de seguridad bancaria (CSP, HSTS, X-Frame-Options: DENY) en `firebase.json` y creamos `storage.rules`.
+*   **Reducción Drástica de Hosting:** Excluimos el entorno virtual de Python, carpetas de dependencias y Git. El deploy bajó de **13,987 a 104 archivos**, resolviendo el exceso de almacenamiento y garantizando costo $0.
+*   **Regla de Oro de Costo Cero:** Documentamos en `AI_RULES.md` la **REGLA DE ORO 9** para forzar a cualquier desarrollador a mantener la app optimizada y libre de costos innecesarios.
 
-## ⏭️ Próximos Pasos Sugeridos
-*   Realizar una prueba controlada en vivo creando una cita de prueba con un número de teléfono conocido y cancelándola.
-*   Validar la creación de ausencias con el nuevo modal de vacaciones y verificar que al intentar bloquear un día con citas, muestre la lista de niños afectados correctamente.
-*   **Fase 2 de Ausencias:** Diseñar y configurar la plantilla de Twilio/Meta y webhook para notificar por WhatsApp a los tutores afectados de forma automática.
-*   **Fase 3 de Ausencias:** Migrar bloqueos de disponibilidad a su propia colección `availability_blocks/` en Firestore para desligarlos de la colección de citas.
+---
+
+## ⏳ Pendientes para la Siguiente Sesión (Mañana)
+
+1.  **Optimización Crítica de Lecturas Firestore (Prioridad 1):**
+    *   Restringir la consulta en tiempo real (`onSnapshot`) de citas en la agenda a un rango dinámico de `[-30, +60]` días.
+    *   Migrar el cálculo de saldos e historial de pacientes en la barra lateral para que se cargue bajo demanda (`getDocs`) al abrir la ficha, en lugar de pre-descargar las 2,162 citas al inicio del sistema.
+    *   Filtrar consultas de citas por terapeuta autenticado.
+2.  **Script de Limpieza `isSchoolVisit` Legacy:** Limpiar bloqueos antiguos en la base de datos que quedaron con el bug de visita escolar activo.
