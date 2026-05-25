@@ -37,14 +37,18 @@ export const AbsenceModal = {
         const endHourSelect = document.getElementById('absenceEndHour');
         const saveBtn = document.getElementById('absenceSaveBtn');
 
-        // Check for conflicts on input changes
-        const triggerConflictCheck = () => this.checkConflicts();
-        
-        if (startInput) startInput.onchange = triggerConflictCheck;
-        if (endInput) endInput.onchange = triggerConflictCheck;
-        if (therapistSelect) therapistSelect.onchange = triggerConflictCheck;
-        if (startHourSelect) startHourSelect.onchange = triggerConflictCheck;
-        if (endHourSelect) endHourSelect.onchange = triggerConflictCheck;
+        // Refrescar conflictos + resumen + validación visual en cualquier cambio
+        const refresh = () => {
+            this.checkConflicts();
+            this._updateSummary();
+            this._validateHourRange();
+        };
+
+        if (startInput) startInput.onchange = refresh;
+        if (endInput) endInput.onchange = refresh;
+        if (therapistSelect) therapistSelect.onchange = refresh;
+        if (startHourSelect) startHourSelect.onchange = refresh;
+        if (endHourSelect) endHourSelect.onchange = refresh;
 
         if (allDayCheckbox) {
             allDayCheckbox.onchange = (e) => {
@@ -52,9 +56,22 @@ export const AbsenceModal = {
                 if (selects) {
                     selects.classList.toggle('hidden', e.target.checked);
                 }
-                this.checkConflicts();
+                refresh();
             };
         }
+
+        // Cambios en el tipo de ausencia → actualizar resumen
+        modal.querySelectorAll('input[name="absenceType"]').forEach(radio => {
+            radio.addEventListener('change', () => this._updateSummary());
+        });
+
+        // Atajos rápidos de rango (Hoy / Esta semana / Próxima semana / 2 semanas)
+        modal.querySelectorAll('[data-absence-quick]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const kind = e.currentTarget.getAttribute('data-absence-quick');
+                this._applyQuickRange(kind);
+            });
+        });
 
         if (modal) {
             modal.onclick = (e) => {
@@ -64,6 +81,143 @@ export const AbsenceModal = {
 
         if (saveBtn) {
             saveBtn.onclick = () => this.save();
+        }
+    },
+
+    /** Atajos rápidos: rellena Fecha Inicio y Fecha Fin con un rango común. */
+    _applyQuickRange(kind) {
+        const startInput = document.getElementById('absenceStartDate');
+        const endInput = document.getElementById('absenceEndDate');
+        const allDayCheckbox = document.getElementById('absenceAllDay');
+        if (!startInput || !endInput) return;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Lunes de la semana en curso (si es domingo, el lunes es mañana).
+        const monday = new Date(today);
+        const dayOfWeek = today.getDay();
+        const diffToMonday = (dayOfWeek === 0) ? 1 : (1 - dayOfWeek);
+        monday.setDate(today.getDate() + diffToMonday);
+
+        const saturday = new Date(monday);
+        saturday.setDate(monday.getDate() + 5);
+
+        const nextMonday = new Date(monday);
+        nextMonday.setDate(monday.getDate() + 7);
+
+        const nextSaturday = new Date(saturday);
+        nextSaturday.setDate(saturday.getDate() + 7);
+
+        let start, end;
+        switch (kind) {
+            case 'today':    start = today; end = today; break;
+            case 'week':     start = today > monday ? today : monday; end = saturday; break;
+            case 'nextweek': start = nextMonday; end = nextSaturday; break;
+            case 'twoweeks': start = today > monday ? today : monday; end = nextSaturday; break;
+            default: return;
+        }
+
+        startInput.value = formatDateLocal(start);
+        endInput.value = formatDateLocal(end);
+
+        // Para rangos > 1 día, conviene "Todo el día" por defecto
+        if (kind !== 'today' && allDayCheckbox && !allDayCheckbox.checked) {
+            allDayCheckbox.checked = true;
+            const selects = document.getElementById('absenceTimeRangeSelects');
+            if (selects) selects.classList.add('hidden');
+        }
+
+        this.checkConflicts();
+        this._updateSummary();
+        this._validateHourRange();
+    },
+
+    /** Actualiza el card de resumen (tipo + terapeuta + rango + días hábiles + horario). */
+    _updateSummary() {
+        const summaryCard = document.getElementById('absenceSummaryCard');
+        const summaryText = document.getElementById('absenceSummaryText');
+        if (!summaryCard || !summaryText) return;
+
+        const startDateStr = document.getElementById('absenceStartDate')?.value;
+        const endDateStr = document.getElementById('absenceEndDate')?.value;
+        const allDay = document.getElementById('absenceAllDay')?.checked;
+        const startHour = parseInt(document.getElementById('absenceStartHour')?.value) || 8;
+        const endHour = parseInt(document.getElementById('absenceEndHour')?.value) || 20;
+        const therapist = document.getElementById('absenceTherapist')?.value || '';
+        const reason = document.querySelector('input[name="absenceType"]:checked')?.value || 'vacation';
+
+        if (!startDateStr || !endDateStr) {
+            summaryCard.classList.add('hidden');
+            return;
+        }
+
+        const start = new Date(startDateStr + 'T00:00:00');
+        const end = new Date(endDateStr + 'T00:00:00');
+        if (start > end) {
+            summaryCard.classList.add('hidden');
+            return;
+        }
+
+        // Días hábiles del rango (excluye domingos)
+        let workingDays = 0;
+        const cursor = new Date(start);
+        while (cursor <= end) {
+            if (cursor.getDay() !== 0) workingDays++;
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        if (workingDays === 0) {
+            summaryText.textContent = 'Sin días hábiles seleccionados (los domingos se excluyen).';
+            summaryCard.classList.remove('hidden');
+            return;
+        }
+
+        const sameDay = startDateStr === endDateStr;
+        const reasonLabel = {
+            vacation: '🏖️ Vacaciones',
+            medical: '🏥 Médica',
+            training: '📚 Capacitación',
+            personal: '👤 Personal',
+            other: '🚫 Otro'
+        }[reason] || '🚫 Ausencia';
+
+        const therapistName = (therapist || '').charAt(0).toUpperCase() + (therapist || '').slice(1);
+        const fmtShort = (d) => d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+        const fmtHour = (h) => (h === 12) ? '12:00 PM' : (h > 12 ? `${h - 12}:00 PM` : `${h}:00 AM`);
+
+        const rangeStr = sameDay ? fmtShort(start) : `${fmtShort(start)} → ${fmtShort(end)}`;
+        const timeStr = allDay ? 'Todo el día' : `${fmtHour(startHour)} – ${fmtHour(endHour)}`;
+        const daysLabel = workingDays === 1 ? '1 día hábil' : `${workingDays} días hábiles`;
+
+        summaryText.innerHTML = `${reasonLabel} · <strong>${escapeHTML(therapistName)}</strong> · ${rangeStr} <span class="text-indigo-400">·</span> ${daysLabel} <span class="text-indigo-400">·</span> ${timeStr}`;
+        summaryCard.classList.remove('hidden');
+    },
+
+    /** Marca con borde rojo si endHour <= startHour (sin alert hasta intentar guardar). */
+    _validateHourRange() {
+        const allDay = document.getElementById('absenceAllDay')?.checked;
+        const startSelect = document.getElementById('absenceStartHour');
+        const endSelect = document.getElementById('absenceEndHour');
+        if (!startSelect || !endSelect) return;
+
+        const errorClasses = ['border-red-400', 'ring-2', 'ring-red-100'];
+        const reset = () => [startSelect, endSelect].forEach(el => {
+            el.classList.remove(...errorClasses);
+            el.classList.add('border-gray-200');
+        });
+
+        if (allDay) { reset(); return; }
+
+        const startHour = parseInt(startSelect.value) || 0;
+        const endHour = parseInt(endSelect.value) || 0;
+        if (endHour <= startHour) {
+            [startSelect, endSelect].forEach(el => {
+                el.classList.add(...errorClasses);
+                el.classList.remove('border-gray-200');
+            });
+        } else {
+            reset();
         }
     },
 
@@ -137,6 +291,8 @@ export const AbsenceModal = {
         }
 
         this.checkConflicts();
+        this._updateSummary();
+        this._validateHourRange();
 
         modal.classList.remove('hidden');
         modal.style.setProperty('display', 'flex', 'important');
@@ -169,8 +325,14 @@ export const AbsenceModal = {
         const card = document.getElementById('absenceConflictsCard');
         const list = document.getElementById('absenceConflictsList');
         const countSpan = document.getElementById('absenceConflictsCount');
+        const noConflictsCard = document.getElementById('absenceNoConflictsCard');
 
-        if (!therapist || !startDateStr || !endDateStr || !list) return;
+        // Si faltan datos, ocultar ambos badges
+        if (!therapist || !startDateStr || !endDateStr || !list) {
+            if (card) card.classList.add('hidden');
+            if (noConflictsCard) noConflictsCard.classList.add('hidden');
+            return;
+        }
 
         const start = new Date(startDateStr + 'T00:00:00');
         const end = new Date(endDateStr + 'T23:59:59');
@@ -204,6 +366,7 @@ export const AbsenceModal = {
         if (this.conflictedAppointments.length > 0) {
             countSpan.textContent = this.conflictedAppointments.length;
             card.classList.remove('hidden');
+            if (noConflictsCard) noConflictsCard.classList.add('hidden');
 
             this.conflictedAppointments.forEach(appt => {
                 const apptDate = new Date(appt.date);
@@ -220,6 +383,12 @@ export const AbsenceModal = {
             });
         } else {
             card.classList.add('hidden');
+            // Mostrar tranquilizador verde solo si el rango es válido
+            if (noConflictsCard && start <= end) {
+                noConflictsCard.classList.remove('hidden');
+            } else if (noConflictsCard) {
+                noConflictsCard.classList.add('hidden');
+            }
         }
     },
 

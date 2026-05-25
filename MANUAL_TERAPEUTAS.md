@@ -85,18 +85,37 @@ Cuando veas `~~D~~ / S`:
 <summary><b>⛔ T. Tipos de Sesión y Bloqueos</b></summary>
 
 *   **Inhabilitar Hora:** Úsalo para bloquear tus horarios de comida o compromisos personales.
-*   **Vacaciones / Día Completo (Nuevo 🔒):** El candado **🔒** de cada día abre un modal premium diseñado para registrar ausencias de forma estructurada:
-    *   **Rango de fechas:** Bloquea varios días seguidos (ej. una o dos semanas) con un solo clic. Los domingos se excluyen solos.
-    *   **Tipo de ausencia:** Elige el motivo exacto (Vacaciones, Médica, Capacitación, Personal, u Otro).
-    *   **Todo el día o rango horario:** Elige si la ausencia cubre todo el día o solo un bloque de horas (ej. de 2 PM a 5 PM).
-    *   **Aviso de citas afectadas:** Si hay niños agendados en ese horario/días, el modal te los mostrará antes de guardar para evitar cancelaciones imprevistas.
+*   **Vacaciones / Día Completo (Premium 🔒):** El candado **🔒** de cada día abre un modal premium diseñado para registrar ausencias rápido y sin errores:
+    *   **Atajos rápidos (🆕 25 may noche):** Cuatro chips arriba del modal — `Hoy`, `Esta semana`, `Próxima semana`, `2 semanas` — rellenan automáticamente las fechas y activan «Todo el día» para rangos largos. Útil para vacaciones de una o dos semanas con un solo toque.
+    *   **Tipo de ausencia con cards visuales (🆕):** Cinco tarjetas (Vacaciones · Médica · Capacitación · Personal · Otro) con icono grande. La seleccionada se enmarca en azul y se ilumina ligeramente.
+    *   **Rango de fechas:** Bloquea varios días seguidos con un solo clic. Los domingos se excluyen solos del conteo de días hábiles.
+    *   **Todo el día o rango horario:** Toggle en pill (con icono 🕒) para elegir si cubre todo el día o un bloque (ej. 2 PM a 5 PM). Si pones hora fin antes que inicio, los selects se marcan en rojo al instante (no hay que esperar a guardar).
+    *   **Tarjeta resumen (🆕):** Antes de confirmar ves el resumen exacto, ej. `🏖️ Vacaciones · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día`.
+    *   **Banner verde «Sin citas afectadas» (🆕):** Te tranquiliza confirmando que nadie quedará colgado en el rango elegido.
+    *   **Banner ámbar de citas afectadas:** Si hay niños agendados, los muestra con nombre y horario para que Yari/Diana decidan reagendar o cancelar.
+    *   **Botón Confirmar premium (🆕):** Gradient azul→índigo con icono candado y animación al presionar. En iPhone respeta el safe-area (no queda debajo del home indicator).
     *   **Seguridad y Validación (S-011 a S-014):**
         *   Sanitización automática de nombres de pacientes para evitar XSS.
         *   Escritura rápida y atómica mediante lotes Firestore (`writeBatch`), reduciendo tiempos de espera al bloquear varios días.
         *   Validación horaria estricta (no permite hora fin menor o igual que hora inicio).
         *   Chequeo en memoria para evitar registrar bloqueos duplicados en las mismas horas.
-    *   **Permisos:** Diana (Admin) y Yari (Recepción) pueden inhabilitar horarios para cualquier terapeuta. Las terapeutas (Vero y Sam) solo pueden registrar ausencias para su propia agenda.
-    *   *Tip operativo:* Para vacaciones largas se recomienda usar "Todo el día". Si necesitas bloquear solo unas horas, hazlo día por día para evitar problemas en Google Calendar.
+    *   **Permisos:** Diana (Admin) y Yari (Recepción) pueden inhabilitar horarios para cualquier terapeuta. Las terapeutas (Vero y Sam) solo pueden registrar ausencias para su propia agenda (select bloqueado).
+    *   *Tip operativo:* Para vacaciones largas usa el atajo **«Esta semana»** o **«Próxima semana»** y déjalo en «Todo el día». Si necesitas bloquear solo unas horas, hazlo día por día (mientras pulimos la sincronización con Google Calendar).
+
+> **📝 Ejemplo paso a paso — «Me voy de vacaciones la próxima semana»**
+>
+> Practica con esta secuencia para confirmar que todo se ve y funciona bien (en tu compu o en tu celular):
+>
+> 1. Abre el calendario y **toca el candado 🔒** en el encabezado de cualquier día.
+> 2. En el chip de atajos rápidos, toca **«Próxima semana»**. Las dos fechas se rellenan solas (Lun → Sáb) y *«Todo el día»* se activa automáticamente. ✅
+> 3. En las cards de tipo, toca **«🏥 Médica»**. La tarjeta se enmarca en azul y se ilumina ligeramente. ✅
+> 4. Mira la **tarjeta indigo «Resumen»**: debe decir algo como `🏥 Médica · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día`. ✅
+> 5. Si no hay niños agendados en ese rango, aparece la **barra verde «Sin citas afectadas en este rango.»** ✅ — Si hay niños, ves la **tarjeta ámbar** con sus nombres y horarios para decidir qué hacer antes de guardar.
+> 6. **Prueba la validación:** destilda *«Todo el día»*, escoge hora inicio **10 AM** y hora fin **8 AM** → los dos selectores se enmarcan en rojo al instante. Si tratas de guardar, te avisa. ✅ Corrige la hora fin a **1 PM** y los bordes se quitan solos.
+> 7. Toca **«Confirmar Bloqueo»** (botón con gradient azul→índigo y candado). En iPhone el botón no queda tapado por el home indicator. ✅
+> 8. Aparece una confirmación con el resumen. Acepta y verás los bloques en tu calendario.
+>
+> *¿Algo se ve mal en celular? Avísale a Daniel con una captura — estamos refinando móvil semana a semana.*
 *   **Visita a Escuela:** Opción especial para sesiones fuera de la clínica.
 </details>
 
@@ -113,4 +132,4 @@ Cuando veas `~~D~~ / S`:
 
 ## 🆘 ¿Necesitas ayuda?
 Si algo no funciona, contacta a Soporte Técnico.
-*Última actualización: 25 de Mayo, 2026 (Pop-up Novedades v9.2 con tarjeta «🏖️ Vacaciones / Día Completo — modal premium» + sweep XSS S-015/S-016 + safe-area iPhone en `#absenceModalFooter`).*
+*Última actualización: 25 de Mayo, 2026 (noche — Fase 1.5 Ausencias UX premium: atajos rápidos, cards de tipo con destaque azul, tarjeta resumen indigo con conteo de días hábiles, banner verde de tranquilidad, validación horaria visual en tiempo real, botón Confirmar con gradient + candado).*

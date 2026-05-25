@@ -438,16 +438,39 @@ export const HelpManual = {
                                     <p>¿Vas a salir a comer o tienes un compromiso? Elige "Inhabilitar" desde el modal de cita para que nadie pueda agendarte en ese espacio.</p>
                                 </div>
                                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                                    <h4 class="font-bold text-amber-900 mb-1">🏖️ Vacaciones / Día completo — <span class="text-[10px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">Nuevo 25 may</span></h4>
-                                    <p class="mb-2">El candado <strong>🔒</strong> de cada día abre ahora un <strong>modal premium</strong> (ya no es el cuadro feo del navegador) con:</p>
+                                    <h4 class="font-bold text-amber-900 mb-1">🏖️ Vacaciones / Día completo — <span class="text-[10px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">Premium 25 may</span></h4>
+                                    <p class="mb-2">El candado <strong>🔒</strong> de cada día abre un <strong>modal premium</strong> (ya no es el cuadro feo del navegador) con todo lo que necesitas para registrar ausencias sin errores:</p>
                                     <ul class="list-disc pl-5 space-y-1">
-                                        <li><strong>Rango de fechas</strong>: bloquea una semana o dos seguidas con un solo clic (los domingos se excluyen solos).</li>
-                                        <li><strong>Tipo de ausencia</strong>: 🏖️ Vacaciones · 🏥 Médica · 📚 Capacitación · 👤 Personal · 🚫 Otro.</li>
-                                        <li><strong>Todo el día</strong> o un <strong>rango horario</strong> (ej. solo de 2 PM a 5 PM).</li>
-                                        <li><strong>Aviso de citas afectadas</strong>: si hay niños agendados en ese rango, los muestra antes de confirmar para que Yari/Diana decidan reagendar o cancelar.</li>
+                                        <li><strong>Atajos rápidos</strong> 🆕: <em>Hoy</em>, <em>Esta semana</em>, <em>Próxima semana</em>, <em>2 semanas</em> — un toque y las fechas se rellenan solas, incluso activan «Todo el día» automáticamente para rangos largos.</li>
+                                        <li><strong>Tipo de ausencia con cards visuales</strong> 🆕: 🏖️ Vacaciones · 🏥 Médica · 📚 Capacitación · 👤 Personal · 🚫 Otro. La que toques se enmarca en azul para que veas claramente la seleccionada.</li>
+                                        <li><strong>Rango de fechas</strong>: bloquea una semana o dos seguidas con un solo clic (los domingos se excluyen solos del conteo).</li>
+                                        <li><strong>Todo el día</strong> o un <strong>rango horario</strong> (ej. solo de 2 PM a 5 PM). Si pones hora fin antes que inicio los selects se enmarcan en rojo al instante.</li>
+                                        <li><strong>Tarjeta resumen</strong> 🆕: te muestra `🏖️ Vacaciones · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día` antes de confirmar, para que veas exactamente lo que estás por guardar.</li>
+                                        <li><strong>Banner verde «Sin citas afectadas»</strong> 🆕: te confirma que nadie quedará colgado en el rango que escogiste.</li>
+                                        <li><strong>Aviso ámbar de citas afectadas</strong>: si hay niños agendados, los muestra con nombre y horario para que Yari/Diana decidan reagendar o cancelar antes de guardar.</li>
                                     </ul>
                                     <p class="mt-2 text-amber-900"><strong>Permisos:</strong> Diana y Yari pueden bloquear a cualquier terapeuta. <strong>Vero y Sam</strong> pueden bloquear únicamente su propia agenda.</p>
-                                    <p class="mt-2 text-xs text-amber-800">💡 <strong>Tip operativo:</strong> para vacaciones largas usa la opción <em>«Todo el día»</em>. Si necesitas bloquear solo unas horas, hazlo día por día (estamos puliendo la sincronización con Google Calendar).</p>
+                                    <p class="mt-2 text-xs text-amber-800">💡 <strong>Tip operativo:</strong> para vacaciones largas usa el atajo <em>«Esta semana»</em> o <em>«Próxima semana»</em> y déjalo en «Todo el día». Si necesitas bloquear solo unas horas, hazlo día por día (estamos puliendo la sincronización con Google Calendar).</p>
+                                </div>
+
+                                <!-- Ejemplo paso a paso (caso real) -->
+                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                                    <h4 class="font-bold text-emerald-900 mb-2 flex items-center gap-1.5">
+                                        <span class="text-base" aria-hidden="true">📝</span>
+                                        Ejemplo paso a paso — «Me voy de vacaciones la próxima semana»
+                                    </h4>
+                                    <p class="text-xs text-emerald-900/90 mb-2">Sigue esta práctica para probar el modal y confirmar que todo se ve y funciona bien (en tu compu o en tu celular):</p>
+                                    <ol class="list-decimal pl-5 space-y-1.5 text-sm text-emerald-950 leading-snug">
+                                        <li>Abre el calendario y <strong>toca el candado 🔒</strong> del encabezado de cualquier día.</li>
+                                        <li>En el chip de atajos rápidos, toca <strong>«Próxima semana»</strong>. Las dos fechas se rellenan solas (Lun → Sáb) y <em>«Todo el día»</em> se activa automáticamente. ✅</li>
+                                        <li>En las cards de tipo, toca <strong>«🏥 Médica»</strong>. La tarjeta se enmarca en azul y se ilumina ligeramente. ✅</li>
+                                        <li>Mira la <strong>tarjeta indigo «Resumen»</strong>: debe decir algo como <code class="text-[11px] bg-white/60 px-1 rounded">🏥 Médica · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día</code>. ✅</li>
+                                        <li>Si no hay niños agendados en ese rango, aparece la <strong>barra verde «Sin citas afectadas en este rango.»</strong> ✅ — Si hay niños, ves la <strong>tarjeta ámbar</strong> con sus nombres y horarios para que decidas qué hacer antes de guardar.</li>
+                                        <li><strong>Prueba la validación:</strong> destilda <em>«Todo el día»</em>, escoge hora inicio <strong>10 AM</strong> y hora fin <strong>8 AM</strong> → los dos selectores se enmarcan en rojo al instante. Si tratas de guardar, te avisa. ✅ Corrige la hora fin a <strong>1 PM</strong> y los bordes se quitan solos.</li>
+                                        <li>Toca <strong>«Confirmar Bloqueo»</strong> (botón con gradient azul→índigo y candado). En iPhone el botón no queda tapado por el home indicator. ✅</li>
+                                        <li>Aparece una confirmación con el resumen. Acepta y verás los bloques en tu calendario.</li>
+                                    </ol>
+                                    <p class="mt-3 text-xs text-emerald-900/85"><strong>¿Algo se ve mal en celular?</strong> Avísale a Daniel con una captura — estamos refinando móvil semana a semana.</p>
                                 </div>
                                 <div class="bg-indigo-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-indigo-800 mb-1">🏫 Visita a Escuela</h4>

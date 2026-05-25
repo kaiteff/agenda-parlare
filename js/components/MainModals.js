@@ -459,107 +459,147 @@ export const MainModals = {
             <div id="absenceModal" class="hidden fixed inset-0 z-[9500] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="absenceModalTitle">
                 <div id="absenceModalPanel" class="bg-white w-full max-w-none md:max-w-lg h-[92dvh] md:h-auto max-h-[92dvh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
                     <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
-                    <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-center gap-3 bg-white flex-shrink-0">
-                        <h3 id="absenceModalTitle" class="text-lg md:text-xl font-bold tracking-tight text-gray-900">Registrar Ausencia / Vacaciones</h3>
-                        <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <!-- HEADER: degradado premium + subtítulo -->
+                    <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-start gap-3 bg-gradient-to-br from-white via-white to-amber-50/40 flex-shrink-0">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shadow-amber-500/30 text-xl" aria-hidden="true">
+                                🔒
+                            </div>
+                            <div class="min-w-0">
+                                <h3 id="absenceModalTitle" class="text-base md:text-lg font-extrabold tracking-tight text-gray-900 leading-tight">Registrar Ausencia / Vacaciones</h3>
+                                <p class="text-[11px] md:text-xs text-gray-500 font-medium mt-0.5">Bloquea días o rangos horarios y revisa las citas afectadas antes de guardar.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="touch-target touch-manipulation flex-shrink-0 p-2.5 -mt-1 -mr-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-5 scroller min-h-0 bg-white overscroll-contain">
                         <!-- Therapist Selection -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
-                            <select id="absenceTherapist" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Terapeuta</label>
+                            <select id="absenceTherapist" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation disabled:bg-gray-50 disabled:text-gray-600">
                                 <option value="diana">Diana</option>
                                 <option value="sam">Sam</option>
                                 <option value="vero">Vero</option>
                             </select>
                         </div>
 
-                        <!-- Absence Type Selection -->
+                        <!-- Absence Type Selection — cards premium con has:checked -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Ausencia</label>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
-                                    <input type="radio" name="absenceType" value="vacation" checked class="w-4 h-4 text-blue-600">
-                                    <span>🏖️ Vacaciones</span>
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Tipo de Ausencia</label>
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5 md:gap-2">
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="vacation" checked class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">🏖️</span>
+                                    <span>Vacaciones</span>
                                 </label>
-                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
-                                    <input type="radio" name="absenceType" value="medical" class="w-4 h-4 text-blue-600">
-                                    <span>🏥 Médica</span>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="medical" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">🏥</span>
+                                    <span>Médica</span>
                                 </label>
-                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
-                                    <input type="radio" name="absenceType" value="training" class="w-4 h-4 text-blue-600">
-                                    <span>📚 Capacitación</span>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="training" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">📚</span>
+                                    <span>Capacitación</span>
                                 </label>
-                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
-                                    <input type="radio" name="absenceType" value="personal" class="w-4 h-4 text-blue-600">
-                                    <span>👤 Personal</span>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="personal" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">👤</span>
+                                    <span>Personal</span>
                                 </label>
-                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
-                                    <input type="radio" name="absenceType" value="other" class="w-4 h-4 text-blue-600">
-                                    <span>🚫 Otro</span>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="other" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">🚫</span>
+                                    <span>Otro</span>
                                 </label>
                             </div>
                         </div>
 
+                        <!-- Atajos rápidos de rango -->
+                        <div>
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Atajos rápidos</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" data-absence-quick="today" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">Hoy</button>
+                                <button type="button" data-absence-quick="week" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">Esta semana</button>
+                                <button type="button" data-absence-quick="nextweek" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">Próxima semana</button>
+                                <button type="button" data-absence-quick="twoweeks" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">2 semanas</button>
+                            </div>
+                        </div>
+
                         <!-- Date Range Selection -->
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-3 md:gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Inicio</label>
-                                <input type="date" id="absenceStartDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">
+                                <label for="absenceStartDate" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Fecha Inicio</label>
+                                <input type="date" id="absenceStartDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Fin</label>
-                                <input type="date" id="absenceEndDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">
+                                <label for="absenceEndDate" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Fecha Fin</label>
+                                <input type="date" id="absenceEndDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation">
                             </div>
                         </div>
 
                         <!-- Time Range Toggle and Selectors -->
                         <div class="space-y-3">
-                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/85 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 cursor-pointer touch-manipulation">
-                                <input type="checkbox" id="absenceAllDay" checked class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300">
-                                <span class="text-sm text-gray-700 font-semibold select-none">Todo el día</span>
+                            <label class="flex items-center justify-between gap-3 min-h-[48px] md:min-h-0 px-3 md:px-3 py-2.5 md:py-2 rounded-xl border border-gray-200 bg-gray-50/60 hover:bg-blue-50/40 hover:border-blue-200 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-300 cursor-pointer touch-manipulation transition-all">
+                                <span class="flex items-center gap-2">
+                                    <span class="text-base" aria-hidden="true">🕒</span>
+                                    <span class="text-sm text-gray-800 font-bold select-none">Todo el día</span>
+                                </span>
+                                <input type="checkbox" id="absenceAllDay" checked class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300 cursor-pointer">
                             </label>
                             
-                            <div id="absenceTimeRangeSelects" class="hidden grid grid-cols-2 gap-4">
+                            <div id="absenceTimeRangeSelects" class="hidden grid grid-cols-2 gap-3 md:gap-4">
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Inicio</label>
-                                    <select id="absenceStartHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none touch-manipulation">
-                                        <!-- Generated 8am to 8pm -->
-                                    </select>
+                                    <label for="absenceStartHour" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Hora Inicio</label>
+                                    <select id="absenceStartHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 touch-manipulation transition-all"></select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Fin</label>
-                                    <select id="absenceEndHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none touch-manipulation">
-                                        <!-- Generated 9am to 9pm -->
-                                    </select>
+                                    <label for="absenceEndHour" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Hora Fin</label>
+                                    <select id="absenceEndHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 touch-manipulation transition-all"></select>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Note / Reason -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas / Motivo Interno</label>
-                            <textarea id="absenceNote" placeholder="Detalles de la ausencia..." rows="2" class="w-full px-3 py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg outline-none focus:ring-2 focus:ring-blue-100 touch-manipulation resize-none"></textarea>
+                            <label for="absenceNote" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Notas / Motivo interno <span class="text-gray-300 font-medium normal-case tracking-normal">(opcional)</span></label>
+                            <textarea id="absenceNote" placeholder="Ej: Capacitación en CDMX, retorno lunes 8 AM…" rows="2" class="w-full px-3 py-2.5 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 touch-manipulation resize-none transition-all"></textarea>
                         </div>
 
-                        <!-- Conflicts Panel -->
-                        <div id="absenceConflictsCard" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
-                            <h4 class="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                Citas en Conflicto Detectadas (<span id="absenceConflictsCount">0</span>)
-                            </h4>
-                            <p class="text-xs text-amber-700 leading-tight">Las siguientes citas programadas se verán afectadas. Confirma que procederás a reasignarlas, moverlas o cancelarlas.</p>
-                            <div id="absenceConflictsList" class="max-h-28 overflow-y-auto divide-y divide-amber-100 text-xs font-semibold text-gray-700 scroller space-y-1 pt-1">
-                                <!-- Conflicted appointments list here -->
+                        <!-- Resumen del rango -->
+                        <div id="absenceSummaryCard" class="hidden flex items-center gap-3 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl px-4 py-3">
+                            <span class="text-2xl flex-shrink-0" aria-hidden="true">📋</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Resumen</div>
+                                <div id="absenceSummaryText" class="text-sm font-bold text-indigo-950 leading-snug mt-0.5"></div>
                             </div>
                         </div>
+
+                        <!-- Sin conflictos (verde) -->
+                        <div id="absenceNoConflictsCard" class="hidden flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5">
+                            <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span class="text-xs font-bold text-emerald-800">Sin citas afectadas en este rango.</span>
+                        </div>
+
+                        <!-- Conflictos (ámbar) -->
+                        <div id="absenceConflictsCard" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2 animate-fade-in">
+                            <h4 class="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Citas afectadas (<span id="absenceConflictsCount">0</span>)
+                            </h4>
+                            <p class="text-xs text-amber-700 leading-tight">Estas citas tendrás que <strong>reagendar o cancelar manualmente</strong> tras guardar el bloqueo.</p>
+                            <div id="absenceConflictsList" class="max-h-32 overflow-y-auto divide-y divide-amber-100 text-xs font-semibold text-gray-700 scroller pt-1"></div>
+                        </div>
                     </div>
-                    <div id="absenceModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl">
+                    <div id="absenceModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.05)] md:shadow-none">
                         <div class="flex gap-3">
-                            <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="flex-1 min-h-[48px] touch-manipulation bg-white text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-50 font-bold border border-gray-200 transition-colors">Cancelar</button>
-                            <button type="button" id="absenceSaveBtn" class="flex-1 min-h-[48px] touch-manipulation bg-blue-600 text-white py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors flex items-center justify-center gap-2">Confirmar Bloqueo</button>
+                            <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="flex-1 min-h-[48px] touch-manipulation bg-white text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-50 active:scale-[0.98] font-bold border border-gray-200 transition-all">Cancelar</button>
+                            <button type="button" id="absenceSaveBtn" class="flex-[1.2] min-h-[48px] touch-manipulation bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] text-white py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg font-bold shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                <span>Confirmar Bloqueo</span>
+                            </button>
                         </div>
                     </div>
                 </div>
