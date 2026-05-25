@@ -12,6 +12,10 @@
   - Actualización de los manuales del repositorio: `MANUAL_USUARIO_PLATAFORMA.md`, `MANUAL_PLANTILLAS_WHATSAPP.md` y `MANUAL_TERAPEUTAS.md`.
   - Registro de avance en `PLAN_DE_TRABAJO.md`, `ANALISIS_ESTRATEGIA_MOVIL.md` y `VISION_PARLARE_V2.md`.
 - **Recordatorios de Mañana:** Se ejecutó con éxito el envío de recordatorios de mañana desde producción enviando 11 mensajes a pacientes autorizados y omitiendo correctamente 1 paciente.
+- **Hotfixes de Interfaz y Compatibilidad (Sesión de hoy):**
+  - **Corrección de Sintaxis en WhatsAppDashboard:** Se corrigió un error de sintaxis (`SyntaxError: Unexpected identifier 'Se'`) en `js/components/WhatsAppDashboard.js` causado por un template string principal sin cerrar.
+  - **Eliminación de Advertencia de Deprecación:** Se añadió la etiqueta `<meta name="mobile-web-app-capable" content="yes">` en `index.html` para resolver la advertencia de consola en navegadores modernos.
+  - Ambos cambios fueron validados localmente y desplegados exitosamente tanto en Hosting como en Cloud Functions de Firebase.
 
 ## Validar (usuario)
 

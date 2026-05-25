@@ -24,7 +24,10 @@ export const Sidebar = {
                     <svg class="absolute left-3 top-3 md:top-2.5 w-5 h-5 md:w-4 md:h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
-                    <input type="search" id="searchInput" placeholder="Buscar paciente..." autocomplete="off" enterkeyhint="search" class="w-full pl-10 md:pl-9 pr-4 py-3.5 md:py-2 text-base md:text-sm bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none touch-manipulation">
+                    <input type="search" id="searchInput" placeholder="Buscar paciente..."
+                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                        enterkeyhint="search" inputmode="search"
+                        class="w-full pl-10 md:pl-9 pr-4 py-3.5 md:py-2 text-base md:text-sm bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none touch-manipulation">
                 </div>
                 
                 <!-- Pestañas de Tiempo -->
@@ -83,9 +86,42 @@ export const Sidebar = {
         const sidebarTabs = document.getElementById('sidebarTabs');
 
         if (searchInput) {
-            searchInput.oninput = () => {
+            this._lastSearchValue = '';
+
+            const onSearchUpdate = () => {
+                const raw = searchInput.value || '';
+                if (raw === this._lastSearchValue) return;
+                this._lastSearchValue = raw;
+
+                if (raw.trim() && this.activeTab !== 'all') {
+                    this.activeTab = 'all';
+                    this._highlightActiveTab('all');
+                    import('./WhatsAppDashboard.js').then(({ WhatsAppDashboard }) => WhatsAppDashboard.render()).catch(() => {});
+                }
                 this.render();
             };
+
+            // Listeners cruzados para cubrir TODAS las variantes de iOS Safari,
+            // Android Chrome, dictado por voz, autocompletado y QuickType bar.
+            ['input', 'search', 'change', 'keyup', 'compositionend'].forEach((evt) => {
+                searchInput.addEventListener(evt, onSearchUpdate);
+            });
+
+            // Fallback iOS: en algunos casos (texto pegado, autocompletado de QuickType,
+            // dictado), ninguno de los eventos anteriores se dispara. Si el input está
+            // enfocado, hacemos un poll de respaldo de 250 ms.
+            searchInput.addEventListener('focus', () => {
+                if (this._searchPollTimer) return;
+                this._searchPollTimer = setInterval(onSearchUpdate, 250);
+            });
+            searchInput.addEventListener('blur', () => {
+                if (this._searchPollTimer) {
+                    clearInterval(this._searchPollTimer);
+                    this._searchPollTimer = null;
+                }
+                // Forzar un último update al perder foco por si quedó pendiente.
+                onSearchUpdate();
+            });
         }
 
         if (sidebarTabs) {
@@ -97,12 +133,9 @@ export const Sidebar = {
                 this.activeTab = tab;
                 
                 // Actualizar UI de pestañas
-                sidebarTabs.querySelectorAll('button').forEach(b => {
-                    b.className = "flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50";
-                });
-                btn.className = "flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all bg-white shadow-sm text-blue-600";
-                
+                this._highlightActiveTab(tab);
                 this.render();
+                import('./WhatsAppDashboard.js').then(({ WhatsAppDashboard }) => WhatsAppDashboard.render());
             };
         }
 
@@ -132,6 +165,19 @@ export const Sidebar = {
         }
         
         this.activeTab = 'today'; // Default
+    },
+
+    /** Aplica el estilo «activo» a una pestaña concreta sin romper el resto. */
+    _highlightActiveTab(tab) {
+        const sidebarTabs = document.getElementById('sidebarTabs');
+        if (!sidebarTabs) return;
+
+        sidebarTabs.querySelectorAll('button').forEach((b) => {
+            const isActive = b.dataset.tab === tab;
+            b.className = isActive
+                ? 'flex-1 py-2.5 md:py-1.5 min-h-[44px] md:min-h-0 text-[10px] font-bold uppercase rounded-md transition-all bg-white shadow-sm text-blue-600 touch-manipulation'
+                : 'flex-1 py-2.5 md:py-1.5 min-h-[44px] md:min-h-0 text-[10px] font-bold uppercase rounded-md transition-all text-gray-500 hover:bg-white/50 touch-manipulation';
+        });
     },
 
     /**
@@ -172,10 +218,16 @@ export const Sidebar = {
                 filtered = PatientFilters.applyAll(PatientState.patients, query);
             }
 
-            // Aplicar búsqueda incluso sobre hoy/mañana si hay query
+            // Búsqueda directa sobre Hoy / Mañana (con normalización para acentos y mayúsculas)
             if (query && (tab === 'today' || tab === 'tomorrow')) {
-                const q = query.toLowerCase();
-                filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
+                const normalize = (s) => (s || '')
+                    .toString()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim();
+                const q = normalize(query);
+                filtered = filtered.filter((p) => normalize(p.name).includes(q));
             }
 
             activeCount = filtered.length;
@@ -218,10 +270,15 @@ export const Sidebar = {
 
             // 2. Renderizar Lista
             if (filtered.length === 0) {
+                const tabHint = tab === 'tomorrow'
+                    ? `No hay pacientes en la agenda para <strong>${nextSessionInfo.label}</strong> con el terapeuta seleccionado. Revisa el bloque <strong>Confirmaciones</strong> arriba o cambia a <strong>Todas</strong> en la agenda.`
+                    : tab === 'today'
+                        ? 'No hay pacientes con cita hoy para este terapeuta.'
+                        : 'No se encontraron pacientes con ese criterio.';
                 listContainer.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 text-center text-gray-400">
+                    <div class="flex flex-col items-center justify-center py-10 px-4 text-center text-gray-500">
                         <svg class="w-8 h-8 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        <p class="text-xs font-medium">No se encontraron pacientes</p>
+                        <p class="text-xs font-medium leading-relaxed">${tabHint}</p>
                     </div>
                 `;
                 return;

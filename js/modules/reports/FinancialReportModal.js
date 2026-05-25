@@ -24,8 +24,8 @@ export const FinancialReportModal = {
         }
 
         const modalHTML = `
-        <div id="financialReportModal" class="hidden fixed inset-0 z-[9700] flex items-center justify-center bg-black bg-opacity-50">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-0 modal-panel flex flex-col max-h-[90vh]">
+        <div id="financialReportModal" class="hidden fixed inset-0 z-[9700] flex items-center justify-center bg-black bg-opacity-50 p-2 md:p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-0 modal-panel flex flex-col max-h-[min(90vh,900px)] min-h-0">
                 <!-- Header -->
                 <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center rounded-t-xl">
                     <div>
@@ -38,8 +38,8 @@ export const FinancialReportModal = {
                         </svg>
                     </button>
                 </div>
-                <!-- Content -->
-                <div class="p-6 overflow-y-auto bg-gray-50/50 flex flex-col gap-6 scroller">
+                <!-- Content (scroll principal: ver las 3 terapeutas + deudores) -->
+                <div class="p-4 md:p-6 overflow-y-auto overflow-x-hidden bg-gray-50/50 flex flex-col gap-6 scroller flex-1 min-h-0 overscroll-contain">
 
                     <!-- Global Summary Cards -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -90,7 +90,7 @@ export const FinancialReportModal = {
                             <h4 class="font-black text-gray-700 uppercase tracking-widest text-xs">Desglose Detallado</h4>
                             <div class="text-[10px] font-bold text-gray-400 uppercase" id="reportTotalCountLabel">0 CITAS TOTALES</div>
                         </div>
-                        <div class="overflow-x-auto scroller">
+                        <div class="overflow-x-auto overflow-y-auto max-h-[min(220px,32vh)] scroller overscroll-contain">
                             <table class="w-full text-sm text-left">
                                 <thead class="bg-white text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                                     <tr>
@@ -135,7 +135,7 @@ export const FinancialReportModal = {
                     </div>
                 </div>
 
-                <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end">
+                <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end flex-shrink-0">
                     <button id="closeReportBtnFooter" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200">
                         Cerrar
                     </button>

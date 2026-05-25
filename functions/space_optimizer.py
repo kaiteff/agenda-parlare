@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import json
+import time
 from datetime import datetime, timedelta
 import pytz
 
@@ -113,11 +114,7 @@ def on_appointment_cancelled_trigger(
     event: firestore_fn.Event[firestore_fn.Change | None],
 ) -> None:
     """Monitorea cancelaciones de citas y activa la lista de espera Autopilot."""
-    # 🚨 AUTOPILOT PAUSADO TEMPORALMENTE EN PRODUCCIÓN PARA EVITAR FALSOS POSITIVOS
-    # Se reactivará en la siguiente fase tras implementar el sistema de confirmación Yari/Terapeuta.
-    logger.info("⏸️ Autopilot de Adelantos temporalmente pausado en producción.")
-    return
-
+    # ✅ Autopilot Reactivado con soporte para Quiet Hours y Delay de 10 min.
     from main import ALL_SECRETS, TWILIO_WHATSAPP_FROM
     
     change = event.data
@@ -156,12 +153,53 @@ def on_appointment_cancelled_trigger(
         )
         return
 
-    logger.info(
-        f"🎯 Cita califica para Autopilot ({diff_hours:.1f}h de anticipación). "
-        "Buscando candidatos..."
-    )
-
     db = _get_db()
+
+    # --- INICIO LÓGICA COPILOTO COLABORATIVO ---
+    # 1. Quiet Hours (07:00 a 21:59 es horario normal, fuera de eso es Quiet Hours)
+    is_quiet_hours = not (7 <= now_mx.hour < 22)
+    if is_quiet_hours:
+        logger.info(f"🌙 Cancelación en Quiet Hours. Pausando para {appointment_id}")
+        db.collection("quiet_hours_pending").document(appointment_id).set({
+            "appointmentId": appointment_id,
+            "therapist": therapist,
+            "cancelledAt": firestore.SERVER_TIMESTAMP,
+            "originalDate": cancelled_date_str,
+        })
+        return
+
+    # 2. Delay inicial de 10 minutos para dar margen a intervención manual
+    logger.info(f"⏳ Esperando 10 minutos (margen manual) para {appointment_id}")
+    time.sleep(600)
+
+    # Validar que la cita siga cancelada
+    current_doc = db.collection("appointments").document(appointment_id).get()
+    if current_doc.exists:
+        if not current_doc.to_dict().get("isCancelled"):
+            logger.info(f"🛑 La cita {appointment_id} fue retomada durante el delay. Abortando.")
+            return
+
+    process_autopilot_candidates(
+        appointment_id,
+        therapist,
+        cancelled_date_str,
+        cancelled_dt,
+        db,
+        get_twilio_client(),
+        TWILIO_WHATSAPP_FROM,
+        is_quiet_hours=False
+    )
+def process_autopilot_candidates(
+    appointment_id: str,
+    therapist: str,
+    cancelled_date_str: str,
+    cancelled_dt: datetime,
+    db,
+    twilio_client,
+    twilio_from: str,
+    is_quiet_hours: bool = False
+):
+    logger.info(f"🎯 Buscando candidatos Autopilot para cita: {appointment_id}...")
     day_end_str = cancelled_dt.strftime("%Y-%m-%dT23:59:59-06:00")
 
     # 2. Buscar citas el mismo día, programadas más tarde con el mismo terapeuta
@@ -181,6 +219,13 @@ def on_appointment_cancelled_trigger(
             continue
         if apt.get("isFullDayBlock") or apt.get("isHourlyBlock"):
             continue
+            
+        # Regla de proximidad: Omitir si la cita candidata está a menos de 2 horas de la cancelada
+        candidate_start = _parse_mx_datetime(apt["date"])
+        if (candidate_start - cancelled_dt).total_seconds() < 2 * 3600:
+            logger.info(f"Omitiendo {apt.get('name')} por regla de proximidad (< 2h).")
+            continue
+            
         candidates.append(apt)
 
     if not candidates:
@@ -192,7 +237,6 @@ def on_appointment_cancelled_trigger(
     logger.info(f"Encontrados {len(candidates)} candidatos potenciales.")
 
     # 3. Filtrar candidatos con recurrentOptIn == 'accepted' y enviar ofertas
-    twilio_client = get_twilio_client()
     offers_sent = 0
 
     # Hora legible en México (e.g. 4:00 PM)
@@ -237,6 +281,7 @@ def on_appointment_cancelled_trigger(
             "freedAppointmentId": appointment_id,
             "freedDate": cancelled_date_str,
             "status": "pending",
+            "quietHours": is_quiet_hours,
             "createdAt": firestore.SERVER_TIMESTAMP,
         }
         offer_ref.set(offer_data)
@@ -244,7 +289,7 @@ def on_appointment_cancelled_trigger(
         # Enviar WhatsApp vía Twilio Content API con botones interactivos
         try:
             twilio_client.messages.create(
-                from_=TWILIO_WHATSAPP_FROM,
+                from_=twilio_from,
                 to=f"whatsapp:+{dest_phone}",
                 content_sid=OFFER_TEMPLATE_SID,
                 content_variables=json.dumps({"1": time_label, "2": therapist_name}),

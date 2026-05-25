@@ -19,6 +19,8 @@ import { ReceptionControl } from './modules/reception/ReceptionControl.js';
 import { ComponentManager } from './components/ComponentManager.js';
 import { SettingsManager } from './managers/SettingsManager.js';
 import { NewFeatureAlert } from './utils/NewFeatureAlert.js';
+import { WaitlistCopilotPanel } from './components/WaitlistCopilotPanel.js';
+import { WaitlistCopilotService } from './services/WaitlistCopilotService.js';
 
 const log = Logger.create('App');
 
@@ -93,6 +95,22 @@ async function initializeModules() {
         
         // Control de Recepción - Maestro
         await initModule('ReceptionControl', () => ReceptionControl.init());
+
+        // Copiloto Colaborativo (Fase B) — banner flotante + glow en agenda
+        await initModule('WaitlistCopilotPanel', () => {
+            WaitlistCopilotPanel.init();
+            // Re-renderizar la agenda SOLO cuando cambia el conjunto de IDs en delay
+            // (no cada segundo del contador, para no bloquear el render).
+            let lastGlowSignature = '';
+            WaitlistCopilotService.subscribe((items) => {
+                const sig = items.map(i => i.id).sort().join('|');
+                if (sig === lastGlowSignature) return;
+                lastGlowSignature = sig;
+                import('./modules/calendar/CalendarEvents.js')
+                    .then(({ CalendarEvents }) => CalendarEvents.render?.())
+                    .catch(() => { /* calendario aún no listo */ });
+            });
+        });
 
         // Google Auth (async pero no bloqueante)
         GoogleAuthService.init()

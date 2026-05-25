@@ -33,16 +33,24 @@ export const PatientFilters = {
      */
     applyAll(patients, query = '') {
         let filtered = this.filterBySelectedTherapist(patients || []);
-        
+
         if (query && query.trim() !== '') {
-            const q = query.toLowerCase().trim();
-            filtered = filtered.filter(p => 
-                p.name.toLowerCase().includes(q) || 
-                (p.phone && p.phone.includes(q))
-            );
+            const normalize = (s) => (s || '')
+                .toString()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+            const q = normalize(query);
+            const digits = q.replace(/\D/g, '');
+
+            filtered = filtered.filter((p) => {
+                if (normalize(p.name).includes(q)) return true;
+                if (digits && p.phone && String(p.phone).replace(/\D/g, '').includes(digits)) return true;
+                return false;
+            });
         }
-        
-        // Ordenar alfabéticamente por nombre
+
         return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
 

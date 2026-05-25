@@ -47,12 +47,20 @@ Marcar ✅ lo completado en la sesión y ajustar prioridades siguientes.
 
 Si hubo mejoras de agenda desktop, rendimiento o refactor planificado: tabla de prioridades, **registro de cambios** (qué, para qué, cómo revertir).
 
-### 5. Visión técnica
+### 5. Seguridad y vulnerabilidades
+**Archivo:** `SEGURIDAD_Y_VULNERABILIDADES.md`
+
+Si la sesión tocó áreas sensibles (auth, reglas Firestore/Storage, secretos, sanitización HTML, headers, dependencias):
+- Registrar hallazgos nuevos con ID `S-XXX` y severidad (🚨/⚠️/🟡/💡).
+- Mover hallazgos cerrados a «✅ Reforzado» (no borrar).
+- Actualizar resumen ejecutivo y bitácora.
+
+### 6. Visión técnica
 **Archivo:** `VISION_PARLARE_V2.md`
 
 Solo si hubo: reglas críticas nuevas, IDs (Twilio SID, Sheets, Calendar), arquitectura, bugs importantes.
 
-### 6. Resumen de sesión (opcional pero recomendado)
+### 7. Resumen de sesión (opcional pero recomendado)
 **Archivo:** `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`
 
 Breve: qué se hizo, qué falta validar, comandos de deploy.

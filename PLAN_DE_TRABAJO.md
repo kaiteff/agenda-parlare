@@ -1,6 +1,6 @@
-# 🚀 Plan de Trabajo - Actualizado (21 Mayo 2026)
+# 🚀 Plan de Trabajo - Actualizado (25 Mayo 2026)
 
-Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva y justificantes médicos, y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
+Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva, justificantes médicos y el **Copiloto Colaborativo** (frontend listo el 25 may), y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
 ---
 
@@ -62,6 +62,13 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
     *   ✅ **#1 Auto-scroll inteligente:** solo carga inicial y botón **Hoy** (`scrollToWorkHoursOnNextRender`); prev/next semana no mueve scroll.
     *   ✅ **#2 Índice por slot:** `CalendarSlotIndex.js` — una pasada por citas visibles en lugar de `filter()` por celda.
     *   ✅ **#3 Toggle Día \| Semana en desktop (`md+`)** — `#calendarViewToggle` visible en toolbar (`index.html`).
+*   **Hotfixes móvil iPhone (25 may)** — (1) Búsqueda de pacientes en iPhone, ahora **a prueba de iOS Safari**: 5 event listeners cruzados (`input`/`search`/`change`/`keyup`/`compositionend`) + polling de respaldo 250 ms cuando el input está enfocado (cubre dictado por voz, paste y QuickType bar). Dedupe por `_lastSearchValue`; forzar update en `blur`. Auto-switch a **Todos** al teclear. Normalización por acentos/mayúsculas. (2) Botón de notificaciones (campana) móvil: el panel quedaba cortado por `overflow-hidden` del header; ahora `position: fixed` en celular. Archivos: `Sidebar.js`, `PatientFilters.js`, `Header.js`.
+*   **Manual de Uso y Capacitación (25 may)** — (1) Creación del archivo de capacitación `MANUAL_DE_USO_Y_CAPACITACION.md` en la raíz detallando la regla de oro y los flujos críticos. (2) Integración de un banner destacado sobre la regla de oro ("Lo que no está en la app de Parláre, no existe") en la parte superior del modal interactivo de ayuda de la aplicación (`HelpManual.js`).
+*   **UX Unificada Pestañas (25 may)** — Se eliminaron los botones duplicados de "Hoy/Mañana" dentro del panel de Confirmaciones (`WhatsAppDashboard.js`). Ahora el dashboard escucha dinámicamente y se sincroniza con la selección principal del `Sidebar.js`. Interfaz mucho más limpia para las terapeutas.
+*   **Pop-up Novedades v9.1 (25 may)** — `NewFeatureAlert.js` actualizado con `STORAGE_KEY: parlare_onboarding_v9_1` y `launchDate: 2026-05-25` para forzar re-aparición. Cuatro tarjetas con los cambios de hoy: (1) Regla de Oro destacada en Manual («Lo que no está en la app de Parláre, no existe»), (2) Búsqueda de pacientes a prueba de iPhone, (3) Campana de notificaciones funcionando en celular, (4) Pestañas unificadas en Confirmaciones.
+    *   **Vigencia ajustada a 2 días** (`MAX_DAYS_VISIBLE: 2`, antes 3): después se oculta solo; lo importante queda en `HelpManual.js` (Regla de Oro como banner permanente + sección B Búsqueda actualizada).
+    *   **Limpieza automática de claves legacy** (`LEGACY_KEYS: ['parlare_onboarding_v8_0', 'parlare_onboarding_v9_0']`): se borran del `localStorage` del navegador del usuario en el próximo arranque. Evita acumulación de claves obsoletas.
+*   **Panel de Administración Costos Base (Previo)** — Interfaz implementada en `AdminSettingsModal.js` y `adminSettings.js` para que el administrador actualice los porcentajes de clínica/comisiones y montos fijos directamente en Firestore, sin tocar el código fuente Javascript. (Documentado y olvidado de pendientes).
 *   **Corrección de Bugs Críticos**:
     *   Guardia contra duplicados (evitando sobrecarga a Google Calendar / 429 Quota Exceeded).
     *   Ajuste de zona horaria (Drift UTC) en métricas y envíos diarios.
@@ -141,35 +148,102 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ---
 
-## ⏳ Falta y Siguientes Pasos (Waitlist Copilot - ¡Nuevo Diseño!)
+## 🚀 Copiloto Colaborativo — Frontend listo (25 may)
 
-Actualmente, **el Autopilot de Adelantos está temporalmente pausado en producción (en `functions/space_optimizer.py`)** para evitar falsos positivos mientras Diana está de vacaciones o cuando las terapeutas tienen ausencias.
+**Frontend completado** del «Copiloto Colaborativo» (Fase B / Waitlist Autopilot). El backend ya tiene el delay de 10 min (`time.sleep(600)` en `functions/space_optimizer.py`) y la regla de proximidad de 2 h. Lo que se construyó hoy:
 
-En la siguiente sesión se implementará el **Copiloto Colaborativo con Confirmación Dual y Heurísticas Humanas**:
-- [ ] **Pausa y Control:** Mantener el trigger pausado hasta completar el flujo de doble confirmación.
-- [ ] **Confirmación Colaborativa (Yari 🆚 Terapeuta):**
-  - Al cancelar, se envía WhatsApp de opción simple a la terapeuta y una alerta web a Yari.
-  - Temporizador de **1 hora** de respuesta. Si nadie aprueba, expira sin mandar WhatsApp a los padres.
-  - El primero en confirmar (Yari en web o Terapeuta en WhatsApp) activa el envío de ofertas.
-- [ ] **Regla de Proximidad (Micro-Shifting):** Priorizar a pacientes cuyas citas originales tengan menos de 3-4 horas de desfase con la hora libre (ej: mover de 6pm a 5pm).
-- [ ] **Efecto Visual (Calendar Glow):** Al cancelarse una cita, hacer que la nueva casilla vacía "brille/destelle" en la agenda web de Yari con un sutil efecto de glow pulsante para llamar su atención visual de inmediato.
-- [ ] **Delay de Pensamiento (10 minutos):** Dar un margen de 10 minutos antes de cualquier acción automática para permitir cambios manuales o arrepentimientos de Yari.
+### Archivos nuevos
+- **`js/services/WaitlistCopilotService.js`** — Listener Firestore: detecta cancelaciones en ventana 8–24 h cuyo `cancelledAt` esté dentro de los últimos 10 min. Tick interno de 1 s para contador regresivo. Métodos: `skipDelay`, `pauseAutopilot`, `markManualSearch`, `getCandidates`, `getGlowingAppointmentIds`. Escribe en colección **`copilot_overrides/{appointmentId}`** con `action ∈ { 'skip_delay', 'pause', 'manual_search' }`.
+- **`js/components/WaitlistCopilotPanel.js`** — Banner flotante premium (glassmorphism, gradiente slate→indigo→fuchsia, backdrop-blur-xl). Contador regresivo en mono tabular grande + barra de progreso animada (emerald→amber→rose). 3 botones: **🚀 Automático** (gradiente esmeralda con shadow elevado), **⏸️ Pausar** (blanco translúcido), **🔍 Manual** (índigo translúcido). Modal de candidatos con WhatsApp + tel pre-llenados.
+- **Glow CSS en `index.css`** — `.calendar-slot-glow` con `@keyframes copilotSlotGlow` (alterna inset 2 px ámbar ↔ esmeralda + box-shadow exterior radiante). Icono ⚡ en la esquina superior derecha del chip.
 
-- [ ] **Factorización del Backend (Plan en FACTORING_PLAN.md):** Seguir paso a paso el plan detallado en [FACTORING_PLAN.md](file:///d:/agbc/Ag_Pa/FACTORING_PLAN.md). Este archivo debe ser modificado y actualizado con cada cambio que hagamos si aún no se ha ejecutado la factorización completa.
-- [ ] Calidad y Optimización: Revisar calidad de código, optimizar flujos lógicos y depurar posibles errores de código (debugging).
-- [ ] Recibos: cita pagada o reembolsable → verificar `receiptPdfUrl` + PDF en Storage.
-- [ ] Índice Firestore `reception_alerts` si el listener arroja error en consola.
+### Contrato backend pendiente (próximo sprint)
+- Antes del `time.sleep(600)` y al despertar, leer `copilot_overrides/{appointmentId}`:
+  - `skip_delay` → ejecutar `process_autopilot_candidates` inmediatamente.
+  - `pause` → abortar; no enviar ofertas.
+  - `manual_search` → solo trazabilidad, seguir flujo normal.
 
-## 💡 Sugerencias (opcional)
+### Re-render eficiente
+- Tick del contador NO re-genera HTML: usa nodos `data-bind="countdown"`/`"progress"` y solo cambia textContent + width.
+- Agenda solo se re-renderiza cuando cambia el **conjunto** de IDs en delay (no cada segundo).
 
-- Enlace «Ver recibo» en citas pagadas.
+### Validación pendiente (en producción)
+- [ ] Cancelar una cita real en ventana 8–24 h y validar:
+  - Aparece banner flotante con contador en sup-der.
+  - La celda cancelada en la agenda brilla con animación ámbar↔esmeralda.
+  - **🚀 Automático** escribe `copilot_overrides/...action=skip_delay` (verificar en Firestore).
+  - **⏸️ Pausar** escribe `action=pause` y el banner desaparece en 4 s.
+  - **🔍 Manual** abre modal con candidatos (mismo día, > 2 h, mismo terapeuta) + botones WhatsApp/Llamar.
+- [ ] Backend: implementar lectura de `copilot_overrides` antes/durante el delay.
+
+## ⏳ Roadmap futuro (siguiente fase)
+
+**Bloque Copiloto (siguiente sprint backend):**
+- [ ] **Cerrar contrato backend Copiloto:** En `functions/space_optimizer.py`, reemplazar `time.sleep(600)` por polling cada 30 s leyendo `copilot_overrides/{appointmentId}`. Respetar `skip_delay` (procesar candidatos ya) y `pause` (abortar). Mientras tanto, la UI ya queda lista y registra las decisiones.
+- [ ] **Confirmación Colaborativa (Yari 🆚 Terapeuta):** WhatsApp de aprobación a la terapeuta + alerta web a Yari, temporizador 1 h, primero en confirmar lanza ofertas. (Capa adicional sobre el contrato anterior.)
+- [ ] **Quiet Hours + Copiloto:** Decidir flujo cuando la cancelación cae fuera de 07:00–22:00 MX (actualmente backend guarda en `quiet_hours_pending` pero frontend no la muestra). Procesar al amanecer automáticamente o aprobación manual de Yari.
+
+**Bloque Inhabilitar día / Vacaciones / Notificación a tutores (Fase 1 ✅ Antigravity 25 may, fases 2 y 3 pendientes — ver `ANALISIS_ESTRATEGIA_MOVIL.md` → «🔎 Análisis técnico — Inhabilitar día/hora y Vacaciones»):**
+
+- [x] **Fase 1 — Modal premium «Crear ausencia» (Antigravity, 25 may)**: reemplazado `prompt()` nativo por `#absenceModal` premium (bottom-sheet móvil, `max-w-lg` desktop, `z-9500`). Incluye:
+    - **Tipo de ausencia** (radio): 🏖️ Vacaciones / 🏥 Médica / 📚 Capacitación / 👤 Personal / 🚫 Otro.
+    - **Rango de fechas** con `<input type="date">` (start + end) + checkbox «Todo el día» que oculta los selectores horarios.
+    - **Rango horario** 8 AM–9 PM con selectores `<select>` y hora fin por defecto +1 sobre la inicio.
+    - **Detección de conflictos en tiempo real** (`AbsenceModal.checkConflicts`): escanea `CalendarState.appointments`, descarta cancelaciones y bloqueos previos, filtra por terapeuta + rango. Muestra tarjeta ámbar con lista de niños afectados (`name + díaCorto + hora`). Antes de guardar, `ModalService.confirm` lista hasta 3 nombres + «N más».
+    - **Permisos de auto-gestión** (`AuthManager.canManageBlockFor`): admin/recepción → todo; terapeuta → solo su agenda. Si el rol es terapeuta el select queda `disabled`.
+    - **Bug fix `isSchoolVisit: false`** explícito en `AbsenceModal.js:289,304` para que bloqueos nuevos NO contaminen reportes de visitas escolares.
+    - **Apertura desde el botón 🔒** del header de cada día (`CalendarUI.js:168` con `import()` dinámico de `AbsenceModal.js`).
+    - Domingos excluidos automáticamente del rango (cierra `currentDay.getDay() !== 0`); muestra toast si no quedaron días hábiles.
+    - **Pendiente del review (no bloquea Fase 2, son hotfixes recomendados):**
+        - **S-011 🚨 XSS** en lista de conflictos (`appt.name` interpolado en `innerHTML:208`). Mismo vector que S-001; aplicar `escapeHTML` cuando se centralice.
+        - **S-012 ⚠️ Escrituras Firestore en serie** (`await createEvent` en bucle): vacaciones de 2 semanas × bloqueo horario = ~120 round-trips serializados sin atomicidad. Migrar a `writeBatch` (hasta 500 escrituras por batch).
+        - **S-013 🟡 Sin validación `endHour > startHour`**: el usuario puede elegir 15 → 10, el bucle no escribe nada pero el toast dice «registrado exitosamente». Agregar guard en `save()`.
+        - **S-014 🟡 Sin detección de duplicados**: dos clics rápidos crean docs duplicados en Firestore + Google Calendar.
+- [ ] **Fase 2 — Notificación WhatsApp al tutor**: nuevo template Twilio + Cloud Function que escanea citas en el rango y manda mensaje con opciones (A) reagendar misma semana, (B) próxima semana, (C) por WhatsApp manual. Pacientes sin opt-in → alerta en Control Maestro para llamada.
+- [ ] **Fase 3 — Modelo de datos limpio (`availability_blocks/`)**: migrar `isFullDayBlock`/`isHourlyBlock` a colección dedicada con metadata (motivo, substituteTherapist, affectedAppointments snapshot, notificationStatus). Vista consolidada «Próximas ausencias del equipo» en Control Maestro. Refactor mayor, documentar en `ARQUITECTURA_FUTURA.md`.
+- [ ] **Bug colateral conocido (sin resolver aún)**: `GoogleCalendarService.js:263` sube bloqueos de hora como recurrentes 24 semanas en Google Calendar pero en Firestore son docs únicos. Borrarlos en la app deja recurrencia huérfana en Google Calendar. A resolver con Fase 3. **Atención:** con el modal nuevo es más fácil generar muchos bloqueos por hora → si Diana se va 2 semanas con bloqueo horario, hoy se crean 120 docs en Firestore y **cada uno** se vuelve weekly por 24 semanas en Google Calendar → ruido masivo. Mientras Fase 3 llega, recomendar a Yari preferir «Todo el día» para vacaciones largas.
+
+**Bloque Seguridad (auditoría 25 may, ver [`SEGURIDAD_Y_VULNERABILIDADES.md`](SEGURIDAD_Y_VULNERABILIDADES.md)):**
+
+> Primera auditoría completa hecha el 25 may. 1 crítico, 4 altos, 3 medios, 2 mejoras. Resumen ejecutivo y bitácora viven en `SEGURIDAD_Y_VULNERABILIDADES.md`. Cada vez que se toque auth/reglas/secretos/sanitización, actualizar ahí.
+
+- [ ] **S-001 🚨 XSS en chips de la agenda**: nombres de paciente interpolados sin escape en `CalendarUI.js:348-372`. Centralizar `escapeHTML` en `js/utils/sanitize.js` y aplicarlo en TODAS las interpolaciones de datos de usuario. **Acción inmediata.**
+- [ ] **S-011 🚨 XSS en lista de citas en conflicto** (nuevo 25 may post-Antigravity): `AbsenceModal.js:208` interpola `appt.name` en `innerHTML`. Mismo vector que S-001. **Arreglar junto con S-001 en una sola pasada con el helper centralizado.**
+- [ ] **S-012 ⚠️ Escrituras Firestore en serie sin batch** (`AbsenceModal.save()`): migrar a `writeBatch(db)` para atomicidad y reducir latencia.
+- [ ] **S-013 🟡 Sin validación `endHour > startHour`** en `AbsenceModal.save()`: añadir guard + mensaje claro.
+- [ ] **S-014 🟡 Sin detección de bloqueos duplicados**: query previo + confirm si ya existen.
+- [ ] **S-002 ⚠️ Lectura cruzada `appointments`**: cualquier terapeuta autenticada puede leer nombres+costos+teléfonos de pacientes de otra terapeuta vía consola del navegador. Plan: dividir en `slots` público + `appointment_details` privado, o migrar a custom claims (S-005).
+- [ ] **S-003 ⚠️ Falta `storage.rules`**: Firebase Storage (recibos médicos PDF) puede estar con reglas default permisivas. Auditar y agregar archivo al repo + `firebase.json`.
+- [ ] **S-004 ⚠️ Headers HTTP de seguridad ausentes**: añadir CSP, X-Frame-Options, Referrer-Policy y X-Content-Type-Options en `firebase.json`.
+- [ ] **S-005 ⚠️ Whitelist de emails hardcoded en reglas**: migrar a custom claims de Firebase Auth para que cambios de email no requieran redeploy.
+- [ ] **S-006/007/008 🟡 Medios**: rate-limit en copilot_overrides, suprimir `console.log` con datos sensibles en prod, custom claims (parte de S-005).
+- [ ] **S-009/010 💡 Mejoras**: bitácora de seguridad central, auditar dependencias npm/pip mensualmente.
+
+**Bloque mantenimiento general:**
+- [ ] **Factorización del Backend (`FACTORING_PLAN.md`):** Seguir paso a paso el plan detallado. Actualizar con cada cambio si aún no se ha ejecutado la factorización completa.
+- [ ] **Calidad y Optimización:** Revisar calidad de código, optimizar flujos lógicos y depurar posibles errores de código (debugging).
+- [ ] **Recibos end-to-end:** Cita pagada o reembolsable → verificar `receiptPdfUrl` + PDF en Storage.
+- [ ] **Índices Firestore** si los listeners arrojan error en consola: `reception_alerts` (`status` + `createdAt`) y `appointments` (`therapist` + `date`, para query de candidatos del Copiloto).
+
+## 💡 Sugerencias (opcional — próximas sesiones)
+
+**UX premium:**
+- Enlace «Ver recibo» en citas pagadas (`receiptPdfUrl`).
 - Iconos PWA 192/512 + splash Capacitor.
-- Empty states y skeleton loaders.
-- Bottom-sheet móvil en Reportes / Corte de caja.
-- Colores de marca en `tailwind.config.js`.
+- Empty states y skeleton loaders en sidebar y agenda.
+- Bottom-sheet móvil en Reportes / Corte de caja (patrón `92dvh` + pull-handle).
+- Tokens de color Parláre en `tailwind.config.js` (teal/magenta del logo).
+
+**Copiloto Colaborativo — mejoras visuales:**
+- Notificación de escritorio (Notification API) cuando aparezca un nuevo banner.
+- Sonido suave opcional al disparar el Copiloto (toggle en Configuración).
+- Vista resumida en Control Maestro con el historial del día (`copilot_overrides` resuelto).
+- Permitir a Yari reasignar manualmente un candidato del modal sin esperar WhatsApp (drag al slot libre).
+
+**Roadmap mayor:**
 - Capacitor POC Android; después retirar Render.
 
 Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
 
 ---
-*Última actualización: 21 de Mayo, 2026 — Cierre «fuga»: opt-in WhatsApp (21 may) + agenda escritorio #1–#3 validada/documentada + `VISION_PARLARE_V2` merge + `ARQUITECTURA_FUTURA.md`.*
+*Última actualización: 25 de Mayo, 2026 (tarde) — Hotfix búsqueda iPhone + campana notificaciones móvil + UX unificada pestañas + Regla de Oro en Manual + Pop-up Novedades v9.1 (vigencia 2 días + limpieza claves legacy) + **Frontend Copiloto Colaborativo (banner premium glassmorphism + glow calendario + modal candidatos)** + **Fase 1 Ausencias / Vacaciones** (modal premium `#absenceModal` + `AbsenceModal.js` + `AuthManager.canManageBlockFor` + bug `isSchoolVisit:true` cerrado en bloqueos nuevos, Antigravity) + **Auditoría de seguridad ampliada** (`SEGURIDAD_Y_VULNERABILIDADES.md`: 2 críticos S-001 y **S-011 nuevo**, 5 altos incluido **S-012 batch**, 5 medios incluido **S-013/S-014 nuevos**, 2 mejoras).*

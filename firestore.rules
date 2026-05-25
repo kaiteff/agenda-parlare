@@ -71,6 +71,13 @@ service cloud.firestore {
       allow read, write: if isSuper();
     }
 
+    // Overrides del Copiloto Colaborativo (Waitlist Autopilot, Fase B):
+    // Yari/Diana escriben aquí desde el frontend para abortar o acelerar
+    // el delay de 10 min del backend `space_optimizer`.
+    match /copilot_overrides/{appointmentId} {
+      allow read, write: if isSuper();
+    }
+
     // Default para las demás colecciones (Fallback)
     match /{document=**} {
       allow read, write: if isSuper();

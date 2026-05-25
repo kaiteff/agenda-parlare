@@ -1,6 +1,6 @@
 # Análisis: Estructura del Proyecto y Estrategia App Móvil
 
-> Documento generado el **17 de Mayo de 2026** a partir de la revisión de `VISION_PARLARE_V2.md`, `resumen_sesion/RESUMEN_SESION_20260517.md`, `AI_RULES.md` y el código activo del repositorio.
+> Documento actualizado el **25 de Mayo de 2026** a partir de la revisión de `VISION_PARLARE_V2.md`, `resumen_sesion/RESUMEN_SESION_20260525.md`, `AI_RULES.md` y el código activo del repositorio.
 >
 > Objetivo: entender la arquitectura actual y decidir el camino hacia una app móvil espectacular (Android + iPhone) con visión SaaS (clonar para otras clínicas).
 >
@@ -119,10 +119,17 @@ firebase deploy --only hosting
 |---|-----------|--------|
 | 1 | **Validación final de opt-in en producción** | ✅ Validado en vivo por el usuario (nuevos pacientes en amarillo, autorizados en verde). |
 | 2 | **Recibos end-to-end** | Paciente con `reimbursementReceipt.autoGenerate: true` → cita **Pagada** → comprobar `receiptPdfUrl` + PDF en Storage. |
-| 3 | **Copiloto Colaborativo (Waitlist / Adelantos)** | Implementar la confirmación dual (Yari + Terapeuta), delay de 10 min, glow de calendario y heurísticas (en pausa temporal). |
-| 4 | **Índice Firestore (si aplica)** | Si el listener de `reception_alerts` falla en consola: índice compuesto `status` + `createdAt`. |
-| 5 | **Toggle Día desktop en producción** | ✅ Validado en vivo por el usuario (probada la vista Día en PC). |
-| 6 | **Agenda desktop — media prioridad** | Ver ítems 4–9 en `ARQUITECTURA_FUTURA.md` (tooltips/hover, query semana, debounce…). |
+| 3 | **Toggle Día desktop en producción** | ✅ Validado en vivo por el usuario (probada la vista Día en PC). |
+| 4 | **Búsqueda iPhone — validar tras hotfix robusto** | Tras deploy 25 may: en iPhone teclear nombre completo y parcial de paciente recién creado (con y sin acentos, dictado por voz, paste). Debe filtrarse a tiempo real. Si vuelve a fallar: pedir captura de consola Safari (Web Inspector). |
+| 5 | **Campana de notificaciones móvil — validar** | Tras deploy 25 may: en iPhone tocar la 🔔 del header → debe abrir panel `fixed top-16 left-2 right-2` sin quedar cortado por `overflow-hidden`. |
+| 6 | **Pestañas unificadas Confirmaciones — validar** | Verificar que el panel WhatsApp ya no muestra botones duplicados Hoy/Mañana y se sincroniza con la selección del Sidebar. |
+| 7 | **Copiloto Colaborativo — validar UI** | Cancelar una cita real en ventana 8–24 h: (a) aparece banner glassmorphism en sup-der con contador 10 min, (b) celda en agenda brilla ámbar↔esmeralda con ⚡, (c) cada botón escribe en `copilot_overrides/{id}` con el `action` correcto (verificar en Firestore Console), (d) modal Manual lista candidatos > 2 h con WhatsApp pre-llenado y tel link. |
+| 8 | **Copiloto Colaborativo — cerrar contrato backend** | Modificar `functions/space_optimizer.py`: reemplazar `time.sleep(600)` por **polling cada 30 s** del doc `copilot_overrides/{appointmentId}`. Respetar `skip_delay` (saltarse el sleep y procesar candidatos ya) y `pause` (abortar sin enviar ofertas). Próximo sprint backend. |
+| 9 | **Quiet Hours + Copiloto** | Actualmente el delay/banner solo aplica en horario diurno (07:00–22:00 MX). Si la cancelación cae en Quiet Hours, el backend guarda en `quiet_hours_pending` pero el frontend aún no la muestra. Decisión pendiente: ¿procesar al día siguiente automáticamente o requerir aprobación manual de Yari al amanecer? |
+| 10 | **Índice Firestore (si aplica)** | Si el listener de `reception_alerts` o el query de candidatos del Copiloto arroja error en consola: índice compuesto `status` + `createdAt` y `therapist` + `date`. |
+| 11 | **Agenda desktop — media prioridad** | Ver ítems 4–9 en `ARQUITECTURA_FUTURA.md` (tooltips/hover, query semana, debounce…). |
+| 12 | **Fase 1 Ausencias / Vacaciones — validar UI en producción** | Tras deploy 25 may (Antigravity): (a) clic en 🔒 del header del día abre modal premium en vez de `prompt()`; (b) elegir terapeuta (con Diana/admin: select habilitado; con Vero/Sam: select bloqueado en su nombre); (c) rango de fechas multi-día funciona y excluye domingos; (d) toggle «Todo el día» oculta selectores horarios; (e) si hay citas en el rango, aparece tarjeta ámbar con conteo + nombres; (f) confirmar muestra modal con resumen (3 nombres + «N más»); (g) tras guardar, los bloqueos aparecen en el calendario y NO contaminan reportes de visitas escolares. |
+| 13 | **Fase 1 Ausencias — hotfixes pendientes (S-011 a S-014)** | Ver `SEGURIDAD_Y_VULNERABILIDADES.md`. No urgentes (no rompen UX) pero recomendados antes de Fase 2: XSS en lista de conflictos, `writeBatch` Firestore, validación `endHour > startHour`, detección de duplicados. |
 
 ### 💡 Sugerencias (opcional — próximas sesiones)
 
@@ -141,6 +148,108 @@ firebase deploy --only hosting
 | Roadmap | Retirar **Render** cuando todo el bot esté en Functions | Un solo backend serverless. |
 
 > **Regla de cierre:** cada sesión debe dejar esta subsección **Falta + Sugerencias** actualizada (no solo lo hecho).
+
+---
+
+## 🔎 Análisis técnico — Inhabilitar día/hora y Vacaciones (25 may)
+
+> **Estado actualizado 25 may (tarde):** Antigravity ejecutó la **Fase 1 completa** (modal premium + permisos por terapeuta + bug `isSchoolVisit:true` cerrado). Las fases 2 (WhatsApp a tutores) y 3 (colección `availability_blocks/`) siguen pendientes. Hallazgos de seguridad/calidad detectados en la revisión post-merge están listados en `SEGURIDAD_Y_VULNERABILIDADES.md` (S-011 a S-014) y en `PLAN_DE_TRABAJO.md`.
+
+### Cómo funciona hoy (mapeo del código)
+
+| Funcionalidad | Dónde vive | Cómo funciona | Problemas |
+|---|---|---|---|
+| **Inhabilitar Hora** (modal cita) | `CalendarModal.js`, radio `value="block"` | Crea un `appointment` con `isHourlyBlock: true`. Permiso `manage_blocks` (admin/recepción). | UX ok. **Pero** en Google Calendar se sube recurrente `RRULE:FREQ=WEEKLY;BYDAY=MO-SA;COUNT=24` (6 meses, no 4 semanas como dice el comentario) — `GoogleCalendarService.js:263`. En Firestore es **un único doc**, así que borrarlo en la app deja la recurrencia huérfana en Google Calendar. **Inconsistencia.** |
+| **Bloquear Día Completo** | Botón 🔒 (`day-block-btn`) en el header de cada día — `CalendarUI.js:148–200` | Pregunta terapeuta vía **`prompt()` nativo del navegador** si vista=Todas. Crea un `appointment` con `name: "⛔ Día Inhábil/Vacaciones"`, `isFullDayBlock: true`, **`isSchoolVisit: true`** (sí, también activa esa bandera), `date: "YYYY-MM-DDT08:00:00"`. | • Icono `w-3 h-3` casi invisible.<br>• `prompt()` nativo: pésimo en móvil, sin estilo, sin validación visual.<br>• `isSchoolVisit: true` contamina reportes de visitas a escuela.<br>• **NO detecta citas existentes** ese día.<br>• Las citas previas quedan visualmente en conflicto con el bloqueo. |
+| **Vacaciones** | **No existe como concepto** | Diana/Yari tienen que clickear el botón 🔒 día por día. | Sin rango de fechas; tedioso para vacaciones largas. No hay metadata (motivo, retorno, sustituto). |
+| **Notificación a tutores** | **No existe** | Cero. El paciente se entera el día de la cita o cuando ve que WhatsApp no llega. | Riesgo de imagen profesional: tutor con cita confirmada llega a clínica y se topa con que está cerrada. |
+| **Sustitución de terapeuta** | **No existe** | Si Diana se va y Sam puede cubrir, hay que reagendar pacientes manualmente uno por uno. | Carga operativa para Yari. |
+| **Vista consolidada de ausencias futuras** | **No existe** | No hay panel «próximas ausencias del equipo» en Control Maestro. | Diana no ve un vistazo de quién falta esta semana / el próximo mes. |
+
+### Otros bugs / inconsistencias detectadas en el camino
+
+- **Doble propósito de `isSchoolVisit`** — al bloquear día completo se marca también como visita escolar (`CalendarUI.js:195`). Cualquier reporte que filtre por «visitas a escuela» va a contar bloqueos erróneamente.
+- **`CalendarData.js:211`** ignora `isFullDayBlock || isSchoolVisit` en cálculos — coherente con el bug anterior pero hace que ambos conceptos se traten como uno solo en finanzas.
+- **Validador `isSlotFree`** considera el bloqueo de día completo bien (comparación por `YYYY-MM-DD`), pero no por terapeuta cruzada: si Diana se bloquea, Sam y Vero siguen disponibles ✅ (correcto, ya filtra por `apptTherapist`).
+
+### Propuesta de rediseño — 3 fases
+
+#### **Fase 1 — UX premium del bloqueo (frontend solo, sin backend nuevo) — ✅ Implementada 25 may por Antigravity**
+
+> Archivos: `js/modules/calendar/AbsenceModal.js` (nuevo, 330 líneas), `js/components/MainModals.js` (sección 7 `#absenceModal`), `js/managers/AuthManager.js:271` (`canManageBlockFor`), `js/modules/calendar/CalendarUI.js:168-178` (apertura del modal).
+>
+> **Pendientes de calidad detectados en review post-merge** (no bloquean Fase 2, ver `SEGURIDAD_Y_VULNERABILIDADES.md` y `PLAN_DE_TRABAJO.md`):
+> - **S-011 🚨 XSS** en `AbsenceModal.js:208` — `appt.name` interpolado en `innerHTML` sin escape (mismo vector que S-001 del calendario). Arreglar junto a S-001 con helper centralizado.
+> - **S-012 ⚠️ Escrituras en serie sin batch** — `await CalendarData.createEvent` en bucle: una vacación con bloqueo horario completo puede generar 120+ round-trips serializados sin atomicidad. Migrar a `writeBatch`.
+> - **S-013 🟡 Sin validación `endHour > startHour`** — si el usuario elige 15→10, el toast dice «éxito» pero no se escribe nada. Agregar guard.
+> - **S-014 🟡 Sin detección de duplicados** — dos clics seguidos crean docs duplicados (en Firestore y Google Calendar).
+> - **Bug Google Calendar pendiente Fase 3** — `GoogleCalendarService.js:263` sigue subiendo bloqueos horarios como recurrentes `RRULE:FREQ=WEEKLY;BYDAY=MO-SA;COUNT=24`. Con el modal nuevo es más fácil generar muchos bloqueos por hora; mientras Fase 3 llega, **recomendar usar «Todo el día» para vacaciones largas**.
+
+- **Reemplazar `prompt()` por modal premium «Crear ausencia»** con:
+  - Selector visual de terapeuta (chips con foto + iniciales).
+  - **Tipo de ausencia**: 🏖️ Vacaciones / 🏥 Médica / 📚 Capacitación / 👤 Personal / 🚫 Otro. Por defecto «Vacaciones».
+  - **Rango de fechas** (`<input type="date">` × 2 con date-picker premium). Si es 1 día, mismo valor en ambos.
+  - **Rango horario opcional**: «Todo el día» (toggle) o «De X:XX a Y:YY» dentro del día.
+  - **Motivo** (textarea breve, opcional, queda en bitácora para auditoría).
+  - **Detección automática de citas afectadas**: tarjeta visual que liste pacientes con cita en ese rango. Esta validación corre antes de crear el bloqueo.
+- **Pre-acciones obligatorias** antes de confirmar bloqueo si hay citas afectadas:
+  - Para cada cita el sistema sugiere: ① reagendar manualmente, ② proponer otro día misma semana al tutor, ③ pasarla a otra terapeuta (si aplica) ④ cancelarla y avisar.
+  - Yari debe resolver cada cita antes de poder presionar «Confirmar ausencia».
+- **Datos limpios**:
+  - Dejar de poner `isSchoolVisit: true` al bloquear día (es bug).
+  - Añadir `blockReason: 'vacation' | 'medical' | 'training' | 'personal' | 'other'`.
+  - Añadir `blockNote: string` con el motivo libre.
+
+#### **Fase 2 — Notificación al tutor (backend WhatsApp)**
+
+- Cuando se confirma el bloqueo con citas afectadas:
+  - **Para cada paciente con `recurrentOptIn: 'accepted'`**: enviar template Twilio aprobado (nuevo, hay que crearlo en Meta) con texto:
+    > «Hola [Nombre]. Te avisamos que tu sesión del [día] a las [hora] con [terapeuta] no se llevará a cabo por motivo de [vacaciones / otro]. Para reagendar responde: A) Misma semana B) La próxima C) Reagendo después por WhatsApp».
+  - **Webhook handle** en `main.py` para procesar respuesta interactiva:
+    - **A** → ofrecer slots libres misma semana (similar al Copiloto, pero invertido: aquí el sistema ofrece huecos al paciente).
+    - **B** → ofrecer slots la semana siguiente.
+    - **C** → crear alerta en `reception_alerts` para Yari.
+  - **Para pacientes sin opt-in WhatsApp**: alerta en Control Maestro para que Yari los llame.
+- **Trazabilidad en bitácora**: tipo `BLOCK_NOTIFICATION_SENT` / `BLOCK_NOTIFICATION_RESPONDED` con el ID del paciente.
+
+#### **Fase 3 — Modelo de datos limpio (refactor, opcional pero recomendado)**
+
+> Esto es lo «correcto» a largo plazo pero requiere migración. Documentar en `ARQUITECTURA_FUTURA.md` como ítem de **alta prioridad** futura.
+
+- **Nueva colección `availability_blocks/{id}`** con esquema:
+  ```js
+  {
+    therapist: 'diana' | 'sam' | 'vero',
+    startDate: 'YYYY-MM-DDTHH:mm:ss',
+    endDate: 'YYYY-MM-DDTHH:mm:ss',
+    type: 'full_day' | 'hourly' | 'recurring_weekly',
+    reason: 'vacation' | 'medical' | 'training' | 'personal' | 'other',
+    note: string,
+    substituteTherapist: 'sam' | null,  // si delegan pacientes
+    affectedAppointments: [appointmentId, ...],  // snapshot al crear
+    notificationStatus: 'pending' | 'partial' | 'sent' | 'failed',
+    createdBy: 'diana' | 'yari',
+    createdAt: timestamp
+  }
+  ```
+- Migrar `isFullDayBlock`/`isHourlyBlock` actuales: dejar de crearlos en `appointments`, pero mantener compatibilidad de lectura (los viejos siguen funcionando).
+- Vista consolidada en Control Maestro: **«Próximas ausencias del equipo»** con cards por bloque mostrando el período, motivo, citas afectadas y estado de notificación.
+
+### Riesgos / cosas a cuidar al implementar
+
+- **Bloqueo recurrente Google Calendar** — Si Fase 1 elimina la recurrencia `COUNT=24` del lado del frontend, el backend GoogleCalendarService.js debe actualizarse también o quedan huérfanos. Posible solución: en Fase 3, los bloqueos recurrentes de hora se modelan como `type: 'recurring_weekly'` en la colección nueva y Google Calendar se sincroniza desde ahí.
+- **Permisos**: la notificación masiva a tutores debe pasar por opt-in. Pacientes que rechazaron WhatsApp NO reciben mensaje (alerta a Yari para que llame).
+- **Idempotencia**: si Yari crea/cancela un bloqueo varias veces, no enviar WhatsApp duplicado al tutor. Usar campo `notificationStatus` en el bloque.
+- **Capacidad operativa**: si Sam está en vacaciones 2 semanas y tiene 30 pacientes con sesión, son 30 WhatsApp + 30 reagendamientos. Debe escalonarse o agruparse para no saturar el bot de Twilio.
+
+### Beneficios esperados
+
+- **Para Diana/Yari:** un click → vacaciones de 2 semanas con tutores ya avisados y reagendados, en vez de 12 clicks + 30 mensajes manuales.
+- **Para tutores:** percepción profesional («me avisaron con anticipación») y opción rápida de reagendar.
+- **Para la clínica:** menos no-shows / quejas, mejor uso de slots libres durante la ausencia (Copiloto Colaborativo puede ofrecerlos).
+- **Para SaaS futuro:** modelo de datos limpio listo para multi-clínica.
+
+---
 
 ### Lo que ya llevamos hecho
 
@@ -161,6 +270,9 @@ firebase deploy --only hosting
 | **UX móvil — Bitácora auditoría** | Entrada en menú **Más → Bitácora de Auditoría** (`MobileBottomNav.js`, permiso `view_audit`). Modal `auditLogModal` bottom-sheet en móvil (`MainModals.js`). Formateo de fecha de cita legible (`appointmentDate`) y bloque de mensaje de WhatsApp colapsable (`💬 Ver mensaje completo` en `AuditPanel.js`). Backend: la Cloud Function scheduler guarda el texto de mensaje real en lugar de un log estático (`main.py`). |
 | **Hotfix 19 may — Calendario móvil** | `index.css`: `--cal-time-col` 3.25rem, `.cal-grid-day` / `.cal-grid-week`, `.calendar-week-fit` (sin overflow-x). `CalendarUI.js`: hora compacta, línea roja desde columna de días, chips `S·Nombre` en semana. `dateUtils.formatTime12hCompact`. `index.html`: `#calendarScrollWrap`. |
 | **Agenda escritorio — perf UX (19 may)** | Auto-scroll solo en carga/Hoy; índice `CalendarSlotIndex.js`; toggle **Día \| Semana** en `md+` (`#calendarViewToggle`). Roadmap: **`ARQUITECTURA_FUTURA.md`**. |
+| **Hotfixes móvil iPhone (25 may)** | (1) **Búsqueda pacientes iPhone — robusta a iOS Safari**: input con `autocorrect/autocapitalize/spellcheck off` + `inputmode="search"`; al teclear se cambia automáticamente a la pestaña **Todos**. **5 event listeners cruzados** (`input`, `search`, `change`, `keyup`, `compositionend`) + **polling de respaldo 250 ms** mientras el input está enfocado (cubre dictado por voz, autocompletado QuickType y casos donde iOS «traga» eventos). Comparación contra `_lastSearchValue` para evitar renders duplicados. Forzar update en `blur`. Normalización (acentos/mayúsculas + teléfono solo dígitos) en `applyAll` y filtro inline. (2) **Botón notificaciones (campana) móvil**: el panel desplegable era `position: absolute` dentro de un contenedor con `overflow-hidden` y se quedaba oculto en celular. Ahora el panel es `position: fixed` en móvil (`top-16 left-2 right-2`, `max-h-[70vh]`) y mantiene `absolute md:w-80` en desktop. Archivos: `Sidebar.js`, `PatientFilters.js`, `Header.js`. |
+| **Frontend Copiloto Colaborativo (25 may)** | UI completa del «Waitlist Autopilot» para Yari. **Servicio** `js/services/WaitlistCopilotService.js`: listener `appointments` que detecta cancelaciones en ventana 8–24 h con `cancelledAt < 10 min`; tick interno 1 s para contador. Escribe en `copilot_overrides/{appointmentId}` con `action ∈ {skip_delay, pause, manual_search}`. Métodos: `skipDelay`, `pauseAutopilot`, `markManualSearch`, `getCandidates`, `getGlowingAppointmentIds`. **Panel** `js/components/WaitlistCopilotPanel.js`: banner flotante glassmorphism (gradiente slate→indigo→fuchsia + `backdrop-blur-xl`), contador regresivo mono tabular + barra emerald→amber→rose, 3 botones premium (🚀 Automático esmeralda con shadow elevado, ⏸️ Pausar blanco translúcido, 🔍 Manual índigo). Modal de candidatos con WhatsApp pre-llenado + tel link. Optimización: tick solo actualiza nodos `data-bind` sin re-generar HTML. **CSS** `.calendar-slot-glow` en `index.css` con `@keyframes copilotSlotGlow` (alterna inset ámbar↔esmeralda + box-shadow radiante + ⚡ en esquina). Integración en `CalendarUI.js` y `app.js` (inicialización + re-render agenda solo cuando cambia el conjunto de IDs glowing). |
+| **Fase 1 Ausencias / Vacaciones (25 may — Antigravity)** | Reemplaza el `prompt()` nativo del botón 🔒 por modal premium `#absenceModal` (bottom-sheet en móvil, `max-w-lg` desktop, `z-9500`). **Nuevo archivo** `js/modules/calendar/AbsenceModal.js` (330 líneas): tipo (🏖️ vacaciones / 🏥 médica / 📚 capacitación / 👤 personal / 🚫 otro), rango de fechas con `<input type="date">` × 2, toggle «Todo el día» + selectores horarios 8 AM–9 PM, **detección de conflictos en tiempo real** (lista nominal de niños afectados en card ámbar con count). **Permisos**: `AuthManager.canManageBlockFor()` — admin/recepción: todo; terapeuta (Vero/Sam): solo su agenda (select `disabled`). **Bug fix**: `isSchoolVisit: false` explícito en bloqueos nuevos (no contamina reportes de visitas escolares). Apertura desde `CalendarUI.js:168` con `import()` dinámico. Domingos excluidos automáticamente del rango. **Pendientes detectados en review (no bloquean Fase 2):** S-011 a S-014 en `SEGURIDAD_Y_VULNERABILIDADES.md` (XSS en lista de conflictos, escrituras sin batch, validación end>start, dedup). |
 | **Recibos Fase 1 — Prep SaaS** | **Clínica** (`AdminSettingsModal` / tab Costos): por terapeuta `professionalLicense`, `graduationInstitution` (disabled, badge «SaaS Ready»). **Paciente** (nuevo + editar): `reimbursementReceipt.autoGenerate`, `reimbursementReceipt.tutorName` (disabled, «Próximamente»). Firestore: `settings/clinicConfig.baseCosts.{id}.*` y `patientProfiles.reimbursementReceipt`. |
 | **Fase C — Opt-In WhatsApp** | `recurrentOptIn` en `patientProfiles` (default `pending`). Badge en ficha (`js/utils/WhatsAppOptIn.js` + `PatientModals.js`). Webhook: `functions/whatsapp_optin.py` + `main.py` (`optin_yes` → accepted, `optin_no` → rejected + `reception_alerts`). Crons solo si `accepted`. Template **`bienvenida_con_optin`** SID `HX08f74d9b520b85acfbf9e678e434b1f6` (`js/config/whatsappTemplates.js`). |
 | **UX Fase C visible (frontend)** | **Sidebar:** punto verde/amarillo/rojo junto al nombre (`renderWhatsAppOptInDot` en `Sidebar.js`). **Control Maestro:** panel «Seguimiento manual WhatsApp» con listener `reception_alerts` (`ReceptionAlertsService.js` + `ReceptionControl.js`): Ver ficha (`window.openPatientHistoryById`), Atendido. **Móvil:** Control Maestro como bottom-sheet `92dvh` + pull-handle. **Onboarding:** `NewFeatureAlert.js` clave `parlare_onboarding_v9_0` (Modo Día, opt-in, recibos PDF). |
@@ -690,7 +802,7 @@ Sprint 2 (Fase 1 continuación / polish)
 - Sesión **19 may 2026** — Calendario móvil; Bitácora en **Más**; Regla documentación siempre; manual actualizado.
 - Sesión **21 may 2026** — Reglas de excepción de Opt-In WhatsApp, inicialización en base de datos, flujo de Bienvenida manual/automático, webhook de actualización, y ampliación de bitácora WhatsApp con soporte para detalles de errores y mensajes omitidos.
 
-*Última actualización de este documento: **21 de Mayo de 2026** (cierre «fuga» — complemento agenda escritorio #1–#3 + `VISION_PARLARE_V2` + `ARQUITECTURA_FUTURA`).*
+*Última actualización de este documento: **25 de Mayo de 2026 (tarde)** — Hotfix búsqueda pacientes iPhone v2 robusto (5 listeners cruzados + polling 250 ms en focus, dedupe por `_lastSearchValue`, forzar update en blur), auto-switch a Todos + normalización, panel de notificaciones móvil (overflow corregido, panel fixed full-width), UX unificada de pestañas (`WhatsAppDashboard` sigue al `Sidebar`), banner Regla de Oro en `HelpManual.js`, **pop-up de Novedades v9.1** (`NewFeatureAlert.js`, `parlare_onboarding_v9_1`) con las 4 novedades del día — vigencia ajustada a **2 días** (`MAX_DAYS_VISIBLE`) y limpieza automática de claves legacy (`v8_0`, `v9_0`) del `localStorage`, **Frontend del Copiloto Colaborativo** (`WaitlistCopilotService.js` + `WaitlistCopilotPanel.js` + `.calendar-slot-glow`) con banner flotante glassmorphism, contador 10 min, modal candidatos y glow en agenda, **Fase 1 de Ausencias / Vacaciones implementada por Antigravity** (`AbsenceModal.js` 330 líneas + modal `#absenceModal` en `MainModals.js` sección 7 + `AuthManager.canManageBlockFor` + bug `isSchoolVisit:true` cerrado en bloqueos nuevos), y **revisión de seguridad post-merge** (S-011 XSS en lista de conflictos, S-012 escrituras sin batch, S-013 validación horaria, S-014 dedup — todos en `SEGURIDAD_Y_VULNERABILIDADES.md`).odal` en `MainModals.js` + integración en `CalendarUI.js` y `AuthManager.js`) con bloqueos por rango de fechas/horas, validación en tiempo real de citas afectadas, bloqueo restringido para terapeutas (Sam/Vero) y corrección de bug en `isSchoolVisit: true` en `CalendarModal.js`, y **Auditoría de seguridad inicial** documentada en `SEGURIDAD_Y_VULNERABILIDADES.md` (1 crítico XSS, 4 altos, 3 medios, 2 mejoras; 6 áreas ya reforzadas).*
 
 ---
 

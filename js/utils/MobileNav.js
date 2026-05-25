@@ -62,6 +62,13 @@ export const MobileNav = {
         this.closeMoreSheet();
         this.setActiveTab('patients');
         this.openSidebar();
+
+        import('../components/WhatsAppDashboard.js').then(({ WhatsAppDashboard }) => {
+            WhatsAppDashboard.render();
+            requestAnimationFrame(() => {
+                document.getElementById('waDashboardContainer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        });
     },
 
     async openReception() {

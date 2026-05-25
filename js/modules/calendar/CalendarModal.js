@@ -795,7 +795,7 @@ export const CalendarModal = {
             let appointmentData = {
                 cost: costPerSlot,
                 therapist: therapist,
-                isSchoolVisit: isSchoolVisit || isBlock,
+                isSchoolVisit: isSchoolVisit, // BUG FIX: block is not a school visit
                 isHourlyBlock: isBlock,
                 isFullDayBlock: false // we distinguish from full day
             };

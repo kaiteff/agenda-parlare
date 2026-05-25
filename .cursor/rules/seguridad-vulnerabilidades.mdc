@@ -1,0 +1,87 @@
+---
+description: Auditoría de seguridad SIEMPRE — revisar y actualizar SEGURIDAD_Y_VULNERABILIDADES.md en cada sesión
+alwaysApply: true
+---
+
+# Seguridad y vulnerabilidades — SIEMPRE revisar y actualizar
+
+> Documento maestro: **`SEGURIDAD_Y_VULNERABILIDADES.md`** en la raíz.
+
+**Regla absoluta:** En **toda** sesión, el asistente debe:
+
+1. **Leer / tener presente** el estado actual de `SEGURIDAD_Y_VULNERABILIDADES.md` al iniciar (mínimo, el Resumen Ejecutivo y la sección 🚨 Crítico).
+2. **Evaluar antes de escribir código** si lo que vas a hacer toca áreas sensibles (ver lista abajo).
+3. **Actualizar el documento en la misma respuesta** si introdujiste, reforzaste o detectaste algo. **No esperes** a que el usuario lo pida.
+
+Sin excepción. No es opcional, no es solo en sesiones de seguridad.
+
+## Áreas sensibles que disparan actualización inmediata
+
+- **Auth / login / sesión** (`AuthManager.js`, `firebase.js`, custom claims).
+- **Firestore rules** (`firestore.rules`).
+- **Storage rules** (`storage.rules`).
+- **Secretos / variables de entorno** (`functions/main.py`, `SecretParam`, `os.environ`, `.env`).
+- **Renderizado de datos de usuario** (`innerHTML` con `${variable}` que venga de Firestore o input del usuario — riesgo XSS).
+- **Webhooks WhatsApp / Twilio** (`functions/main.py`, `whatsapp_optin.py`, `space_optimizer.py`).
+- **Permisos por rol** (`AuthManager.can(...)`, `isSuper`, `isOwner`).
+- **Dependencias** (`npm install`, `package.json`, `functions/requirements.txt`).
+- **Headers HTTP** (`firebase.json` → `hosting.headers`).
+- **Console.log con datos sensibles** (nombres, teléfonos, costos, médico).
+
+## Flujo en cada sesión
+
+### A. Al inicio de la sesión (1er turno)
+
+- Tener presente el conteo del Resumen Ejecutivo (cuántos 🚨, ⚠️, 🟡, 💡 pendientes).
+- Si vas a trabajar en una de las áreas sensibles listadas arriba, **menciona los hallazgos relacionados** al usuario antes de tocar el código.
+- Ejemplo: «Antes de tocar `CalendarUI.js`, recordatorio: hallazgo abierto **S-001 (XSS)** en esa misma área. ¿Aprovechamos para arreglar también?»
+
+### B. Durante la tarea
+
+- Si **detectas** un riesgo nuevo (XSS posible, regla permisiva, secret expuesto, dependencia vulnerable):
+  - Asigna ID secuencial `S-XXX` (revisa el último en el doc).
+  - Llena: archivo:línea, descripción, impacto, mitigación propuesta, severidad (🚨/⚠️/🟡/💡), estado.
+- Si **introduces** una nueva área sensible (colección Firestore nueva, secret nuevo, header nuevo):
+  - Agrega fila en «✅ Reforzado / OK» con la fecha y descripción.
+
+### C. Al cerrar la tarea / sesión
+
+- Si la sesión **cerró** un hallazgo:
+  - **Mover** la entrada de su sección a «✅ Reforzado / OK» con la fecha y el cambio que lo resolvió.
+  - **Nunca borrar.** El histórico es valioso para auditoría.
+- Actualizar el conteo del Resumen Ejecutivo si cambió.
+- Actualizar la línea «*Última actualización…*» al pie del documento.
+- Mencionar en el resumen al usuario: «Doc de seguridad actualizado: cerré S-XXX / agregué S-YYY».
+
+## Severidad
+
+| Símbolo | Nivel | Cuándo |
+|---------|-------|--------|
+| 🚨 | **Crítico** | Acción inmediata. Exposición de datos, ejecución de código arbitrario, escalación de privilegios real. |
+| ⚠️ | **Alto** | Próximo sprint. Lectura cruzada de datos sensibles, falta de reglas, ausencia de headers. |
+| 🟡 | **Medio** | Cola. UX engañosa, rate-limit, mejores prácticas. |
+| 💡 | **Mejora** | Opcional. Observabilidad, auditoría dependencias. |
+
+## Auditorías programadas (además del flujo continuo)
+
+- **Inicio de cada mes** — revisar Resumen Ejecutivo, pendientes ⚠️ y 🟡 que llevan tiempo abiertos.
+- **Al cerrar cada fase grande** (Copiloto, Vacaciones, Capacitor, SaaS, etc.) — auditoría completa de la fase.
+- **Cuando aparezca un advisory** en `npm audit`, `pip-audit` o Dependabot — entrada nueva tipo `S-XXX`.
+
+## Integración con otras reglas vivas
+
+- Esta regla complementa pero **no reemplaza** `documentacion-viva-siempre.mdc` (ANALISIS / PLAN / Manual).
+- En cierre de sesión («vamos», «alistémonos», etc.), confirmar en el resumen final que el doc quedó al día — ver `.cursor/rules/cierre-sesion-documentacion.mdc` paso 5.
+- En `AI_RULES.md` está referenciada en la Regla de Oro 5 punto 4.
+
+## Frases que disparan revisión explícita (extra)
+
+Si el usuario dice:
+- «¿hay vulnerabilidades?»
+- «revisa seguridad»
+- «auditoría»
+- «cómo va lo de seguridad»
+- «¿qué falta de seguridad?»
+- «se rompe algo si…»
+
+→ Abrir `SEGURIDAD_Y_VULNERABILIDADES.md` y presentar el estado actual al usuario.

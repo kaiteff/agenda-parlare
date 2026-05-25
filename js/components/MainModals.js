@@ -451,7 +451,116 @@ export const MainModals = {
                         </div>
                         <button onclick="document.getElementById('auditLogModal').classList.add('hidden')" class="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition-all">
                             Cerrar
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. ABSENCE / VACATION MODAL -->
+            <div id="absenceModal" class="hidden fixed inset-0 z-[9500] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="absenceModalTitle">
+                <div id="absenceModalPanel" class="bg-white w-full max-w-none md:max-w-lg h-[92dvh] md:h-auto max-h-[92dvh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
+                    <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
+                    <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-center gap-3 bg-white flex-shrink-0">
+                        <h3 id="absenceModalTitle" class="text-lg md:text-xl font-bold tracking-tight text-gray-900">Registrar Ausencia / Vacaciones</h3>
+                        <button type="button" onclick="import('../modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-5 scroller min-h-0 bg-white overscroll-contain">
+                        <!-- Therapist Selection -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
+                            <select id="absenceTherapist" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">
+                                <option value="diana">Diana</option>
+                                <option value="sam">Sam</option>
+                                <option value="vero">Vero</option>
+                            </select>
+                        </div>
+
+                        <!-- Absence Type Selection -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Ausencia</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
+                                    <input type="radio" name="absenceType" value="vacation" checked class="w-4 h-4 text-blue-600">
+                                    <span>🏖️ Vacaciones</span>
+                                </label>
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
+                                    <input type="radio" name="absenceType" value="medical" class="w-4 h-4 text-blue-600">
+                                    <span>🏥 Médica</span>
+                                </label>
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
+                                    <input type="radio" name="absenceType" value="training" class="w-4 h-4 text-blue-600">
+                                    <span>📚 Capacitación</span>
+                                </label>
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
+                                    <input type="radio" name="absenceType" value="personal" class="w-4 h-4 text-blue-600">
+                                    <span>👤 Personal</span>
+                                </label>
+                                <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-all">
+                                    <input type="radio" name="absenceType" value="other" class="w-4 h-4 text-blue-600">
+                                    <span>🚫 Otro</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Date Range Selection -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Inicio</label>
+                                <input type="date" id="absenceStartDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Fin</label>
+                                <input type="date" id="absenceEndDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">
+                            </div>
+                        </div>
+
+                        <!-- Time Range Toggle and Selectors -->
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/85 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 cursor-pointer touch-manipulation">
+                                <input type="checkbox" id="absenceAllDay" checked class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300">
+                                <span class="text-sm text-gray-700 font-semibold select-none">Todo el día</span>
+                            </label>
+                            
+                            <div id="absenceTimeRangeSelects" class="hidden grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Inicio</label>
+                                    <select id="absenceStartHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none touch-manipulation">
+                                        <!-- Generated 8am to 8pm -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Fin</label>
+                                    <select id="absenceEndHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none touch-manipulation">
+                                        <!-- Generated 9am to 9pm -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Note / Reason -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas / Motivo Interno</label>
+                            <textarea id="absenceNote" placeholder="Detalles de la ausencia..." rows="2" class="w-full px-3 py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg outline-none focus:ring-2 focus:ring-blue-100 touch-manipulation resize-none"></textarea>
+                        </div>
+
+                        <!-- Conflicts Panel -->
+                        <div id="absenceConflictsCard" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                            <h4 class="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Citas en Conflicto Detectadas (<span id="absenceConflictsCount">0</span>)
+                            </h4>
+                            <p class="text-xs text-amber-700 leading-tight">Las siguientes citas programadas se verán afectadas. Confirma que procederás a reasignarlas, moverlas o cancelarlas.</p>
+                            <div id="absenceConflictsList" class="max-h-28 overflow-y-auto divide-y divide-amber-100 text-xs font-semibold text-gray-700 scroller space-y-1 pt-1">
+                                <!-- Conflicted appointments list here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div id="absenceModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl">
+                        <div class="flex gap-3">
+                            <button type="button" onclick="import('../modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="flex-1 min-h-[48px] touch-manipulation bg-white text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-50 font-bold border border-gray-200 transition-colors">Cancelar</button>
+                            <button type="button" id="absenceSaveBtn" class="flex-1 min-h-[48px] touch-manipulation bg-blue-600 text-white py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors flex items-center justify-center gap-2">Confirmar Bloqueo</button>
+                        </div>
                     </div>
                 </div>
             </div>

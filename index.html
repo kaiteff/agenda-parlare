@@ -7,6 +7,7 @@
     <title>Agenda Parláre</title>
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Parláre">
     <link rel="icon" type="image/png" href="assets/parlare-logo.png">
     <link rel="apple-touch-icon" href="assets/parlare-logo.png">
@@ -107,9 +108,10 @@
                                 </button>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
-                                <div id="calendarTherapistFilterWrap" class="md:hidden hidden min-w-0 max-w-[9.5rem]">
+                                <div id="calendarTherapistFilterWrap" class="md:hidden hidden min-w-0 flex-1 max-w-[5.5rem] sm:max-w-[7rem]">
                                     <select id="therapistFilterMobile" aria-label="Filtrar terapeuta"
-                                        class="w-full min-h-[44px] text-xs font-bold uppercase tracking-wide text-gray-700 border border-gray-200 rounded-xl px-2.5 bg-gray-50 outline-none touch-manipulation"></select>
+                                        class="w-full min-h-[44px] text-xs font-bold uppercase tracking-wide text-gray-700 border border-gray-200 rounded-xl px-2 bg-gray-50 outline-none touch-manipulation truncate"
+                                        title="Terapeuta en agenda"></select>
                                 </div>
                                 <div id="calendarViewToggle"
                                     class="flex items-center bg-gray-100 p-1 rounded-xl md:rounded-lg border border-gray-200"

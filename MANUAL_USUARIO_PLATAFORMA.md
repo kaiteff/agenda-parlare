@@ -130,12 +130,17 @@ Ubicado en el panel administrativo de Daniel, el **Control Maestro** gestiona la
 
 ---
 
-## 6. Monitoreo de Alertas del Autopilot (Waitlist)
+## 6. Monitoreo de Alertas del Copiloto Colaborativo (Autopilot)
 
-> [!WARNING]
-> **ESTADO DE OPERACIÓN EN PRODUCCIÓN (MAYO 2026):** El Autopilot está **temporalmente pausado** en el backend para prevenir envíos accidentales mientras Diana está de vacaciones o ante ausencias de terapeutas. En la próxima etapa técnica, se activará en formato **Copiloto Colaborativo** con confirmación dual (Yari/Terapeuta) y un temporizador de 1 hora.
+> [!NOTE]
+> **ESTADO DE OPERACIÓN EN PRODUCCIÓN (MAYO 2026):** El Autopilot ha sido reactivado en formato **Copiloto Colaborativo**. Ahora incluye protecciones avanzadas para evitar envíos indeseados o intempestivos, brindando mayor control al staff de la clínica.
 
-El **Optimizador de Espacios** trabaja de forma silenciosa en el backend, pero ofrece herramientas visuales para su supervisión.
+El **Optimizador de Espacios (Copiloto Colaborativo)** trabaja de forma silenciosa en el backend. Cuando una cita es cancelada con 8 a 24 horas de anticipación, el sistema aplica las siguientes reglas antes de ofrecer el espacio a otros pacientes del día:
+
+1.  **Freno Inicial (Margen Manual de 10 minutos):** El sistema espera 10 minutos antes de gatillar cualquier oferta automática. Si Yari o la Terapeuta reasignan el espacio liberado de forma manual en este lapso, el Autopilot se aborta automáticamente.
+2.  **Quiet Hours (Horario Nocturno):** Si un paciente cancela entre las 10:00 PM y las 6:59 AM, el Autopilot **no despierta a nadie**. La cancelación se queda "en pausa" y el sistema reanudará el proceso de búsqueda y ofertas a las **8:00 AM** del día siguiente.
+3.  **Regla de Proximidad (Ventana de 2 horas):** El sistema nunca ofrecerá un espacio a pacientes cuya cita original esté programada a menos de 2 horas del espacio cancelado. Esto asegura que los papás tengan tiempo realista de prepararse y llegar a la clínica.
+4.  **Confirmación de WhatsApp:** Si se cumplen todas las reglas, el sistema contacta vía WhatsApp a los pacientes programados para más tarde ese día, ofreciéndoles adelantar su cita. El primero en presionar "Sí, acepto" se queda con el lugar.
 
 ### 📋 Gestión de Alertas en Recepción
 Cuando ocurra una compresión exitosa de agenda:

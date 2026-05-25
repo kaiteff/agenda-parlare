@@ -10,6 +10,7 @@ import pytz
 
 # Firebase & Functions
 import firebase_admin
+import time  # added for controlled delays
 from firebase_admin import firestore
 from firebase_functions import https_fn, options, scheduler_fn, firestore_fn
 from firebase_functions.params import SecretParam
@@ -785,7 +786,7 @@ def send_evening_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
     result = execute_send_evening_reminders()
     print(f"🌙 Cron tarde de recordatorios ejecutado: {result}")
 
-@scheduler_fn.on_schedule(schedule="0 1 * * 1", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+@scheduler_fn.on_schedule(schedule="0 7,20 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)  # updated to run twice daily
 def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
     gcal = get_user_calendar_service()
     if not gcal: return
@@ -815,8 +816,50 @@ def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
                 }).execute()
                 db.collection('appointments').document(a['_id']).update({'googleEventId': created_ev['id']})
             except: pass
+        time.sleep(3)  # pause 3 s between therapist syncs to avoid Google API quota errors
 
 # ── 7. Gatillos de Base de Datos (Firestore Triggers) ─────────────────────
+
+# ── 8. Release Quiet‑Hours Offers ────────────────────────────────────────
+@scheduler_fn.on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+def release_quiet_hours_offers(event: scheduler_fn.ScheduledEvent) -> None:
+    """Procesa cancelaciones acumuladas durante Quiet Hours (9 PM‑8 AM)."""
+    db = _get_db()
+    
+    # Import the autopilot logic
+    from space_optimizer import process_autopilot_candidates, _parse_mx_datetime
+    
+    pending = db.collection('quiet_hours_pending').stream()
+    twilio_client = get_twilio_client()
+    
+    count = 0
+    for doc in pending:
+        data = doc.to_dict()
+        appointment_id = data.get("appointmentId")
+        therapist = data.get("therapist")
+        cancelled_date_str = data.get("originalDate")
+        
+        if appointment_id and therapist and cancelled_date_str:
+            try:
+                cancelled_dt = _parse_mx_datetime(cancelled_date_str)
+                process_autopilot_candidates(
+                    appointment_id,
+                    therapist,
+                    cancelled_date_str,
+                    cancelled_dt,
+                    db,
+                    twilio_client,
+                    TWILIO_WHATSAPP_FROM.value,
+                    is_quiet_hours=True
+                )
+                count += 1
+            except Exception as e:
+                logger.error(f"Error procesando pending_quiet_hours {appointment_id}: {e}")
+            
+        # Eliminar el documento pendiente
+        doc.reference.delete()
+        
+    logger.info(f"✅ Liberadas {count} cancelaciones de Quiet Hours.")
 
 @firestore_fn.on_document_created(document="patientProfiles/{patientId}", secrets=ALL_SECRETS)
 def on_patient_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) -> None:

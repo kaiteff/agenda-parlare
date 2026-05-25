@@ -10,6 +10,7 @@ import { buildCalendarSlotIndex, getEventsForSlot } from './CalendarSlotIndex.js
 import { CalendarData } from './CalendarData.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
+import { WaitlistCopilotService } from '../../services/WaitlistCopilotService.js';
 
 export const CalendarUI = {
     /**
@@ -169,33 +170,11 @@ export const CalendarUI = {
                 if (!btn) return;
                 
                 const dDate = btn.dataset.date;
-                const selectedTherapist = AuthManager.getSelectedTherapist();
-                let therapistToBlock = selectedTherapist;
-
-                // Si está en vista 'all', preguntar a quién
-                if (!selectedTherapist || selectedTherapist === 'all') {
-                    const ans = prompt("¿A qué terapeuta quieres bloquear en este día? (diana, sam, vero)", "diana");
-                    if (!ans) return;
-                    
-                    const lowerAns = ans.toLowerCase().trim();
-                    if (['diana', 'sam', 'vero'].includes(lowerAns)) {
-                        therapistToBlock = lowerAns;
-                    } else {
-                        ModalService.alert("Error", "Terapeuta no válido. Debe ser diana, sam o vero.", "error");
-                        return;
-                    }
-                }
-
-                if (await ModalService.confirm("Bloquear Día", `¿Quieres bloquear todo el día ${dDate} para la agenda de ${therapistToBlock}?`)) {
-                    await CalendarData.createEvent({
-                        name: "⛔ Día Inhábil/Vacaciones",
-                        date: dDate + "T08:00:00", // Hora neutra para pasar validaciones
-                        cost: 0,
-                        isSchoolVisit: true,
-                        isFullDayBlock: true,
-                        therapist: therapistToBlock
-                    });
-                }
+                import('./AbsenceModal.js').then(m => {
+                    m.AbsenceModal.open(dDate);
+                }).catch(err => {
+                    console.error("Error al cargar AbsenceModal:", err);
+                });
             });
 
             // Time Slots starting at 8 AM
@@ -260,7 +239,10 @@ export const CalendarUI = {
                                 const chip = document.createElement('div');
                                 const canEdit = AuthManager.canEditItem(evt) || AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
                                 const chipSize = weekMobileCompact ? 'cal-event-chip text-[9px]' : 'text-[10px]';
-                                chip.className = `flex-1 flex items-center justify-center ${chipSize} font-bold rounded border ${bgColor} transition-all truncate px-0.5 gap-0.5 min-w-0 ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}`;
+                                // Glow del Copiloto: si la cita está en delay de 10 min para Autopilot
+                                const glowingIds = WaitlistCopilotService.getGlowingAppointmentIds?.() || new Set();
+                                const glowCls = evt.isCancelled && glowingIds.has(evt.id) ? ' calendar-slot-glow' : '';
+                                chip.className = `flex-1 flex items-center justify-center ${chipSize} font-bold rounded border ${bgColor} transition-all truncate px-0.5 gap-0.5 min-w-0 ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}${glowCls}`;
                                 if (canEdit) {
                                     chip.draggable = true;
                                     chip.ondragstart = (e) => { e.dataTransfer.setData("text/plain", evt.id); chip.style.opacity = '0.5'; };
@@ -328,7 +310,9 @@ export const CalendarUI = {
                                 }
                                 
                                 const cardText = weekMobileCompact ? 'text-[10px] px-1 py-0.5' : 'text-xs px-2 py-1';
-                                eventCard.className = `${heightClass} rounded-lg ${cardText} font-medium flex flex-col justify-center min-w-0 overflow-hidden ${cardClasses} cursor-pointer transition-all`;
+                                const glowingIdsSel = WaitlistCopilotService.getGlowingAppointmentIds?.() || new Set();
+                                const glowClsSel = evt.isCancelled && glowingIdsSel.has(evt.id) ? ' calendar-slot-glow' : '';
+                                eventCard.className = `${heightClass} rounded-lg ${cardText} font-medium flex flex-col justify-center min-w-0 overflow-hidden ${cardClasses} cursor-pointer transition-all${glowClsSel}`;
                                 if (canView) {
                                     eventCard.draggable = true;
                                     eventCard.ondragstart = (e) => { e.dataTransfer.setData("text/plain", evt.id); eventCard.style.opacity = '0.5'; };

@@ -5,17 +5,35 @@
 import { BRAND } from './brandAssets.js';
 
 export const NewFeatureAlert = {
-    STORAGE_KEY: 'parlare_onboarding_v9_0',
+    STORAGE_KEY: 'parlare_onboarding_v9_1',
+    // Claves antiguas en localStorage que ya no se usan y deben limpiarse.
+    LEGACY_KEYS: ['parlare_onboarding_v8_0', 'parlare_onboarding_v9_0'],
+    // Vigencia del pop-up: pasados N días desde launchDate, deja de mostrarse
+    // y el contenido importante vive solo en HelpManual.js.
+    MAX_DAYS_VISIBLE: 2,
+
+    _cleanupLegacyKeys() {
+        try {
+            this.LEGACY_KEYS.forEach((key) => {
+                if (localStorage.getItem(key) !== null) {
+                    localStorage.removeItem(key);
+                    console.log(`[NewFeatureAlert] Limpieza: clave legacy «${key}» eliminada de localStorage.`);
+                }
+            });
+        } catch (_) { /* localStorage bloqueado: noop */ }
+    },
 
     init() {
+        this._cleanupLegacyKeys();
+
         const alreadySeen = localStorage.getItem(this.STORAGE_KEY);
         if (alreadySeen) return;
 
-        const launchDate = new Date('2026-05-18T00:00:00');
+        const launchDate = new Date('2026-05-25T00:00:00');
         const now = new Date();
         const diffDays = Math.ceil(Math.abs(now - launchDate) / (1000 * 60 * 60 * 24));
-        if (diffDays > 3) {
-            console.log('[NewFeatureAlert] Pop-up omitido (excedió el límite de 3 días de vigencia).');
+        if (diffDays > this.MAX_DAYS_VISIBLE) {
+            console.log(`[NewFeatureAlert] Pop-up omitido (excedió el límite de ${this.MAX_DAYS_VISIBLE} días de vigencia). Las novedades viven ahora en el Manual de Ayuda.`);
             return;
         }
 
@@ -32,28 +50,35 @@ export const NewFeatureAlert = {
                 <div class="p-6 md:p-8 bg-gradient-to-tr from-cyan-600 via-blue-600 to-fuchsia-600 text-white text-center shrink-0">
                     <img src="${BRAND.logoSrc}" alt="${BRAND.logoAlt}" class="h-14 w-auto mx-auto mb-3 object-contain bg-white/90 rounded-xl px-3 py-2" />
                     <h2 class="text-xl md:text-2xl font-bold">Novedades en Parláre</h2>
-                    <p class="text-blue-100 text-xs font-semibold mt-1 uppercase tracking-wider">Mayo 2026</p>
+                    <p class="text-blue-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 25 Mayo 2026</p>
                 </div>
                 <div class="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 scroller">
-                    <div class="flex gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                        <span class="text-xl shrink-0">🚦</span>
+                    <div class="flex gap-3 p-4 bg-amber-50 rounded-2xl border-l-4 border-amber-500">
+                        <span class="text-xl shrink-0">⚠️</span>
                         <div>
-                            <h3 class="font-bold text-amber-900 text-sm">Consentimiento WhatsApp</h3>
-                            <p class="text-xs text-amber-950/80 mt-1 leading-relaxed">Semáforo en la ficha del paciente: <strong>WhatsApp Activo</strong>, <strong>Pendiente</strong> o <strong>Seguimiento Manual</strong>. Los recordatorios automáticos solo salen si el padre acepta.</p>
+                            <h3 class="font-bold text-amber-900 text-sm">Regla de Oro destacada en el Manual</h3>
+                            <p class="text-xs text-amber-950/80 mt-1 leading-relaxed"><strong>«Lo que no está en la app de Parláre, no existe.»</strong> Nunca edites citas directamente en Google Calendar. Ábrelo en <strong>Manual de Ayuda</strong> para ver el banner completo y los flujos críticos.</p>
                         </div>
                     </div>
-                    <div class="flex gap-3 p-4 bg-purple-50 rounded-2xl border border-purple-100">
-                        <span class="text-xl shrink-0">📅</span>
+                    <div class="flex gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                        <span class="text-xl shrink-0">🔍</span>
                         <div>
-                            <h3 class="font-bold text-purple-900 text-sm">Modo «Un Día» en celular</h3>
-                            <p class="text-xs text-purple-950/80 mt-1 leading-relaxed">Vista diaria con pestañas Lun–Sáb y toggle <strong>Día | Semana</strong> junto a «Hoy». Sin scroll horizontal en el teléfono.</p>
+                            <h3 class="font-bold text-emerald-900 text-sm">Búsqueda de pacientes a prueba de iPhone</h3>
+                            <p class="text-xs text-emerald-950/80 mt-1 leading-relaxed">Si antes en iPhone no salía un paciente recién creado: ahora la pestaña <strong>Todos</strong> se activa sola al escribir y la búsqueda detecta dictado por voz, paste y autocompletado del teclado. Sin acentos ni mayúsculas obligatorias.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 p-4 bg-rose-50 rounded-2xl border border-rose-100">
+                        <span class="text-xl shrink-0">🔔</span>
+                        <div>
+                            <h3 class="font-bold text-rose-900 text-sm">Campana de notificaciones funcionando en celular</h3>
+                            <p class="text-xs text-rose-950/80 mt-1 leading-relaxed">El panel de notificaciones ya se despliega correctamente en el iPhone (antes quedaba escondido). Toca la <strong>🔔 campana</strong> arriba a la derecha para ver alertas y seguimientos pendientes.</p>
                         </div>
                     </div>
                     <div class="flex gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                        <span class="text-xl shrink-0">📄</span>
+                        <span class="text-xl shrink-0">🎯</span>
                         <div>
-                            <h3 class="font-bold text-blue-900 text-sm">Recibos de reembolso (PDF)</h3>
-                            <p class="text-xs text-blue-950/80 mt-1 leading-relaxed">Al marcar una cita como pagada, el sistema puede generar el comprobante para la aseguradora (cuando esté activo en el paciente).</p>
+                            <h3 class="font-bold text-blue-900 text-sm">Pestañas unificadas en Confirmaciones</h3>
+                            <p class="text-xs text-blue-950/80 mt-1 leading-relaxed">Eliminamos los botones duplicados «Hoy / Mañana» dentro del panel de Confirmaciones. Ahora <strong>solo manda la pestaña principal</strong> arriba de la lista de pacientes y el dashboard se sincroniza solo. Más limpio, menos confusión.</p>
                         </div>
                     </div>
                 </div>

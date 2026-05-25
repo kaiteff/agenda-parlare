@@ -266,6 +266,20 @@ export const AuthManager = {
     },
 
     /**
+     * Verifica si el usuario tiene permitido crear/editar ausencias de una terapeuta específica
+     */
+    canManageBlockFor(therapistId) {
+        if (!this.currentUser) return false;
+        if (this.isAdmin() || this.currentUser?.role === 'receptionist') return true;
+        if (this.currentUser?.role === 'therapist') {
+            const userTherapist = (this.currentUser.therapist || '').toLowerCase();
+            const targetTherapist = (therapistId || '').toLowerCase();
+            return userTherapist === targetTherapist;
+        }
+        return false;
+    },
+
+    /**
      * Helpers de Roles
      */
     isAdmin() {

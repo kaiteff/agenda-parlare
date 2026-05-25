@@ -69,6 +69,17 @@ export const HelpManual = {
                 <div class="flex-1 overflow-y-auto p-8 scroller bg-gray-50/50">
                     <div class="max-w-3xl mx-auto space-y-4 pb-10">
                         
+                        <!-- Regla de Oro Banner -->
+                        <div class="bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-2xl mb-6 shadow-sm">
+                            <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+                                ⚠️ REGLA DE ORO DE LA CLÍNICA
+                            </h4>
+                            <p class="text-amber-800 text-xs mt-1.5 leading-relaxed font-medium">
+                                <strong>"Lo que no está en la app de Parláre, no existe."</strong> 
+                                Jamás edites, crees o elimines citas directamente en Google Calendar. Todo movimiento debe registrarse en esta app para que el bot de WhatsApp funcione, las comisiones se calculen y no se dupliquen eventos.
+                            </p>
+                        </div>
+                        
                         <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">Índice de Ayuda (Orden Alfabético)</p>
 
                         <!-- A. Ajustes de Pago -->
@@ -131,15 +142,40 @@ export const HelpManual = {
                                 <ul class="list-disc ml-5 space-y-1">
                                     <li>No importa si usas <strong>MAYÚSCULAS</strong> o minúsculas.</li>
                                     <li>Ignora los <strong>acentos</strong> (puedes escribir "jose" para buscar a "José").</li>
+                                    <li>Funciona también con número de <strong>teléfono</strong>.</li>
+                                    <li><strong>📱 Tip:</strong> al teclear, automáticamente se cambia a la pestaña <strong>Todos</strong> para encontrar pacientes recién creados aunque no tengan cita hoy.</li>
                                 </ul>
+                                <p class="text-xs text-gray-500 italic">Si usas iPhone y antes la búsqueda no encontraba a un paciente nuevo, ahora es a prueba de iOS: la pestaña «Todos» se activa sola en cuanto escribes, funciona con dictado por voz, pegar texto y autocompletado del teclado.</p>
                             </div>
                         </details>
 
-                        <!-- C. Citas y Calendario -->
+                        <!-- C. Copiloto Colaborativo -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-indigo-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">C</span>
+                                    Copiloto de Adelantos (Waitlist)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <p>Cuando se cancela una cita <strong>entre 8 y 24 horas antes</strong>, el sistema te avisa con un banner flotante arriba a la derecha y la celda de la agenda <strong>brilla en ámbar/esmeralda</strong> con un ⚡ para que la veas de inmediato.</p>
+                                <p>El banner tiene un <strong>contador de 10 minutos</strong> (margen para que decidas) con tres botones:</p>
+                                <ul class="list-disc ml-5 space-y-2">
+                                    <li><strong>🚀 Automático</strong> — Lanza ya las ofertas por WhatsApp a pacientes que tienen cita más tarde ese día con la misma terapeuta. No esperes los 10 min.</li>
+                                    <li><strong>⏸️ Pausar</strong> — Aborta el Autopilot para ese espacio. Úsalo si vas a llenar tú el hueco a mano (paciente que llamó, conoces a alguien, etc.).</li>
+                                    <li><strong>🔍 Manual</strong> — Abre la lista de candidatos elegibles con sus teléfonos y un botón directo de <strong>WhatsApp</strong> con mensaje listo. Útil cuando prefieres llamar personalmente.</li>
+                                </ul>
+                                <p class="text-xs text-gray-500 italic">Si no haces nada en 10 minutos, el sistema envía las ofertas solo. El primero que conteste "Sí, adelantar" desde su WhatsApp se queda con el espacio y los demás reciben "Lo sentimos, ya fue tomado".</p>
+                                <p class="text-xs bg-amber-50 border-l-4 border-amber-400 p-3 rounded text-amber-800">⚠️ El banner solo lo ves tú (Yari) y Diana. Las terapeutas no lo ven para no distraerlas.</p>
+                            </div>
+                        </details>
+
+                        <!-- D. Citas y Calendario -->
                         <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-blue-200">
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
                                 <h3 class="text-gray-800 font-bold flex items-center gap-3">
-                                    <span class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm">C</span>
+                                    <span class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm">D</span>
                                     Citas y Calendario
                                 </h3>
                                 <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -341,8 +377,8 @@ export const HelpManual = {
                                          <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> <strong>Seguimiento Manual</strong> — Rechazó bots; Yari debe contactar por teléfono (alerta en Recepción).</li>
                                      </ul>
                                      <p class="text-xs text-amber-800 mt-2 italic"><strong>Reglas de Consentimiento:</strong>
-                                         <br>• Al crear un paciente nuevo o presionar <strong>Bienvenida</strong>, se desactiva la casilla de recordatorios automáticos (`wantsWhatsapp = false`) y se envía la plantilla de bienvenida solicitando opt-in.
-                                         <br>• Cuando el paciente responde **"Sí, autorizo"**, el sistema <strong>activa la casilla automáticamente</strong> (`wantsWhatsapp = true`) y activa el bot.
+                                         <br>• Al crear un paciente nuevo o presionar <strong>Bienvenida</strong>, se desactiva la casilla de recordatorios automáticos (<code>wantsWhatsapp = false</code>) y se envía la plantilla de bienvenida solicitando opt-in.
+                                         <br>• Cuando el paciente responde **"Sí, autorizo"**, el sistema <strong>activa la casilla automáticamente</strong> (<code>wantsWhatsapp = true</code>) y activa el bot.
                                          <br>• Si activas la casilla manualmente en el expediente, los recordatorios se enviarán inmediatamente sin bloquear, facilitando la transición de pacientes antiguos.
                                      </p>
                                  </div>
@@ -399,7 +435,19 @@ export const HelpManual = {
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
                                 <div class="bg-rose-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-rose-800 mb-1">⛔ Inhabilitar Hora</h4>
-                                    <p>¿Vas a salir a comer o tienes un compromiso? Elige "Inhabilitar" para que nadie pueda agendarte en ese espacio.</p>
+                                    <p>¿Vas a salir a comer o tienes un compromiso? Elige "Inhabilitar" desde el modal de cita para que nadie pueda agendarte en ese espacio.</p>
+                                </div>
+                                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                    <h4 class="font-bold text-amber-900 mb-1">🏖️ Vacaciones / Día completo — <span class="text-[10px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">Nuevo 25 may</span></h4>
+                                    <p class="mb-2">El candado <strong>🔒</strong> de cada día abre ahora un <strong>modal premium</strong> (ya no es el cuadro feo del navegador) con:</p>
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <li><strong>Rango de fechas</strong>: bloquea una semana o dos seguidas con un solo clic (los domingos se excluyen solos).</li>
+                                        <li><strong>Tipo de ausencia</strong>: 🏖️ Vacaciones · 🏥 Médica · 📚 Capacitación · 👤 Personal · 🚫 Otro.</li>
+                                        <li><strong>Todo el día</strong> o un <strong>rango horario</strong> (ej. solo de 2 PM a 5 PM).</li>
+                                        <li><strong>Aviso de citas afectadas</strong>: si hay niños agendados en ese rango, los muestra antes de confirmar para que Yari/Diana decidan reagendar o cancelar.</li>
+                                    </ul>
+                                    <p class="mt-2 text-amber-900"><strong>Permisos:</strong> Diana y Yari pueden bloquear a cualquier terapeuta. <strong>Vero y Sam</strong> pueden bloquear únicamente su propia agenda.</p>
+                                    <p class="mt-2 text-xs text-amber-800">💡 <strong>Tip operativo:</strong> para vacaciones largas usa la opción <em>«Todo el día»</em>. Si necesitas bloquear solo unas horas, hazlo día por día (estamos puliendo la sincronización con Google Calendar).</p>
                                 </div>
                                 <div class="bg-indigo-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-indigo-800 mb-1">🏫 Visita a Escuela</h4>

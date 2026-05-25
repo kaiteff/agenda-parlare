@@ -39,7 +39,10 @@ export const Header = {
                     <img src="assets/parlare-logo.png" alt="Parláre" class="h-7 w-auto max-h-8 object-contain" height="28" />
                 </div>
 
-                <div class="flex items-center gap-2 md:gap-3">
+                <div class="flex items-center gap-1 md:gap-3 min-w-0 flex-shrink justify-end max-w-[58%] sm:max-w-none">
+                    <div id="mobileViewingTherapistWrap" class="md:hidden hidden flex-shrink min-w-0 max-w-[4.25rem] sm:max-w-[5.5rem]" title="">
+                        <span id="mobileViewingTherapistLabel" class="block text-[10px] font-black uppercase tracking-wide text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-1.5 py-1 truncate text-center"></span>
+                    </div>
                     <!-- Admin Settings (Cog) -->
                     <button id="adminSettingsBtn" class="hidden items-center justify-center p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors ring-1 ring-blue-100" title="Configuración de Clínica">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +57,7 @@ export const Header = {
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
                             <span id="notificationBadge" class="hidden absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm">0</span>
                         </button>
-                        <div id="notificationList" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[9999] transform origin-top-right transition-all">
+                        <div id="notificationList" class="hidden fixed md:absolute top-16 md:top-auto left-2 right-2 md:left-auto md:right-0 md:mt-2 md:w-80 max-h-[70vh] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[9999] transform origin-top-right transition-all">
                             <div class="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                                 <h3 class="text-sm font-bold text-gray-700">Notificaciones</h3>
                                 <button id="markAllReadBtn" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Marcar todo leído</button>
@@ -157,7 +160,7 @@ export const Header = {
         if (!syncContainer) {
             syncContainer = document.createElement('div');
             syncContainer.id = 'syncStatusContainer';
-            syncContainer.className = 'ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 transition-all duration-300';
+            syncContainer.className = 'ml-2 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 transition-all duration-300';
             userInfoEl.parentElement.insertBefore(syncContainer, userInfoEl.nextSibling);
 
             // Suscribirse a cambios
@@ -176,7 +179,9 @@ export const Header = {
 
         const STATES = SyncStatus.STATES;
         let html = '';
-        let className = 'ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 ';
+        let className = 'ml-2 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-300 ';
+
+        const hideSyncText = 'hidden md:inline';
 
         switch (state) {
             case STATES.OFFLINE:
@@ -184,7 +189,7 @@ export const Header = {
                     <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 011.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
                     </svg>
-                    <span class="text-xs text-red-500 font-bold hidden md:inline">Sin Conexión</span>
+                    <span class="text-xs text-red-500 font-bold ${hideSyncText}">Sin Conexión</span>
                 `;
                 className += 'bg-red-50 border-red-100 opacity-100';
                 container.title = "Sin conexión a internet";
@@ -309,6 +314,7 @@ export const Header = {
             AuthManager.setSelectedTherapist(newTherapist);
             if (selector) selector.value = newTherapist;
             if (mobileSelector) mobileSelector.value = newTherapist;
+            this._updateMobileTherapistBadge(newTherapist);
             if (window.PatientManager) window.PatientManager.render();
             if (typeof window.renderCalendar === 'function') window.renderCalendar();
         };
@@ -336,10 +342,14 @@ export const Header = {
                 const selected = AuthManager.getSelectedTherapist();
                 selector.value = selected;
                 if (mobileSelector) mobileSelector.value = selected;
+                this._updateMobileTherapistBadge(selected);
 
                 selector.onchange = (e) => applyTherapistChange(e.target.value);
                 if (mobileSelector) {
-                    mobileSelector.onchange = (e) => applyTherapistChange(e.target.value);
+                    mobileSelector.onchange = (e) => {
+                        applyTherapistChange(e.target.value);
+                        this._updateMobileTherapistBadge(e.target.value);
+                    };
                 }
 
                 // Mostrar botón de configuración si es admin
@@ -353,8 +363,29 @@ export const Header = {
                 selectorContainer.classList.add('hidden');
                 selectorContainer.classList.remove('md:flex');
                 if (mobileWrap) mobileWrap.classList.add('hidden');
+                const mobileBadge = document.getElementById('mobileViewingTherapistWrap');
+                if (mobileBadge) mobileBadge.classList.add('hidden');
             }
         }
+    },
+
+    /** Pill compacto en header móvil: quién se está viendo (Diana / Sam / Vero / Todas). */
+    _updateMobileTherapistBadge(therapistId) {
+        const wrap = document.getElementById('mobileViewingTherapistWrap');
+        const label = document.getElementById('mobileViewingTherapistLabel');
+        if (!wrap || !label) return;
+
+        if (!AuthManager.can('switch_therapist_view')) {
+            wrap.classList.add('hidden');
+            return;
+        }
+
+        const id = therapistId || 'all';
+        const names = { diana: 'Diana', sam: 'Sam', vero: 'Vero', all: 'Todas' };
+        const text = names[id] || id;
+        label.textContent = text;
+        wrap.title = `Viendo agenda de ${text}`;
+        wrap.classList.remove('hidden');
     },
 
     /**

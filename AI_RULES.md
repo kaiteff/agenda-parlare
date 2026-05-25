@@ -16,15 +16,18 @@ Cada sesión que toque la **estrategia móvil**, la **UI responsive**, **Capacit
 
 ## 📢 REGLA DE ORO 4: Duración de Pop-ups Informativos (Novedades)
 Cada vez que se cree o actualice un pop-up de novedades o bienvenida (ej: `NewFeatureAlert.js`):
-1. **Expiración de 3 Días:** El pop-up debe dejar de mostrarse automáticamente después de 3 días a partir de su fecha de lanzamiento o creación para evitar fatiga visual y molestias en el staff.
+1. **Expiración de 2 Días:** El pop-up debe dejar de mostrarse automáticamente después de **2 días** (`MAX_DAYS_VISIBLE`) a partir de su fecha de lanzamiento o creación para evitar fatiga visual y molestias en el staff.
 2. **Información Práctica:** El contenido del pop-up siempre debe actualizarse y redactarse con un enfoque claro en el beneficio y las instrucciones prácticas de uso para las terapeutas (Diana, Sam, Vero) y la recepcionista (Yari).
 3. **Persistencia Local:** Utilizar `localStorage` para evitar re-renderizaciones intrusivas una vez cerrado por el usuario dentro del periodo de validez.
+4. **Limpieza de claves legacy:** Cuando se cambie de versión (`STORAGE_KEY`), agregar la clave anterior a `LEGACY_KEYS` para que se borre automáticamente del navegador del usuario en el próximo arranque. Evita acumulación de claves obsoletas.
+5. **Permanencia en el Manual:** Lo importante del pop-up (Regla de Oro, fixes críticos, flujos nuevos) debe vivir también en `HelpManual.js`. El pop-up es solo un destacado temporal; el manual es la referencia permanente.
 
 ## 🗺️ REGLA DE ORO 5: Alineación del Roadmap y Check de Inicio de Sesión
 Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de arquitectura:
 1. **Lectura Obligatoria del Plan:** Todo asistente de IA (Antigravity, Cursor) **DEBE leer y comparar en su primer turno** los archivos `PLAN_DE_TRABAJO.md` y `ANALISIS_ESTRATEGIA_MOVIL.md` para entender con exactitud matemática el estado del proyecto, qué piezas ya están 100% listas/desplegadas y cuáles son las prioridades inmediatas.
 2. **Cero Duplicación de Esfuerzos:** No intentar proponer o reescribir funcionalidades que ya estén marcadas como completadas, evitando colisiones de código y desviaciones de la arquitectura SaaS.
 3. **Refactor y escritorio:** Para roadmap de agenda desktop, rendimiento y deuda técnica gradual, leer y actualizar **`ARQUITECTURA_FUTURA.md`** (registro de cambios con **para qué** y **cómo revertir**). Histórico: `old/ARQUITECTURA_FUTURA.md`.
+4. **Seguridad y vulnerabilidades:** Para auditorías, hallazgos de seguridad, XSS, reglas Firestore/Storage, secretos, dependencias, leer y actualizar **`SEGURIDAD_Y_VULNERABILIDADES.md`**. Cada hallazgo lleva ID `S-XXX`, severidad y estado. Nunca borrar hallazgos cerrados (se mueven a «✅ Reforzado»). Regla Cursor: `.cursor/rules/seguridad-vulnerabilidades.mdc`.
 
 
 ### Qué actualizar en ANALISIS_ESTRATEGIA_MOVIL.md:
@@ -53,6 +56,17 @@ Tras **cualquier** cambio de código o producto, el asistente **DEBE actualizar 
 Mínimo habitual: `ANALISIS_ESTRATEGIA_MOVIL.md` (incluye **⏳ Falta** y **💡 Sugerencias**), `PLAN_DE_TRABAJO.md`, y `HelpManual.js` si cambió la UI para el staff.
 
 Regla Cursor: `.cursor/rules/documentacion-viva-siempre.mdc` (`alwaysApply: true`).
+
+## 🛡️ REGLA DE ORO 8: Seguridad y vulnerabilidades — SIEMPRE revisar
+En **toda** sesión, sin importar el tema:
+
+1. **Tener presente** el estado de `SEGURIDAD_Y_VULNERABILIDADES.md` al iniciar (mínimo el Resumen Ejecutivo).
+2. **Avisar al usuario** si lo que vamos a tocar tiene hallazgos abiertos relacionados. Ejemplo: «Antes de tocar `CalendarUI.js`: hay un S-001 abierto (XSS) en esa misma área; ¿lo arreglamos junto?».
+3. **Actualizar el documento en la misma respuesta** si introdujiste, reforzaste o detectaste algo de seguridad. Nunca borrar hallazgos cerrados (se mueven a «✅ Reforzado / OK»).
+
+Áreas sensibles que disparan revisión inmediata: auth/login, `firestore.rules`, `storage.rules`, secretos backend (Twilio, Google), `innerHTML` con datos de usuario, webhooks WhatsApp, permisos por rol, dependencias npm/pip, headers HTTP, `console.log` con datos sensibles.
+
+Regla Cursor: `.cursor/rules/seguridad-vulnerabilidades.mdc` (`alwaysApply: true`).
 
 ## 🏁 REGLA DE ORO 6: Cierre de sesión ("Vamos" / "Alistémonos")
 Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«alistémonos»**, **«cerramos»**, **«listo para irnos»** o frases similares, el asistente **DEBE hacer un repaso final** de la documentación viva — no basta con un resumen en el chat (la Regla 7 ya debió aplicarse en cada tarea).
