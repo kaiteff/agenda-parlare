@@ -85,6 +85,18 @@ Cuando veas `~~D~~ / S`:
 <summary><b>⛔ T. Tipos de Sesión y Bloqueos</b></summary>
 
 *   **Inhabilitar Hora:** Úsalo para bloquear tus horarios de comida o compromisos personales.
+*   **Vacaciones / Día Completo (Nuevo 🔒):** El candado **🔒** de cada día abre un modal premium diseñado para registrar ausencias de forma estructurada:
+    *   **Rango de fechas:** Bloquea varios días seguidos (ej. una o dos semanas) con un solo clic. Los domingos se excluyen solos.
+    *   **Tipo de ausencia:** Elige el motivo exacto (Vacaciones, Médica, Capacitación, Personal, u Otro).
+    *   **Todo el día o rango horario:** Elige si la ausencia cubre todo el día o solo un bloque de horas (ej. de 2 PM a 5 PM).
+    *   **Aviso de citas afectadas:** Si hay niños agendados en ese horario/días, el modal te los mostrará antes de guardar para evitar cancelaciones imprevistas.
+    *   **Seguridad y Validación (S-011 a S-014):**
+        *   Sanitización automática de nombres de pacientes para evitar XSS.
+        *   Escritura rápida y atómica mediante lotes Firestore (`writeBatch`), reduciendo tiempos de espera al bloquear varios días.
+        *   Validación horaria estricta (no permite hora fin menor o igual que hora inicio).
+        *   Chequeo en memoria para evitar registrar bloqueos duplicados en las mismas horas.
+    *   **Permisos:** Diana (Admin) y Yari (Recepción) pueden inhabilitar horarios para cualquier terapeuta. Las terapeutas (Vero y Sam) solo pueden registrar ausencias para su propia agenda.
+    *   *Tip operativo:* Para vacaciones largas se recomienda usar "Todo el día". Si necesitas bloquear solo unas horas, hazlo día por día para evitar problemas en Google Calendar.
 *   **Visita a Escuela:** Opción especial para sesiones fuera de la clínica.
 </details>
 
@@ -101,5 +113,4 @@ Cuando veas `~~D~~ / S`:
 
 ## 🆘 ¿Necesitas ayuda?
 Si algo no funciona, contacta a Soporte Técnico.
-
-*Última actualización: 21 de Mayo, 2026*
+*Última actualización: 25 de Mayo, 2026*

@@ -12,6 +12,7 @@ import { ToastService } from '../../utils/ToastService.js';
 import { LoaderService } from '../../utils/LoaderService.js';
 import { formatDateLocal } from '../../utils/dateUtils.js';
 import { escapeHTML } from '../../utils/sanitize.js';
+import { db, collectionPath, writeBatch, doc, collection } from '../../firebase.js';
 
 export const AbsenceModal = {
     initialized: false,
@@ -245,6 +246,41 @@ export const AbsenceModal = {
             return;
         }
 
+        // S-013: Horas válidas (endHour > startHour)
+        if (!allDay && endHour <= startHour) {
+            ModalService.alert("Horario Inválido", "La hora de fin debe ser mayor que la hora de inicio.", "warning");
+            return;
+        }
+
+        // S-014: Detección de bloqueos duplicados en memoria
+        const duplicateBlocks = CalendarState.appointments.filter(appt => {
+            if (appt.isCancelled || (!appt.isFullDayBlock && !appt.isHourlyBlock)) return false;
+            if (appt.therapist !== therapist) return false;
+
+            const apptDate = new Date(appt.date);
+            // Validar si cae en el rango de fechas
+            const apptDay = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
+            if (apptDay < start || apptDay > end) return false;
+
+            if (allDay) {
+                return true;
+            } else {
+                const apptHour = apptDate.getHours();
+                if (apptHour >= startHour && apptHour < endHour) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (duplicateBlocks.length > 0) {
+            const proceed = await ModalService.confirm(
+                "Bloqueos Existentes",
+                `Ya existen <strong>${duplicateBlocks.length} bloqueos</strong> registrados para esta terapeuta en el rango seleccionado.<br><br>¿Deseas agregarlos de todas formas?`
+            );
+            if (!proceed) return;
+        }
+
         // 2. Conflict confirmation
         if (this.conflictedAppointments.length > 0) {
             const count = this.conflictedAppointments.length;
@@ -278,39 +314,46 @@ export const AbsenceModal = {
                 return;
             }
 
-            // Create Firestore entries in batch
+            // S-012: Create Firestore entries in batch (atómico y óptimo)
+            const batch = writeBatch(db);
+            const appointmentsCol = collection(db, collectionPath);
+
             for (const dayStr of daysToBlock) {
                 if (allDay) {
-                    // Full day block event at 8 AM
-                    await CalendarData.createEvent({
+                    const docRef = doc(appointmentsCol);
+                    batch.set(docRef, {
                         name: "⛔ Día Inhábil/Vacaciones",
                         date: `${dayStr}T08:00:00`,
                         cost: 0,
-                        isSchoolVisit: false, // BUG FIX: block is not a school visit
+                        isSchoolVisit: false,
                         isFullDayBlock: true,
                         isHourlyBlock: false,
                         therapist: therapist,
                         blockReason: reason,
-                        blockNote: note || ''
+                        blockNote: note || '',
+                        createdAt: new Date().toISOString()
                     });
                 } else {
-                    // Hourly block events for each hour in range
                     for (let h = startHour; h < endHour; h++) {
                         const hStr = h.toString().padStart(2, '0');
-                        await CalendarData.createEvent({
+                        const docRef = doc(appointmentsCol);
+                        batch.set(docRef, {
                             name: "⛔ Hora Inhábil",
                             date: `${dayStr}T${hStr}:00:00`,
                             cost: 0,
-                            isSchoolVisit: false, // BUG FIX: block is not a school visit
+                            isSchoolVisit: false,
                             isFullDayBlock: false,
                             isHourlyBlock: true,
                             therapist: therapist,
                             blockReason: reason,
-                            blockNote: note || ''
+                            blockNote: note || '',
+                            createdAt: new Date().toISOString()
                         });
                     }
                 }
             }
+
+            await batch.commit();
 
             ToastService.success(`Ausencia registrada exitosamente (${daysToBlock.length} día(s)) 🎉`);
             this.close();

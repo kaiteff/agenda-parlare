@@ -194,11 +194,11 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
     - **Bug fix `isSchoolVisit: false`** explícito en `AbsenceModal.js:289,304` para que bloqueos nuevos NO contaminen reportes de visitas escolares.
     - **Apertura desde el botón 🔒** del header de cada día (`CalendarUI.js:168` con `import()` dinámico de `AbsenceModal.js`).
     - Domingos excluidos automáticamente del rango (cierra `currentDay.getDay() !== 0`); muestra toast si no quedaron días hábiles.
-    - **Pendiente del review (no bloquea Fase 2, son hotfixes recomendados):**
-        - **S-011 🚨 XSS** en lista de conflictos (`appt.name` interpolado en `innerHTML:208`). Mismo vector que S-001; aplicar `escapeHTML` cuando se centralice.
-        - **S-012 ⚠️ Escrituras Firestore en serie** (`await createEvent` en bucle): vacaciones de 2 semanas × bloqueo horario = ~120 round-trips serializados sin atomicidad. Migrar a `writeBatch` (hasta 500 escrituras por batch).
-        - **S-013 🟡 Sin validación `endHour > startHour`**: el usuario puede elegir 15 → 10, el bucle no escribe nada pero el toast dice «registrado exitosamente». Agregar guard en `save()`.
-        - **S-014 🟡 Sin detección de duplicados**: dos clics rápidos crean docs duplicados en Firestore + Google Calendar.
+    - **Completado (Hotfixes de seguridad y robustez):**
+        - **S-011 🚨 XSS** en lista de conflictos: mitigado aplicando `escapeHTML` en `AbsenceModal.js`.
+        - **S-012 ⚠️ Escrituras Firestore en serie**: migrado a `writeBatch` (lote atómico) para bloqueos múltiples.
+        - **S-013 🟡 Sin validación `endHour > startHour`**: agregado guard de validación horaria en `save()`.
+        - **S-014 🟡 Sin detección de duplicados**: implementado chequeo proactivo en memoria antes de guardar.
 - [ ] **Fase 2 — Notificación WhatsApp al tutor**: nuevo template Twilio + Cloud Function que escanea citas en el rango y manda mensaje con opciones (A) reagendar misma semana, (B) próxima semana, (C) por WhatsApp manual. Pacientes sin opt-in → alerta en Control Maestro para llamada.
 - [ ] **Fase 3 — Modelo de datos limpio (`availability_blocks/`)**: migrar `isFullDayBlock`/`isHourlyBlock` a colección dedicada con metadata (motivo, substituteTherapist, affectedAppointments snapshot, notificationStatus). Vista consolidada «Próximas ausencias del equipo» en Control Maestro. Refactor mayor, documentar en `ARQUITECTURA_FUTURA.md`.
 - [ ] **Bug colateral conocido (sin resolver aún)**: `GoogleCalendarService.js:263` sube bloqueos de hora como recurrentes 24 semanas en Google Calendar pero en Firestore son docs únicos. Borrarlos en la app deja recurrencia huérfana en Google Calendar. A resolver con Fase 3. **Atención:** con el modal nuevo es más fácil generar muchos bloqueos por hora → si Diana se va 2 semanas con bloqueo horario, hoy se crean 120 docs en Firestore y **cada uno** se vuelve weekly por 24 semanas en Google Calendar → ruido masivo. Mientras Fase 3 llega, recomendar a Yari preferir «Todo el día» para vacaciones largas.
@@ -207,11 +207,11 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 > Primera auditoría completa hecha el 25 may. 1 crítico, 4 altos, 3 medios, 2 mejoras. Resumen ejecutivo y bitácora viven en `SEGURIDAD_Y_VULNERABILIDADES.md`. Cada vez que se toque auth/reglas/secretos/sanitización, actualizar ahí.
 
-- [ ] **S-001 🚨 XSS en chips de la agenda**: nombres de paciente interpolados sin escape en `CalendarUI.js:348-372`. Centralizar `escapeHTML` en `js/utils/sanitize.js` y aplicarlo en TODAS las interpolaciones de datos de usuario. **Acción inmediata.**
-- [ ] **S-011 🚨 XSS en lista de citas en conflicto** (nuevo 25 may post-Antigravity): `AbsenceModal.js:208` interpola `appt.name` en `innerHTML`. Mismo vector que S-001. **Arreglar junto con S-001 en una sola pasada con el helper centralizado.**
-- [ ] **S-012 ⚠️ Escrituras Firestore en serie sin batch** (`AbsenceModal.save()`): migrar a `writeBatch(db)` para atomicidad y reducir latencia.
-- [ ] **S-013 🟡 Sin validación `endHour > startHour`** en `AbsenceModal.save()`: añadir guard + mensaje claro.
-- [ ] **S-014 🟡 Sin detección de bloqueos duplicados**: query previo + confirm si ya existen.
+- [x] **S-001 🚨 XSS en chips de la agenda**: nombres de paciente interpolados sin escape en `CalendarUI.js:348-372`. Centralizado `escapeHTML` en `js/utils/sanitize.js` y aplicado en TODAS las interpolaciones de datos de usuario.
+- [x] **S-011 🚨 XSS en lista de citas en conflicto** (nuevo 25 may post-Antigravity): `AbsenceModal.js:208` interpola `appt.name` en `innerHTML`. Arreglado con el helper `escapeHTML`.
+- [x] **S-012 ⚠️ Escrituras Firestore en serie sin batch** (`AbsenceModal.save()`): migrado a `writeBatch(db)` para atomicidad y reducir latencia.
+- [x] **S-013 🟡 Sin validación `endHour > startHour`** en `AbsenceModal.save()`: añadido guard + mensaje claro.
+- [x] **S-014 🟡 Sin detección de bloqueos duplicados**: query previo + confirm si ya existen.
 - [ ] **S-002 ⚠️ Lectura cruzada `appointments`**: cualquier terapeuta autenticada puede leer nombres+costos+teléfonos de pacientes de otra terapeuta vía consola del navegador. Plan: dividir en `slots` público + `appointment_details` privado, o migrar a custom claims (S-005).
 - [ ] **S-003 ⚠️ Falta `storage.rules`**: Firebase Storage (recibos médicos PDF) puede estar con reglas default permisivas. Auditar y agregar archivo al repo + `firebase.json`.
 - [ ] **S-004 ⚠️ Headers HTTP de seguridad ausentes**: añadir CSP, X-Frame-Options, Referrer-Policy y X-Content-Type-Options en `firebase.json`.

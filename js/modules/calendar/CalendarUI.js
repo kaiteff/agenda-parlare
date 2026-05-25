@@ -11,6 +11,7 @@ import { CalendarData } from './CalendarData.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 import { WaitlistCopilotService } from '../../services/WaitlistCopilotService.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 
 export const CalendarUI = {
     /**
@@ -323,10 +324,10 @@ export const CalendarUI = {
                                 const pInitial = evt.planningTherapist ? evt.planningTherapist.charAt(0).toUpperCase() : null;
                                 
                                 const nameContent = evt.isCancelled 
-                                    ? `<div class="truncate font-semibold flex-1 leading-tight flex items-center gap-1"><span class="line-through">${evt.name}</span> <span class="text-[9px] font-black uppercase bg-red-100 px-1 rounded">X ${evt.cancelledBy || '?'}</span></div>`
+                                    ? `<div class="truncate font-semibold flex-1 leading-tight flex items-center gap-1"><span class="line-through">${escapeHTML(evt.name)}</span> <span class="text-[9px] font-black uppercase bg-red-100 px-1 rounded">X ${evt.cancelledBy || '?'}</span></div>`
                                     : (pInitial && pInitial !== tInitial) 
-                                        ? `<div class="truncate font-semibold flex-1 leading-tight"><span class="line-through opacity-50 text-[10px] mr-1">${pInitial}</span><span class="text-red-500 mr-1">/</span>${evt.name}</div>`
-                                        : `<div class="truncate font-semibold flex-1 leading-tight">${evt.name}</div>`;
+                                        ? `<div class="truncate font-semibold flex-1 leading-tight"><span class="line-through opacity-50 text-[10px] mr-1">${pInitial}</span><span class="text-red-500 mr-1">/</span>${escapeHTML(evt.name)}</div>`
+                                        : `<div class="truncate font-semibold flex-1 leading-tight">${escapeHTML(evt.name)}</div>`;
                                     
                                 eventCard.innerHTML = `<div class="flex items-center justify-between gap-1 w-full">${nameContent}${evt.confirmed && canView && !evt.isCancelled ? '✓' : ''}</div>`;
                                 container.appendChild(eventCard);
@@ -347,7 +348,7 @@ export const CalendarUI = {
                         if (!evt || !AuthManager.canEditItem(evt)) return;
                         const [year, month, day] = dateStr.split('-');
                         const newDateObj = new Date(year, month - 1, day, hour, 0, 0);
-                        if (await ModalService.confirm('Mover Cita', `¿Mover a ${evt.name}?`)) {
+                        if (await ModalService.confirm('Mover Cita', `¿Mover a ${escapeHTML(evt.name)}?`)) {
                             await CalendarData.updateEvent(evt.id, { ...evt, date: newDateObj.toISOString() });
                         }
                     };

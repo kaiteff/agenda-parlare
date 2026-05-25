@@ -129,7 +129,7 @@ firebase deploy --only hosting
 | 10 | **Índice Firestore (si aplica)** | Si el listener de `reception_alerts` o el query de candidatos del Copiloto arroja error en consola: índice compuesto `status` + `createdAt` y `therapist` + `date`. |
 | 11 | **Agenda desktop — media prioridad** | Ver ítems 4–9 en `ARQUITECTURA_FUTURA.md` (tooltips/hover, query semana, debounce…). |
 | 12 | **Fase 1 Ausencias / Vacaciones — validar UI en producción** | Tras deploy 25 may (Antigravity): (a) clic en 🔒 del header del día abre modal premium en vez de `prompt()`; (b) elegir terapeuta (con Diana/admin: select habilitado; con Vero/Sam: select bloqueado en su nombre); (c) rango de fechas multi-día funciona y excluye domingos; (d) toggle «Todo el día» oculta selectores horarios; (e) si hay citas en el rango, aparece tarjeta ámbar con conteo + nombres; (f) confirmar muestra modal con resumen (3 nombres + «N más»); (g) tras guardar, los bloqueos aparecen en el calendario y NO contaminan reportes de visitas escolares. |
-| 13 | **Fase 1 Ausencias — hotfixes pendientes (S-011 a S-014)** | Ver `SEGURIDAD_Y_VULNERABILIDADES.md`. No urgentes (no rompen UX) pero recomendados antes de Fase 2: XSS en lista de conflictos, `writeBatch` Firestore, validación `endHour > startHour`, detección de duplicados. |
+| 13 | **Fase 1 Ausencias — hotfixes pendientes (S-011 a S-014)** | ✅ Completados (XSS mitigado, escrituras en batch implementadas, validación de hora y detección de duplicados añadidas). |
 
 ### 💡 Sugerencias (opcional — próximas sesiones)
 
