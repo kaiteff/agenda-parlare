@@ -29,6 +29,7 @@ import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { SheetService } from '../../services/google/SheetService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 // Redundant CDN imports removed for consistency
 
 /**
@@ -450,7 +451,7 @@ export const PatientActions = {
         const pendingApts = PatientFilters.getPendingPayments(patientName);
         const totalDebt = pendingApts.reduce((sum, apt) => sum + (parseFloat(apt.cost) || 0), 0);
 
-        let confirmMessage = `¿Estás seguro de dar de baja a "<strong>${patientName}</strong>"?<br><br>El paciente quedará inactivo pero sus datos se conservarán.`;
+        let confirmMessage = `¿Estás seguro de dar de baja a "<strong>${escapeHTML(patientName)}</strong>"?<br><br>El paciente quedará inactivo pero sus datos se conservarán.`;
 
         if (totalDebt > 0) {
             confirmMessage += `<br><br><div class="bg-red-50 p-3 rounded border border-red-200 text-red-700 font-bold text-center">⚠️ ALERTA DE DEUDA ⚠️<br>Este paciente debe: $${totalDebt}</div>`;
@@ -520,7 +521,7 @@ export const PatientActions = {
      * @returns {Promise<boolean>} true si se reactivó correctamente
      */
     async reactivatePatient(profileId, patientName) {
-        if (!await ModalService.confirm("Reactivar Paciente", `¿Desea reactivar a "<strong>${patientName}</strong>"?`)) {
+        if (!await ModalService.confirm("Reactivar Paciente", `¿Desea reactivar a "<strong>${escapeHTML(patientName)}</strong>"?`)) {
             return false;
         }
 
@@ -563,7 +564,7 @@ export const PatientActions = {
 
         if (!await ModalService.confirm(
             "⚠️ ELIMINAR PACIENTE ⚠️",
-            `¿Estás COMPLETAMENTE SEGURO de eliminar PERMANENTEMENTE a "<strong>${patientName}</strong>"?<br><br>Esta acción NO SE PUEDE DESHACER.<br><br>Se eliminarán:<br>- El perfil del paciente<br>- TODO su historial de citas<br>- Todos los registros de pagos`,
+            `¿Estás COMPLETAMENTE SEGURO de eliminar PERMANENTEMENTE a "<strong>${escapeHTML(patientName)}</strong>"?<br><br>Esta acción NO SE PUEDE DESHACER.<br><br>Se eliminarán:<br>- El perfil del paciente<br>- TODO su historial de citas<br>- Todos los registros de pagos`,
             "ELIMINAR DEFINITIVAMENTE",
             "Cancelar",
             "danger"

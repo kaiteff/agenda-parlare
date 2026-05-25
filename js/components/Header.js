@@ -321,7 +321,9 @@ export const Header = {
 
         if (selectorContainer && selector) {
             if (AuthManager.can('switch_therapist_view')) {
-                selectorContainer.classList.remove('hidden');
+                // No removemos 'hidden': el HTML inicial es `hidden md:flex` para que el dropdown
+                // de terapeuta desktop NO se muestre en celular (ahí ya tenemos #calendarTherapistFilterWrap
+                // en el toolbar del calendario). Solo aseguramos `md:flex` presente.
                 selectorContainer.classList.add('md:flex');
                 if (mobileWrap) mobileWrap.classList.remove('hidden');
 
@@ -369,23 +371,27 @@ export const Header = {
         }
     },
 
-    /** Pill compacto en header móvil: quién se está viendo (Diana / Sam / Vero / Todas). */
+    /**
+     * Pill compacto en header móvil: quién se está viendo (Diana / Sam / Vero / Todas).
+     *
+     * NOTA (25 may 2026): el pill se mantiene **oculto** en el header móvil para evitar duplicación
+     * con `#calendarTherapistFilterWrap` (filtro del toolbar del calendario, justo debajo del header).
+     * La pista visual del «¿qué agenda estoy viendo?» vive en el filtro del toolbar, no aquí.
+     * Mantenemos el `label.textContent` y `wrap.title` actualizados por si en el futuro se reactiva.
+     */
     _updateMobileTherapistBadge(therapistId) {
         const wrap = document.getElementById('mobileViewingTherapistWrap');
         const label = document.getElementById('mobileViewingTherapistLabel');
         if (!wrap || !label) return;
-
-        if (!AuthManager.can('switch_therapist_view')) {
-            wrap.classList.add('hidden');
-            return;
-        }
 
         const id = therapistId || 'all';
         const names = { diana: 'Diana', sam: 'Sam', vero: 'Vero', all: 'Todas' };
         const text = names[id] || id;
         label.textContent = text;
         wrap.title = `Viendo agenda de ${text}`;
-        wrap.classList.remove('hidden');
+
+        // Siempre oculto: redundante con el filtro del toolbar.
+        wrap.classList.add('hidden');
     },
 
     /**

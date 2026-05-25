@@ -5,6 +5,7 @@
 
 import { AuthManager } from '../managers/AuthManager.js';
 import { renderWhatsAppOptInDot } from '../utils/WhatsAppOptIn.js';
+import { escapeHTML } from '../utils/sanitize.js';
 
 export const Sidebar = {
     /**
@@ -391,7 +392,7 @@ export const Sidebar = {
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-0.5">
-                            <h3 class="font-bold text-gray-800 truncate flex items-center gap-1.5 min-w-0">${renderWhatsAppOptInDot(p)}<span class="truncate">${p.name}</span>${birthdayIcon}${whatsAppStatus}${cancelLabel}</h3>
+                            <h3 class="font-bold text-gray-800 truncate flex items-center gap-1.5 min-w-0">${renderWhatsAppOptInDot(p)}<span class="truncate">${escapeHTML(p.name)}</span>${birthdayIcon}${whatsAppStatus}${cancelLabel}</h3>
                             <div class="w-2 h-2 rounded-full ${statusColor} shadow-sm"></div>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] ${p.isCancelled ? 'text-gray-400' : (p.appointmentTime ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium')}">

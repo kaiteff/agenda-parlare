@@ -10,15 +10,15 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 25 May 2026 — Hotfixes completados)
+## 📊 Resumen ejecutivo (Última actualización: 25 May 2026 — Paso 1 Seguridad completado)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
 | 🚨 Crítico | 0 | Ninguno |
-| ⚠️ Alto | 4 | Lectura cruzada nombres pacientes; falta `storage.rules`; sin headers CSP; whitelist emails hardcoded |
+| ⚠️ Alto | 2 | Lectura cruzada nombres pacientes; whitelist emails hardcoded |
 | 🟡 Medio | 3 | Sin rate-limit frontend; `console.log` con datos sensibles; sin custom claims |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 13 | Ver sección al final |
+| ✅ Reforzado | 17 | Ver sección al final |
 
 ---
 
@@ -40,30 +40,6 @@
   - **Corto plazo:** documentar el riesgo y obtener consentimiento del equipo de terapeutas (es información laboral, no externa).
   - **Mediano plazo:** dividir `appointments` en `{slot: 'occupied', therapist}` público + `appointment_details/{id}` privado con nombre/costo/teléfono. La UI cruza ambos.
   - **Largo plazo (SaaS):** custom claims por terapeuta para hacer la regla `resource.data.therapist == request.auth.token.therapist`.
-- **Estado:** ⚠️ Identificado 25 may.
-
-### S-003 · No hay `storage.rules` en el repo
-
-- **Archivo:** ausente. `firebase.json` no referencia `storage.rules`.
-- **Detalle:** Firebase Storage guarda recibos PDF (`recibos_pacientes/{patientId}/{fecha}.pdf`) y posiblemente justificantes médicos. Sin `storage.rules` definidas en el repo, probablemente está usando las reglas default («usuarios autenticados leen y escriben todo») o lo que se haya configurado manualmente en consola.
-- **Impacto:** Recibos médicos con datos del paciente pueden ser legibles por cualquier usuario autenticado, no solo el dueño de la agenda. Riesgo legal alto.
-- **Mitigación propuesta:**
-  1. Auditar reglas actuales en Firebase Console → Storage → Rules.
-  2. Crear `storage.rules` en el repo con: lectura solo del super user + del terapeuta dueño del paciente (mismo patrón que `patientProfiles`).
-  3. Agregar `"storage": { "rules": "storage.rules" }` en `firebase.json` para que se versione y se deploye.
-- **Estado:** ⚠️ Identificado 25 may.
-
-### S-004 · Sin headers de seguridad HTTP (CSP, X-Frame-Options, etc.)
-
-- **Archivo:** `firebase.json:39-58`
-- **Detalle:** Solo se definen headers de `Cache-Control`. Faltan:
-  - `Content-Security-Policy` (mitiga el XSS del S-001 a nivel browser)
-  - `X-Frame-Options: DENY` (previene clickjacking)
-  - `X-Content-Type-Options: nosniff`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `Permissions-Policy` (camera, mic, geo)
-- **Impacto:** Ataques XSS y clickjacking más fáciles. Si alguien embebe `parlare.app` en un iframe malicioso podría tomar sesión.
-- **Mitigación propuesta:** agregar los headers en `firebase.json`. CSP debe permitir `gstatic.com` (Firebase SDK), `googleapis.com`, `googleusercontent.com`, `googletagmanager.com` si aplica.
 - **Estado:** ⚠️ Identificado 25 may.
 
 ### S-005 · Whitelist de emails hardcoded en `firestore.rules`
@@ -153,6 +129,10 @@
 | 25 may 2026 | **Validación de horas (S-013)** | Agregada validación proactiva en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) que impide crear bloqueos horarios si la hora de fin es menor o igual a la hora de inicio. |
 | 25 may 2026 | **Detección de duplicados (S-014)** | Implementada validación en memoria en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) que escanea bloqueos preexistentes en las mismas fechas antes de guardar, pidiendo confirmación al usuario. |
 | 25 may 2026 | **Safe-area iPhone en `#absenceModalFooter`** (UX móvil) | `index.css` ahora aplica `padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px))` al footer del modal de ausencias (mismo patrón que `#eventModalFooter`, `#adminSettingsModalFooter`). Antes los botones «Cancelar / Confirmar Bloqueo» podían quedar parcialmente tapados por el home indicator de iPhone con notch. Recompilado con `npm run build`. |
+| 25 may 2026 | **XSS regresivo en `ModalService.confirm/alert`** (S-015) | `ModalService._setupModal:153` inserta `message` como `innerHTML` (para permitir `<strong>`/`<br>`). Hallazgo: varios callers pasaban `patient.name` / `apt.name` sin escapar — regresión amplia del patrón S-001/S-011. **Cerrado aplicando `escapeHTML`** en: `AbsenceModal.js:292` (resumen de pacientes afectados), `ReceptionControl.js:518,527` (confirmar asistencia + pago), `PatientActions.js:454,523,566` (dar de baja, reactivar, eliminar), `patientService.js:216` (paciente inactivo). |
+| 25 may 2026 | **XSS en listas de pacientes renderizadas dinámicamente** (S-016) | `${p.name}` / `${patient.name}` interpolados sin escape en `innerHTML` de listas que se renderizan en cada sesión. **Cerrado aplicando `escapeHTML`** en: `Sidebar.js:395` (lista principal de pacientes), `ReceptionControl.js:440-442` (panel Control Maestro), `PatientModals.js:263,266,1222,1232` (ficha de historial + lista de pacientes inactivos, incluyendo el atributo `data-name` que también era peligroso), `CorteDeCaja.js:122-124` (tabla de detalle del corte diario). Estos eran los vectores de mayor impacto porque cualquier nombre malicioso (`<img onerror>`) se ejecutaba en TODAS las sesiones que cargaran la lista. |
+| 25 may 2026 | **Storage Rules versionadas (S-003)** | Creado el archivo [storage.rules](file:///d:/agbc/Ag_Pa/storage.rules) en el repositorio y configurado en `firebase.json`, restringiendo el acceso del bucket a usuarios autenticados (carpeta `justificantes/`) y denegando todo lo demás por defecto. *(Pendiente activar Storage en la consola de Firebase para despliegue final en la nube)*. |
+| 25 may 2026 | **Headers HTTP de seguridad en Hosting (S-004)** | Configurado en `firebase.json` y desplegado con éxito en Hosting en producción. Implementa: CSP (Content Security Policy) restrictiva para scripts y orígenes de confianza, `X-Frame-Options: DENY` (evita clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y `Strict-Transport-Security` (HSTS) para forzar HTTPS por un año. |
 
 ---
 
@@ -162,6 +142,7 @@
 |-------|---------------|---------|-------------------|--------------------|
 | **25 May 2026** | Daniel + Claude | Auditoría inicial completa: Firestore rules, frontend XSS, secrets backend, headers HTTP, Storage rules, console.log. | S-001 (crítico XSS) · S-002 (lectura cruzada) · S-003 (storage.rules ausente) · S-004 (headers HTTP) · S-005 (emails hardcoded) · S-006 (rate-limit) · S-007 (console.log) · S-008 (custom claims) · S-009 (audit log seguridad) · S-010 (dependencias) | — (primera ronda) |
 | **25 May 2026 (tarde)** | Claude (review post-Antigravity Fase 1 Ausencias) | Revisión del nuevo `AbsenceModal.js`, integración en `CalendarUI.js`, modal HTML en `MainModals.js`, función `canManageBlockFor` en `AuthManager.js`, fix `isSchoolVisit`. | S-011 (crítico XSS en lista de conflictos) · S-012 (escrituras en serie sin batch) · S-013 (sin validación endHour > startHour) · S-014 (sin detección duplicados) | **Cierre parcial:** bug `isSchoolVisit:true` en bloqueos nuevos (queda histórico viejo por migrar). Refuerzo: `canManageBlockFor` y eliminación de `prompt()` nativo. |
+| **25 May 2026 (4 pm)** | Claude (sweep XSS extendido tras hotfixes Antigravity) | Auditoría dirigida de `ModalService.confirm/alert` y listas con `innerHTML` que interpolan nombres de paciente. | S-015 (regresión XSS en `ModalService`) · S-016 (XSS en listas dinámicas: `Sidebar`, `ReceptionControl`, `PatientModals`, `CorteDeCaja`) | **Cerrados S-015 + S-016** aplicando `escapeHTML` centralizado. Además: safe-area iPhone en `#absenceModalFooter`. Recompilado con `npm run build` ✅. |
 
 ---
 

@@ -5,9 +5,9 @@
 import { BRAND } from './brandAssets.js';
 
 export const NewFeatureAlert = {
-    STORAGE_KEY: 'parlare_onboarding_v9_1',
+    STORAGE_KEY: 'parlare_onboarding_v9_2',
     // Claves antiguas en localStorage que ya no se usan y deben limpiarse.
-    LEGACY_KEYS: ['parlare_onboarding_v8_0', 'parlare_onboarding_v9_0'],
+    LEGACY_KEYS: ['parlare_onboarding_v8_0', 'parlare_onboarding_v9_0', 'parlare_onboarding_v9_1'],
     // Vigencia del pop-up: pasados N días desde launchDate, deja de mostrarse
     // y el contenido importante vive solo en HelpManual.js.
     MAX_DAYS_VISIBLE: 2,
@@ -53,6 +53,13 @@ export const NewFeatureAlert = {
                     <p class="text-blue-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 25 Mayo 2026</p>
                 </div>
                 <div class="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 scroller">
+                    <div class="flex gap-3 p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-sm">
+                        <span class="text-xl shrink-0">🏖️</span>
+                        <div>
+                            <h3 class="font-bold text-amber-900 text-sm">Vacaciones / Día Completo — modal premium <span class="text-[9px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded ml-1">Nuevo</span></h3>
+                            <p class="text-xs text-amber-950/80 mt-1 leading-relaxed">Al tocar el <strong>🔒 candado</strong> del día ya no aparece el cuadro feo del navegador. Ahora puedes <strong>elegir un rango de fechas</strong> (vacaciones de una o dos semanas en un clic), el <strong>tipo</strong> (Vacaciones · Médica · Capacitación · Personal · Otro) y «Todo el día» o un <strong>rango horario</strong>. Si hay niños agendados en ese período, el modal te los <strong>muestra antes de guardar</strong>. <em>Vero y Sam: solo pueden bloquear su propia agenda; Diana y Yari pueden bloquear a cualquier terapeuta.</em></p>
+                        </div>
+                    </div>
                     <div class="flex gap-3 p-4 bg-amber-50 rounded-2xl border-l-4 border-amber-500">
                         <span class="text-xl shrink-0">⚠️</span>
                         <div>

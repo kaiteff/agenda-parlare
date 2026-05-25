@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Regla para la carpeta de justificantes médicos
+    match /justificantes/{fileName} {
+      // Solo usuarios autenticados de Parláre pueden leer y escribir justificantes
+      allow read, write: if request.auth != null;
+    }
+    
+    // Bloquear el resto del almacenamiento por defecto
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

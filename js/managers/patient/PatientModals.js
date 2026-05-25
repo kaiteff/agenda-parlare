@@ -28,6 +28,7 @@ import { SettingsManager } from '../SettingsManager.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { getReimbursementReceiptFromDom } from '../../services/patientService.js';
 import { renderWhatsAppOptInBadge } from '../../utils/WhatsAppOptIn.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 
 /**
  * Gestión de modales
@@ -260,10 +261,10 @@ export const PatientModals = {
                 <div class="flex flex-col gap-2 w-full min-w-0 pr-14 md:pr-0">
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="w-11 h-11 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm border border-white">
-                            ${patient.name.charAt(0)}
+                            ${escapeHTML(patient.name.charAt(0))}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="text-base md:text-lg font-extrabold text-gray-900 leading-tight truncate">${patient.name}</div>
+                            <div class="text-base md:text-lg font-extrabold text-gray-900 leading-tight truncate">${escapeHTML(patient.name)}</div>
                             <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
                                 <span class="w-2 h-2 rounded-full ${patient.isActive !== false ? 'bg-green-500' : 'bg-gray-400'}"></span>
                                 Terapeuta ${therapistName}
@@ -1219,7 +1220,7 @@ export const PatientModals = {
 
             patientEl.innerHTML = `
                 <div>
-                    <div class="font-semibold text-gray-800">${patient.name}</div>
+                    <div class="font-semibold text-gray-800">${escapeHTML(patient.name)}</div>
                     <div class="text-xs text-gray-500">
                         Terapeuta: ${patient.therapist === 'diana' ? 'Diana' : 'Sam'}
                     </div>
@@ -1228,8 +1229,8 @@ export const PatientModals = {
                 </div>
                 <button 
                     class="reactivate-btn px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm h-fit"
-                    data-id="${patient.id}"
-                    data-name="${patient.name}">
+                    data-id="${escapeHTML(patient.id)}"
+                    data-name="${escapeHTML(patient.name)}">
                     ✓ Reactivar
                 </button>
             `;

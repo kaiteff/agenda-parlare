@@ -3,6 +3,7 @@ import { db, patientProfilesPath, collectionPath, collection, addDoc, updateDoc,
 import { query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { validatePatientName, normalizeName } from '../utils/validators.js';
 import { ModalService } from '../utils/ModalService.js';
+import { escapeHTML } from '../utils/sanitize.js';
 
 /**
  * Busca un perfil de paciente por nombre
@@ -213,7 +214,7 @@ export async function ensurePatientProfile(patientName, firstName = '', lastName
 
             if (await ModalService.confirm(
                 "Paciente Inactivo",
-                `⚠️ ${patientName} está dado/a de baja desde el ${dateStr}.<br><br>¿Desea reactivar y agendar?`,
+                `⚠️ <strong>${escapeHTML(patientName)}</strong> está dado/a de baja desde el ${dateStr}.<br><br>¿Desea reactivar y agendar?`,
                 "Reactivar",
                 "Cancelar"
             )) {

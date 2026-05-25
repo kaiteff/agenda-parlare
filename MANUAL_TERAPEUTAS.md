@@ -113,4 +113,4 @@ Cuando veas `~~D~~ / S`:
 
 ## 🆘 ¿Necesitas ayuda?
 Si algo no funciona, contacta a Soporte Técnico.
-*Última actualización: 25 de Mayo, 2026*
+*Última actualización: 25 de Mayo, 2026 (Pop-up Novedades v9.2 con tarjeta «🏖️ Vacaciones / Día Completo — modal premium» + sweep XSS S-015/S-016 + safe-area iPhone en `#absenceModalFooter`).*

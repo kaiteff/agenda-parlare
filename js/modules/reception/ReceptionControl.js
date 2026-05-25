@@ -14,6 +14,7 @@ import { CalendarData } from '../calendar/CalendarData.js';
 import { PatientModals } from '../../managers/patient/PatientModals.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 import { ReceptionAlertsService } from '../../services/ReceptionAlertsService.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 
 export const ReceptionControl = {
     isInitialized: false,
@@ -436,9 +437,9 @@ export const ReceptionControl = {
             tr.innerHTML = `
                 <td class="px-4 md:px-6 py-3 md:py-4">
                     <div class="flex flex-col">
-                        <span class="font-bold text-gray-800 text-sm md:text-base">${p.name}</span>
-                        <span class="text-[10px] md:text-xs text-gray-500">${p.parentName || 'Sin responsable'}</span>
-                        <span class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">${p.phone || ''}</span>
+                        <span class="font-bold text-gray-800 text-sm md:text-base">${escapeHTML(p.name)}</span>
+                        <span class="text-[10px] md:text-xs text-gray-500">${escapeHTML(p.parentName || 'Sin responsable')}</span>
+                        <span class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">${escapeHTML(p.phone || '')}</span>
                     </div>
                 </td>
                 <td class="px-4 md:px-6 py-3 md:py-4">
@@ -515,7 +516,7 @@ export const ReceptionControl = {
 
     async handleConfirm(apt) {
         if (!apt) return;
-        const ok = await ModalService.confirm('Confirmar Asistencia', `¿Confirmar asistencia de **${apt.name}** para el ${this.formatDate(apt.date)}?`, 'Confirmar');
+        const ok = await ModalService.confirm('Confirmar Asistencia', `¿Confirmar asistencia de <strong>${escapeHTML(apt.name)}</strong> para el ${this.formatDate(apt.date)}?`, 'Confirmar');
         if (ok) {
             await PatientActions.toggleConfirmationDirect(apt.id, false);
             this.render();
@@ -524,7 +525,7 @@ export const ReceptionControl = {
 
     async handlePayment(patient, pendingApts) {
         const total = pendingApts.reduce((sum, a) => sum + (a.cost || 0), 0);
-        const ok = await ModalService.confirm('Registrar Pago', `¿Marcar como pagadas las **${pendingApts.length} sesiones** de **${patient.name}** por un total de **$${total}**?`, 'SÍ, PAGADO', 'Cancelar', 'success');
+        const ok = await ModalService.confirm('Registrar Pago', `¿Marcar como pagadas las <strong>${pendingApts.length} sesiones</strong> de <strong>${escapeHTML(patient.name)}</strong> por un total de <strong>$${total}</strong>?`, 'SÍ, PAGADO', 'Cancelar', 'success');
         
         if (ok) {
             ToastService.info(`Procesando pago de ${patient.name}...`);

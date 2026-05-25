@@ -284,7 +284,11 @@ export const AbsenceModal = {
         // 2. Conflict confirmation
         if (this.conflictedAppointments.length > 0) {
             const count = this.conflictedAppointments.length;
-            const patientNames = Array.from(new Set(this.conflictedAppointments.map(a => a.name))).slice(0, 3).join(', ');
+            // S-015: escapar nombres de paciente antes de meterlos en el mensaje HTML del ModalService
+            const patientNames = Array.from(new Set(this.conflictedAppointments.map(a => a.name)))
+                .slice(0, 3)
+                .map(n => escapeHTML(n))
+                .join(', ');
             const summary = count > 3 ? `${patientNames} y ${count - 3} más` : patientNames;
 
             const confirmSave = await ModalService.confirm(

@@ -5,6 +5,7 @@
 
 import { CalendarState } from '../calendar/CalendarState.js';
 import { AuthManager } from '../../managers/AuthManager.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 
 export const CorteDeCaja = {
 
@@ -119,9 +120,9 @@ export const CorteDeCaja = {
         } else {
             tbody.innerHTML = report.detalle.map(d => `
                 <tr class="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td class="px-4 py-2.5 font-medium text-gray-800">${d.name}</td>
-                    <td class="px-4 py-2.5 text-gray-500">${d.time}</td>
-                    <td class="px-4 py-2.5 text-gray-500 capitalize">${d.therapist}</td>
+                    <td class="px-4 py-2.5 font-medium text-gray-800">${escapeHTML(d.name)}</td>
+                    <td class="px-4 py-2.5 text-gray-500">${escapeHTML(d.time)}</td>
+                    <td class="px-4 py-2.5 text-gray-500 capitalize">${escapeHTML(d.therapist)}</td>
                     <td class="px-4 py-2.5 text-right font-medium">$${d.cost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                     <td class="px-4 py-2.5 text-center">
                         ${d.isPaid
