@@ -152,6 +152,7 @@
 | 25 may 2026 | **Escritura en lote (`writeBatch`) (S-012)** | Reemplazada creación en serie en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) por un lote atómico (`writeBatch`) de Firestore para bloqueos múltiples (vacaciones). Evita corrupción de datos y colapsa la latencia. |
 | 25 may 2026 | **Validación de horas (S-013)** | Agregada validación proactiva en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) que impide crear bloqueos horarios si la hora de fin es menor o igual a la hora de inicio. |
 | 25 may 2026 | **Detección de duplicados (S-014)** | Implementada validación en memoria en [AbsenceModal.js](file:///d:/agbc/Ag_Pa/js/modules/calendar/AbsenceModal.js) que escanea bloqueos preexistentes en las mismas fechas antes de guardar, pidiendo confirmación al usuario. |
+| 25 may 2026 | **Safe-area iPhone en `#absenceModalFooter`** (UX móvil) | `index.css` ahora aplica `padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px))` al footer del modal de ausencias (mismo patrón que `#eventModalFooter`, `#adminSettingsModalFooter`). Antes los botones «Cancelar / Confirmar Bloqueo» podían quedar parcialmente tapados por el home indicator de iPhone con notch. Recompilado con `npm run build`. |
 
 ---
 

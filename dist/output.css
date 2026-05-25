@@ -4432,7 +4432,8 @@ header::after {
 #newPatientModalFooter,
 #patientHistoryModalFooter,
 #inactivePatientsModalFooter,
-#adminSettingsModalFooter {
+#adminSettingsModalFooter,
+#absenceModalFooter {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }
 
@@ -4440,7 +4441,8 @@ header::after {
   #newPatientModalFooter,
     #patientHistoryModalFooter,
     #inactivePatientsModalFooter,
-    #adminSettingsModalFooter {
+    #adminSettingsModalFooter,
+    #absenceModalFooter {
     padding-bottom: 1rem;
   }
 }
