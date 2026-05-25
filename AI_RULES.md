@@ -98,6 +98,15 @@ Al finalizar **cualquier tarea** (Regla 7) y al cerrar sesión (Regla 6), se deb
      `firebase deploy`
 5. **ZIP Backup**: Crear un respaldo comprimido de la sesión (ej: `Backup_Parlare_YYYYMMDD_Final.zip`).
 6. **Resumen de Sesión**: Crear el archivo de cierre en `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`.
+
+## 💸 REGLA DE ORO 9: Arquitectura de Costo Cero ($0) y Gasto Mínimo
+Cualquier desarrollador o asistente de IA debe diseñar y optimizar el sistema para mantenerse dentro de los niveles gratuitos de Firebase (Blaze con cobros de $0 USD):
+1. **Ignorados en Hosting Estricto:** Hosting debe servir exclusivamente el frontend estático. Está prohibido subir entornos virtuales (`functions/**`), carpetas de dependencias (`node_modules/**`), historial de git (`.git/**`), archivos de cache (`.firebase/**`, `.cursor/**`) o scripts locales (`scratch/**`, `scripts/**`). El despliegue de hosting debe mantenerse por debajo de **150 archivos** para evitar exceder los 10 GB gratuitos.
+2. **Minimización de Consultas Firestore:** Está prohibido suscribirse en tiempo real (`onSnapshot`) a colecciones completas sin filtros o límites de fechas.
+   * La agenda solo debe escuchar citas dentro del rango visible (`[-30, +60]` días).
+   * La lista y saldos de pacientes no debe descargar todo el historial de citas; los detalles históricos y balances se cargan bajo demanda (`getDocs`) al abrir la ficha específica de un paciente.
+   * Los terapeutas deben filtrar los listeners por su ID correspondiente (`therapistId`) para evitar leer datos ajenos.
+
 ## 💻 ENTORNO DE DESARROLLO: Cursor.sh (Desde 17 de Mayo 2026)
 A partir del **domingo 17 de Mayo de 2026**, el desarrollo de la V2 se realiza de manera centralizada utilizando **Cursor.sh** como el entorno e IDE de cabecera.
 - **Sincronización de IA**: Cualquier asistente de IA debe estar consciente de que estamos trabajando en Cursor.sh y coordinar de manera armónica las sugerencias de la IA interna de Cursor con los cambios de arquitectura globales.
