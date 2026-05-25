@@ -328,11 +328,21 @@ export const AbsenceModal = {
             const batch = writeBatch(db);
             const appointmentsCol = collection(db, collectionPath);
 
+            // Map reason to dynamic names and emojis
+            const reasonMap = {
+                vacation: { emoji: "🏖️", text: "Vacaciones" },
+                medical: { emoji: "🏥", text: "Ausencia Médica" },
+                training: { emoji: "📚", text: "Capacitación" },
+                personal: { emoji: "👤", text: "Asunto Personal" },
+                other: { emoji: "⛔", text: "Hora Inhábil" }
+            };
+            const reasonInfo = reasonMap[reason] || { emoji: "⛔", text: "Hora Inhábil" };
+
             for (const dayStr of daysToBlock) {
                 if (allDay) {
                     const docRef = doc(appointmentsCol);
                     batch.set(docRef, {
-                        name: "⛔ Día Inhábil/Vacaciones",
+                        name: `${reasonInfo.emoji} ${reasonInfo.text} (Todo el día)`,
                         date: `${dayStr}T08:00:00`,
                         cost: 0,
                         isSchoolVisit: false,
@@ -348,7 +358,7 @@ export const AbsenceModal = {
                         const hStr = h.toString().padStart(2, '0');
                         const docRef = doc(appointmentsCol);
                         batch.set(docRef, {
-                            name: "⛔ Hora Inhábil",
+                            name: `${reasonInfo.emoji} ${reasonInfo.text}`,
                             date: `${dayStr}T${hStr}:00:00`,
                             cost: 0,
                             isSchoolVisit: false,
