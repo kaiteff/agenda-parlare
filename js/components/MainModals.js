@@ -461,7 +461,7 @@ export const MainModals = {
                     <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
                     <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-center gap-3 bg-white flex-shrink-0">
                         <h3 id="absenceModalTitle" class="text-lg md:text-xl font-bold tracking-tight text-gray-900">Registrar Ausencia / Vacaciones</h3>
-                        <button type="button" onclick="import('../modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
+                        <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -558,7 +558,7 @@ export const MainModals = {
                     </div>
                     <div id="absenceModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl">
                         <div class="flex gap-3">
-                            <button type="button" onclick="import('../modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="flex-1 min-h-[48px] touch-manipulation bg-white text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-50 font-bold border border-gray-200 transition-colors">Cancelar</button>
+                            <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="flex-1 min-h-[48px] touch-manipulation bg-white text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-50 font-bold border border-gray-200 transition-colors">Cancelar</button>
                             <button type="button" id="absenceSaveBtn" class="flex-1 min-h-[48px] touch-manipulation bg-blue-600 text-white py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors flex items-center justify-center gap-2">Confirmar Bloqueo</button>
                         </div>
                     </div>

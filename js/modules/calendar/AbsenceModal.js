@@ -56,6 +56,12 @@ export const AbsenceModal = {
             };
         }
 
+        if (modal) {
+            modal.onclick = (e) => {
+                if (e.target === modal) this.close();
+            };
+        }
+
         if (saveBtn) {
             saveBtn.onclick = () => this.save();
         }
