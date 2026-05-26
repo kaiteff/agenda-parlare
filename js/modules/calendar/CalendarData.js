@@ -35,60 +35,107 @@ async function getClinicFee(patientName) {
 }
 
 export const CalendarData = {
+    _subscribers: [],
+    _unsubscribeSnapshot: null,
+    _lastData: null,
+    _lastMetadata: null,
+
     /**
      * Suscribe a cambios en la colección de citas
      * @param {Function} onUpdate - Callback cuando hay nuevos datos
      * @returns {Function} Unsubscribe function
      */
     subscribe(onUpdate) {
-        const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() - 30);
-        const end = new Date(today);
-        end.setDate(today.getDate() + 61); // +61 para capturar el día 60 completo
+        if (!onUpdate) return () => {};
 
-        const getLocalDateStr = (d) => {
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-        const startDateStr = getLocalDateStr(start);
-        const endDateStr = getLocalDateStr(end);
+        // Agregar suscriptor
+        this._subscribers.push(onUpdate);
 
-        const colRef = collection(db, collectionPath);
-        
-        let q;
-
-        if (AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist') {
-            q = query(
-                colRef,
-                where('date', '>=', startDateStr),
-                where('date', '<', endDateStr)
-            );
-        } else {
-            const therapistId = AuthManager.currentUser?.therapist || 'diana';
-            q = query(
-                colRef,
-                where('date', '>=', startDateStr),
-                where('date', '<', endDateStr),
-                where('therapist', '==', therapistId)
-            );
+        // Si ya tenemos datos previos, entregárselos de inmediato al nuevo suscriptor
+        if (this._lastData) {
+            try {
+                onUpdate(this._lastData, this._lastMetadata || { fromCache: true });
+            } catch (e) {
+                console.error("Error al notificar suscriptor inicial:", e);
+            }
         }
 
-        return onSnapshot(q, (snapshot) => {
-            const data = [];
-            snapshot.forEach((doc) => {
-                data.push({ id: doc.id, ...doc.data() });
+        // Si es el primer suscriptor, iniciar el listener real de Firestore
+        if (this._subscribers.length === 1) {
+            const today = new Date();
+            const start = new Date(today);
+            start.setDate(today.getDate() - 30);
+            const end = new Date(today);
+            end.setDate(today.getDate() + 61); // +61 para capturar el día 60 completo
+
+            const getLocalDateStr = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            const startDateStr = getLocalDateStr(start);
+            const endDateStr = getLocalDateStr(end);
+
+            const colRef = collection(db, collectionPath);
+            
+            let q;
+
+            if (AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist') {
+                q = query(
+                    colRef,
+                    where('date', '>=', startDateStr),
+                    where('date', '<', endDateStr)
+                );
+            } else {
+                const therapistId = AuthManager.currentUser?.therapist || 'diana';
+                q = query(
+                    colRef,
+                    where('date', '>=', startDateStr),
+                    where('date', '<', endDateStr),
+                    where('therapist', '==', therapistId)
+                );
+            }
+
+            console.log(`📡 CalendarData: Iniciando listener Firestore compartido (Rango ${startDateStr} - ${endDateStr}).`);
+
+            this._unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                const data = [];
+                snapshot.forEach((doc) => {
+                    data.push({ id: doc.id, ...doc.data() });
+                });
+
+                this._lastData = data;
+                this._lastMetadata = snapshot.metadata;
+
+                CalendarState.setAppointments(data);
+
+                // Notificar a todos los suscriptores
+                this._subscribers.forEach(cb => {
+                    try {
+                        cb(data, snapshot.metadata);
+                    } catch (e) {
+                        console.error("Error en callback de suscriptor de citas:", e);
+                    }
+                });
+            }, (error) => {
+                console.error("Error en listener compartido de Firestore:", error);
             });
+        }
 
-            console.log(`📡 CalendarData: Recibidas ${data.length} citas de Firebase (Rango ${startDateStr} - ${endDateStr}).`);
-            CalendarState.setAppointments(data);
-
-            if (onUpdate) onUpdate(data, snapshot.metadata);
-        }, (error) => {
-            console.error("Error Snapshot:", error);
-        });
+        // Retornar función para desuscribirse
+        return () => {
+            this._subscribers = this._subscribers.filter(cb => cb !== onUpdate);
+            
+            // Si ya no quedan suscriptores, apagar el listener real
+            if (this._subscribers.length === 0 && this._unsubscribeSnapshot) {
+                console.log("📡 CalendarData: Sin suscriptores. Apagando listener Firestore.");
+                this._unsubscribeSnapshot();
+                this._unsubscribeSnapshot = null;
+                this._lastData = null;
+                this._lastMetadata = null;
+            }
+        };
     },
 
     // Wrappers para servicios de citas

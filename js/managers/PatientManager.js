@@ -25,6 +25,7 @@ import { PatientModalsHTML } from './patient/PatientModalsHTML.js';
 import { db, collectionPath, collection, onSnapshot, query, orderBy, where } from '../firebase.js';
 import { Logger } from '../utils/Logger.js';
 import { AuthManager } from './AuthManager.js';
+import { CalendarData } from '../modules/calendar/CalendarData.js';
 
 const log = Logger.create('PatientMgr');
 
@@ -175,41 +176,15 @@ export const PatientManager = {
         // los desuscribimos antes de crear nuevos para evitar memory leak y rendido doble.
         this._teardownListeners();
 
-        const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() - 30);
-        const end = new Date(today);
-        end.setDate(today.getDate() + 61); // +61 para capturar el día 60 completo
-
-        const getLocalDateStr = (d) => {
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-        const startDateStr = getLocalDateStr(start);
-        const endDateStr = getLocalDateStr(end);
-
         const user = AuthManager.currentUser;
         const isSuperUser = AuthManager.isAdmin() || user?.role === 'receptionist';
         const therapistId = user?.therapist || 'diana';
 
-        // 1. Listener de CITAS (rango 90 días, filtrado por terapeuta para no-admins)
-        const colRef = collection(db, collectionPath);
-        const qApts = isSuperUser
-            ? query(colRef, where('date', '>=', startDateStr), where('date', '<', endDateStr))
-            : query(colRef, where('date', '>=', startDateStr), where('date', '<', endDateStr), where('therapist', '==', therapistId));
-
-        this._unsubscribeApts = onSnapshot(qApts, (snapshot) => {
-            const appointments = [];
-            snapshot.forEach((doc) => {
-                appointments.push({ id: doc.id, ...doc.data() });
-            });
-            // Sort en cliente (evita exigir índices compuestos extra)
-            appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
-            this._processData(appointments, null);
-        }, (error) => {
-            log.error('Error en listener de citas:', error);
+        // 1. Listener de CITAS unificado y compartido vía CalendarData
+        this._unsubscribeApts = CalendarData.subscribe((appointments) => {
+            // Clonar para no alterar el array compartido y ordenar en cliente
+            const sortedAppointments = [...appointments].sort((a, b) => new Date(b.date) - new Date(a.date));
+            this._processData(sortedAppointments, null);
         });
 
         // 2. Listener de PERFILES (filtrado por seguridad legal)
