@@ -488,6 +488,9 @@ export const PatientModals = {
                             <button id="scheduleFromHistoryBtn" class="mt-2 w-full py-2 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">Agendar Ahora</button>
                         `}
                     </div>
+                </div>
+            `;
+        }
 
         // Actualizar totales de la parte inferior (antiguos dom)
         if (dom.patientTotalPaid) dom.patientTotalPaid.textContent = `$${totalPaid}`;
