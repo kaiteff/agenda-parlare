@@ -5,10 +5,10 @@
  *
  * Contrato con el backend (`functions/space_optimizer.py`):
  *   - El trigger `on_appointment_cancelled_trigger` detecta cancelaciones
- *     en ventana 8-24 h y hace un `time.sleep(600)` (10 min de margen).
- *   - Este servicio detecta esas mismas cancelaciones desde el frontend
- *     y muestra un panel a Yari para que decida antes de que termine el
- *     delay.
+ *     en ventana 8-24 h y hace un polling de 30 s sobre `copilot_overrides`
+ *     durante 480 s (8 min de margen manual). Este límite viene del tope
+ *     de Google Cloud Functions para triggers Firestore (540 s); se dejó
+ *     un margen de 1 min para Twilio/Sheets tras procesar candidatos.
  *
  *   El frontend escribe en la colección `copilot_overrides/{appointmentId}`
  *   con uno de los siguientes valores en `action`:
@@ -17,9 +17,10 @@
  *     - 'manual_search': Yari abrió la búsqueda manual; sigue habiendo
  *        delay automático mientras tanto.
  *
- *   El backend (próximo sprint) debe leer este documento al despertar del
- *   `time.sleep` y respetar la decisión. Mientras tanto el frontend ya deja
- *   constancia para Yari + para auditoría.
+ *   El backend lee ese documento en cada ciclo de polling (cada 30 s) y
+ *   respeta la decisión. Por eso `COPILOT_DELAY_MS` DEBE coincidir con el
+ *   `total_wait` del backend, o el banner mostrará tiempo restante falso
+ *   y las pausas tardías se perderían silenciosamente.
  */
 
 import {
@@ -37,8 +38,10 @@ import {
 const APPOINTMENTS = 'appointments';
 const OVERRIDES = 'copilot_overrides';
 
-// 10 minutos en milisegundos — debe coincidir con `time.sleep(600)` del backend
-export const COPILOT_DELAY_MS = 10 * 60 * 1000;
+// 8 minutos en milisegundos — DEBE coincidir con `total_wait = 480` en
+// `functions/space_optimizer.py:174`. Cambiar uno sin cambiar el otro rompe
+// la UX (banner dice "te quedan X min" pero el backend ya terminó hace rato).
+export const COPILOT_DELAY_MS = 8 * 60 * 1000;
 
 // Ventana de antelación: 8 h a 24 h antes de la cita
 const MIN_HOURS_BEFORE = 8;
@@ -109,7 +112,7 @@ export const WaitlistCopilotService = {
     },
 
     /**
-     * Salta el delay de 10 min y dispara Autopilot YA.
+     * Salta el delay (ver `COPILOT_DELAY_MS`) y dispara Autopilot YA.
      */
     async skipDelay(appointmentId) {
         await this._writeOverride(appointmentId, 'skip_delay');
@@ -235,7 +238,7 @@ export const WaitlistCopilotService = {
                 return;
             }
 
-            // ¿Cancelación reciente (< 10 min)?
+            // ¿Cancelación reciente (dentro del COPILOT_DELAY_MS)?
             const cancelledAt = this._toMillis(data.cancelledAt) || now;
             const elapsed = now - cancelledAt;
             if (elapsed >= COPILOT_DELAY_MS) {

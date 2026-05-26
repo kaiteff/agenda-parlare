@@ -6,7 +6,7 @@
 >
 > **Mapa operativo diario:** [`ANALISIS_ESTRATEGIA_MOVIL.md`](ANALISIS_ESTRATEGIA_MOVIL.md) · **Prioridades producto:** [`PLAN_DE_TRABAJO.md`](PLAN_DE_TRABAJO.md)
 
-*Última actualización: **19 de Mayo de 2026***
+*Última actualización: **26 de Mayo de 2026** — Registro extendido con 4 cambios mayores del 26 may: Optimización Firestore Fase 1 (Antigravity), Fase 2 hotfixes (Cursor), Win 1 multicast `CalendarData.subscribe` (Antigravity), Hotfix sincronización Copiloto (Cursor). Lecturas estimadas: 29 k → 8–12 k/día (-58 % a -75 %).*
 
 ---
 
@@ -30,6 +30,10 @@
 | 19 May 2026 | **#1 Auto-scroll inteligente** | `CalendarState.js`, `CalendarEvents.js`, `CalendarUI.js` | No saltar scroll al cambiar semana; solo carga inicial y botón **Hoy** | Quitar flag `scrollToWorkHoursOnNextRender` y restaurar `setTimeout` siempre en `renderCalendar` |
 | 19 May 2026 | **#2 Índice citas por slot** | `CalendarSlotIndex.js` (nuevo), `CalendarUI.js` | Menos `filter()` por celda; render más rápido con muchas citas | Borrar import índice y volver al `filter` en `CalendarUI` |
 | 19 May 2026 | **#3 Toggle Día \| Semana en desktop** | `index.html` (quitar `md:hidden` en `#calendarViewToggle`) | Misma UX que móvil en `md+`; reutiliza `CalendarState.viewMode` y bind en `CalendarEvents.js` | Volver a poner `md:hidden` en el contenedor del toggle |
+| 26 May 2026 | **Optimización Firestore Fase 1** (Antigravity) | `PatientManager.js`, `CalendarData.js`, `PatientModals.js`, `PatientActions.js`, `space_optimizer.py` | Ventana `[-30, +60]` días + filtro por terapeuta para no-admins; historial bajo demanda con `getDocs`; polling de 30 s en backend sobre `copilot_overrides`. Reduce ~75 % las lecturas Firestore. | Revertir queries a `orderBy("date","desc")` global y restaurar `time.sleep(600)` en backend. |
+| 26 May 2026 | **Optimización Firestore Fase 2 hotfixes** (Cursor) | `PatientManager.js`, `PatientModals.js`, `WaitlistCopilotService.js`, `Header.js`, `firestore.indexes.json` (nuevo), `firebase.json`, `space_optimizer.py` | Q-001 a Q-006: SyntaxError fatal por `const user` redeclarado, `timeout_sec=540`, cache historial con merge live, índices versionados (6 compuestos), unsubscribe en listeners, filtros de fecha en listeners gigantes. | Cada fix tiene su contra-cambio: restaurar `const user` doble (rompería el módulo), bajar timeout, borrar `_historyCache`, eliminar `firestore.indexes.json`, quitar `_teardownListeners()`, devolver listeners sin filtro `date`. NO conviene revertir ninguno. |
+| 26 May 2026 | **Win 1 — Multicast en `CalendarData.subscribe`** (Antigravity, tarde) | `CalendarData.js`, `PatientManager.js` | Patrón multicast: el primer suscriptor abre la conexión real, los siguientes la reusan + reciben `_lastData` cacheado. `PatientManager` quita su `onSnapshot` propio de `appointments` y se suscribe a CalendarData. Cuando todos se desuscriben, el listener real se apaga. **Ahorro extra 30–50 % adicional** sobre lecturas. | Revertir: volver a poner `_subscribers` como atributo de instancia única, hacer que `subscribe` reemplace siempre el listener anterior, y restaurar el `onSnapshot` propio de citas en `PatientManager._setupRealtimeListener` (era un listener con la misma query Ventana 90 días + filtro terapeuta). |
+| 26 May 2026 | **Hotfix sincronización Copiloto** (Cursor, tarde) | `WaitlistCopilotService.js`, `WaitlistCopilotPanel.js`, `HelpManual.js`, `CalendarUI.js` (comentarios) | Q-008: backend bajó delay a 8 min por límite Cloud Functions (540 s), pero frontend seguía con `COPILOT_DELAY_MS = 10 * 60 * 1000`. Propagada la constante única; los textos y cálculos del panel ahora derivan de `COPILOT_DELAY_MS / 60000`. Manual actualizado a «8 min». | Subir `COPILOT_DELAY_MS` a `10 * 60 * 1000` y volver a hardcodear «10 min» en los textos. **NO conviene** salvo que el backend vuelva a 10 min. |
 
 ---
 

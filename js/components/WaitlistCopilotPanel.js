@@ -4,15 +4,19 @@
  * Banner flotante premium del «Copiloto Colaborativo» (Fase B).
  *
  * - Glassmorphism (backdrop-blur + bg semitransparente)
- * - Contador regresivo animado (10 min desde la cancelación)
+ * - Contador regresivo animado (delay desde la cancelación, ver COPILOT_DELAY_MS)
  * - 3 acciones: 🚀 Automático · ⏸️ Pausar · 🔍 Búsqueda Manual
  *
  * Diseñado para anidar varios espacios libres simultáneamente
  * (stack vertical en escritorio, bottom-sheet apilable en móvil).
  */
 
-import { WaitlistCopilotService } from '../services/WaitlistCopilotService.js';
+import { WaitlistCopilotService, COPILOT_DELAY_MS } from '../services/WaitlistCopilotService.js';
 import { AuthManager } from '../managers/AuthManager.js';
+
+// Minutos derivados de la constante única (contrato con el backend).
+// Cualquier cambio se propaga automáticamente al UI sin tocar copys.
+const DELAY_MINUTES = Math.round(COPILOT_DELAY_MS / 60000);
 
 const CONTAINER_ID = 'waitlistCopilotContainer';
 const MODAL_ID = 'waitlistCandidatesModal';
@@ -94,7 +98,7 @@ export const WaitlistCopilotPanel = {
             const progressEl = card.querySelector('[data-bind="progress"]');
             if (countdownEl) countdownEl.textContent = this._formatCountdown(item.remainingMs);
             if (progressEl) {
-                const pct = Math.max(0, Math.min(100, (item.remainingMs / (10 * 60 * 1000)) * 100));
+                const pct = Math.max(0, Math.min(100, (item.remainingMs / COPILOT_DELAY_MS) * 100));
                 progressEl.style.width = `${pct.toFixed(2)}%`;
             }
         });
@@ -104,7 +108,7 @@ export const WaitlistCopilotPanel = {
         const therapistName = THERAPIST_LABEL[item.therapist] || item.therapist;
         const timeLabel = this._formatTime(item.date);
         const countdown = this._formatCountdown(item.remainingMs);
-        const progress = Math.max(0, Math.min(100, (item.remainingMs / (10 * 60 * 1000)) * 100));
+        const progress = Math.max(0, Math.min(100, (item.remainingMs / COPILOT_DELAY_MS) * 100));
 
         const statusBadge = (() => {
             if (item.localStatus === 'launching') {
@@ -113,7 +117,7 @@ export const WaitlistCopilotPanel = {
             if (item.localStatus === 'paused') {
                 return '<span class="px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-100 text-[10px] font-bold uppercase tracking-wider border border-slate-400/30">Autopilot en pausa</span>';
             }
-            return '<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-100 text-[10px] font-bold uppercase tracking-wider border border-amber-400/30 animate-pulse">Esperando · 10 min</span>';
+            return `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-100 text-[10px] font-bold uppercase tracking-wider border border-amber-400/30 animate-pulse">Esperando · ${DELAY_MINUTES} min</span>`;
         })();
 
         const ctaDisabled = item.localStatus !== 'waiting';
@@ -190,7 +194,7 @@ export const WaitlistCopilotPanel = {
                 </div>
 
                 <p class="mt-2 text-[10px] text-slate-400/80 leading-relaxed">
-                    ${ctaDisabled ? 'Acción registrada. Esta tarjeta desaparecerá en unos segundos.' : 'Tienes 10 min para intervenir antes del envío automático.'}
+                    ${ctaDisabled ? 'Acción registrada. Esta tarjeta desaparecerá en unos segundos.' : `Tienes ${DELAY_MINUTES} min para intervenir antes del envío automático.`}
                 </p>
             </div>
         </div>`;

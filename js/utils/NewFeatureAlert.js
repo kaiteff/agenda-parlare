@@ -5,9 +5,9 @@
 import { BRAND } from './brandAssets.js';
 
 export const NewFeatureAlert = {
-    STORAGE_KEY: 'parlare_onboarding_v9_2',
+    STORAGE_KEY: 'parlare_onboarding_v9_3',
     // Claves antiguas en localStorage que ya no se usan y deben limpiarse.
-    LEGACY_KEYS: ['parlare_onboarding_v8_0', 'parlare_onboarding_v9_0', 'parlare_onboarding_v9_1'],
+    LEGACY_KEYS: ['parlare_onboarding_v8_0', 'parlare_onboarding_v9_0', 'parlare_onboarding_v9_1', 'parlare_onboarding_v9_2'],
     // Vigencia del pop-up: pasados N días desde launchDate, deja de mostrarse
     // y el contenido importante vive solo en HelpManual.js.
     MAX_DAYS_VISIBLE: 2,
@@ -29,7 +29,7 @@ export const NewFeatureAlert = {
         const alreadySeen = localStorage.getItem(this.STORAGE_KEY);
         if (alreadySeen) return;
 
-        const launchDate = new Date('2026-05-25T00:00:00');
+        const launchDate = new Date('2026-05-26T00:00:00');
         const now = new Date();
         const diffDays = Math.ceil(Math.abs(now - launchDate) / (1000 * 60 * 60 * 24));
         if (diffDays > this.MAX_DAYS_VISIBLE) {
@@ -50,9 +50,25 @@ export const NewFeatureAlert = {
                 <div class="p-6 md:p-8 bg-gradient-to-tr from-cyan-600 via-blue-600 to-fuchsia-600 text-white text-center shrink-0">
                     <img src="${BRAND.logoSrc}" alt="${BRAND.logoAlt}" class="h-14 w-auto mx-auto mb-3 object-contain bg-white/90 rounded-xl px-3 py-2" />
                     <h2 class="text-xl md:text-2xl font-bold">Novedades en Parláre</h2>
-                    <p class="text-blue-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 25 Mayo 2026</p>
+                    <p class="text-blue-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 26 Mayo 2026</p>
                 </div>
                 <div class="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 scroller">
+                    <div class="flex gap-3 p-4 bg-gradient-to-br from-indigo-50 via-fuchsia-50 to-slate-50 rounded-2xl border border-indigo-200 shadow-sm">
+                        <span class="text-xl shrink-0">🚀</span>
+                        <div>
+                            <h3 class="font-bold text-indigo-900 text-sm">Copiloto Colaborativo de cancelaciones <span class="text-[9px] uppercase tracking-wider bg-indigo-200 text-indigo-900 px-1.5 py-0.5 rounded ml-1">Solo Yari/Diana</span></h3>
+                            <p class="text-xs text-indigo-950/80 mt-1 leading-relaxed">Cuando se cancela una cita <strong>entre 8 y 24 horas antes</strong>, aparece automáticamente un <strong>banner flotante arriba a la derecha</strong> con un contador de <strong>8 minutos</strong>. Mientras corre el contador, la celda cancelada en la agenda <strong>brilla en ámbar/esmeralda con un ⚡</strong> para que la veas de inmediato. Tienes 3 botones:</p>
+                            <ul class="text-xs text-indigo-950/80 mt-2 ml-3 space-y-1 list-disc">
+                                <li><strong>🚀 Automático</strong> — Salta el contador y lanza ya las ofertas por WhatsApp a pacientes que tienen cita más tarde ese día con la misma terapeuta.</li>
+                                <li><strong>⏸️ Pausar</strong> — Aborta el envío. Úsalo si vas a llenar tú el hueco a mano.</li>
+                                <li><strong>🔍 Manual</strong> — Abre la lista de candidatos con teléfono y botón directo de WhatsApp por si prefieres llamar.</li>
+                            </ul>
+                            <p class="text-xs text-indigo-950/80 mt-2 leading-relaxed">Si no haces nada en 8 min, el sistema envía las ofertas solo. El primero que responda "Sí, adelantar" se queda con el espacio. Las terapeutas <strong>no ven este banner</strong> para no distraerlas.</p>
+                            <div class="mt-2 px-3 py-2 bg-white/70 border border-indigo-200 rounded-lg text-[11px] text-indigo-900 leading-snug">
+                                <strong>💡 Tip:</strong> Detalle completo en <em>Manual de Ayuda → Copiloto Colaborativo</em>.
+                            </div>
+                        </div>
+                    </div>
                     <div class="flex gap-3 p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-sm">
                         <span class="text-xl shrink-0">🏖️</span>
                         <div>

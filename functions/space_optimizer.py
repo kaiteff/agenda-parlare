@@ -108,13 +108,13 @@ def update_google_calendar_time(appointment: dict, new_date_str: str) -> None:
 @firestore_fn.on_document_written(
     document="appointments/{appointmentId}",
     memory=options.MemoryOption.MB_512,
-    timeout_sec=720,  # 12 min (10 min de delay máx + 2 min de margen para Twilio/Sheets)
+    timeout_sec=540,  # 9 min (límite máximo permitido para triggers de Firestore)
 )
 def on_appointment_cancelled_trigger(
     event: firestore_fn.Event[firestore_fn.Change | None],
 ) -> None:
     """Monitorea cancelaciones de citas y activa la lista de espera Autopilot."""
-    # ✅ Autopilot Reactivado con soporte para Quiet Hours y Delay de 10 min.
+    # ✅ Autopilot Reactivado con soporte para Quiet Hours y Delay de 8 min.
     from main import ALL_SECRETS, TWILIO_WHATSAPP_FROM
     
     change = event.data
@@ -168,10 +168,10 @@ def on_appointment_cancelled_trigger(
         })
         return
 
-    # 2. Delay inicial de 10 minutos con polling cada 30 segundos
-    logger.info(f"⏳ Esperando hasta 10 minutos (margen manual) con polling de 30s para {appointment_id}")
+    # 2. Delay inicial de 8 minutos con polling cada 30 segundos
+    logger.info(f"⏳ Esperando hasta 8 minutos (margen manual) con polling de 30s para {appointment_id}")
     
-    total_wait = 600  # 10 minutos
+    total_wait = 480  # 8 minutos (ajustado para caber dentro del límite de 540s del trigger)
     poll_interval = 30
     elapsed = 0
     should_proceed = True

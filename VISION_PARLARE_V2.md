@@ -372,4 +372,16 @@ Al comenzar cualquier sesión de desarrollo:
 5. Confirmar con el usuario la tarea del día — **no reimplementar lo ya ✅** en la tabla «Estado consolidado».
 
 ---
-*Última actualización: **19 de Mayo de 2026** — Fusión estado ✅/⏳/🔜 (móvil Fase 1, opt-in, recibos, agenda desktop 1–3, forward-only sync); mapa de documentos vivos; backend Functions como principal.*
+*Última actualización: **26 de Mayo de 2026** — Cambios arquitectónicos clave:
+
+**1. Patrón Multicast en `CalendarData.subscribe`** (26 may, tarde) — La capa de datos del calendario ahora mantiene `_subscribers: Array<callback>` y un único `_unsubscribeSnapshot`. El primer suscriptor abre la conexión real de Firestore; los siguientes (incluyendo `PatientManager`) reusan la misma + reciben el `_lastData` cacheado al instante. Cuando todos se desuscriben, el listener real se apaga. **Regla**: cualquier módulo que necesite escuchar `appointments` en tiempo real DEBE pasar por `CalendarData.subscribe()` — NO crear otro `onSnapshot` propio.
+
+**2. Ventana temporal `[-30, +60]` días** — Todos los listeners de `appointments` deben filtrar por `where('date', '>=', startStr).where('date', '<', endStr)`. Datos históricos > 30 días: cargar bajo demanda con `getDocs(query(... where name == X))` (ver `PatientModals.openHistory`). NO mantener historiales en memoria global.
+
+**3. Filtro por terapeuta para no-admins** — `where('therapist', '==', therapistId)` cuando el usuario no es admin/recepcionista. Aplica en `CalendarData.subscribe` y `PatientManager` (perfiles).
+
+**4. Copiloto Colaborativo — contrato frontend↔backend** — La constante `COPILOT_DELAY_MS` (`js/services/WaitlistCopilotService.js`) DEBE coincidir con `total_wait` en `functions/space_optimizer.py`. Actual: **8 min (480 s)**, ajustado por límite de Google Cloud Functions para triggers Firestore (`timeout_sec` max 540 s). El backend hace polling de 30 s sobre `copilot_overrides/{id}` y respeta `skip_delay` / `pause`. Si cambia el delay del backend, actualizar la constante única en frontend y se propaga al UI (panel, manual).
+
+**5. Índices Firestore versionados** — `firestore.indexes.json` en raíz con los índices compuestos requeridos por las queries (`therapist+date`, `name+date`, `isCancelled+date`, `sheetSynced+isPaid+date`, `space_offers × 2`). Cualquier query nueva con filtro compuesto debe añadir su índice ahí + `firebase deploy --only firestore:indexes`.
+
+Estado heredado: ✅/⏳/🔜 móvil Fase 1, opt-in, recibos, agenda desktop 1–3, forward-only sync; mapa de documentos vivos; backend Functions como principal.*

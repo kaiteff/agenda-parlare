@@ -240,7 +240,7 @@ export const CalendarUI = {
                                 const chip = document.createElement('div');
                                 const canEdit = AuthManager.canEditItem(evt) || AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
                                 const chipSize = weekMobileCompact ? 'cal-event-chip text-[9px]' : 'text-[10px]';
-                                // Glow del Copiloto: si la cita está en delay de 10 min para Autopilot
+                                // Glow del Copiloto: si la cita está en delay activo del Autopilot (ver COPILOT_DELAY_MS)
                                 const glowingIds = WaitlistCopilotService.getGlowingAppointmentIds?.() || new Set();
                                 const glowCls = evt.isCancelled && glowingIds.has(evt.id) ? ' calendar-slot-glow' : '';
                                 chip.className = `flex-1 flex items-center justify-center ${chipSize} font-bold rounded border ${bgColor} transition-all truncate px-0.5 gap-0.5 min-w-0 ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-70 grayscale-[20%]'}${glowCls}`;

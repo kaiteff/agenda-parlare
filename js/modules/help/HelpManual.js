@@ -160,14 +160,36 @@ export const HelpManual = {
                             </summary>
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
                                 <p>Cuando se cancela una cita <strong>entre 8 y 24 horas antes</strong>, el sistema te avisa con un banner flotante arriba a la derecha y la celda de la agenda <strong>brilla en ámbar/esmeralda</strong> con un ⚡ para que la veas de inmediato.</p>
-                                <p>El banner tiene un <strong>contador de 10 minutos</strong> (margen para que decidas) con tres botones:</p>
+                                <p>El banner tiene un <strong>contador de 8 minutos</strong> (margen para que decidas) con tres botones:</p>
                                 <ul class="list-disc ml-5 space-y-2">
-                                    <li><strong>🚀 Automático</strong> — Lanza ya las ofertas por WhatsApp a pacientes que tienen cita más tarde ese día con la misma terapeuta. No esperes los 10 min.</li>
+                                    <li><strong>🚀 Automático</strong> — Lanza ya las ofertas por WhatsApp a pacientes que tienen cita más tarde ese día con la misma terapeuta. No esperes los 8 min.</li>
                                     <li><strong>⏸️ Pausar</strong> — Aborta el Autopilot para ese espacio. Úsalo si vas a llenar tú el hueco a mano (paciente que llamó, conoces a alguien, etc.).</li>
                                     <li><strong>🔍 Manual</strong> — Abre la lista de candidatos elegibles con sus teléfonos y un botón directo de <strong>WhatsApp</strong> con mensaje listo. Útil cuando prefieres llamar personalmente.</li>
                                 </ul>
-                                <p class="text-xs text-gray-500 italic">Si no haces nada en 10 minutos, el sistema envía las ofertas solo. El primero que conteste "Sí, adelantar" desde su WhatsApp se queda con el espacio y los demás reciben "Lo sentimos, ya fue tomado".</p>
+                                <p class="text-xs text-gray-500 italic">Si no haces nada en 8 minutos, el sistema envía las ofertas solo. El primero que conteste "Sí, adelantar" desde su WhatsApp se queda con el espacio y los demás reciben "Lo sentimos, ya fue tomado".</p>
                                 <p class="text-xs bg-amber-50 border-l-4 border-amber-400 p-3 rounded text-amber-800">⚠️ El banner solo lo ves tú (Yari) y Diana. Las terapeutas no lo ven para no distraerlas.</p>
+
+                                <!-- Sub-sección: etiquetas y botones grises en Búsqueda Manual -->
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-3">
+                                    <h4 class="font-bold text-slate-800 mb-2 text-sm flex items-center gap-1.5">
+                                        <span class="text-base" aria-hidden="true">❓</span>
+                                        ¿Qué significa «Sin opt-in» y por qué algunos botones aparecen en gris?
+                                    </h4>
+                                    <p class="text-xs text-slate-700 mb-2">En el modal de <strong>🔍 Búsqueda Manual</strong> verás candidatos con diferentes etiquetas y estados. Esto es lo que significan:</p>
+                                    <ul class="list-disc pl-5 space-y-1.5 text-xs text-slate-700 leading-snug">
+                                        <li><strong>Etiqueta «Sin opt-in» (gris claro):</strong> el paciente <strong>NO tiene autorización activa</strong> de WhatsApp en su ficha. Sucede en pacientes nuevos a los que aún no se les activó la casilla o que no han respondido «Sí, autorizo» al mensaje de bienvenida.</li>
+                                        <li><strong>Etiqueta «Rechazó WA» (rojo claro):</strong> el paciente respondió explícitamente <strong>«No»</strong> al opt-in. No mandes WhatsApp automatizado a este — si lo necesitas, llámalo de viva voz.</li>
+                                        <li><strong>Etiqueta verde «Opt-in OK»:</strong> el paciente <strong>sí dio consentimiento</strong>. Estos son los candidatos ideales para el Copiloto.</li>
+                                        <li><strong>Botones 📞 Llamar y 💬 WhatsApp en gris (deshabilitados):</strong> aparecen así <strong>únicamente cuando el paciente NO tiene teléfono registrado</strong> en su ficha (campo vacío). El sistema bloquea el botón para que no intentes llamar a la nada.</li>
+                                    </ul>
+                                    <p class="text-xs text-slate-700 mt-2 mb-1.5"><strong>🛠️ Cómo arreglarlo en cada caso:</strong></p>
+                                    <ul class="list-disc pl-5 space-y-1 text-xs text-slate-700 leading-snug">
+                                        <li><strong>Para que ya no diga «Sin opt-in»:</strong> abre la ficha del paciente → en la sección de WhatsApp activa la casilla manualmente (si tienes su consentimiento físico/verbal). También puedes presionar el botón <strong>Bienvenida</strong> para mandarle el mensaje de opt-in automático.</li>
+                                        <li><strong>Para que los botones se iluminen:</strong> abre la ficha del paciente → captura un <strong>teléfono válido</strong> (10 dígitos). En cuanto se guarde, los botones de Llamar/WhatsApp se activan automáticamente.</li>
+                                        <li><strong>Si rechazó WhatsApp («Rechazó WA»):</strong> no insistas con mensajes automáticos; respeta su decisión. Si necesitas avisarle algo urgente, llámalo por teléfono.</li>
+                                    </ul>
+                                    <p class="text-[11px] text-slate-500 italic mt-2">💡 El semáforo verde/amarillo/rojo en la lista de pacientes (sidebar) también te dice el estado de opt-in de cada uno sin entrar al modal del Copiloto.</p>
+                                </div>
                             </div>
                         </details>
 
@@ -445,7 +467,7 @@ export const HelpManual = {
                                         <li><strong>Tipo de ausencia con cards visuales</strong> 🆕: 🏖️ Vacaciones · 🏥 Médica · 📚 Capacitación · 👤 Personal · 🚫 Otro. La que toques se enmarca en azul para que veas claramente la seleccionada.</li>
                                         <li><strong>Rango de fechas</strong>: bloquea una semana o dos seguidas con un solo clic (los domingos se excluyen solos del conteo).</li>
                                         <li><strong>Todo el día</strong> o un <strong>rango horario</strong> (ej. solo de 2 PM a 5 PM). Si pones hora fin antes que inicio los selects se enmarcan en rojo al instante.</li>
-                                        <li><strong>Tarjeta resumen</strong> 🆕: te muestra `🏖️ Vacaciones · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día` antes de confirmar, para que veas exactamente lo que estás por guardar.</li>
+                                        <li><strong>Tarjeta resumen</strong> 🆕: te muestra <code class="text-[11px] bg-amber-100/70 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200">🏖️ Vacaciones · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día</code> antes de confirmar, para que veas exactamente lo que estás por guardar.</li>
                                         <li><strong>Banner verde «Sin citas afectadas»</strong> 🆕: te confirma que nadie quedará colgado en el rango que escogiste.</li>
                                         <li><strong>Aviso ámbar de citas afectadas</strong>: si hay niños agendados, los muestra con nombre y horario para que Yari/Diana decidan reagendar o cancelar antes de guardar.</li>
                                     </ul>
