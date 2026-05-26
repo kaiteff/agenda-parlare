@@ -488,39 +488,6 @@ export const PatientModals = {
                             <button id="scheduleFromHistoryBtn" class="mt-2 w-full py-2 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">Agendar Ahora</button>
                         `}
                     </div>
-                </div>
-            `;
-        }
-
-                    <!-- Last Activity -->
-                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Actividad</div>
-                        <div class="text-xs font-semibold text-gray-500 mb-1">Última sesión:</div>
-                        <div class="text-lg font-black text-gray-800 mb-3">${lastSession}</div>
-                        <div class="flex items-center gap-2">
-                             <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase border border-indigo-100">
-                                Total: ${appointments.length} citas
-                             </span>
-                        </div>
-                    </div>
-
-                    <!-- Next Step -->
-                    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-5 rounded-2xl shadow-lg shadow-blue-200 text-white">
-                        <div class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mb-3">Próximo Paso</div>
-                        ${appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).length > 0 ? `
-                            <div class="text-xs font-medium text-blue-100 mb-1">Siguiente cita:</div>
-                            <div class="text-lg font-bold leading-tight">
-                                ${new Date(appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date).toLocaleDateString('es-ES', {day:'numeric', month:'short'})} 
-                                <span class="opacity-75 font-normal">@ ${new Date(appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date).getHours()}:00</span>
-                            </div>
-                        ` : `
-                            <div class="text-xs font-medium text-blue-100 mb-1">Sin cita próxima</div>
-                            <button id="scheduleFromHistoryBtn" class="mt-2 w-full py-2 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">Agendar Ahora</button>
-                        `}
-                    </div>
-                </div>
-            `;
-        }
 
         // Actualizar totales de la parte inferior (antiguos dom)
         if (dom.patientTotalPaid) dom.patientTotalPaid.textContent = `$${totalPaid}`;
