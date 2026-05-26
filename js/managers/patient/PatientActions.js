@@ -18,7 +18,7 @@
  * @module PatientActions
  */
 
-import { db, updateDoc, doc, collectionPath, patientProfilesPath, collection, query, where, getDocs, getDoc } from '../../firebase.js';
+import { db, updateDoc, doc, collectionPath, patientProfilesPath, collection, query, where, getDocs, getDoc, serverTimestamp } from '../../firebase.js';
 import { createPatientProfile, deactivatePatient as deactivatePatientService, reactivatePatient as reactivatePatientService, deletePatientProfile, getReimbursementReceiptFromDom } from '../../services/patientService.js';
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';

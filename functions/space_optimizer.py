@@ -168,16 +168,48 @@ def on_appointment_cancelled_trigger(
         })
         return
 
-    # 2. Delay inicial de 10 minutos para dar margen a intervención manual
-    logger.info(f"⏳ Esperando 10 minutos (margen manual) para {appointment_id}")
-    time.sleep(600)
-
-    # Validar que la cita siga cancelada
-    current_doc = db.collection("appointments").document(appointment_id).get()
-    if current_doc.exists:
+    # 2. Delay inicial de 10 minutos con polling cada 30 segundos
+    logger.info(f"⏳ Esperando hasta 10 minutos (margen manual) con polling de 30s para {appointment_id}")
+    
+    total_wait = 600  # 10 minutos
+    poll_interval = 30
+    elapsed = 0
+    should_proceed = True
+    
+    while elapsed < total_wait:
+        # Validar que la cita siga cancelada
+        current_doc = db.collection("appointments").document(appointment_id).get()
+        if not current_doc.exists:
+            logger.info(f"🛑 La cita {appointment_id} ya no existe en Firestore. Abortando.")
+            should_proceed = False
+            break
+            
         if not current_doc.to_dict().get("isCancelled"):
             logger.info(f"🛑 La cita {appointment_id} fue retomada durante el delay. Abortando.")
-            return
+            should_proceed = False
+            break
+            
+        # Revisar si hay un override del Copiloto
+        override_doc = db.collection("copilot_overrides").document(appointment_id).get()
+        if override_doc.exists:
+            override_data = override_doc.to_dict()
+            action = override_data.get("action")
+            logger.info(f"⚡ Copiloto override detectado para {appointment_id}: {action}")
+            
+            if action == "skip_delay":
+                logger.info(f"🚀 Adelantando el Autopilot inmediatamente por petición manual.")
+                break
+            elif action == "pause":
+                logger.info(f"⏸️ Autopilot pausado manualmente por Recepción/Terapeuta. Abortando.")
+                should_proceed = False
+                break
+        
+        # Esperar 30 segundos
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+
+    if not should_proceed:
+        return
 
     process_autopilot_candidates(
         appointment_id,

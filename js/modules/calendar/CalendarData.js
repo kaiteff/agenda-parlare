@@ -3,11 +3,12 @@
  * Gestiona la capa de datos del calendario y la comunicación con Firebase
  */
 
-import { db, collectionPath, patientProfilesPath, collection, onSnapshot, query } from '../../firebase.js';
+import { db, collectionPath, patientProfilesPath, collection, onSnapshot, query, where } from '../../firebase.js';
 import { CalendarState } from './CalendarState.js';
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from '../../services/appointmentService.js';
 import { SheetService } from '../../services/google/SheetService.js';
-import { getDocs, query as fsQuery, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getDocs, query as fsQuery, where as fsWhere } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { AuthManager } from '../../managers/AuthManager.js';
 
 /**
  * Obtiene el clinicFee de un paciente desde Firestore.
@@ -18,7 +19,7 @@ async function getClinicFee(patientName) {
     try {
         const q = fsQuery(
             collection(db, patientProfilesPath),
-            where('name', '==', patientName)
+            fsWhere('name', '==', patientName)
         );
         const snap = await getDocs(q);
         if (!snap.empty) {
@@ -40,8 +41,40 @@ export const CalendarData = {
      * @returns {Function} Unsubscribe function
      */
     subscribe(onUpdate) {
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - 30);
+        const end = new Date(today);
+        end.setDate(today.getDate() + 61); // +61 para capturar el día 60 completo
+
+        const getLocalDateStr = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const startDateStr = getLocalDateStr(start);
+        const endDateStr = getLocalDateStr(end);
+
         const colRef = collection(db, collectionPath);
-        const q = query(colRef);
+        
+        let q;
+
+        if (AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist') {
+            q = query(
+                colRef,
+                where('date', '>=', startDateStr),
+                where('date', '<', endDateStr)
+            );
+        } else {
+            const therapistId = AuthManager.currentUser?.therapist || 'diana';
+            q = query(
+                colRef,
+                where('date', '>=', startDateStr),
+                where('date', '<', endDateStr),
+                where('therapist', '==', therapistId)
+            );
+        }
 
         return onSnapshot(q, (snapshot) => {
             const data = [];
@@ -49,7 +82,7 @@ export const CalendarData = {
                 data.push({ id: doc.id, ...doc.data() });
             });
 
-            console.log(`📡 CalendarData: Recibidas ${data.length} citas de Firebase.`);
+            console.log(`📡 CalendarData: Recibidas ${data.length} citas de Firebase (Rango ${startDateStr} - ${endDateStr}).`);
             CalendarState.setAppointments(data);
 
             if (onUpdate) onUpdate(data, snapshot.metadata);

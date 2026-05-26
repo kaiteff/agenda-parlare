@@ -163,13 +163,50 @@ export const PatientManager = {
      * Escucha tanto CITAS como PERFILES para sincronización total
      */
     _setupRealtimeListener() {
-        // 1. Listen to Appointments
-        const qApts = query(collection(db, collectionPath), orderBy("date", "desc"));
+        // 1. Listen to Appointments in the range [-30, +60] days
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - 30);
+        const end = new Date(today);
+        end.setDate(today.getDate() + 61); // +61 to capture day 60 fully
+
+        const getLocalDateStr = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const startDateStr = getLocalDateStr(start);
+        const endDateStr = getLocalDateStr(end);
+
+        const colRef = collection(db, collectionPath);
+        
+        let qApts;
+        const user = AuthManager.currentUser;
+
+        if (AuthManager.isAdmin() || user?.role === 'receptionist') {
+            qApts = query(
+                colRef,
+                where('date', '>=', startDateStr),
+                where('date', '<', endDateStr)
+            );
+        } else {
+            const therapistId = user?.therapist || 'diana';
+            qApts = query(
+                colRef,
+                where('date', '>=', startDateStr),
+                where('date', '<', endDateStr),
+                where('therapist', '==', therapistId)
+            );
+        }
+
         onSnapshot(qApts, (snapshot) => {
             const appointments = [];
             snapshot.forEach((doc) => {
                 appointments.push({ id: doc.id, ...doc.data() });
             });
+            // Client-side sort by date desc to avoid requiring composite indexes
+            appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
             PatientState.updateAppointments(appointments);
             this._processData();
         });

@@ -20,7 +20,7 @@
 import { PatientState } from './PatientState.js';
 import { PatientFilters } from './PatientFilters.js';
 import { PatientActions } from './PatientActions.js';
-import { patientsData, patientProfiles } from '../../firebase.js';
+import { patientsData, patientProfiles, db, collectionPath, collection, query, where, getDocs } from '../../firebase.js';
 import { AuthManager } from '../AuthManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ScheduleManager } from '../ScheduleManager.js';
@@ -177,7 +177,7 @@ export const PatientModals = {
      * 
      * @param {Object} patient - Datos del paciente
      */
-    openHistory(patient) {
+    async openHistory(patient) {
         const { dom } = PatientState;
 
         // PREVENCIÓN DE CONFLICTOS:
@@ -195,7 +195,7 @@ export const PatientModals = {
             return;
         }
 
-        // Forzar visualización
+        // Forzar visualización de la estructura del modal
         dom.patientHistoryModal.classList.remove('hidden');
         dom.patientHistoryModal.style.display = 'flex';
         dom.patientHistoryModal.style.zIndex = '9500';
@@ -219,10 +219,71 @@ export const PatientModals = {
             }
         }
 
-        // Obtener todas las citas del paciente usando el estado actualizado
-        const appointments = (PatientState.appointments || []).filter(apt => apt.name === patient.name);
+        // Poner estado cargando inicial
+        const therapistName = patient.therapist === 'diana' ? 'Diana' : patient.therapist === 'sam' ? 'Sam' : patient.therapist || 'No asignado';
+        if (dom.patientHistoryTitle) {
+            dom.patientHistoryTitle.innerHTML = `
+                <div class="flex flex-col gap-2 w-full min-w-0 pr-14 md:pr-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-11 h-11 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm border border-white">
+                            ${escapeHTML(patient.name.charAt(0))}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-base md:text-lg font-extrabold text-gray-900 leading-tight truncate">${escapeHTML(patient.name)}</div>
+                            <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                                Cargando expediente...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-        // Calcular estadísticas
+        const statsContainer = dom.patientHistoryModal.querySelector('.stats-container');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="col-span-full flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+            `;
+        }
+
+        if (dom.patientHistoryList) {
+            dom.patientHistoryList.innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <span class="text-sm text-gray-400">Cargando citas...</span>
+                </div>
+            `;
+        }
+
+        // Configurar botones de acción iniciales
+        this._setupHistoryActions(patient);
+
+        // Botón de cerrar
+        const closeBtn = document.getElementById('closePatientHistoryBtn');
+        if (closeBtn) closeBtn.onclick = () => this.closeHistory();
+
+        // Cargar citas completas bajo demanda
+        let appointments = [];
+        try {
+            const q = query(
+                collection(db, collectionPath),
+                where('name', '==', patient.name)
+            );
+            const snap = await getDocs(q);
+            snap.forEach((doc) => {
+                appointments.push({ id: doc.id, ...doc.data() });
+            });
+            // Ordenar de más reciente a más antigua
+            appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        } catch (err) {
+            console.error("Error al cargar historial bajo demanda:", err);
+            ToastService.error("Error al obtener el historial completo. Mostrando datos locales.");
+            appointments = (PatientState.appointments || []).filter(apt => apt.name === patient.name);
+        }
+
+        // Calcular estadísticas con los datos reales completos
         const now = new Date();
         const attended = appointments.filter(apt => apt.isPaid && !apt.isCancelled).length;
         const cancelled = appointments.filter(apt => apt.isCancelled).length;
@@ -234,7 +295,7 @@ export const PatientModals = {
 
         const { totalPaid, totalPending } = PatientFilters.calculatePaymentTotals(appointments);
 
-        // Actualizar título con alerta de recurrencia
+        // Actualizar título final
         if (dom.patientHistoryTitle) {
             // Lógica de alerta de citas por agotarse (menos de 14 días para la última cita)
             const futureApts = appointments.filter(a => !a.isCancelled && new Date(a.date) >= now);
@@ -256,7 +317,6 @@ export const PatientModals = {
                 </div>
             ` : '';
 
-            const therapistName = patient.therapist === 'diana' ? 'Diana' : patient.therapist === 'sam' ? 'Sam' : patient.therapist || 'No asignado';
             dom.patientHistoryTitle.innerHTML = `
                 <div class="flex flex-col gap-2 w-full min-w-0 pr-14 md:pr-0">
                     <div class="flex items-center gap-3 min-w-0">
@@ -283,8 +343,7 @@ export const PatientModals = {
             `;
         }
 
-        // Inyectar bloque de Analítica Visual
-        const statsContainer = dom.patientHistoryModal.querySelector('.stats-container');
+        // Renderizar estadísticas visuales
         if (statsContainer) {
             // Encontrar última cita real (no cancelada y ya pasada)
             const pastAttended = appointments
@@ -329,6 +388,36 @@ export const PatientModals = {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Last Activity -->
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Actividad</div>
+                        <div class="text-xs font-semibold text-gray-500 mb-1">Última sesión:</div>
+                        <div class="text-lg font-black text-gray-800 mb-3">${lastSession}</div>
+                        <div class="flex items-center gap-2">
+                             <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase border border-indigo-100">
+                                Total: ${appointments.length} citas
+                             </span>
+                        </div>
+                    </div>
+
+                    <!-- Next Step -->
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-5 rounded-2xl shadow-lg shadow-blue-200 text-white">
+                        <div class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mb-3">Próximo Paso</div>
+                        ${appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).length > 0 ? `
+                            <div class="text-xs font-medium text-blue-100 mb-1">Siguiente cita:</div>
+                            <div class="text-lg font-bold leading-tight">
+                                ${new Date(appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date).toLocaleDateString('es-ES', {day:'numeric', month:'short'})} 
+                                <span class="opacity-75 font-normal">@ ${new Date(appointments.filter(a => new Date(a.date) >= now && !a.isCancelled).sort((a,b)=>new Date(a.date)-new Date(b.date))[0].date).getHours()}:00</span>
+                            </div>
+                        ` : `
+                            <div class="text-xs font-medium text-blue-100 mb-1">Sin cita próxima</div>
+                            <button id="scheduleFromHistoryBtn" class="mt-2 w-full py-2 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors">Agendar Ahora</button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
 
                     <!-- Last Activity -->
                     <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
