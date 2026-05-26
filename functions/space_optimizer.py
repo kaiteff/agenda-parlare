@@ -108,7 +108,7 @@ def update_google_calendar_time(appointment: dict, new_date_str: str) -> None:
 @firestore_fn.on_document_written(
     document="appointments/{appointmentId}",
     memory=options.MemoryOption.MB_512,
-    timeout_sec=120,
+    timeout_sec=720,  # 12 min (10 min de delay máx + 2 min de margen para Twilio/Sheets)
 )
 def on_appointment_cancelled_trigger(
     event: firestore_fn.Event[firestore_fn.Change | None],

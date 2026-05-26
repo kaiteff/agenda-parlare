@@ -36,6 +36,70 @@ import { escapeHTML } from '../../utils/sanitize.js';
 export const PatientModals = {
 
     /**
+     * Cache de citas históricas cargadas bajo demanda en `openHistory`.
+     * Se usa para que los re-renders en tiempo real (cuando llega un snapshot de
+     * Firestore con el listener limitado a ventana 90 días) NO sobreescriban el
+     * listado completo con la versión recortada del state local.
+     *
+     * Estructura: { patientId, patientName, appointments: [...], loadedAt: ts }
+     * Se invalida en `closeHistory()`.
+     */
+    _historyCache: null,
+
+    /**
+     * Devuelve true si el cache aplica para el paciente dado (mismo id/nombre y
+     * cargado en los últimos 5 minutos).
+     */
+    _isHistoryCacheValid(patient) {
+        if (!this._historyCache || !patient) return false;
+        const sameId = this._historyCache.patientId && this._historyCache.patientId === patient.id;
+        const sameName = this._historyCache.patientName === patient.name;
+        const isFresh = (Date.now() - (this._historyCache.loadedAt || 0)) < 5 * 60 * 1000;
+        return (sameId || sameName) && isFresh;
+    },
+
+    /**
+     * Devuelve las citas para mostrar en el modal de historial:
+     *  - Base: cache completo cargado con `getDocs` en `openHistory` (sin límite de ventana).
+     *  - Live overrides: cualquier cita del listener (estado local, ventana 90 días) reemplaza
+     *    la del cache para el mismo `id` (así se reflejan cambios en tiempo real).
+     *  - Live additions: cualquier cita del listener cuyo `id` no esté en el cache se agrega
+     *    (cubre el caso de que se cree una cita nueva mientras el modal está abierto).
+     *
+     * Si el cache no es válido (paciente distinto, expirado), regresa el fallback.
+     */
+    getHistoryAppointments(patient, fallbackAppointments = []) {
+        if (!this._isHistoryCacheValid(patient)) {
+            return fallbackAppointments;
+        }
+
+        const liveById = new Map();
+        for (const apt of (fallbackAppointments || [])) {
+            if (apt && apt.id) liveById.set(apt.id, apt);
+        }
+
+        // Construir array final: cache + overrides en vivo, manteniendo orden cronológico desc.
+        const merged = [];
+        const seenIds = new Set();
+
+        for (const apt of this._historyCache.appointments) {
+            const fresh = (apt && apt.id) ? liveById.get(apt.id) : null;
+            merged.push(fresh || apt);
+            if (apt && apt.id) seenIds.add(apt.id);
+        }
+
+        // Agregar citas en vivo que el cache no tenía (e.g. cita nueva creada mientras estaba abierto)
+        for (const apt of (fallbackAppointments || [])) {
+            if (apt && apt.id && !seenIds.has(apt.id)) {
+                merged.push(apt);
+            }
+        }
+
+        merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+        return merged;
+    },
+
+    /**
      * Bloquea o libera el scroll del body según modales abiertos (coordina con calendario y bottom nav).
      * @param {boolean} lock
      * @private
@@ -264,7 +328,7 @@ export const PatientModals = {
         const closeBtn = document.getElementById('closePatientHistoryBtn');
         if (closeBtn) closeBtn.onclick = () => this.closeHistory();
 
-        // Cargar citas completas bajo demanda
+        // Cargar citas completas bajo demanda (todas las históricas, sin límite de ventana).
         let appointments = [];
         try {
             const q = query(
@@ -277,10 +341,19 @@ export const PatientModals = {
             });
             // Ordenar de más reciente a más antigua
             appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            // Cachear para que los re-renders en vivo no recorten a ventana 90 días
+            this._historyCache = {
+                patientId: patient.id,
+                patientName: patient.name,
+                appointments,
+                loadedAt: Date.now()
+            };
         } catch (err) {
             console.error("Error al cargar historial bajo demanda:", err);
             ToastService.error("Error al obtener el historial completo. Mostrando datos locales.");
             appointments = (PatientState.appointments || []).filter(apt => apt.name === patient.name);
+            this._historyCache = null; // No cachear en fallback
         }
 
         // Calcular estadísticas con los datos reales completos
@@ -490,6 +563,9 @@ export const PatientModals = {
             dom.patientHistoryModal.style.display = 'none';
         }
         this._syncBodyScroll(false);
+
+        // Invalidar cache de historial al cerrar (la próxima apertura re-consultará Firestore)
+        this._historyCache = null;
 
         // Ocultar sección de edición si estaba visible
         if (dom.patientEditSection) {

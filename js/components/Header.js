@@ -265,11 +265,20 @@ export const Header = {
                 batchSyncBtn.classList.remove('opacity-50', 'animate-pulse');
             };
 
-            // Suscribirse a cambios en Firestore para actualizar el contador en tiempo real
+            // Optimización lecturas Firestore (26 may 2026):
+            // Solo nos interesan citas pagadas no-sincronizadas de los últimos 30 días
+            // (las sincronizaciones pendientes muy viejas son irrecuperables, en cuyo caso
+            // hay que limpiarlas a mano vía script). Antes el listener leía todas las pagadas
+            // sin sync de toda la historia.
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const thirtyDaysAgoIso = thirtyDaysAgo.toISOString().slice(0, 10);
+
             const q = query(
                 collection(db, collectionPath),
                 where('sheetSynced', '==', false),
-                where('isPaid', '==', true)
+                where('isPaid', '==', true),
+                where('date', '>=', thirtyDaysAgoIso)
             );
 
             onSnapshot(q, (snapshot) => {

@@ -63,9 +63,17 @@ export const WaitlistCopilotService = {
     start() {
         if (this._unsub) return;
 
+        // Optimización de lecturas Firestore (26 may 2026):
+        // Solo necesitamos cancelaciones futuras dentro de la ventana 8–24 h.
+        // Filtramos por `date >= hoy` para evitar arrastrar cancelaciones históricas
+        // (antes el listener cargaba TODAS las canceladas de la base, incluso de hace años).
+        // El `_handleSnapshot` ya filtra adicionalmente por la ventana 8-24h.
+        const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
         const q = query(
             collection(db, APPOINTMENTS),
-            where('isCancelled', '==', true)
+            where('isCancelled', '==', true),
+            where('date', '>=', todayIso)
         );
 
         this._unsub = onSnapshot(

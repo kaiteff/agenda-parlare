@@ -44,6 +44,13 @@ export const PatientManager = {
     actions: PatientActions,
     modals: PatientModals,
 
+    // Unsubscribe handlers (para evitar memory leak en logout/login)
+    _unsubscribeApts: null,
+    _unsubscribeProfiles: null,
+    // Profiles crudos directos del snapshot Firestore (evita que _processData lea
+    // el array enriquecido en una segunda pasada y sobreescriba con appointments: []).
+    _rawProfiles: [],
+
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
@@ -161,14 +168,18 @@ export const PatientManager = {
     /**
      * Configura listeners de Firestore en tiempo real
      * Escucha tanto CITAS como PERFILES para sincronización total
+     * Ventana de 90 días [-30, +60] para reducir lecturas Firestore (~75% menos vs anterior).
      */
     _setupRealtimeListener() {
-        // 1. Listen to Appointments in the range [-30, +60] days
+        // Limpieza previa: si ya hay listeners activos (re-login, hot reload, etc.)
+        // los desuscribimos antes de crear nuevos para evitar memory leak y rendido doble.
+        this._teardownListeners();
+
         const today = new Date();
         const start = new Date(today);
         start.setDate(today.getDate() - 30);
         const end = new Date(today);
-        end.setDate(today.getDate() + 61); // +61 to capture day 60 fully
+        end.setDate(today.getDate() + 61); // +61 para capturar el día 60 completo
 
         const getLocalDateStr = (d) => {
             const year = d.getFullYear();
@@ -179,69 +190,85 @@ export const PatientManager = {
         const startDateStr = getLocalDateStr(start);
         const endDateStr = getLocalDateStr(end);
 
-        const colRef = collection(db, collectionPath);
-        
-        let qApts;
         const user = AuthManager.currentUser;
+        const isSuperUser = AuthManager.isAdmin() || user?.role === 'receptionist';
+        const therapistId = user?.therapist || 'diana';
 
-        if (AuthManager.isAdmin() || user?.role === 'receptionist') {
-            qApts = query(
-                colRef,
-                where('date', '>=', startDateStr),
-                where('date', '<', endDateStr)
-            );
-        } else {
-            const therapistId = user?.therapist || 'diana';
-            qApts = query(
-                colRef,
-                where('date', '>=', startDateStr),
-                where('date', '<', endDateStr),
-                where('therapist', '==', therapistId)
-            );
-        }
+        // 1. Listener de CITAS (rango 90 días, filtrado por terapeuta para no-admins)
+        const colRef = collection(db, collectionPath);
+        const qApts = isSuperUser
+            ? query(colRef, where('date', '>=', startDateStr), where('date', '<', endDateStr))
+            : query(colRef, where('date', '>=', startDateStr), where('date', '<', endDateStr), where('therapist', '==', therapistId));
 
-        onSnapshot(qApts, (snapshot) => {
+        this._unsubscribeApts = onSnapshot(qApts, (snapshot) => {
             const appointments = [];
             snapshot.forEach((doc) => {
                 appointments.push({ id: doc.id, ...doc.data() });
             });
-            // Client-side sort by date desc to avoid requiring composite indexes
+            // Sort en cliente (evita exigir índices compuestos extra)
             appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
-            PatientState.updateAppointments(appointments);
-            this._processData();
+            this._processData(appointments, null);
+        }, (error) => {
+            log.error('Error en listener de citas:', error);
         });
 
-        // 2. Listen to Patient Profiles (Filtrado por seguridad legal)
+        // 2. Listener de PERFILES (filtrado por seguridad legal)
+        const profilesRef = collection(db, 'patientProfiles');
         let qProfiles;
-        const user = AuthManager.currentUser;
-        
-        if (AuthManager.isAdmin() || user?.role === 'receptionist') {
+
+        if (isSuperUser) {
             log.info('Cargando todos los perfiles (Modo SuperUser)');
-            qProfiles = query(collection(db, 'patientProfiles'));
+            qProfiles = query(profilesRef);
         } else {
-            const therapistId = user?.therapist || 'diana';
             log.info(`Filtrando perfiles para terapeuta: ${therapistId}`);
-            qProfiles = query(collection(db, 'patientProfiles'), where('therapist', '==', therapistId));
+            qProfiles = query(profilesRef, where('therapist', '==', therapistId));
         }
 
-        onSnapshot(qProfiles, (snapshot) => {
+        this._unsubscribeProfiles = onSnapshot(qProfiles, (snapshot) => {
             const profiles = [];
             snapshot.forEach((doc) => {
                 profiles.push({ id: doc.id, ...doc.data() });
             });
-            PatientState.updatePatients(profiles);
-            this._processData();
+            this._processData(null, profiles);
         }, (error) => {
             log.error('Error en listener de perfiles:', error);
         });
     },
 
     /**
-     * Procesa y cruza los datos de citas y perfiles
+     * Cancela los listeners activos. Llamado al re-suscribir y, opcionalmente,
+     * al hacer logout (ver `AuthManager.onLogout` si se integra).
      */
-    _processData() {
+    _teardownListeners() {
+        if (typeof this._unsubscribeApts === 'function') {
+            try { this._unsubscribeApts(); } catch (e) { log.warn('Error al desuscribir citas:', e); }
+            this._unsubscribeApts = null;
+        }
+        if (typeof this._unsubscribeProfiles === 'function') {
+            try { this._unsubscribeProfiles(); } catch (e) { log.warn('Error al desuscribir perfiles:', e); }
+            this._unsubscribeProfiles = null;
+        }
+    },
+
+    /**
+     * Procesa y cruza los datos de citas y perfiles.
+     * Recibe los datos frescos por argumento (no del estado global) para evitar
+     * que una segunda pasada lea el array de pacientes ya enriquecido.
+     *
+     * @param {Array|null} appointmentsArg - Si se pasa, actualiza el state + reprocesa
+     * @param {Array|null} profilesArg - Si se pasa, actualiza `_rawProfiles` + reprocesa
+     */
+    _processData(appointmentsArg = null, profilesArg = null) {
+        // Actualizar estado fresco si llegó snapshot
+        if (Array.isArray(appointmentsArg)) {
+            PatientState.updateAppointments(appointmentsArg);
+        }
+        if (Array.isArray(profilesArg)) {
+            this._rawProfiles = profilesArg;
+        }
+
         const appointments = PatientState.appointments;
-        const profiles = PatientState.patients;
+        const profiles = this._rawProfiles;
 
         log.time('Procesamiento de datos', () => {
             const patientMap = new Map();
@@ -343,9 +370,9 @@ export const PatientManager = {
                 return p;
             });
 
-            // Actualizar estado centralizado
+            // Actualizar estado centralizado (solo el enriquecido; las appointments
+            // ya las actualizamos al inicio si llegó snapshot fresco).
             PatientState.updatePatients(patients);
-            PatientState.updateAppointments(appointments);
 
             // Re-renderizar UI
             this.render();
@@ -376,8 +403,16 @@ export const PatientManager = {
                 const canViewFinancials = AuthManager.isAdmin() || 
                                         AuthManager.currentUser?.role === 'receptionist' || 
                                         (updatedPatient.therapist === AuthManager.currentUser?.therapist);
-                
-                PatientModals._renderPatientAppointments(updatedPatient.appointments, canViewFinancials);
+
+                // Usar cache de historial cargado en `openHistory` (todas las citas históricas)
+                // como fuente preferida; sólo recurrir a `updatedPatient.appointments`
+                // (ventana 90 días) si no hay cache válido.
+                const historyAppointments = PatientModals.getHistoryAppointments(
+                    updatedPatient,
+                    updatedPatient.appointments
+                );
+
+                PatientModals._renderPatientAppointments(historyAppointments, canViewFinancials);
                 PatientModals._setupHistoryActions(updatedPatient);
             }
         }
