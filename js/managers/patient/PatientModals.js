@@ -499,12 +499,6 @@ export const PatientModals = {
         // Renderizar lista de citas
         this._renderPatientAppointments(appointments, canViewFinancials);
 
-        // Configurar botones de acción
-        this._setupHistoryActions(patient);
-
-        // Botón de cerrar
-        const closeBtn = document.getElementById('closePatientHistoryBtn');
-        if (closeBtn) closeBtn.onclick = () => this.closeHistory();
 
         // Mostrar modal
         dom.patientHistoryModal.classList.remove('hidden');
