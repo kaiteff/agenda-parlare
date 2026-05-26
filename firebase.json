@@ -1,6 +1,18 @@
 {
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "ignore": [
+      "venv",
+      ".venv",
+      "env",
+      ".env",
+      "**/__pycache__",
+      "**/*.pyc",
+      "**/*.pyo",
+      "**/*.pyd",
+      "scripts",
+      ".pytest_cache"
+    ]
   },
   "firestore": {
     "rules": "firestore.rules"
