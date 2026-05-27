@@ -572,9 +572,9 @@ def send_reminders_api(req: https_fn.Request) -> https_fn.Response:
     except Exception as e:
         return https_fn.Response(json.dumps({'error': str(e)}), status=500, mimetype='application/json')
 
-@scheduler_fn.on_schedule(schedule="0 21 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+@scheduler_fn.on_schedule(schedule="0 9 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
-    """Cronjob programado para ejecutarse todos los días a las 9:00 PM hora México.
+    """Cronjob programado para ejecutarse todos los días a las 9:00 AM hora México.
     Envía resúmenes individuales a las terapeutas y un reporte maestro a Recepción (Yari).
     """
     mx_now = datetime.now(MX_TZ)
