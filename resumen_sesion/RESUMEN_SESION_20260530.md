@@ -9,9 +9,11 @@
    - Se removió el índice compuesto redundante de la colección `notifications` en `firestore.indexes.json` (`timestamp DESC`), ya que Firestore genera automáticamente índices de campo único para todas las propiedades. Esto resolvió el error 400 durante la carga de índices.
    - Despliegue exitoso de **Firestore Rules** (limitando lectura de citas según regla S-002: `isSuper() || isOwner(therapist)`) e **Indexes** a producción.
 
-3. **Despliegue de Firebase Functions (2nd Gen):**
+3. **Despliegue y Corrección de Firebase Functions (2nd Gen):**
    - Corrección del error de timeout (10s) en la inicialización local del CLI mediante la variable de entorno `FUNCTIONS_DISCOVERY_TIMEOUT=120`.
-   - Se desplegaron exitosamente las 11 Cloud Functions, incluyendo la lógica de **Quiet Hours** (pausa/liberación manual) en `space_optimizer.py` y los triggers asociados.
+   - **Solución al error de parámetros duplicados:** Durante el deploy individual se detectó un error por el cual `SecretParam('TWILIO_SID')` se declaraba dos veces. Esto sucedía porque Firebase CLI ejecuta el punto de entrada como `serving`, lo que causaba que la importación circular de `main` en `space_optimizer.py` re-ejecutara `main.py` de cero bajo el nombre `"main"`. Se solucionó abstrayendo todos los secretos a `functions/secrets_config.py`.
+   - Se crearon/desplegaron las funciones solicitadas: `on_quiet_hours_pending_written` (nuevo trigger Eventarc para Firestore), `on_appointment_cancelled_trigger`, `on_appointment_receipt_trigger` y `release_quiet_hours_offers`.
+   - Se registró adecuadamente el trigger `on_quiet_hours_pending_written` al final de `main.py` para asegurar su inicialización y despliegue por el runtime de Firebase.
 
 4. **Despliegue de Frontend (Hosting):**
    - Se desplegó la versión de producción a Firebase Hosting con los últimos cambios de UI (tarjetas moradas para Quiet Hours, fin del listener duplicado de notificaciones en `WaitlistCopilotService`, y límite de 80 notificaciones).
