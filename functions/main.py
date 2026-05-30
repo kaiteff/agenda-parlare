@@ -46,13 +46,15 @@ db = FirestoreProxy()
 MX_TZ = pytz.timezone('America/Mexico_City')
 
 # Registro de Secretos de Firebase (se inyectarán en tiempo de ejecución)
-TWILIO_SID = SecretParam('TWILIO_SID')
-TWILIO_TOKEN = SecretParam('TWILIO_TOKEN')
-GOOGLE_REFRESH_TOKEN = SecretParam('GOOGLE_REFRESH_TOKEN')
-GOOGLE_CLIENT_ID = SecretParam('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = SecretParam('GOOGLE_CLIENT_SECRET')
+from secrets_config import (
+    TWILIO_SID,
+    TWILIO_TOKEN,
+    GOOGLE_REFRESH_TOKEN,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    ALL_SECRETS,
+)
 
-ALL_SECRETS = [TWILIO_SID, TWILIO_TOKEN, GOOGLE_REFRESH_TOKEN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET]
 TWILIO_WHATSAPP_FROM = "whatsapp:+16066451055"
 
 # ── 2. Configuraciones Duras (Pendiente Fase 2 SaaS) ───────────────────────
@@ -1020,8 +1022,6 @@ def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
 @scheduler_fn.on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def release_quiet_hours_offers(event: scheduler_fn.ScheduledEvent) -> None:
     """Procesa cancelaciones acumuladas durante Quiet Hours (9 PM‑8 AM)."""
-    db = _get_db()
-    
     from space_optimizer import process_quiet_hours_pending_item
 
     pending = db.collection('quiet_hours_pending').stream()
@@ -1033,7 +1033,7 @@ def release_quiet_hours_offers(event: scheduler_fn.ScheduledEvent) -> None:
             doc,
             db,
             twilio_client,
-            TWILIO_WHATSAPP_FROM.value,
+            TWILIO_WHATSAPP_FROM,
         ):
             count += 1
 
@@ -1073,6 +1073,9 @@ def on_patient_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot])
 from receipt_generator import on_appointment_receipt_trigger  # noqa: F401, E402
 
 # Optimizador de espacios (Fase B)
-from space_optimizer import on_appointment_cancelled_trigger  # noqa: F401, E402
+from space_optimizer import (
+    on_appointment_cancelled_trigger,
+    on_quiet_hours_pending_written,
+)  # noqa: F401, E402
 
 

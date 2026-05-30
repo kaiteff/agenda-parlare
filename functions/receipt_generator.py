@@ -19,6 +19,8 @@ import pytz
 from firebase_admin import firestore, storage
 from firebase_functions import firestore_fn, options
 
+from trigger_utils import change_before_after
+
 logger = logging.getLogger(__name__)
 
 MX_TZ = pytz.timezone("America/Mexico_City")
@@ -302,8 +304,7 @@ def on_appointment_receipt_trigger(
     if change is None:
         return
 
-    before = change.before.to_dict() if change.before.exists else None
-    after = change.after.to_dict() if change.after.exists else None
+    before, after = change_before_after(change)
 
     if not became_paid(before, after):
         return

@@ -22,6 +22,11 @@ from firebase_admin import firestore
 from firebase_functions import firestore_fn, options
 from twilio.rest import Client
 
+from trigger_utils import change_before_after
+
+# Secretos Twilio para decoradores
+from secrets_config import ALL_SECRETS
+
 logger = logging.getLogger(__name__)
 
 MX_TZ = pytz.timezone("America/Mexico_City")
@@ -109,6 +114,7 @@ def update_google_calendar_time(appointment: dict, new_date_str: str) -> None:
     document="appointments/{appointmentId}",
     memory=options.MemoryOption.MB_512,
     timeout_sec=540,  # 9 min (límite máximo permitido para triggers de Firestore)
+    secrets=ALL_SECRETS,
 )
 def on_appointment_cancelled_trigger(
     event: firestore_fn.Event[firestore_fn.Change | None],
@@ -121,8 +127,7 @@ def on_appointment_cancelled_trigger(
     if change is None:
         return
 
-    before = change.before.to_dict() if change.before.exists else None
-    after = change.after.to_dict() if change.after.exists else None
+    before, after = change_before_after(change)
 
     # Detectar si pasó de ACTIVA a CANCELADA
     if not after or not after.get("isCancelled"):
@@ -517,21 +522,21 @@ def process_quiet_hours_pending_item(
     document="quiet_hours_pending/{appointmentId}",
     memory=options.MemoryOption.MB_512,
     timeout_sec=300,
+    secrets=ALL_SECRETS,
 )
 def on_quiet_hours_pending_written(
     event: firestore_fn.Event[firestore_fn.Change | None],
 ) -> None:
     """Libera Autopilot de inmediato cuando Yari pide `status: release_now`."""
     change = event.data
-    if change is None or not change.after.exists:
+    if change is None:
         return
 
-    after = change.after.to_dict() or {}
-    if after.get("status") != "release_now":
+    before, after = change_before_after(change)
+    if not after or after.get("status") != "release_now":
         return
 
-    before = change.before.to_dict() if change.before.exists else {}
-    if before.get("status") == "release_now":
+    if before and before.get("status") == "release_now":
         return
 
     db = _get_db()
@@ -541,5 +546,5 @@ def on_quiet_hours_pending_written(
         change.after,
         db,
         get_twilio_client(),
-        TWILIO_WHATSAPP_FROM.value,
+        TWILIO_WHATSAPP_FROM,
     )
