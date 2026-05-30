@@ -232,7 +232,7 @@ export const PatientManager = {
                 snap.forEach((d) => profiles.push({ id: d.id, ...d.data() }));
                 this._profilesSessionUid = uid;
                 this._processData(null, profiles);
-                log.success(`Perfiles cargados: ${profiles.length} (1× sesión)`);
+                log.success(`Perfiles cargados: ${profiles.length} (~${profiles.length} reads, getDocs 1× sesión)`);
             } catch (error) {
                 log.error('Error cargando perfiles:', error);
             } finally {

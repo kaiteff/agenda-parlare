@@ -39,6 +39,10 @@ log.info("Iniciando Agenda Parlare...");
 // Manejar estado de autenticación
 async function handleAuthState(user) {
     if (user) {
+        if (user.uid === lastAuthenticatedUid && modulesInitialized) {
+            return;
+        }
+
         const userData = await AuthManager.initUser(user);
 
         if (!userData) {
@@ -49,17 +53,25 @@ async function handleAuthState(user) {
             return;
         }
 
-        log.success(`Usuario autenticado: ${userData.displayName} (${userData.role})`);
+        lastAuthenticatedUid = user.uid;
+        log.success(`Usuario autenticado: ${userData.displayName} (${userData.role}) — agenda: ${AuthManager.getSelectedTherapist()}`);
 
         loginContainer.classList.add('hidden');
         appContent.classList.remove('hidden');
 
-        Header.init();
+        if (!headerInitialized) {
+            Header.init();
+            headerInitialized = true;
+        } else {
+            Header.render();
+        }
         initializeModules();
     } else {
         log.info("Usuario no autenticado");
         AppLifecycle.shutdown();
         modulesInitialized = false;
+        headerInitialized = false;
+        lastAuthenticatedUid = null;
         AuthManager.clear();
 
         loginContainer.classList.remove('hidden');
@@ -70,6 +82,8 @@ async function handleAuthState(user) {
 }
 
 let modulesInitialized = false;
+let headerInitialized = false;
+let lastAuthenticatedUid = null;
 
 async function initializeModules() {
     if (modulesInitialized) return;
@@ -157,9 +171,8 @@ loginForm.addEventListener('submit', async (e) => {
         loginError.classList.remove('hidden');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
-    } else {
-        if (result.user) handleAuthState(result.user);
     }
+    // Éxito: onAuthStateChanged en firebase.js llama handleAuthState (evita doble init).
 });
 
 initializeFirebase(handleAuthState);

@@ -98,6 +98,8 @@ export const AuthManager = {
     },
     currentUser: null,
     selectedTherapist: null, // Para admins: qué calendario están viendo
+    _initUserInFlight: null,
+    _initUserUid: null,
 
     /**
      * Inicializa el listener de estado de autenticación
@@ -158,20 +160,48 @@ export const AuthManager = {
     clear() {
         this.currentUser = null;
         this.selectedTherapist = null;
+        this._initUserUid = null;
+        this._initUserInFlight = null;
     },
 
     /**
      * Carga el perfil extendido del usuario desde Firestore
      */
     async initUser(firebaseUser) {
+        const uid = firebaseUser?.uid;
+        if (!uid) return null;
+
+        if (this._initUserUid === uid && this.currentUser?.uid === uid) {
+            return this.currentUser;
+        }
+        if (this._initUserInFlight) {
+            return this._initUserInFlight;
+        }
+
+        this._initUserInFlight = this._initUserCore(firebaseUser);
+        try {
+            return await this._initUserInFlight;
+        } finally {
+            this._initUserInFlight = null;
+            this._initUserUid = uid;
+        }
+    },
+
+    async _initUserCore(firebaseUser) {
         try {
             console.log("👤 AuthManager: Inicializando usuario...", firebaseUser.uid);
-            let userData = await this.getUserData(firebaseUser.uid);
+            const firestoreData = await this.getUserData(firebaseUser.uid);
+            const manual = firebaseUser.email
+                ? AUTHORIZED_USERS[firebaseUser.email.toLowerCase()]
+                : null;
 
-            // Si no hay datos en Firestore, buscar en nuestro mapeo manual por Email
-            if (!userData && firebaseUser.email) {
-                console.log("🔍 Buscando en mapeo manual para:", firebaseUser.email);
-                userData = AUTHORIZED_USERS[firebaseUser.email.toLowerCase()];
+            // Email autorizado en código gana sobre users/{uid} (evita therapist:diana en Firestore para Daniel admin)
+            let userData = manual
+                ? { ...(firestoreData || {}), ...manual }
+                : firestoreData;
+
+            if (!userData && manual) {
+                console.log("🔍 Perfil desde mapeo manual:", firebaseUser.email);
             }
 
             if (userData) {
@@ -189,11 +219,13 @@ export const AuthManager = {
                 };
             }
 
-            // Inicializar filtro de terapeuta: PRIORIDAD AL SUYO (incluso si es Admin)
-            if (this.currentUser.therapist && this.currentUser.therapist !== 'all') {
+            // Vista de agenda: admin/recepción → «Todas» por defecto (o última elección en sesión)
+            if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
+                const saved = sessionStorage.getItem('parlare_admin_therapist_view');
+                const allowed = ['diana', 'sam', 'vero', 'all'];
+                this.selectedTherapist = allowed.includes(saved) ? saved : 'all';
+            } else if (this.currentUser.therapist && this.currentUser.therapist !== 'all') {
                 this.selectedTherapist = this.currentUser.therapist;
-            } else if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
-                this.selectedTherapist = 'all';
             } else {
                 this.selectedTherapist = 'diana';
             }
@@ -317,7 +349,9 @@ export const AuthManager = {
     setSelectedTherapist(therapistId) {
         if (this.can('switch_therapist_view')) {
             this.selectedTherapist = therapistId;
-            // Disparar evento de cambio si fuera necesario
+            if (this.isAdmin() || this.currentUser?.role === 'receptionist') {
+                sessionStorage.setItem('parlare_admin_therapist_view', therapistId);
+            }
             return true;
         }
         return false;

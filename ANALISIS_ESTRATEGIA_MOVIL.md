@@ -153,7 +153,11 @@ firebase deploy --only hosting
 
 **Frontend 28–30 may (lecturas al login — admin):** `patientProfiles` → **getDocs 1× por sesión** (super/recepción). Copiloto sin 2.º listener; notificaciones `limit(80)`; `batchSync` solo admin. **30 may:** `AppLifecycle.shutdown()` al logout (antes los listeners seguían vivos y la consola Firebase no “bajaba” al cerrar sesión).
 
-**Cómo medir en Firebase Console (importante):** el gráfico **Reads** es acumulado del **día/hora**, no se reinicia al logout. Anota el número a las 10:00 → abre Parláre una vez → mira a las 10:02: el **delta** debe ser ~500–900, no que el total del día se quede igual (ej. 3.5k todo el sábado incluye crons 7–9 AM + otros usuarios + sesiones previas).
+**Cómo medir en Firebase Console (importante):** el gráfico **Reads** es acumulado del **día/hora**, no se reinicia al logout. Mide el **delta** (antes/después), no que el total baje.
+
+**Login admin (30 may):** si Firestore `users/{uid}` trae `therapist: diana`, antes ganaba sobre el mapa manual → aterrizaba en Diana. **Fix:** mapa `AUTHORIZED_USERS` gana; admin/recepción default **Todas** + `sessionStorage` `parlare_admin_therapist_view`. Dedupe `initUser` y doble `Header.init`.
+
+**Validado Daniel (30 may):** un **F5** ≈ **+200 reads** (4.5k → 4.7k). Login después **sin subir más** = datos ya cargados en esa pestaña (correcto). Antes del refactor un solo abrir podía sumar **~1.2k**. Consola: `CalendarData: N citas` + `Perfiles: ~M reads`.
 
 ### 💡 Sugerencias (opcional — próximas sesiones)
 

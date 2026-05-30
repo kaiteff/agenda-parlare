@@ -105,6 +105,11 @@ export const CalendarData = {
                     data.push({ id: doc.id, ...doc.data() });
                 });
 
+                const fromCache = snapshot.metadata?.fromCache ? 'caché' : 'servidor';
+                console.log(
+                    `📡 CalendarData: ${data.length} citas (${fromCache}, ~${data.length} reads este snapshot)`
+                );
+
                 this._lastData = data;
                 this._lastMetadata = snapshot.metadata;
 

@@ -369,9 +369,14 @@ export const Header = {
                 selector.innerHTML = optionsHtml;
                 if (mobileSelector) mobileSelector.innerHTML = optionsHtml;
 
-                const selected = AuthManager.getSelectedTherapist();
+                const selected = AuthManager.getSelectedTherapist() || 'all';
                 selector.value = selected;
                 if (mobileSelector) mobileSelector.value = selected;
+                if (selector.value !== selected) {
+                    selector.value = 'all';
+                    if (mobileSelector) mobileSelector.value = 'all';
+                    AuthManager.setSelectedTherapist('all');
+                }
                 this._updateMobileTherapistBadge(selected);
 
                 selector.onchange = (e) => applyTherapistChange(e.target.value);
