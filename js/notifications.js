@@ -11,6 +11,7 @@ const log = Logger.create('Notifications');
 
 // Referencias DOM
 let notificationBell, notificationBadge, notificationPanel, notificationList;
+let _notificationsUnsub = null;
 
 // Inicializar notificaciones
 export function initNotifications() {
@@ -31,7 +32,12 @@ function setupNotificationsListener() {
         // 28 may 2026: antes leía TODA la colección en cada login (cientos/miles de reads).
         const notifQuery = query(notifColRef, orderBy('timestamp', 'desc'), limit(80));
 
-        onSnapshot(notifQuery, (snapshot) => {
+        if (_notificationsUnsub) {
+            _notificationsUnsub();
+            _notificationsUnsub = null;
+        }
+
+        _notificationsUnsub = onSnapshot(notifQuery, (snapshot) => {
             if (!notificationList) return;
 
             notificationList.innerHTML = '';
@@ -258,6 +264,13 @@ async function clearAllNotifications() {
             log.error("Error clearing notifications:", e);
             await ModalService.alert("Error", "Error al limpiar notificaciones: " + e.message, "error");
         }
+    }
+}
+
+export function shutdownNotifications() {
+    if (_notificationsUnsub) {
+        _notificationsUnsub();
+        _notificationsUnsub = null;
     }
 }
 

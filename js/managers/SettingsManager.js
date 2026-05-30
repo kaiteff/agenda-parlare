@@ -13,15 +13,17 @@ export const SettingsManager = {
         baseCosts: {}
     },
     subscribers: [],
+    _settingsUnsub: null,
 
     /**
      * Inicializa el manager y escucha cambios en tiempo real
      */
     async init() {
         console.log('⚙️ SettingsManager: Inicializando...');
-        
+        if (this._settingsUnsub) return;
+
         // Escuchar cambios en tiempo real
-        onSnapshot(doc(db, this.docPath), (snapshot) => {
+        this._settingsUnsub = onSnapshot(doc(db, this.docPath), (snapshot) => {
             if (snapshot.exists()) {
                 this.config = snapshot.data();
 
@@ -160,5 +162,12 @@ export const SettingsManager = {
             }
         };
         await this.saveConfig(defaults);
+    },
+
+    shutdown() {
+        if (this._settingsUnsub) {
+            this._settingsUnsub();
+            this._settingsUnsub = null;
+        }
     }
 };

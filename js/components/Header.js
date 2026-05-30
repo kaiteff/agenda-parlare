@@ -299,6 +299,13 @@ export const Header = {
         });
     },
 
+    shutdown() {
+        if (this._batchSyncUnsub) {
+            this._batchSyncUnsub();
+            this._batchSyncUnsub = null;
+        }
+    },
+
     /**
      * Actualiza el contador del botón de sincronización manual
      * @param {number} count 

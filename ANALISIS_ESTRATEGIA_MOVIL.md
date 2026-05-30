@@ -151,7 +151,9 @@ firebase deploy --only hosting
 
 **Backend ya optimizado (no requiere acción diaria):** sync Google 7 AM solo; domingo nuke / L–S incremental; recordatorios 8 AM/8 PM leen perfiles por `profileId` (C-Lite); listener citas multicast (Win 1).
 
-**Frontend 28 may (lecturas al login — admin):** `patientProfiles` → **getDocs 1× por sesión** (super/recepción; sin `onSnapshot` continuo). Tras crear/editar/baja/reactivar → `PatientManager.refreshProfiles(true)`. `batchSync` Header → solo admin/recepción, listener único. Copiloto sin 2.º listener; notificaciones `limit(80)`. Meta login admin: **~500–750** reads (antes ~1.2k).
+**Frontend 28–30 may (lecturas al login — admin):** `patientProfiles` → **getDocs 1× por sesión** (super/recepción). Copiloto sin 2.º listener; notificaciones `limit(80)`; `batchSync` solo admin. **30 may:** `AppLifecycle.shutdown()` al logout (antes los listeners seguían vivos y la consola Firebase no “bajaba” al cerrar sesión).
+
+**Cómo medir en Firebase Console (importante):** el gráfico **Reads** es acumulado del **día/hora**, no se reinicia al logout. Anota el número a las 10:00 → abre Parláre una vez → mira a las 10:02: el **delta** debe ser ~500–900, no que el total del día se quede igual (ej. 3.5k todo el sábado incluye crons 7–9 AM + otros usuarios + sesiones previas).
 
 ### 💡 Sugerencias (opcional — próximas sesiones)
 

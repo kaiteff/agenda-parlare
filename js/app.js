@@ -21,6 +21,7 @@ import { SettingsManager } from './managers/SettingsManager.js';
 import { NewFeatureAlert } from './utils/NewFeatureAlert.js';
 import { WaitlistCopilotPanel } from './components/WaitlistCopilotPanel.js';
 import { WaitlistCopilotService } from './services/WaitlistCopilotService.js';
+import { AppLifecycle } from './services/AppLifecycle.js';
 
 const log = Logger.create('App');
 
@@ -57,6 +58,8 @@ async function handleAuthState(user) {
         initializeModules();
     } else {
         log.info("Usuario no autenticado");
+        AppLifecycle.shutdown();
+        modulesInitialized = false;
         AuthManager.clear();
 
         loginContainer.classList.remove('hidden');

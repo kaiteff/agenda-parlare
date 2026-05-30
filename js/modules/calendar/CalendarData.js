@@ -138,6 +138,17 @@ export const CalendarData = {
         };
     },
 
+    /** Cierra el listener compartido (logout). */
+    shutdown() {
+        this._subscribers = [];
+        if (this._unsubscribeSnapshot) {
+            this._unsubscribeSnapshot();
+            this._unsubscribeSnapshot = null;
+        }
+        this._lastData = null;
+        this._lastMetadata = null;
+    },
+
     // Wrappers para servicios de citas
 
     async createEvent(data) {
