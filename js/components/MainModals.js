@@ -584,13 +584,34 @@ export const MainModals = {
                         </div>
 
                         <!-- Conflictos (ámbar) -->
-                        <div id="absenceConflictsCard" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2 animate-fade-in">
+                        <div id="absenceConflictsCard" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3 animate-fade-in">
                             <h4 class="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                                 Citas afectadas (<span id="absenceConflictsCount">0</span>)
                             </h4>
-                            <p class="text-xs text-amber-700 leading-tight">Estas citas tendrás que <strong>reagendar o cancelar manualmente</strong> tras guardar el bloqueo.</p>
-                            <div id="absenceConflictsList" class="max-h-32 overflow-y-auto divide-y divide-amber-100 text-xs font-semibold text-gray-700 scroller pt-1"></div>
+                            <div id="absenceConflictsList" class="max-h-28 overflow-y-auto divide-y divide-amber-100 text-xs font-semibold text-gray-700 scroller pt-1"></div>
+                            <div id="absenceConflictActions" class="space-y-2 pt-2 border-t border-amber-200/80">
+                                <p class="text-[11px] font-black text-amber-900 uppercase tracking-wider">¿Qué hacemos con estas citas?</p>
+                                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-100 bg-white cursor-pointer touch-manipulation has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50/50">
+                                    <input type="radio" name="absenceConflictAction" value="block_only" checked class="mt-0.5 text-blue-600">
+                                    <span class="text-xs text-gray-800 leading-snug"><strong>Solo bloquear</strong> — yo coordino las citas por fuera.</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-100 bg-white cursor-pointer touch-manipulation has-[:checked]:border-red-400 has-[:checked]:bg-red-50/40">
+                                    <input type="radio" name="absenceConflictAction" value="cancel" class="mt-0.5 text-red-600">
+                                    <span class="text-xs text-gray-800 leading-snug"><strong>Cancelar en Parláre</strong> — marca canceladas (sin WhatsApp al papá).</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-100 bg-white cursor-pointer touch-manipulation has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50/40">
+                                    <input type="radio" name="absenceConflictAction" value="reassign" class="mt-0.5 text-indigo-600">
+                                    <span class="text-xs text-gray-800 leading-snug"><strong>Pasar a otra terapeuta</strong> — misma hora y día (tú confirmas con el papá).</span>
+                                </label>
+                                <div id="absenceSubstituteWrap" class="hidden pl-1 space-y-1.5">
+                                    <label for="absenceSubstituteTherapist" class="block text-[10px] font-black text-indigo-800 uppercase tracking-wider">Terapeuta que cubre</label>
+                                    <select id="absenceSubstituteTherapist" class="w-full px-3 py-3 text-base font-semibold border border-indigo-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-100 touch-manipulation"></select>
+                                    <p id="absenceSubstituteHint" class="text-[11px] text-indigo-800/90 leading-snug">Reasignamos solo las que caben a la <strong>misma hora</strong> con la terapeuta que cubre. El aviso al tutor lo haces tú.</p>
+                                    <div id="absenceSubstituteFitSummary" class="hidden text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2"></div>
+                                    <div id="absenceSubstituteSuggestions" class="hidden max-h-40 overflow-y-auto scroller space-y-2 text-[11px] border border-indigo-100 rounded-xl p-2.5 bg-indigo-50/40"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div id="absenceModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.05)] md:shadow-none">

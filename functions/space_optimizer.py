@@ -163,8 +163,10 @@ def on_appointment_cancelled_trigger(
         db.collection("quiet_hours_pending").document(appointment_id).set({
             "appointmentId": appointment_id,
             "therapist": therapist,
+            "patientName": after.get("name") or "Paciente",
             "cancelledAt": firestore.SERVER_TIMESTAMP,
             "originalDate": cancelled_date_str,
+            "status": "pending",
         })
         return
 
@@ -467,3 +469,77 @@ def handle_space_offer_interactive(
         return f"¡Excelente! Tu sesión ha sido reprogramada con éxito para el día de hoy a las {time_label}. ¡Nos vemos en tu sesión! 😊"
 
     return None
+
+
+def process_quiet_hours_pending_item(
+    doc_snapshot,
+    db,
+    twilio_client,
+    twilio_from: str,
+) -> bool:
+    """
+    Procesa un documento de quiet_hours_pending si aplica.
+    Retorna True si se lanzó Autopilot y se eliminó el doc.
+    """
+    data = doc_snapshot.to_dict() or {}
+    status = data.get("status", "pending")
+    if status == "paused":
+        return False
+
+    appointment_id = data.get("appointmentId") or doc_snapshot.id
+    therapist = data.get("therapist")
+    cancelled_date_str = data.get("originalDate")
+    if not (appointment_id and therapist and cancelled_date_str):
+        doc_snapshot.reference.delete()
+        return False
+
+    try:
+        cancelled_dt = _parse_mx_datetime(cancelled_date_str)
+        process_autopilot_candidates(
+            appointment_id,
+            therapist,
+            cancelled_date_str,
+            cancelled_dt,
+            db,
+            twilio_client,
+            twilio_from,
+            is_quiet_hours=True,
+        )
+        doc_snapshot.reference.delete()
+        logger.info(f"✅ Quiet hours liberado: {appointment_id}")
+        return True
+    except Exception as exc:
+        logger.error(f"Error procesando quiet_hours_pending {appointment_id}: {exc}")
+        return False
+
+
+@firestore_fn.on_document_written(
+    document="quiet_hours_pending/{appointmentId}",
+    memory=options.MemoryOption.MB_512,
+    timeout_sec=300,
+)
+def on_quiet_hours_pending_written(
+    event: firestore_fn.Event[firestore_fn.Change | None],
+) -> None:
+    """Libera Autopilot de inmediato cuando Yari pide `status: release_now`."""
+    change = event.data
+    if change is None or not change.after.exists:
+        return
+
+    after = change.after.to_dict() or {}
+    if after.get("status") != "release_now":
+        return
+
+    before = change.before.to_dict() if change.before.exists else {}
+    if before.get("status") == "release_now":
+        return
+
+    db = _get_db()
+    from main import TWILIO_WHATSAPP_FROM
+
+    process_quiet_hours_pending_item(
+        change.after,
+        db,
+        get_twilio_client(),
+        TWILIO_WHATSAPP_FROM.value,
+    )

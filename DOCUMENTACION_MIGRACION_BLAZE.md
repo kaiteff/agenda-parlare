@@ -13,19 +13,23 @@ graph TD
         A[whatsapp_webhook.py] -->|Flask App| B[Webhook /webhook]
         A -->|API| C[Send Message /api/send-message]
         D[Cronjobs Externos] -->|Peticiones HTTP 8 AM| E[/cron/reminders]
-        D -->|Peticiones HTTP 9 PM| F[/cron/daily-summary]
+        D -->|Peticiones HTTP 9 AM| F[/cron/daily-summary]
     end
 
     subgraph Serverless Nativo (Firebase Blaze)
         G[functions/main.py] -->|HTTPS Trigger| H[Cloud Function: whatsapp_webhook]
         G -->|HTTPS Trigger| I[Cloud Function: send_message_api]
         J[Cloud Scheduler] -->|Cron Oficial 8 AM| K[Cloud Function: send_reminders_cron]
-        J -->|Cron Oficial 9 PM| L[Cloud Function: daily_summary_cron]
+        J -->|Cron Oficial 9 AM| L[Cloud Function: daily_summary_cron]
     end
     
     style Servidor Actual (Render) fill:#fee2e2,stroke:#ef4444,stroke-width:2px
     style Serverless Nativo (Firebase Blaze) fill:#dcfce7,stroke:#22c55e,stroke-width:2px
 ```
+
+> **Nota crítica (27 may 2026):** si aún existe un cron externo apuntando a Render `/cron/daily-summary`, **puede mandar el resumen tarde (9 PM)** aunque ya exista `daily_summary_cron` en Firebase a las 9 AM.  
+> Recomendación: **deshabilitar el cron externo** y dejar **solo** el Scheduler oficial de Firebase (`daily_summary_cron`).  
+> Mitigación temporal: el endpoint de Render se auto-protege y **no envía nada fuera de la ventana 9 AM** (ver guardia `outside_9am_window` en `whatsapp_webhook.py`).
 
 ---
 

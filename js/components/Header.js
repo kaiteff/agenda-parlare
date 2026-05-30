@@ -13,6 +13,7 @@ import { ToastService } from '../utils/ToastService.js';
 import { MobileNav } from '../utils/MobileNav.js';
 
 export const Header = {
+    _batchSyncUnsub: null,
 
     /**
      * Inyecta el HTML base del Header
@@ -243,48 +244,59 @@ export const Header = {
         const userInfoEl = document.getElementById('userInfo');
         if (!userInfoEl) return;
 
-        // Crear contenedor si no existe
-        let batchSyncBtn = document.getElementById('batchSyncBtn');
-        if (!batchSyncBtn) {
-            batchSyncBtn = document.createElement('button');
-            batchSyncBtn.id = 'batchSyncBtn';
-            batchSyncBtn.className = 'ml-2 hidden items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 transition-all shadow-sm active:scale-95';
-            batchSyncBtn.title = "Sincronizar pagos pendientes con Excel";
-            
-            userInfoEl.parentElement.insertBefore(batchSyncBtn, userInfoEl.nextSibling);
+        const canBatchSync = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        const batchSyncBtn = document.getElementById('batchSyncBtn');
 
-            // Listener de click
-            batchSyncBtn.onclick = async (e) => {
-                e.preventDefault();
-                batchSyncBtn.disabled = true;
-                batchSyncBtn.classList.add('opacity-50', 'animate-pulse');
-                
-                await SyncService.syncAllPending();
-                
-                batchSyncBtn.disabled = false;
-                batchSyncBtn.classList.remove('opacity-50', 'animate-pulse');
-            };
-
-            // Optimización lecturas Firestore (26 may 2026):
-            // Solo nos interesan citas pagadas no-sincronizadas de los últimos 30 días
-            // (las sincronizaciones pendientes muy viejas son irrecuperables, en cuyo caso
-            // hay que limpiarlas a mano vía script). Antes el listener leía todas las pagadas
-            // sin sync de toda la historia.
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const thirtyDaysAgoIso = thirtyDaysAgo.toISOString().slice(0, 10);
-
-            const q = query(
-                collection(db, collectionPath),
-                where('sheetSynced', '==', false),
-                where('isPaid', '==', true),
-                where('date', '>=', thirtyDaysAgoIso)
-            );
-
-            onSnapshot(q, (snapshot) => {
-                this._updateBatchSyncUI(snapshot.size);
-            });
+        if (!canBatchSync) {
+            if (batchSyncBtn) batchSyncBtn.remove();
+            if (this._batchSyncUnsub) {
+                this._batchSyncUnsub();
+                this._batchSyncUnsub = null;
+            }
+            return;
         }
+
+        let btn = batchSyncBtn;
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'batchSyncBtn';
+            btn.className = 'ml-2 hidden items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 transition-all shadow-sm active:scale-95';
+            btn.title = 'Sincronizar pagos pendientes con Excel';
+            userInfoEl.parentElement.insertBefore(btn, userInfoEl.nextSibling);
+
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'animate-pulse');
+                await SyncService.syncAllPending();
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'animate-pulse');
+            };
+        }
+
+        this._ensureBatchSyncListener();
+    },
+
+    /**
+     * Un solo onSnapshot para el contador Excel (admin/recepción). No se recrea en cada render.
+     */
+    _ensureBatchSyncListener() {
+        if (this._batchSyncUnsub) return;
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoIso = thirtyDaysAgo.toISOString().slice(0, 10);
+
+        const q = query(
+            collection(db, collectionPath),
+            where('sheetSynced', '==', false),
+            where('isPaid', '==', true),
+            where('date', '>=', thirtyDaysAgoIso)
+        );
+
+        this._batchSyncUnsub = onSnapshot(q, (snapshot) => {
+            this._updateBatchSyncUI(snapshot.size);
+        });
     },
 
     /**

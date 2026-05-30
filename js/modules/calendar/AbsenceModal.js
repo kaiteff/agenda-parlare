@@ -10,7 +10,8 @@ import { AuthManager } from '../../managers/AuthManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { LoaderService } from '../../utils/LoaderService.js';
-import { formatDateLocal } from '../../utils/dateUtils.js';
+import { formatDateLocal, formatTime12h } from '../../utils/dateUtils.js';
+import { isSlotFree } from '../../utils/validators.js';
 import { escapeHTML } from '../../utils/sanitize.js';
 import { db, collectionPath, writeBatch, doc, collection } from '../../firebase.js';
 
@@ -46,7 +47,15 @@ export const AbsenceModal = {
 
         if (startInput) startInput.onchange = refresh;
         if (endInput) endInput.onchange = refresh;
-        if (therapistSelect) therapistSelect.onchange = refresh;
+        if (therapistSelect) {
+            therapistSelect.onchange = () => {
+                refresh();
+                if (this._getConflictAction() === 'reassign') {
+                    this._populateSubstituteSelect(therapistSelect.value);
+                    this._renderSubstituteReassignPanel();
+                }
+            };
+        }
         if (startHourSelect) startHourSelect.onchange = refresh;
         if (endHourSelect) endHourSelect.onchange = refresh;
 
@@ -82,6 +91,142 @@ export const AbsenceModal = {
         if (saveBtn) {
             saveBtn.onclick = () => this.save();
         }
+
+        modal.querySelectorAll('input[name="absenceConflictAction"]').forEach(radio => {
+            radio.addEventListener('change', () => this._toggleConflictActionUI());
+        });
+        const subSelect = document.getElementById('absenceSubstituteTherapist');
+        if (subSelect) subSelect.onchange = () => this._renderSubstituteReassignPanel();
+    },
+
+    _getConflictAction() {
+        return document.querySelector('input[name="absenceConflictAction"]:checked')?.value || 'block_only';
+    },
+
+    _toggleConflictActionUI() {
+        const wrap = document.getElementById('absenceSubstituteWrap');
+        const action = this._getConflictAction();
+        if (wrap) wrap.classList.toggle('hidden', action !== 'reassign');
+        if (action === 'reassign') {
+            const therapist = document.getElementById('absenceTherapist')?.value;
+            this._populateSubstituteSelect(therapist);
+            this._renderSubstituteReassignPanel();
+        }
+    },
+
+    _therapistLabel(id) {
+        const k = (id || '').toLowerCase();
+        if (k === 'diana') return 'Diana';
+        if (k === 'sam') return 'Sam';
+        if (k === 'vero') return 'Vero';
+        return id || '';
+    },
+
+    _buildSubstituteReassignReport(substituteId) {
+        const fits = [];
+        const needsAlt = [];
+        for (const appt of this.conflictedAppointments) {
+            if (!this._substituteHasPatientAtSlot(substituteId, appt)) {
+                fits.push(appt);
+            } else {
+                needsAlt.push({
+                    appt,
+                    altSlots: this._findSameDayOpenSlots(substituteId, appt)
+                });
+            }
+        }
+        return { fits, needsAlt };
+    },
+
+    /** Huecos libres de la sustituta el mismo día, ordenados por cercanía a la hora original. */
+    _findSameDayOpenSlots(substituteId, appt, limit = 4) {
+        const ref = new Date(appt.date);
+        const preferHour = ref.getHours();
+        const candidates = [];
+        for (let h = 8; h <= 20; h++) {
+            const slotDate = new Date(ref);
+            slotDate.setHours(h, 0, 0, 0);
+            if (slotDate.getDay() === 0) continue;
+            if (isSlotFree(slotDate, CalendarState.appointments, appt.id, substituteId)) {
+                candidates.push({ hour: h, label: formatTime12h(h), distance: Math.abs(h - preferHour) });
+            }
+        }
+        candidates.sort((a, b) => a.distance - b.distance);
+        return candidates.slice(0, limit);
+    },
+
+    _renderSubstituteReassignPanel() {
+        const fitEl = document.getElementById('absenceSubstituteFitSummary');
+        const listEl = document.getElementById('absenceSubstituteSuggestions');
+        const substitute = document.getElementById('absenceSubstituteTherapist')?.value;
+
+        if (!fitEl || !listEl || this._getConflictAction() !== 'reassign' || !substitute) {
+            fitEl?.classList.add('hidden');
+            listEl?.classList.add('hidden');
+            return;
+        }
+
+        const { fits, needsAlt } = this._buildSubstituteReassignReport(substitute);
+        const subName = this._therapistLabel(substitute);
+
+        if (fits.length > 0) {
+            fitEl.textContent = `✅ ${fits.length} cita(s) caben con ${subName} a la misma hora y día (se reasignan al guardar).`;
+            fitEl.classList.remove('hidden');
+        } else {
+            fitEl.classList.add('hidden');
+        }
+
+        if (needsAlt.length === 0) {
+            listEl.classList.add('hidden');
+            listEl.innerHTML = '';
+            return;
+        }
+
+        const maxRows = 12;
+        const rows = needsAlt.slice(0, maxRows);
+        let html = `<p class="font-black text-indigo-900 uppercase tracking-wider text-[10px] mb-1">⚠️ ${needsAlt.length} cita(s) — ${subName} ocupada a esa hora · huecos ese día</p>`;
+
+        rows.forEach(({ appt, altSlots }) => {
+            const d = new Date(appt.date);
+            const dayLabel = d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+            const hourLabel = formatTime12h(d.getHours());
+            const alts = altSlots.length
+                ? altSlots.map(s => s.label).join(', ')
+                : 'sin huecos 8 AM–8 PM ese día';
+            html += `<div class="py-1.5 border-b border-indigo-100/80 last:border-0 leading-snug">
+                <span class="font-bold text-gray-900">${escapeHTML(appt.name)}</span>
+                <span class="text-indigo-800"> · ${dayLabel} ${hourLabel}</span>
+                <div class="text-indigo-700 mt-0.5">Libres con ${subName}: <strong>${alts}</strong></div>
+            </div>`;
+        });
+
+        if (needsAlt.length > maxRows) {
+            html += `<p class="text-indigo-600 font-semibold pt-1">… y ${needsAlt.length - maxRows} más (coordina manual o cancela).</p>`;
+        }
+
+        listEl.innerHTML = html;
+        listEl.classList.remove('hidden');
+    },
+
+    _populateSubstituteSelect(awayTherapist) {
+        const select = document.getElementById('absenceSubstituteTherapist');
+        if (!select) return;
+        const away = (awayTherapist || '').toLowerCase();
+        const labels = { diana: 'Diana', sam: 'Sam', vero: 'Vero' };
+        const options = ['diana', 'sam', 'vero'].filter(t => t !== away);
+        select.innerHTML = options.map(t => `<option value="${t}">${labels[t]}</option>`).join('');
+    },
+
+    _substituteHasPatientAtSlot(substituteId, appt) {
+        const target = new Date(appt.date);
+        const dayKey = formatDateLocal(target);
+        const hour = target.getHours();
+        return CalendarState.appointments.some(a => {
+            if (a.isCancelled || a.isFullDayBlock || a.isHourlyBlock) return false;
+            if ((a.therapist || '').toLowerCase() !== substituteId) return false;
+            const d = new Date(a.date);
+            return formatDateLocal(d) === dayKey && d.getHours() === hour;
+        });
     },
 
     /** Atajos rápidos: rellena Fecha Inicio y Fecha Fin con un rango común. */
@@ -274,6 +419,12 @@ export const AbsenceModal = {
         const vacationRadio = document.querySelector('input[name="absenceType"][value="vacation"]');
         if (vacationRadio) vacationRadio.checked = true;
 
+        const blockOnlyRadio = document.querySelector('input[name="absenceConflictAction"][value="block_only"]');
+        if (blockOnlyRadio) blockOnlyRadio.checked = true;
+        document.getElementById('absenceSubstituteWrap')?.classList.add('hidden');
+        document.getElementById('absenceSubstituteFitSummary')?.classList.add('hidden');
+        document.getElementById('absenceSubstituteSuggestions')?.classList.add('hidden');
+
         // Restriction/Permission for therapists (Vero / Sam)
         const therapistSelect = document.getElementById('absenceTherapist');
         const userRole = AuthManager.currentUser?.role;
@@ -390,6 +541,17 @@ export const AbsenceModal = {
                 noConflictsCard.classList.add('hidden');
             }
         }
+
+        if (this.conflictedAppointments.length > 0) {
+            this._populateSubstituteSelect(therapist);
+            this._toggleConflictActionUI();
+            if (this._getConflictAction() === 'reassign') {
+                this._renderSubstituteReassignPanel();
+            }
+        } else {
+            document.getElementById('absenceSubstituteFitSummary')?.classList.add('hidden');
+            document.getElementById('absenceSubstituteSuggestions')?.classList.add('hidden');
+        }
     },
 
     async save() {
@@ -456,24 +618,45 @@ export const AbsenceModal = {
             if (!proceed) return;
         }
 
-        // 2. Conflict confirmation
+        const conflictAction = this.conflictedAppointments.length > 0 ? this._getConflictAction() : 'block_only';
+        let substituteTherapist = null;
+
         if (this.conflictedAppointments.length > 0) {
             const count = this.conflictedAppointments.length;
-            // S-015: escapar nombres de paciente antes de meterlos en el mensaje HTML del ModalService
             const patientNames = Array.from(new Set(this.conflictedAppointments.map(a => a.name)))
                 .slice(0, 3)
                 .map(n => escapeHTML(n))
                 .join(', ');
             const summary = count > 3 ? `${patientNames} y ${count - 3} más` : patientNames;
 
-            const confirmSave = await ModalService.confirm(
-                "Citas Afectadas",
-                `Bloquear este rango afectará a <strong>${count} citas</strong> (${summary}).<br><br>¿Estás seguro de proceder con el bloqueo? Tendrás que reagendar o cancelar estas citas de forma manual en la agenda.`
-            );
+            if (conflictAction === 'reassign') {
+                substituteTherapist = document.getElementById('absenceSubstituteTherapist')?.value;
+                if (!substituteTherapist) {
+                    ModalService.alert("Terapeuta requerida", "Elige quién cubrirá las citas.", "warning");
+                    return;
+                }
+            }
 
+            let actionLabel = 'solo registrar el bloqueo';
+            if (conflictAction === 'cancel') actionLabel = `<strong>cancelar ${count} citas</strong> en Parláre (sin WhatsApp)`;
+            if (conflictAction === 'reassign') {
+                const subName = this._therapistLabel(substituteTherapist);
+                const report = this._buildSubstituteReassignReport(substituteTherapist);
+                if (report.needsAlt.length === 0) {
+                    actionLabel = `<strong>pasar ${report.fits.length} citas a ${subName}</strong> (misma hora y día)`;
+                } else {
+                    actionLabel = `<strong>pasar ${report.fits.length} a ${subName}</strong> a la misma hora; <strong>${report.needsAlt.length}</strong> quedan para que coordines otro hueco (ver lista de horarios libres).`;
+                }
+            }
+
+            const confirmSave = await ModalService.confirm(
+                "Citas afectadas",
+                `Hay <strong>${count} citas</strong> (${summary}).<br><br>Acción: ${actionLabel}.<br><br>¿Confirmas el bloqueo de vacaciones?`
+            );
             if (!confirmSave) return;
         }
 
+        const cancelledByLabel = AuthManager.currentUser?.displayName || 'Vacaciones';
         LoaderService.show("Registrando ausencias...");
         try {
             // Generate list of days to block
@@ -542,9 +725,47 @@ export const AbsenceModal = {
                 }
             }
 
+            let conflictUpdates = 0;
+            let reassignSkipped = 0;
+            for (const appt of this.conflictedAppointments) {
+                if (!appt.id) continue;
+                const ref = doc(db, collectionPath, appt.id);
+                if (conflictAction === 'cancel') {
+                    batch.update(ref, {
+                        isCancelled: true,
+                        cancelledBy: cancelledByLabel,
+                        cancelledAt: new Date().toISOString(),
+                        updatedBy: AuthManager.currentUser?.email || 'absence_modal'
+                    });
+                    conflictUpdates++;
+                } else if (conflictAction === 'reassign' && substituteTherapist) {
+                    if (this._substituteHasPatientAtSlot(substituteTherapist, appt)) {
+                        reassignSkipped++;
+                        continue;
+                    }
+                    batch.update(ref, {
+                        therapist: substituteTherapist,
+                        reassignedFrom: therapist,
+                        reassignedAt: new Date().toISOString(),
+                        reassignedBy: AuthManager.currentUser?.email || 'absence_modal'
+                    });
+                    conflictUpdates++;
+                }
+            }
+
             await batch.commit();
 
-            ToastService.success(`Ausencia registrada exitosamente (${daysToBlock.length} día(s)) 🎉`);
+            let toastMsg = `Ausencia registrada (${daysToBlock.length} día(s))`;
+            if (conflictAction === 'cancel' && conflictUpdates > 0) {
+                toastMsg += ` · ${conflictUpdates} cita(s) canceladas`;
+            } else if (conflictAction === 'reassign' && (conflictUpdates > 0 || reassignSkipped > 0)) {
+                const subName = this._therapistLabel(substituteTherapist);
+                toastMsg += ` · ${conflictUpdates} pasadas a ${subName}`;
+                if (reassignSkipped > 0) {
+                    toastMsg += ` · ${reassignSkipped} requieren otro horario`;
+                }
+            }
+            ToastService.success(`${toastMsg} 🎉`);
             this.close();
             
             // Re-render calendar UI to display the new blocks

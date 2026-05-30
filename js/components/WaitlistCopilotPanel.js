@@ -12,7 +12,10 @@
  */
 
 import { WaitlistCopilotService, COPILOT_DELAY_MS } from '../services/WaitlistCopilotService.js';
+import { QuietHoursCopilotService } from '../services/QuietHoursCopilotService.js';
 import { AuthManager } from '../managers/AuthManager.js';
+
+const ACTION_DEBOUNCE_MS = 1000;
 
 // Minutos derivados de la constante única (contrato con el backend).
 // Cualquier cambio se propaga automáticamente al UI sin tocar copys.
@@ -29,7 +32,11 @@ const THERAPIST_LABEL = {
 
 export const WaitlistCopilotPanel = {
     _initialized: false,
-    _unsub: null,
+    _unsubDay: null,
+    _unsubQuiet: null,
+    _dayItems: [],
+    _quietItems: [],
+    _actionLocks: new Map(),
 
     init() {
         if (this._initialized) return;
@@ -41,15 +48,30 @@ export const WaitlistCopilotPanel = {
         this._ensureContainer();
 
         WaitlistCopilotService.start();
-        this._unsub = WaitlistCopilotService.subscribe((items) => this.render(items));
+        QuietHoursCopilotService.start();
+        this._unsubDay = WaitlistCopilotService.subscribe((items) => {
+            this._dayItems = items.map((i) => ({ ...i, kind: 'day' }));
+            this.render(this._mergedItems());
+        });
+        this._unsubQuiet = QuietHoursCopilotService.subscribe((items) => {
+            this._quietItems = items;
+            this.render(this._mergedItems());
+        });
 
         this._initialized = true;
     },
 
+    _mergedItems() {
+        return [...this._quietItems, ...this._dayItems];
+    },
+
     destroy() {
-        if (this._unsub) this._unsub();
-        this._unsub = null;
+        if (this._unsubDay) this._unsubDay();
+        if (this._unsubQuiet) this._unsubQuiet();
+        this._unsubDay = null;
+        this._unsubQuiet = null;
         WaitlistCopilotService.stop();
+        QuietHoursCopilotService.stop();
         document.getElementById(CONTAINER_ID)?.remove();
         document.getElementById(MODAL_ID)?.remove();
         this._initialized = false;
@@ -80,18 +102,22 @@ export const WaitlistCopilotPanel = {
 
         // Firma del conjunto: si solo cambió el contador, NO re-generamos HTML;
         // solo actualizamos los nodos `data-bind` (contador + barra).
-        const signature = items.map(i => `${i.id}:${i.localStatus}`).join('|');
+        const signature = items.map(i => `${i.kind || 'day'}:${i.id}:${i.localStatus}`).join('|');
         const sameSet = signature === this._lastSignature;
 
         if (!sameSet) {
             this._lastSignature = signature;
-            container.innerHTML = items.map((item) => this._cardHTML(item)).join('');
+            container.innerHTML = items.map((item) => {
+                if (item.kind === 'quiet') return this._quietCardHTML(item);
+                return this._cardHTML(item);
+            }).join('');
             items.forEach((item) => this._bindCard(item));
             return;
         }
 
-        // Tick: actualizar solo contador + barra de progreso
+        // Tick: actualizar solo contador + barra de progreso (solo tarjetas diurnas)
         items.forEach((item) => {
+            if (item.kind === 'quiet') return;
             const card = container.querySelector(`[data-copilot-id="${item.id}"]`);
             if (!card) return;
             const countdownEl = card.querySelector('[data-bind="countdown"]');
@@ -102,6 +128,65 @@ export const WaitlistCopilotPanel = {
                 progressEl.style.width = `${pct.toFixed(2)}%`;
             }
         });
+    },
+
+    _quietCardHTML(item) {
+        const therapistName = THERAPIST_LABEL[item.therapist] || item.therapist;
+        const timeLabel = this._formatTime(item.date);
+        const ctaDisabled = item.localStatus !== 'waiting';
+        const statusBadge = (() => {
+            if (item.localStatus === 'launching') {
+                return '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-100 text-[10px] font-bold uppercase tracking-wider border border-emerald-400/30">Lanzando…</span>';
+            }
+            if (item.localStatus === 'paused' || item.status === 'paused') {
+                return '<span class="px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-100 text-[10px] font-bold uppercase tracking-wider border border-slate-400/30">En pausa</span>';
+            }
+            return '<span class="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-100 text-[10px] font-bold uppercase tracking-wider border border-violet-400/30">🌙 Quiet Hours</span>';
+        })();
+
+        return `
+        <div
+            data-copilot-id="${item.id}"
+            data-copilot-kind="quiet"
+            class="pointer-events-auto group relative overflow-hidden rounded-2xl border border-violet-300/20 bg-gradient-to-br from-slate-950/90 via-violet-950/85 to-slate-900/90 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(76,29,149,0.45)] text-slate-100 animate-fade-in">
+            <div class="relative p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-800 flex items-center justify-center text-lg">🌙</div>
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200/90">Copiloto · Quiet Hours</p>
+                            <h3 class="text-sm font-bold text-white truncate">Cancelación nocturna · ${timeLabel}</h3>
+                            <p class="text-[11px] text-slate-300/90 truncate">${therapistName} · ${this._escape(item.patientName)}</p>
+                        </div>
+                    </div>
+                    <button type="button" data-action="dismiss" aria-label="Ocultar"
+                        class="shrink-0 w-7 h-7 rounded-lg text-slate-300/70 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">×</button>
+                </div>
+                <div class="mt-3 flex items-center justify-between gap-3">
+                    <p class="text-xs text-slate-200/90 leading-relaxed">
+                        Autopilot programado para las <strong>${item.scheduledReleaseLabel || '8:00 AM'}</strong> (hora México), salvo que intervengas.
+                    </p>
+                    ${statusBadge}
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-2">
+                    <button type="button" data-action="skip" ${ctaDisabled ? 'disabled' : ''}
+                        class="inline-flex flex-col items-center justify-center gap-0.5 py-2.5 px-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 disabled:opacity-50 text-white text-[11px] font-bold uppercase">
+                        <span aria-hidden="true">🚀</span><span>Liberar ya</span>
+                    </button>
+                    <button type="button" data-action="pause" ${ctaDisabled ? 'disabled' : ''}
+                        class="inline-flex flex-col items-center justify-center gap-0.5 py-2.5 px-2 rounded-xl bg-white/10 disabled:opacity-50 text-white text-[11px] font-bold uppercase border border-white/15">
+                        <span aria-hidden="true">⏸️</span><span>Pausar</span>
+                    </button>
+                    <button type="button" data-action="manual" ${item.localStatus === 'paused' ? 'disabled' : ''}
+                        class="inline-flex flex-col items-center justify-center gap-0.5 py-2.5 px-2 rounded-xl bg-violet-500/20 disabled:opacity-50 text-violet-100 text-[11px] font-bold uppercase border border-violet-300/30">
+                        <span aria-hidden="true">🔍</span><span>Manual</span>
+                    </button>
+                </div>
+                <p class="mt-2 text-[10px] text-slate-400/80 leading-relaxed">
+                    ${ctaDisabled ? 'Acción registrada.' : 'Fuera de horario 07:00–22:00 MX. Puedes adelantar al amanecer sin esperar al cron.'}
+                </p>
+            </div>
+        </div>`;
     },
 
     _cardHTML(item) {
@@ -204,21 +289,58 @@ export const WaitlistCopilotPanel = {
         const card = document.querySelector(`[data-copilot-id="${item.id}"]`);
         if (!card) return;
 
-        card.querySelector('[data-action="dismiss"]')?.addEventListener('click', () => {
+        const withDebounce = (action, fn) => {
+            card.querySelector(`[data-action="${action}"]`)?.addEventListener('click', async () => {
+                const lockKey = `${item.id}:${action}`;
+                if (this._actionLocks.get(lockKey)) return;
+                this._actionLocks.set(lockKey, true);
+                setTimeout(() => this._actionLocks.delete(lockKey), ACTION_DEBOUNCE_MS);
+                try {
+                    await fn();
+                } catch (e) {
+                    console.warn('[WaitlistCopilot] acción:', e);
+                    this._toast('No se pudo completar la acción. Intenta de nuevo.');
+                }
+            });
+        };
+
+        if (item.kind === 'quiet') {
+            withDebounce('dismiss', async () => {
+                if (item.status === 'paused' || item.localStatus === 'paused') {
+                    await QuietHoursCopilotService.dismiss(item.id);
+                } else {
+                    this._toast('Pausa primero si quieres descartar la cola nocturna.');
+                }
+            });
+            withDebounce('skip', async () => {
+                await QuietHoursCopilotService.releaseNow(item.id);
+                this._toast('🚀 Liberando ofertas Quiet Hours…');
+            });
+            withDebounce('pause', async () => {
+                await QuietHoursCopilotService.pause(item.id);
+                this._toast('⏸️ Cola nocturna en pausa. El cron de las 8 AM no enviará ofertas.');
+            });
+            withDebounce('manual', async () => {
+                this.openCandidatesModal(item);
+            });
+            return;
+        }
+
+        withDebounce('dismiss', () => {
             WaitlistCopilotService.dismissLocal(item.id);
         });
 
-        card.querySelector('[data-action="skip"]')?.addEventListener('click', async () => {
+        withDebounce('skip', async () => {
             await WaitlistCopilotService.skipDelay(item.id);
             this._toast('🚀 Autopilot lanzado. Ofertas saliendo por WhatsApp…');
         });
 
-        card.querySelector('[data-action="pause"]')?.addEventListener('click', async () => {
+        withDebounce('pause', async () => {
             await WaitlistCopilotService.pauseAutopilot(item.id);
             this._toast('⏸️ Autopilot pausado. Llena el espacio manualmente.');
         });
 
-        card.querySelector('[data-action="manual"]')?.addEventListener('click', async () => {
+        withDebounce('manual', async () => {
             await WaitlistCopilotService.markManualSearch(item.id);
             this.openCandidatesModal(item);
         });
@@ -294,7 +416,13 @@ export const WaitlistCopilotPanel = {
 
         // Cargar candidatos
         const body = modal.querySelector('.flex-1.overflow-y-auto');
-        const candidates = await WaitlistCopilotService.getCandidates(item.id);
+        const candidates = item.kind === 'quiet'
+            ? await WaitlistCopilotService.getCandidatesForSlot({
+                id: item.appointmentId || item.id,
+                therapist: item.therapist,
+                date: item.date
+            })
+            : await WaitlistCopilotService.getCandidates(item.id);
 
         if (!candidates || candidates.length === 0) {
             body.innerHTML = `

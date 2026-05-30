@@ -279,6 +279,17 @@ export const AuthManager = {
         return false;
     },
 
+    /** Puede abrir el modal de vacaciones/ausencias (propia agenda o cualquiera si admin/recepción). */
+    canOpenAbsenceModal() {
+        if (!this.currentUser) return false;
+        if (this.isAdmin() || this.currentUser?.role === 'receptionist') return true;
+        if (this.currentUser?.role === 'therapist') {
+            const t = (this.currentUser.therapist || '').toLowerCase();
+            return t && t !== 'all';
+        }
+        return false;
+    },
+
     /**
      * Helpers de Roles
      */

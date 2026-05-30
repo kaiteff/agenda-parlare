@@ -173,6 +173,9 @@ export const PatientActions = {
 
                 console.log('✅ PatientActions: Paciente creado:', fullName);
 
+                const { PatientManager } = await import('../PatientManager.js');
+                await PatientManager.refreshProfiles(true);
+
                 // Abrir modal de agendar primera cita
                 setTimeout(() => {
                     ScheduleManager.openModal(result.id, fullName, therapist, defaultCost);
@@ -501,6 +504,8 @@ export const PatientActions = {
                 }
 
                 console.log('✅ PatientActions: Paciente desactivado:', patientName);
+                const { PatientManager } = await import('../PatientManager.js');
+                await PatientManager.refreshProfiles(true);
                 return true;
             } else {
                 await ModalService.alert("Error", 'Error al dar de baja: ' + result.error, "error");
@@ -531,6 +536,8 @@ export const PatientActions = {
             if (result.success) {
                 ToastService.success(`Paciente "${patientName}" reactivado exitosamente.`);
                 console.log('✅ PatientActions: Paciente reactivado:', patientName);
+                const { PatientManager } = await import('../PatientManager.js');
+                await PatientManager.refreshProfiles(true);
                 return true;
             } else {
                 await ModalService.alert("Error", 'Error al reactivar: ' + result.error, "error");
@@ -708,6 +715,8 @@ export const PatientActions = {
             }
 
             console.log(`✅ PatientActions: Perfil actualizado para ${patientName}`);
+            const { PatientManager } = await import('../PatientManager.js');
+            await PatientManager.refreshProfiles(true);
             ToastService.success("Perfil actualizado correctamente");
             return true;
 

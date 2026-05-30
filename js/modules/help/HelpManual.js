@@ -167,6 +167,7 @@ export const HelpManual = {
                                     <li><strong>🔍 Manual</strong> — Abre la lista de candidatos elegibles con sus teléfonos y un botón directo de <strong>WhatsApp</strong> con mensaje listo. Útil cuando prefieres llamar personalmente.</li>
                                 </ul>
                                 <p class="text-xs text-gray-500 italic">Si no haces nada en 8 minutos, el sistema envía las ofertas solo. El primero que conteste "Sí, adelantar" desde su WhatsApp se queda con el espacio y los demás reciben "Lo sentimos, ya fue tomado".</p>
+                                <p class="text-xs bg-violet-50 border-l-4 border-violet-400 p-3 rounded text-violet-900"><strong>🌙 Quiet Hours (22:00–07:00 MX):</strong> si cancelan de noche, aparece una tarjeta morada (sin contador de 8 min). Por defecto el Autopilot se libera a las <strong>8:00 AM</strong>. Puedes <strong>Liberar ya</strong>, <strong>Pausar</strong> (el cron de la mañana no enviará ofertas) o usar <strong>Manual</strong> como en el día.</p>
                                 <p class="text-xs bg-amber-50 border-l-4 border-amber-400 p-3 rounded text-amber-800">⚠️ El banner solo lo ves tú (Yari) y Diana. Las terapeutas no lo ven para no distraerlas.</p>
 
                                 <!-- Sub-sección: etiquetas y botones grises en Búsqueda Manual -->
@@ -460,39 +461,56 @@ export const HelpManual = {
                                     <p>¿Vas a salir a comer o tienes un compromiso? Elige "Inhabilitar" desde el modal de cita para que nadie pueda agendarte en ese espacio.</p>
                                 </div>
                                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                                    <h4 class="font-bold text-amber-900 mb-1">🏖️ Vacaciones / Día completo — <span class="text-[10px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">Premium 25 may</span></h4>
-                                    <p class="mb-2">El candado <strong>🔒</strong> de cada día abre un <strong>modal premium</strong> (ya no es el cuadro feo del navegador) con todo lo que necesitas para registrar ausencias sin errores:</p>
-                                    <ul class="list-disc pl-5 space-y-1">
-                                        <li><strong>Atajos rápidos</strong> 🆕: <em>Hoy</em>, <em>Esta semana</em>, <em>Próxima semana</em>, <em>2 semanas</em> — un toque y las fechas se rellenan solas, incluso activan «Todo el día» automáticamente para rangos largos.</li>
-                                        <li><strong>Tipo de ausencia con cards visuales</strong> 🆕: 🏖️ Vacaciones · 🏥 Médica · 📚 Capacitación · 👤 Personal · 🚫 Otro. La que toques se enmarca en azul para que veas claramente la seleccionada.</li>
-                                        <li><strong>Rango de fechas</strong>: bloquea una semana o dos seguidas con un solo clic (los domingos se excluyen solos del conteo).</li>
-                                        <li><strong>Todo el día</strong> o un <strong>rango horario</strong> (ej. solo de 2 PM a 5 PM). Si pones hora fin antes que inicio los selects se enmarcan en rojo al instante.</li>
-                                        <li><strong>Tarjeta resumen</strong> 🆕: te muestra <code class="text-[11px] bg-amber-100/70 text-amber-900 px-1.5 py-0.5 rounded border border-amber-200">🏖️ Vacaciones · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día</code> antes de confirmar, para que veas exactamente lo que estás por guardar.</li>
-                                        <li><strong>Banner verde «Sin citas afectadas»</strong> 🆕: te confirma que nadie quedará colgado en el rango que escogiste.</li>
-                                        <li><strong>Aviso ámbar de citas afectadas</strong>: si hay niños agendados, los muestra con nombre y horario para que Yari/Diana decidan reagendar o cancelar antes de guardar.</li>
+                                    <h4 class="font-bold text-amber-900 mb-1">🏖️ Vacaciones / Día completo — <span class="text-[10px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">Actualizado 28 may</span></h4>
+                                    <p class="mb-2">Registra ausencias desde el candado <strong>🔒</strong> del día o, en celular, <strong>Más → Vacaciones / Ausencia</strong>. El modal incluye atajos de fechas, tipos visuales y resumen antes de guardar.</p>
+
+                                    <p class="text-xs font-bold text-amber-900 uppercase tracking-wide mt-3 mb-1">Cómo abrirlo</p>
+                                    <ul class="list-disc pl-5 space-y-1 text-sm">
+                                        <li><strong>Computadora:</strong> candado 🔒 en el encabezado del día (vista semana o día).</li>
+                                        <li><strong>Celular (Vero, Sam, Diana, Yari):</strong> barra inferior <strong>Más → Vacaciones / Ausencia</strong>, o candado 🔒 junto al número del día.</li>
                                     </ul>
-                                    <p class="mt-2 text-amber-900"><strong>Permisos:</strong> Diana y Yari pueden bloquear a cualquier terapeuta. <strong>Vero y Sam</strong> pueden bloquear únicamente su propia agenda.</p>
-                                    <p class="mt-2 text-xs text-amber-800">💡 <strong>Tip operativo:</strong> para vacaciones largas usa el atajo <em>«Esta semana»</em> o <em>«Próxima semana»</em> y déjalo en «Todo el día». Si necesitas bloquear solo unas horas, hazlo día por día (estamos puliendo la sincronización con Google Calendar).</p>
+
+                                    <p class="text-xs font-bold text-amber-900 uppercase tracking-wide mt-3 mb-1">Antes de confirmar</p>
+                                    <ul class="list-disc pl-5 space-y-1 text-sm">
+                                        <li><strong>Atajos:</strong> <em>Hoy</em>, <em>Esta semana</em>, <em>Próxima semana</em>, <em>2 semanas</em> (activan «Todo el día» en rangos largos).</li>
+                                        <li><strong>Tipo:</strong> 🏖️ Vacaciones · 🏥 Médica · 📚 Capacitación · 👤 Personal · 🚫 Otro.</li>
+                                        <li><strong>Resumen indigo</strong> y <strong>banner verde</strong> si no hay citas en el rango.</li>
+                                        <li><strong>Lista ámbar</strong> si hay niños agendados (nombre + hora).</li>
+                                    </ul>
+
+                                    <p class="text-xs font-bold text-amber-900 uppercase tracking-wide mt-3 mb-1">Si hay citas afectadas — elige una acción</p>
+                                    <ul class="list-disc pl-5 space-y-1.5 text-sm">
+                                        <li><strong>Solo bloquear:</strong> crea los días/horas inhábiles; tú hablas con cada familia y mueves citas a mano en la agenda.</li>
+                                        <li><strong>Cancelar en Parláre:</strong> marca esas citas como canceladas en la app. <em>No envía WhatsApp al papá</em> — el seguimiento es interno (llamada o mensaje personal).</li>
+                                        <li><strong>Pasar a otra terapeuta:</strong> elige quién cubre (Diana, Sam o Vero). La app <strong>solo reasigna</strong> las que caben a la <strong>misma hora y el mismo día</strong> con quien cubre.
+                                            <ul class="list-disc pl-5 mt-1 space-y-1 text-xs text-amber-900/90">
+                                                <li>Barra <strong>verde</strong>: «X citas caben a la misma hora» (se cambian al guardar).</li>
+                                                <li>Lista <strong>índigo</strong>: si quien cubre ya tiene paciente a esa hora, ves hasta <strong>4 huecos libres de esa terapeuta ese mismo día</strong> (horarios cercanos) para ofrecer al papá.</li>
+                                                <li>Tú confirmas con el papá; luego mueves la cita manualmente al hueco acordado si no era la misma hora.</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+
+                                    <p class="mt-3 text-amber-900"><strong>Permisos:</strong> Diana y Yari → cualquier terapeuta. <strong>Vero y Sam</strong> → solo su propia agenda.</p>
+                                    <p class="mt-2 text-xs text-amber-800">💡 <strong>Vacaciones largas (10–20+ niños):</strong> atajo <em>«Próxima semana»</em> + <em>«Pasar a otra terapeuta»</em> para las que quepan; el resto coordínalo con la lista de huecos libres. No se mueven automáticamente a «la próxima semana» — la mayoría ya tiene horario fijo semanal.</p>
                                 </div>
 
                                 <!-- Ejemplo paso a paso (caso real) -->
                                 <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
                                     <h4 class="font-bold text-emerald-900 mb-2 flex items-center gap-1.5">
                                         <span class="text-base" aria-hidden="true">📝</span>
-                                        Ejemplo paso a paso — «Me voy de vacaciones la próxima semana»
+                                        Ejemplo — «Me voy de vacaciones la próxima semana» (con citas)
                                     </h4>
-                                    <p class="text-xs text-emerald-900/90 mb-2">Sigue esta práctica para probar el modal y confirmar que todo se ve y funciona bien (en tu compu o en tu celular):</p>
+                                    <p class="text-xs text-emerald-900/90 mb-2">Práctica recomendada en celular (Sam/Vero) o en computadora:</p>
                                     <ol class="list-decimal pl-5 space-y-1.5 text-sm text-emerald-950 leading-snug">
-                                        <li>Abre el calendario y <strong>toca el candado 🔒</strong> del encabezado de cualquier día.</li>
-                                        <li>En el chip de atajos rápidos, toca <strong>«Próxima semana»</strong>. Las dos fechas se rellenan solas (Lun → Sáb) y <em>«Todo el día»</em> se activa automáticamente. ✅</li>
-                                        <li>En las cards de tipo, toca <strong>«🏥 Médica»</strong>. La tarjeta se enmarca en azul y se ilumina ligeramente. ✅</li>
-                                        <li>Mira la <strong>tarjeta indigo «Resumen»</strong>: debe decir algo como <code class="text-[11px] bg-white/60 px-1 rounded">🏥 Médica · Sam · lun 25 → sáb 30 · 6 días hábiles · Todo el día</code>. ✅</li>
-                                        <li>Si no hay niños agendados en ese rango, aparece la <strong>barra verde «Sin citas afectadas en este rango.»</strong> ✅ — Si hay niños, ves la <strong>tarjeta ámbar</strong> con sus nombres y horarios para que decidas qué hacer antes de guardar.</li>
-                                        <li><strong>Prueba la validación:</strong> destilda <em>«Todo el día»</em>, escoge hora inicio <strong>10 AM</strong> y hora fin <strong>8 AM</strong> → los dos selectores se enmarcan en rojo al instante. Si tratas de guardar, te avisa. ✅ Corrige la hora fin a <strong>1 PM</strong> y los bordes se quitan solos.</li>
-                                        <li>Toca <strong>«Confirmar Bloqueo»</strong> (botón con gradient azul→índigo y candado). En iPhone el botón no queda tapado por el home indicator. ✅</li>
-                                        <li>Aparece una confirmación con el resumen. Acepta y verás los bloques en tu calendario.</li>
+                                        <li>Abre <strong>Más → Vacaciones / Ausencia</strong> (celular) o el candado 🔒 del día (computadora).</li>
+                                        <li>Toca <strong>«Próxima semana»</strong> y el tipo <strong>🏖️ Vacaciones</strong>. Revisa el resumen indigo.</li>
+                                        <li>Si hay citas en ámbar, elige <strong>«Pasar a otra terapeuta»</strong> → selecciona quién cubre (ej. Diana).</li>
+                                        <li>Lee la barra verde («X caben a la misma hora») y la lista índigo con <strong>huecos libres</strong> para los que no caben.</li>
+                                        <li>Llama o escribe a esas familias; si acuerdan otro horario, mueve la cita manualmente en la agenda.</li>
+                                        <li><strong>Confirmar Bloqueo</strong> → acepta el resumen. Las que cupieron cambian de terapeuta; las demás siguen en tu nombre hasta que las muevas o canceles.</li>
                                     </ol>
-                                    <p class="mt-3 text-xs text-emerald-900/85"><strong>¿Algo se ve mal en celular?</strong> Avísale a Daniel con una captura — estamos refinando móvil semana a semana.</p>
+                                    <p class="mt-3 text-xs text-emerald-900/85"><strong>Alternativa:</strong> <em>Cancelar en Parláre</em> si la familia pausará esas sesiones (sin mensaje automático del bot).</p>
                                 </div>
                                 <div class="bg-indigo-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-indigo-800 mb-1">🏫 Visita a Escuela</h4>

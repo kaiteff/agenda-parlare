@@ -10,15 +10,15 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 26 May 2026 — Optimización Firestore Fase 1+2+3 + Win 1 + Hotfix Copiloto cerrados)
+## 📊 Resumen ejecutivo (Última actualización: 28 May 2026 — Recordatorios 8 AM C-lite + Ausencias Fase 2a + cron sync 1×/día)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
 | 🚨 Crítico | 0 | Ninguno |
-| ⚠️ Alto | 2 | Lectura cruzada nombres pacientes (S-002); whitelist emails hardcoded (S-005) |
-| 🟡 Medio | 3 | Sin rate-limit frontend; `console.log` con datos sensibles; sin custom claims |
+| ⚠️ Alto | 1 | Whitelist emails hardcoded (S-005) — custom claims pendiente |
+| 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 25 | Ver sección al final (S-001, S-003, S-004, S-011 a S-016, Q-001 a Q-008, headers, sanitize.js, indexes, multicast, sync Copiloto) |
+| ✅ Reforzado | 30 | Incl. S-002 parcial (rules `appointments`), S-006 parcial (debounce Copiloto), `quiet_hours_pending` rules, UI Quiet Hours |
 
 ---
 
@@ -31,16 +31,12 @@
 
 ## ⚠️ Alto — próximo sprint
 
-### S-002 · `appointments` permite lectura cruzada de nombres entre terapeutas
+### S-002 · `appointments` — lectura cruzada (mitigación parcial en reglas)
 
-- **Archivo:** `firestore.rules:38`
-- **Detalle:** `allow read: if isAuthenticated();` para toda la colección `appointments`. El comentario explica que la UI oculta nombres, pero **cualquier terapeuta puede abrir la consola del navegador** y hacer `getDocs(collection(db, 'appointments'))` para ver TODOS los nombres + costos + teléfonos de pacientes que no le corresponden.
-- **Impacto:** Riesgo legal de privacidad (LFPDPPP MX). Sam puede ver pacientes de Diana y viceversa por la vía técnica.
-- **Mitigación propuesta:**
-  - **Corto plazo:** documentar el riesgo y obtener consentimiento del equipo de terapeutas (es información laboral, no externa).
-  - **Mediano plazo:** dividir `appointments` en `{slot: 'occupied', therapist}` público + `appointment_details/{id}` privado con nombre/costo/teléfono. La UI cruza ambos.
-  - **Largo plazo (SaaS):** custom claims por terapeuta para hacer la regla `resource.data.therapist == request.auth.token.therapist`.
-- **Estado:** ⚠️ Identificado 25 may.
+- **Archivo:** `firestore.rules` — `appointments` `allow read`
+- **Detalle (histórico):** Antes cualquier autenticado podía leer todas las citas vía consola. **28 may 2026:** regla `isSuper() || isOwner(resource.data.therapist)` alineada con `CalendarData` (terapeutas ya filtraban por `therapist` en la query).
+- **Pendiente (mediano plazo):** colección pública de slots ocupados sin PII + `appointment_details` privado, o custom claims (S-005).
+- **Estado:** 🟡 Mitigación parcial 28 may — cierre total al dividir colecciones o SaaS multi-clínica.
 
 ### S-005 · Whitelist de emails hardcoded en `firestore.rules`
 
@@ -59,13 +55,12 @@
 
 ## 🟡 Medio — cola
 
-### S-006 · Sin rate-limit en el frontend para `copilot_overrides`
+### S-006 · Rate-limit frontend Copiloto (debounce 1 s)
 
-- **Archivo:** `js/services/WaitlistCopilotService.js`
-- **Detalle:** Un usuario malicioso podría disparar `skipDelay`/`pauseAutopilot` cientos de veces. Aunque solo escribe `copilot_overrides/{appointmentId}` (que es idempotente, sobreescribe el mismo doc), si se llama muy seguido sí podría hacer un peak de escritura.
-- **Impacto:** Bajo (escritura idempotente, costo Firestore mínimo) pero buena práctica.
-- **Mitigación propuesta:** debounce de 1 s en los handlers de los botones del banner.
-- **Estado:** 🟡 Identificado 25 may. Mejora menor.
+- **Archivo:** `js/components/WaitlistCopilotPanel.js`
+- **Detalle:** Debounce de 1 s en botones del banner (día + Quiet Hours) para evitar ráfagas de escritura a `copilot_overrides` / `quiet_hours_pending`.
+- **Pendiente:** rate-limit server-side si el riesgo crece.
+- **Estado:** ✅ Mitigación frontend 28 may.
 
 ### S-007 · `console.log` con datos sensibles en producción
 
@@ -140,6 +135,13 @@
 | 26 may 2026 | **Memory leak por listeners sin unsubscribe (Q-005)** | `PatientManager._setupRealtimeListener` creaba `onSnapshot` sin guardar la función de unsubscribe. Re-login/hot-reload acumulaba listeners duplicados → DoS de lecturas Firestore + double rendering. **Cerrado** con `_unsubscribeApts`/`_unsubscribeProfiles` y método `_teardownListeners()` que se llama al inicio (idempotente). |
 | 26 may 2026 | **Listeners gigantes sin filtro de fecha (Q-006 — costo)** | `WaitlistCopilotService` leía TODAS las citas canceladas históricas (`where isCancelled==true`) en cada login → cientos de reads innecesarias. `Header.batchSync` leía todas las citas pagadas sin sync de toda la historia. **Cerrado** agregando `where('date', '>=', todayIso)` en el primero (cancelaciones futuras únicamente) y `where('date', '>=', -30d)` en el segundo. Reduce consumo del plan Blaze; estimación 29k → 15-20k lecturas/día. |
 | 26 may 2026 | **Listener duplicado `appointments` (Q-007 — costo, Win 1)** | `PatientManager._setupRealtimeListener` y `CalendarData.subscribe` mantenían **dos listeners independientes IDÉNTICOS** sobre `appointments` (misma ventana 90 días, mismo filtro por terapeuta). Cada cambio en una cita disparaba DOS callbacks y DOS payloads completos al cliente. **Cerrado** (Antigravity, tarde) implementando patrón **multicast** en `CalendarData.subscribe`: el primer suscriptor abre la conexión real de Firestore; los siguientes (incluyendo `PatientManager`) reusan la misma + reciben el último snapshot cacheado inmediatamente. `PatientManager` quitó su listener propio de citas; mantiene solo el de `patientProfiles`. **Ahorro estimado: 30–50 % adicional sobre las lecturas que aún quedaban tras Q-006. Total acumulado proyectado: 29 k → 8–12 k/día.** |
+| 28 may 2026 | **Cancelación masiva desde modal Ausencias (sin WhatsApp)** | `AbsenceModal` puede marcar `isCancelled` en lote al registrar vacaciones. **Diseño acordado:** solo Firestore; el equipo avisa al tutor por fuera. No dispara plantillas Twilio. `cancelledBy` = nombre del usuario (ej. «Vacaciones»). Reasignación opcional solo cambia `therapist` + `reassignedFrom` (misma hora/día); coordinación con papá es manual. |
+| 28 may 2026 | **Bug bitácora recordatorio 8 AM (`doc.id` vs `doc_id`)** | En `execute_send_reminders`, el `update` de la cita ya usaba `doc_id`, pero `_log_reminder_to_audit` en éxito/error seguía con `doc.id` (variable inexistente en el bucle) → **NameError** si realmente se enviaba un WhatsApp. Smoke test 200 OK no lo detectó si todo fue `skipped`. **Cerrado** (Cursor revisión post-Antigravity): líneas 561 y 571 → `doc_id`. Redeploy `functions` recomendado. |
+| 28 may 2026 | **Cron `server_calendar_sync` híbrido A+B** | `0 7 * * *` MX: **domingo** nuke suave semana Google; **L–S** incremental (36 h lookback, `googleEventId` / `updatedAt`). Menos writes/API Google entre semana; lectura Firestore de la semana sigue 1×/día (C-lite pendiente para bajarla). |
+| 28 may 2026 | **S-002 parcial — `appointments` read por terapeuta** | `firestore.rules`: lectura solo `isSuper()` o `isOwner(resource.data.therapist)`. Cierra vía consola para Sam/Vero; admin/recepción sin cambio. |
+| 28 may 2026 | **`quiet_hours_pending` + UI Copiloto nocturno** | Reglas explícitas `isSuper()`. Banner morado: Liberar ya / Pausar / Manual; cron 8 AM respeta `paused`; trigger `release_now`. |
+| 28 may 2026 | **S-006 debounce Copiloto** | `WaitlistCopilotPanel`: 1 s entre clics en acciones del banner. |
+| 28 may 2026 | **Q-009 — Lecturas login admin** | `PatientManager`: super/recepción `getDocs` perfiles 1×/sesión (no listener). `Header` batchSync solo admin/recepción. Copiloto + notificaciones acotadas. Reduce pico ~1.2k → ~500–750 reads/sesión. |
 | 26 may 2026 | **Desync de tiempos entre frontend y backend del Copiloto (Q-008 — UX crítico)** | Tras el deploy de la Cloud Function, Antigravity tuvo que bajar `total_wait` de 10 min a **8 min** (480 s) porque Google Cloud rechaza `timeout_sec > 540 s` en triggers Firestore. Pero el frontend (`WaitlistCopilotService.js:41`) seguía con `COPILOT_DELAY_MS = 10 * 60 * 1000`. **Síntoma**: el banner mostraba contador de 10 min mientras el backend procesaba las ofertas a los 8 min. Si Yari tocaba «Pausar» entre el minuto 8 y el 10, la decisión **se perdía silenciosamente** (el polling del backend ya había terminado y las ofertas ya estaban en camino). Vulnerabilidad de integridad de UX + posible inconsistencia operacional (paciente recibe oferta WhatsApp que Yari intentó cancelar). **Cerrado** (Cursor, tarde) alineando `COPILOT_DELAY_MS = 8 * 60 * 1000` + propagando la constante única desde service hacia panel (cálculos `pct`/`progress` y textos «Esperando · X min», «Tienes X min para intervenir»). Actualizado `HelpManual.js` (3 menciones). Build OK, lints OK. Cualquier cambio futuro del delay se propaga al UI con un solo edit. |
 
 ---
@@ -168,4 +170,4 @@
 
 ---
 
-*Última actualización: 26 de Mayo, 2026 (tarde) — Cerrados Q-001 a Q-008 en una sola jornada. Fase 1+2+3 de optimización Firestore desplegadas en producción: índices `Enabled`, function con `timeout_sec=540` y `total_wait=480` (8 min por límite Cloud Functions), **multicast `CalendarData.subscribe`** (Win 1 que cierra duplicación de listener de `appointments`), y **propagación de `COPILOT_DELAY_MS = 8 * 60 * 1000`** al frontend para evitar que el banner del Copiloto mienta a Yari con un contador inflado. Lecturas estimadas: 29 k → **8–12 k/día**. Estado de seguridad cierra el día con 0 críticos, 2 altos (S-002, S-005 — refactor de custom claims pendiente), 3 medios, 2 mejoras, **25 reforzados**. Pendiente Daniel: limpieza manual de revisiones Hosting (17.6 GB → 10 GB).*
+*Última actualización: 28 de Mayo, 2026 — Quiet Hours Copiloto UI + S-002 rules parcial + debounce S-006. Fase 2a Ausencias (cancelar / reasignar terapeuta sin WhatsApp) + entrada móvil «Vacaciones / Ausencia» + cron Google sync 1×/día (7 AM). 26 may (tarde) — Cerrados Q-001 a Q-008 en una sola jornada. Fase 1+2+3 de optimización Firestore desplegadas en producción: índices `Enabled`, function con `timeout_sec=540` y `total_wait=480` (8 min por límite Cloud Functions), **multicast `CalendarData.subscribe`** (Win 1 que cierra duplicación de listener de `appointments`), y **propagación de `COPILOT_DELAY_MS = 8 * 60 * 1000`** al frontend para evitar que el banner del Copiloto mienta a Yari con un contador inflado. Lecturas estimadas: 29 k → **8–12 k/día**. Estado de seguridad cierra el día con 0 críticos, 2 altos (S-002, S-005 — refactor de custom claims pendiente), 3 medios, 2 mejoras, **25 reforzados**. Pendiente Daniel: limpieza manual de revisiones Hosting (17.6 GB → 10 GB).*

@@ -1,6 +1,6 @@
 // notifications.js - Sistema de notificaciones persistentes
 
-import { db, notificationsPath, collection, onSnapshot, query, updateDoc, doc, deleteDoc, getDocs, getDoc, collectionPath } from './firebase.js'; // Added getDoc, collectionPath
+import { db, notificationsPath, collection, onSnapshot, query, updateDoc, doc, deleteDoc, getDocs, getDoc, collectionPath, orderBy, limit } from './firebase.js'; // Added getDoc, collectionPath
 import { ModalService } from './utils/ModalService.js';
 import { Logger } from './utils/Logger.js';
 import { CalendarModal } from './modules/calendar/CalendarModal.js'; // Import CalendarModal
@@ -28,7 +28,8 @@ export function initNotifications() {
 function setupNotificationsListener() {
     try {
         const notifColRef = collection(db, notificationsPath);
-        const notifQuery = query(notifColRef);
+        // 28 may 2026: antes leía TODA la colección en cada login (cientos/miles de reads).
+        const notifQuery = query(notifColRef, orderBy('timestamp', 'desc'), limit(80));
 
         onSnapshot(notifQuery, (snapshot) => {
             if (!notificationList) return;

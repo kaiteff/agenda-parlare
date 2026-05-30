@@ -773,6 +773,22 @@ def send_daily_summary():
 
     try:
         mx_now = datetime.now(MX_TZ)
+        # 🛡️ GUARDIA ANTI-ERROR DE CRON:
+        # Este endpoint vivía en Render y en algunos despliegues quedó siendo llamado
+        # por cron externo a las 9 PM. Si se ejecuta en la noche, manda el resumen
+        # "tarde" del día que ya pasó, lo cual confunde (lo correcto es 9 AM del mismo día).
+        #
+        # Permitimos solo una ventana razonable alrededor de las 9:00 AM MX.
+        # Si el cron externo está mal configurado, aquí se "auto-protege" y no envía nada.
+        allow_window_start = mx_now.replace(hour=8, minute=40, second=0, microsecond=0)
+        allow_window_end = mx_now.replace(hour=9, minute=40, second=0, microsecond=0)
+        if not (allow_window_start <= mx_now <= allow_window_end):
+            print(f"🛑 Daily Summary omitido: cron ejecutado fuera de ventana 9 AM. now={mx_now.isoformat()}")
+            return jsonify({
+                'status': 'skipped',
+                'reason': 'outside_9am_window',
+                'now': mx_now.isoformat(),
+            }), 200
         today_str = mx_now.strftime('%Y-%m-%d')
         
         # 🛡️ FIX: Consultamos un rango más amplio (hoy hasta mañana temprano) para capturar drift UTC

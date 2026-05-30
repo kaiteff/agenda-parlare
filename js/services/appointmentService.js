@@ -1,5 +1,5 @@
 // appointmentService.js - Servicio para gestión de citas
-import { db, collectionPath, notificationsPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
+import { db, collectionPath, notificationsPath, patientProfilesPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs, query, where } from '../firebase.js';
 import { validateAppointment } from '../utils/validators.js';
 import { Logger } from '../utils/Logger.js';
 import { AuditService } from './AuditService.js';
@@ -73,6 +73,39 @@ async function _syncToCalendar(action, data) {
 }
 
 /**
+ * Enriches appointment data with profileId and phone from the patient profile
+ */
+async function enrichWithProfileData(appointmentData) {
+    let profileId = appointmentData.profileId || appointmentData.patientId || null;
+    let phone = appointmentData.phone || null;
+
+    const name = appointmentData.name?.trim();
+    if (name && (!profileId || !phone)) {
+        try {
+            const q = query(
+                collection(db, patientProfilesPath),
+                where('name', '==', name)
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const docSnap = snap.docs[0];
+                const data = docSnap.data();
+                if (!profileId) profileId = docSnap.id;
+                if (!phone) phone = data.phone || null;
+            }
+        } catch (err) {
+            log.warn('Error resolving patient profile for enrichment:', err);
+        }
+    }
+
+    return {
+        ...appointmentData,
+        profileId,
+        phone
+    };
+}
+
+/**
  * Crea una nueva cita
  * @param {Object} appointmentData - Datos de la cita
  * @param {Array} existingAppointments - Citas existentes para validación
@@ -87,12 +120,14 @@ export async function createAppointment(appointmentData, existingAppointments) {
             return { success: false, error: validation.errors.join('\n') };
         }
 
+        const enrichedData = await enrichWithProfileData(appointmentData);
+
         const docRef = await addDoc(collection(db, collectionPath), {
-            ...appointmentData,
-            name: appointmentData.name.trim(),
-            date: appointmentData.date,
-            cost: appointmentData.cost || 0,
-            therapist: appointmentData.therapist || 'diana', // Default a diana si no se especifica
+            ...enrichedData,
+            name: enrichedData.name.trim(),
+            date: enrichedData.date,
+            cost: enrichedData.cost || 0,
+            therapist: enrichedData.therapist || 'diana', // Default a diana si no se especifica
             isPaid: false,
             confirmed: false,
             isCancelled: false,
@@ -103,25 +138,25 @@ export async function createAppointment(appointmentData, existingAppointments) {
         });
 
         const newId = docRef.id;
-        log.success(`Cita creada [${newId}] para ${appointmentData.name}`);
+        log.success(`Cita creada [${newId}] para ${enrichedData.name}`);
 
         // Bitácora de Auditoría
         await AuditService.log('CREATE', 'APPOINTMENT', newId, { 
-            patientName: appointmentData.name, 
-            date: appointmentData.date,
-            therapist: appointmentData.therapist 
+            patientName: enrichedData.name, 
+            date: enrichedData.date,
+            therapist: enrichedData.therapist 
         });
 
         // Crear notificación interna
         _createNotification(
             'Nueva Cita',
-            `Se agendó cita para ${appointmentData.name} el ${new Date(appointmentData.date).toLocaleString()}`,
+            `Se agendó cita para ${enrichedData.name} el ${new Date(enrichedData.date).toLocaleString()}`,
             'success',
-            { appointmentId: newId, patientName: appointmentData.name, therapist: appointmentData.therapist }
+            { appointmentId: newId, patientName: enrichedData.name, therapist: enrichedData.therapist }
         );
 
         // Sync a Google Calendar (no bloquea)
-        _syncToCalendar('create', { ...appointmentData, id: newId });
+        _syncToCalendar('create', { ...enrichedData, id: newId });
 
         return { success: true, id: newId };
     } catch (error) {
@@ -151,9 +186,16 @@ export async function updateAppointment(id, updateData, existingAppointments) {
             }
         }
 
+        let enrichedUpdateData = { ...updateData };
+        if (updateData.name || updateData.patientId || updateData.profileId) {
+            const enriched = await enrichWithProfileData(mergedData);
+            enrichedUpdateData.profileId = enriched.profileId;
+            enrichedUpdateData.phone = enriched.phone;
+        }
+
         const docRef = doc(db, collectionPath, id);
         await updateDoc(docRef, {
-            ...updateData,
+            ...enrichedUpdateData,
             updatedAt: serverTimestamp(),
             updatedBy: AuthManager.currentUser?.email || 'unknown'
         });

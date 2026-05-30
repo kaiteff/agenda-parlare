@@ -28,12 +28,12 @@ import {
     collection,
     query,
     where,
-    onSnapshot,
     doc,
     setDoc,
     serverTimestamp,
     getDocs
 } from '../firebase.js';
+import { CalendarData } from '../modules/calendar/CalendarData.js';
 
 const APPOINTMENTS = 'appointments';
 const OVERRIDES = 'copilot_overrides';
@@ -66,24 +66,11 @@ export const WaitlistCopilotService = {
     start() {
         if (this._unsub) return;
 
-        // Optimización de lecturas Firestore (26 may 2026):
-        // Solo necesitamos cancelaciones futuras dentro de la ventana 8–24 h.
-        // Filtramos por `date >= hoy` para evitar arrastrar cancelaciones históricas
-        // (antes el listener cargaba TODAS las canceladas de la base, incluso de hace años).
-        // El `_handleSnapshot` ya filtra adicionalmente por la ventana 8-24h.
-        const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
-        const q = query(
-            collection(db, APPOINTMENTS),
-            where('isCancelled', '==', true),
-            where('date', '>=', todayIso)
-        );
-
-        this._unsub = onSnapshot(
-            q,
-            (snap) => this._handleSnapshot(snap),
-            (err) => console.warn('[WaitlistCopilot] Listener appointments:', err)
-        );
+        // 28 may 2026: reutilizar el listener compartido de CalendarData (~90 días).
+        // Antes había un segundo onSnapshot solo de canceladas → duplicaba lecturas al login.
+        this._unsub = CalendarData.subscribe((appointments) => {
+            this._handleAppointments(appointments);
+        });
 
         this._tickTimer = setInterval(() => this._tick(), 1000);
     },
@@ -179,9 +166,22 @@ export const WaitlistCopilotService = {
     async getCandidates(appointmentId) {
         const item = this._pending.get(appointmentId);
         if (!item) return [];
+        return this.getCandidatesForSlot({
+            id: appointmentId,
+            therapist: item.therapist,
+            date: item.date
+        });
+    },
 
-        const therapist = item.therapist;
-        const cancelledDate = new Date(item.date);
+    /**
+     * Candidatos para búsqueda manual (día o quiet hours).
+     * @param {{ id: string, therapist: string, date: string }} slot
+     */
+    async getCandidatesForSlot(slot) {
+        if (!slot?.date || !slot?.therapist) return [];
+
+        const therapist = slot.therapist;
+        const cancelledDate = new Date(slot.date);
 
         // Misma día (hasta 23:59), citas > cancelledDate
         const dayEnd = new Date(cancelledDate);
@@ -190,7 +190,7 @@ export const WaitlistCopilotService = {
         const q = query(
             collection(db, APPOINTMENTS),
             where('therapist', '==', therapist),
-            where('date', '>', item.date),
+            where('date', '>', slot.date),
             where('date', '<=', dayEnd.toISOString())
         );
 
@@ -218,35 +218,30 @@ export const WaitlistCopilotService = {
 
     // ─────────────────────── internos ───────────────────────
 
-    _handleSnapshot(snap) {
+    _handleAppointments(appointments) {
         const now = Date.now();
-        snap.docChanges().forEach((change) => {
-            const id = change.doc.id;
-            const data = change.doc.data();
+        const activeIds = new Set();
 
-            if (change.type === 'removed' || !data.isCancelled) {
-                this._pending.delete(id);
-                return;
+        for (const data of appointments) {
+            const id = data.id;
+            if (!data.isCancelled) {
+                continue;
             }
 
-            // ¿Está en ventana 8-24 h?
-            if (!data.date) return;
+            if (!data.date) continue;
             const aptDate = new Date(data.date);
             const hoursBefore = (aptDate - new Date()) / (1000 * 60 * 60);
             if (hoursBefore < MIN_HOURS_BEFORE || hoursBefore > MAX_HOURS_BEFORE) {
-                this._pending.delete(id);
-                return;
+                continue;
             }
 
-            // ¿Cancelación reciente (dentro del COPILOT_DELAY_MS)?
             const cancelledAt = this._toMillis(data.cancelledAt) || now;
             const elapsed = now - cancelledAt;
             if (elapsed >= COPILOT_DELAY_MS) {
-                // Ya pasó el delay: el backend debió haber lanzado las ofertas
-                this._pending.delete(id);
-                return;
+                continue;
             }
 
+            activeIds.add(id);
             const existing = this._pending.get(id);
             this._pending.set(id, {
                 id,
@@ -255,9 +250,13 @@ export const WaitlistCopilotService = {
                 patientName: data.name || 'Paciente',
                 cancelledAt,
                 cancelledBy: data.cancelledBy || null,
-                localStatus: existing?.localStatus || 'waiting' // 'waiting' | 'launching' | 'paused'
+                localStatus: existing?.localStatus || 'waiting'
             });
-        });
+        }
+
+        for (const id of [...this._pending.keys()]) {
+            if (!activeIds.has(id)) this._pending.delete(id);
+        }
         this._notify();
     },
 

@@ -22,7 +22,7 @@ import { Sidebar } from '../components/Sidebar.js';
 import { PatientActions } from './patient/PatientActions.js';
 import { PatientModals } from './patient/PatientModals.js';
 import { PatientModalsHTML } from './patient/PatientModalsHTML.js';
-import { db, collectionPath, collection, onSnapshot, query, orderBy, where } from '../firebase.js';
+import { db, collectionPath, collection, onSnapshot, query, getDocs, where } from '../firebase.js';
 import { Logger } from '../utils/Logger.js';
 import { AuthManager } from './AuthManager.js';
 import { CalendarData } from '../modules/calendar/CalendarData.js';
@@ -48,6 +48,9 @@ export const PatientManager = {
     // Unsubscribe handlers (para evitar memory leak en logout/login)
     _unsubscribeApts: null,
     _unsubscribeProfiles: null,
+    /** Super/recepción: getDocs 1× por sesión (uid); terapeutas: onSnapshot filtrado. */
+    _profilesSessionUid: null,
+    _profilesLoadPromise: null,
     // Profiles crudos directos del snapshot Firestore (evita que _processData lea
     // el array enriquecido en una segunda pasada y sobreescriba con appointments: []).
     _rawProfiles: [],
@@ -187,22 +190,70 @@ export const PatientManager = {
             this._processData(sortedAppointments, null);
         });
 
-        // 2. Listener de PERFILES (filtrado por seguridad legal)
-        const profilesRef = collection(db, 'patientProfiles');
-        let qProfiles;
-
+        // 2. Perfiles: super/recepción = 1 lectura masiva por sesión; terapeutas = tiempo real filtrado
         if (isSuperUser) {
-            log.info('Cargando todos los perfiles (Modo SuperUser)');
-            qProfiles = query(profilesRef);
+            this._loadProfilesOnce();
         } else {
-            log.info(`Filtrando perfiles para terapeuta: ${therapistId}`);
-            qProfiles = query(profilesRef, where('therapist', '==', therapistId));
+            this._subscribeProfilesRealtime(therapistId);
         }
+    },
+
+    /**
+     * Super/recepción: una sola carga de todos los perfiles por login (sin onSnapshot).
+     * @param {boolean} [force=false] — true tras crear/editar paciente
+     */
+    async refreshProfiles(force = false) {
+        const isSuperUser = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        if (!isSuperUser) return;
+        await this._loadProfilesOnce(force);
+    },
+
+    async _loadProfilesOnce(force = false) {
+        const uid = AuthManager.currentUser?.uid;
+        if (!uid) return;
+
+        if (!force && this._profilesSessionUid === uid && this._rawProfiles.length > 0) {
+            log.info('Perfiles: cache de sesión (sin nueva lectura Firestore)');
+            this._processData(null, this._rawProfiles);
+            return;
+        }
+
+        if (this._profilesLoadPromise && !force) {
+            await this._profilesLoadPromise;
+            return;
+        }
+
+        log.info('Perfiles: getDocs único (modo super/recepción)');
+
+        this._profilesLoadPromise = (async () => {
+            try {
+                const snap = await getDocs(collection(db, 'patientProfiles'));
+                const profiles = [];
+                snap.forEach((d) => profiles.push({ id: d.id, ...d.data() }));
+                this._profilesSessionUid = uid;
+                this._processData(null, profiles);
+                log.success(`Perfiles cargados: ${profiles.length} (1× sesión)`);
+            } catch (error) {
+                log.error('Error cargando perfiles:', error);
+            } finally {
+                this._profilesLoadPromise = null;
+            }
+        })();
+
+        await this._profilesLoadPromise;
+    },
+
+    _subscribeProfilesRealtime(therapistId) {
+        log.info(`Perfiles: listener filtrado (${therapistId})`);
+        const qProfiles = query(
+            collection(db, 'patientProfiles'),
+            where('therapist', '==', therapistId)
+        );
 
         this._unsubscribeProfiles = onSnapshot(qProfiles, (snapshot) => {
             const profiles = [];
-            snapshot.forEach((doc) => {
-                profiles.push({ id: doc.id, ...doc.data() });
+            snapshot.forEach((d) => {
+                profiles.push({ id: d.id, ...d.data() });
             });
             this._processData(null, profiles);
         }, (error) => {
@@ -223,6 +274,8 @@ export const PatientManager = {
             try { this._unsubscribeProfiles(); } catch (e) { log.warn('Error al desuscribir perfiles:', e); }
             this._unsubscribeProfiles = null;
         }
+        this._profilesSessionUid = null;
+        this._profilesLoadPromise = null;
     },
 
     /**

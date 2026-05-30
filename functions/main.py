@@ -411,27 +411,55 @@ def execute_send_reminders():
     tomorrow = mx_now + timedelta(days=1)
     day_str = tomorrow.strftime('%Y-%m-%d')
     
-    profiles = db.collection('patientProfiles').stream()
-    phone_map = {}
-    for p in profiles:
-        data = p.to_dict()
-        if not data.get('phone') or not data.get('wantsWhatsapp', True):
-            continue
-        if not patient_accepts_automated_whatsapp(data):
-            continue
-        phone_map[data.get('name', '').strip().lower()] = data
-
     start_iso = f"{day_str}T00:00:00"
     end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+
+    # Pre-cargar citas y recopilar profileIds/nombres
+    appointments_list = []
+    profile_ids = set()
+    names = set()
+    for doc in query:
+        apt = doc.to_dict()
+        appointments_list.append((doc.id, apt))
+        p_id = apt.get('profileId') or apt.get('patientId')
+        if p_id:
+            profile_ids.add(p_id)
+        if apt.get('name'):
+            names.add(apt.get('name').strip().lower())
+
+    phone_map = {}
+    # Leer perfiles específicos por profileId
+    for p_id in profile_ids:
+        try:
+            p_doc = db.collection('patientProfiles').document(p_id).get()
+            if p_doc.exists:
+                data = p_doc.to_dict()
+                if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
+                    phone_map[data.get('name', '').strip().lower()] = data
+                    phone_map[p_id] = data
+        except Exception as e:
+            print(f"⚠️ Error al leer perfil {p_id}: {e}")
+
+    # Complementar buscando por nombre para citas sin profileId (o no encontrados)
+    for name in names:
+        if name not in phone_map:
+            try:
+                docs = db.collection('patientProfiles').where('name', '==', name).stream()
+                for doc in docs:
+                    data = doc.to_dict()
+                    if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
+                        phone_map[name] = data
+                        phone_map[doc.id] = data
+            except Exception as e:
+                print(f"⚠️ Error buscando perfil por nombre {name}: {e}")
 
     sent_count = 0
     skipped_count = 0
     skipped_details = []
     errors = []
 
-    for doc in query:
-        apt = doc.to_dict()
+    for doc_id, apt in appointments_list:
         if apt.get('isCancelled') or apt.get('confirmed'):
             skipped_details.append({
                 'name': apt.get('name', ''),
@@ -442,7 +470,12 @@ def execute_send_reminders():
             continue
             
         p_name = apt.get('name', '')
-        p_info = phone_map.get(p_name.strip().lower())
+        # Intentar buscar por profileId primero, luego por nombre
+        p_id = apt.get('profileId') or apt.get('patientId')
+        p_info = phone_map.get(p_id) if p_id else None
+        if not p_info:
+            p_info = phone_map.get(p_name.strip().lower())
+
         if not p_info:
             skipped_details.append({
                 'name': p_name,
@@ -451,7 +484,7 @@ def execute_send_reminders():
                 'date': apt.get('date', '')
             })
             _log_reminder_to_audit(
-                doc.id, p_name, apt.get('therapist', 'diana'),
+                doc_id, p_name, apt.get('therapist', 'diana'),
                 None, apt.get('date', ''),
                 'WHATSAPP_REMINDER_SKIPPED',
                 message='⚠️ Paciente sin número, sin opt-in aceptado, o wantsWhatsapp=False',
@@ -507,7 +540,7 @@ def execute_send_reminders():
             )
             
             # Registrar en Firestore
-            db.collection('appointments').document(doc.id).update({
+            db.collection('appointments').document(doc_id).update({
                 'lastReminderSentAt': firestore.SERVER_TIMESTAMP,
                 'lastReminderType': 'AUTO_CRON',
                 'lastReminderBy': 'Robot Parláre'
@@ -525,7 +558,7 @@ def execute_send_reminders():
                 f"¡Te esperamos! 😊"
             )
             _log_reminder_to_audit(
-                doc.id, p_name, therapist, dest, apt['date'],
+                doc_id, p_name, therapist, dest, apt['date'],
                 'WHATSAPP_REMINDER', message=msg_log
             )
                 
@@ -535,7 +568,7 @@ def execute_send_reminders():
             errors.append(f"Error {p_name}: {str(e)}")
             print(f"⚠️ Error enviando a {p_name}: {e}")
             _log_reminder_to_audit(
-                doc.id, p_name, apt.get('therapist', 'diana'),
+                doc_id, p_name, apt.get('therapist', 'diana'),
                 p_info.get('phone', '') if p_info else '⚠️ SIN NÚMERO',
                 apt.get('date', ''),
                 'WHATSAPP_REMINDER_ERROR',
@@ -664,36 +697,67 @@ def execute_send_evening_reminders():
     tomorrow = mx_now + timedelta(days=1)
     day_str = tomorrow.strftime('%Y-%m-%d')
 
-    profiles = db.collection('patientProfiles').stream()
-    phone_map = {}
-    for p in profiles:
-        data = p.to_dict()
-        if not data.get('phone') or not data.get('wantsWhatsapp', True):
-            continue
-        if not patient_accepts_automated_whatsapp(data):
-            continue
-        phone_map[data.get('name', '').strip().lower()] = data
-
     start_iso = f"{day_str}T00:00:00"
     end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+
+    # Pre-cargar citas y recopilar profileIds/nombres
+    appointments_list = []
+    profile_ids = set()
+    names = set()
+    for doc in query:
+        apt = doc.to_dict()
+        appointments_list.append((doc.id, apt))
+        p_id = apt.get('profileId') or apt.get('patientId')
+        if p_id:
+            profile_ids.add(p_id)
+        if apt.get('name'):
+            names.add(apt.get('name').strip().lower())
+
+    phone_map = {}
+    # Leer perfiles específicos por profileId
+    for p_id in profile_ids:
+        try:
+            p_doc = db.collection('patientProfiles').document(p_id).get()
+            if p_doc.exists:
+                data = p_doc.to_dict()
+                if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
+                    phone_map[data.get('name', '').strip().lower()] = data
+                    phone_map[p_id] = data
+        except Exception as e:
+            print(f"⚠️ Error al leer perfil {p_id}: {e}")
+
+    # Complementar buscando por nombre para citas sin profileId (o no encontrados)
+    for name in names:
+        if name not in phone_map:
+            try:
+                docs = db.collection('patientProfiles').where('name', '==', name).stream()
+                for doc in docs:
+                    data = doc.to_dict()
+                    if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
+                        phone_map[name] = data
+                        phone_map[doc.id] = data
+            except Exception as e:
+                print(f"⚠️ Error buscando perfil por nombre {name}: {e}")
 
     sent_count = 0
     skipped_count = 0
     errors = []
 
-    for doc in query:
-        apt = doc.to_dict()
-
+    for doc_id, apt in appointments_list:
         if apt.get('isCancelled') or apt.get('confirmed'):
             skipped_count += 1
             continue
 
         p_name = apt.get('name', '')
-        p_info = phone_map.get(p_name.strip().lower())
+        # Intentar buscar por profileId primero, luego por nombre
+        p_id = apt.get('profileId') or apt.get('patientId')
+        p_info = phone_map.get(p_id) if p_id else None
+        if not p_info:
+            p_info = phone_map.get(p_name.strip().lower())
         if not p_info:
             _log_reminder_to_audit(
-                doc.id, p_name, apt.get('therapist', 'diana'),
+                doc_id, p_name, apt.get('therapist', 'diana'),
                 None, apt.get('date', ''),
                 'WHATSAPP_REMINDER_SKIPPED',
                 message='⚠️ Sin número, opt-in no aceptado, o wantsWhatsapp=False',
@@ -745,7 +809,7 @@ def execute_send_evening_reminders():
                 content_variables=json.dumps({"1": date_str, "2": hour_str, "3": therapist})
             )
 
-            db.collection('appointments').document(doc.id).update({
+            db.collection('appointments').document(doc_id).update({
                 'lastEveningReminderSentAt': firestore.SERVER_TIMESTAMP,
                 'lastReminderType': 'AUTO_CRON_PM',
                 'lastReminderBy': 'Robot Parláre'
@@ -762,7 +826,7 @@ def execute_send_evening_reminders():
                 f"¡Te esperamos! 😊"
             )
             _log_reminder_to_audit(
-                doc.id, p_name, therapist, dest, apt['date'],
+                doc_id, p_name, therapist, dest, apt['date'],
                 'WHATSAPP_REMINDER_PM', message=msg_log
             )
 
@@ -772,7 +836,7 @@ def execute_send_evening_reminders():
             errors.append(f"Error {p_name}: {str(e)}")
             print(f"⚠️ Error enviando PM a {p_name}: {e}")
             _log_reminder_to_audit(
-                doc.id, p_name, apt.get('therapist', 'diana'),
+                doc_id, p_name, apt.get('therapist', 'diana'),
                 p_info.get('phone', ''), apt.get('date', ''),
                 'WHATSAPP_REMINDER_ERROR',
                 error=f"[8PM] {str(e)}"
@@ -786,37 +850,169 @@ def send_evening_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
     result = execute_send_evening_reminders()
     print(f"🌙 Cron tarde de recordatorios ejecutado: {result}")
 
-@scheduler_fn.on_schedule(schedule="0 7,20 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)  # updated to run twice daily
-def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
-    gcal = get_user_calendar_service()
-    if not gcal: return
-    mx_now = datetime.now(MX_TZ)
+# ── Google Calendar sync (híbrido A+B: incremental L–S, nuke suave domingo) ──
+
+SYNC_LOOKBACK_HOURS = 36  # citas editadas desde ayer tarde entran al incremental
+
+
+def _calendar_week_bounds(mx_now):
     week_start = (mx_now - timedelta(days=mx_now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     week_end = week_start + timedelta(days=6, hours=23, minutes=59, seconds=59)
-    
-    query = db.collection('appointments').where('date', '>=', f"{week_start.strftime('%Y-%m-%d')}T00:00:00").where('date', '<=', f"{week_end.strftime('%Y-%m-%d')}T23:59:59").stream()
-    active_apts = [a.to_dict() | {'_id': a.id} for a in query if not a.to_dict().get('isCancelled')]
+    return week_start, week_end
 
+
+def _fetch_week_appointments(week_start, week_end):
+    query = (
+        db.collection('appointments')
+        .where('date', '>=', f"{week_start.strftime('%Y-%m-%d')}T00:00:00")
+        .where('date', '<=', f"{week_end.strftime('%Y-%m-%d')}T23:59:59")
+        .stream()
+    )
+    return [doc.to_dict() | {'_id': doc.id} for doc in query]
+
+
+def _firestore_ts_to_mx(val):
+    if val is None:
+        return None
+    if hasattr(val, 'timestamp'):
+        return datetime.fromtimestamp(val.timestamp(), tz=MX_TZ)
+    if isinstance(val, datetime):
+        return val.astimezone(MX_TZ) if val.tzinfo else MX_TZ.localize(val)
+    return None
+
+
+def _apt_touched_since(apt, since_dt):
+    if not apt.get('googleEventId'):
+        return True
+    updated = _firestore_ts_to_mx(apt.get('updatedAt'))
+    if updated is None:
+        return False
+    return updated >= since_dt
+
+
+def _gcal_color_id(t_key):
+    if t_key == 'diana':
+        return '4'
+    if t_key == 'sam':
+        return '7'
+    return '3'
+
+
+def _gcal_event_body(t_key, apt):
+    dt_start = parse_mx_datetime(apt['date'])
+    dt_end = dt_start + timedelta(hours=1)
+    summary = ('✅ ' if apt.get('confirmed') else '') + apt.get('name', 'Cita')
+    return {
+        'summary': summary,
+        'description': f"Terapeuta: {t_key.capitalize()}\nCosto: ${apt.get('cost', 0)}\n📱 Agenda Parláre",
+        'start': {'dateTime': dt_start.isoformat(), 'timeZone': 'America/Mexico_City'},
+        'end': {'dateTime': dt_end.isoformat(), 'timeZone': 'America/Mexico_City'},
+        'colorId': _gcal_color_id(t_key),
+        'reminders': {'useDefault': False, 'overrides': [{'method': 'popup', 'minutes': 5}]},
+    }
+
+
+def _sync_calendar_week_nuke(gcal, week_start, week_end, active_apts):
+    stats = {'mode': 'nuke', 'inserted': 0, 'deleted_gcal': 0, 'errors': 0}
     for t_key, cal_id in THERAPIST_CALENDARS.items():
         try:
-            existing = gcal.events().list(calendarId=cal_id, timeMin=week_start.isoformat(), timeMax=week_end.isoformat(), singleEvents=True, maxResults=2500).execute().get('items', [])
-            for ev in existing: gcal.events().delete(calendarId=cal_id, eventId=ev['id']).execute()
-        except: continue
+            existing = gcal.events().list(
+                calendarId=cal_id, timeMin=week_start.isoformat(), timeMax=week_end.isoformat(),
+                singleEvents=True, maxResults=2500,
+            ).execute().get('items', [])
+            for ev in existing:
+                gcal.events().delete(calendarId=cal_id, eventId=ev['id']).execute()
+                stats['deleted_gcal'] += 1
+        except Exception as e:
+            print(f"⚠️ Nuke list/delete {t_key}: {e}")
+            stats['errors'] += 1
+            continue
 
-        for a in [ap for ap in active_apts if (ap.get('therapist') or 'diana').lower() == t_key]:
+        for apt in [a for a in active_apts if (a.get('therapist') or 'diana').lower() == t_key]:
             try:
-                dt_start = parse_mx_datetime(a['date'])
-                dt_end = dt_start + timedelta(hours=1)
-                color_id = '4' if t_key == 'diana' else ('7' if t_key == 'sam' else '3')
-                summary = ('✅ ' if a.get('confirmed') else '') + a.get('name', 'Cita')
-                created_ev = gcal.events().insert(calendarId=cal_id, body={
-                    'summary': summary, 'description': f"Terapeuta: {t_key.capitalize()}\nCosto: ${a.get('cost', 0)}\n📱 Agenda Parláre",
-                    'start': {'dateTime': dt_start.isoformat(), 'timeZone': 'America/Mexico_City'}, 'end': {'dateTime': dt_end.isoformat(), 'timeZone': 'America/Mexico_City'},
-                    'colorId': color_id, 'reminders': {'useDefault': False, 'overrides': [{'method': 'popup', 'minutes': 5}]}
-                }).execute()
-                db.collection('appointments').document(a['_id']).update({'googleEventId': created_ev['id']})
-            except: pass
-        time.sleep(3)  # pause 3 s between therapist syncs to avoid Google API quota errors
+                created_ev = gcal.events().insert(
+                    calendarId=cal_id, body=_gcal_event_body(t_key, apt),
+                ).execute()
+                db.collection('appointments').document(apt['_id']).update({'googleEventId': created_ev['id']})
+                stats['inserted'] += 1
+            except Exception as e:
+                print(f"⚠️ Nuke insert {t_key} {apt.get('_id')}: {e}")
+                stats['errors'] += 1
+        time.sleep(3)
+    return stats
+
+
+def _sync_calendar_week_incremental(gcal, week_start, week_end, week_apts, since_dt):
+    stats = {'mode': 'incremental', 'upserted': 0, 'deleted': 0, 'skipped': 0, 'errors': 0}
+    active = [a for a in week_apts if not a.get('isCancelled')]
+    cancelled = [a for a in week_apts if a.get('isCancelled') and a.get('googleEventId')]
+
+    for t_key, cal_id in THERAPIST_CALENDARS.items():
+        therapist_active = [a for a in active if (a.get('therapist') or 'diana').lower() == t_key]
+        to_upsert = [a for a in therapist_active if _apt_touched_since(a, since_dt)]
+        to_remove = [
+            a for a in cancelled
+            if (a.get('therapist') or 'diana').lower() == t_key and _apt_touched_since(a, since_dt)
+        ]
+        stats['skipped'] += len(therapist_active) - len(to_upsert)
+
+        for apt in to_remove:
+            try:
+                gcal.events().delete(calendarId=cal_id, eventId=apt['googleEventId']).execute()
+                db.collection('appointments').document(apt['_id']).update({
+                    'googleEventId': firestore.DELETE_FIELD,
+                })
+                stats['deleted'] += 1
+            except Exception as e:
+                print(f"⚠️ Incremental delete {t_key} {apt.get('_id')}: {e}")
+                stats['errors'] += 1
+
+        for apt in to_upsert:
+            body = _gcal_event_body(t_key, apt)
+            try:
+                event_id = apt.get('googleEventId')
+                if event_id:
+                    try:
+                        gcal.events().patch(calendarId=cal_id, eventId=event_id, body=body).execute()
+                    except Exception as patch_err:
+                        err_low = str(patch_err).lower()
+                        if '404' in err_low or 'not found' in err_low:
+                            created = gcal.events().insert(calendarId=cal_id, body=body).execute()
+                            db.collection('appointments').document(apt['_id']).update({'googleEventId': created['id']})
+                        else:
+                            raise
+                else:
+                    created = gcal.events().insert(calendarId=cal_id, body=body).execute()
+                    db.collection('appointments').document(apt['_id']).update({'googleEventId': created['id']})
+                stats['upserted'] += 1
+            except Exception as e:
+                print(f"⚠️ Incremental upsert {t_key} {apt.get('_id')}: {e}")
+                stats['errors'] += 1
+        time.sleep(2)
+    return stats
+
+
+@scheduler_fn.on_schedule(schedule="0 7 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
+    """7 AM MX — Dom: nuke suave semana en Google; Lun–Sáb: solo citas nuevas o tocadas (36 h)."""
+    gcal = get_user_calendar_service()
+    if not gcal:
+        print('⚠️ server_calendar_sync: sin cliente Google Calendar OAuth')
+        return
+
+    mx_now = datetime.now(MX_TZ)
+    week_start, week_end = _calendar_week_bounds(mx_now)
+    week_apts = _fetch_week_appointments(week_start, week_end)
+    active_apts = [a for a in week_apts if not a.get('isCancelled')]
+
+    is_sunday = mx_now.weekday() == 6
+    if is_sunday:
+        result = _sync_calendar_week_nuke(gcal, week_start, week_end, active_apts)
+    else:
+        since_dt = mx_now - timedelta(hours=SYNC_LOOKBACK_HOURS)
+        result = _sync_calendar_week_incremental(gcal, week_start, week_end, week_apts, since_dt)
+
+    print(f"📅 server_calendar_sync ({result.get('mode')}): {result}")
 
 # ── 7. Gatillos de Base de Datos (Firestore Triggers) ─────────────────────
 
@@ -826,39 +1022,21 @@ def release_quiet_hours_offers(event: scheduler_fn.ScheduledEvent) -> None:
     """Procesa cancelaciones acumuladas durante Quiet Hours (9 PM‑8 AM)."""
     db = _get_db()
     
-    # Import the autopilot logic
-    from space_optimizer import process_autopilot_candidates, _parse_mx_datetime
-    
+    from space_optimizer import process_quiet_hours_pending_item
+
     pending = db.collection('quiet_hours_pending').stream()
     twilio_client = get_twilio_client()
-    
+
     count = 0
     for doc in pending:
-        data = doc.to_dict()
-        appointment_id = data.get("appointmentId")
-        therapist = data.get("therapist")
-        cancelled_date_str = data.get("originalDate")
-        
-        if appointment_id and therapist and cancelled_date_str:
-            try:
-                cancelled_dt = _parse_mx_datetime(cancelled_date_str)
-                process_autopilot_candidates(
-                    appointment_id,
-                    therapist,
-                    cancelled_date_str,
-                    cancelled_dt,
-                    db,
-                    twilio_client,
-                    TWILIO_WHATSAPP_FROM.value,
-                    is_quiet_hours=True
-                )
-                count += 1
-            except Exception as e:
-                logger.error(f"Error procesando pending_quiet_hours {appointment_id}: {e}")
-            
-        # Eliminar el documento pendiente
-        doc.reference.delete()
-        
+        if process_quiet_hours_pending_item(
+            doc,
+            db,
+            twilio_client,
+            TWILIO_WHATSAPP_FROM.value,
+        ):
+            count += 1
+
     logger.info(f"✅ Liberadas {count} cancelaciones de Quiet Hours.")
 
 @firestore_fn.on_document_created(document="patientProfiles/{patientId}", secrets=ALL_SECRETS)

@@ -32,10 +32,9 @@ service cloud.firestore {
 
     // Colección de Citas (Agenda)
     match /appointments/{docId} {
-      // LECTURA: Permitida para todos los terapeutas para ver disponibilidad (slots ocupados)
-      // LEGAL: La UI se encarga de ocultar los nombres de pacientes que no les pertenecen.
-      // Para máxima seguridad, se recomienda migrar notas clínicas a una colección restringida.
-      allow read: if isAuthenticated();
+      // LECTURA: Super/recepción ven todo; cada terapeuta solo sus citas (S-002, 28 may 2026).
+      // La UI ya filtraba por `therapist` en CalendarData; las reglas cierran la vía consola.
+      allow read: if isAuthenticated() && (isSuper() || isOwner(resource.data.therapist));
       
       // ESCRITURA: Solo el dueño de la agenda o Super usuarios
       allow create: if isAuthenticated() && isOwner(request.resource.data.therapist);
@@ -75,6 +74,11 @@ service cloud.firestore {
     // Yari/Diana escriben aquí desde el frontend para abortar o acelerar
     // el delay de 10 min del backend `space_optimizer`.
     match /copilot_overrides/{appointmentId} {
+      allow read, write: if isSuper();
+    }
+
+    // Cola Copiloto — cancelaciones nocturnas (22:00–07:00 MX)
+    match /quiet_hours_pending/{appointmentId} {
       allow read, write: if isSuper();
     }
 
