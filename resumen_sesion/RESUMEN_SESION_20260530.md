@@ -30,9 +30,19 @@
 7. **Sincronización de Repositorio (GitHub & Render):**
    - Se subieron los cambios a la rama `main` en GitHub, lo que activa automáticamente el despliegue del bot de WhatsApp en Render.
 
-## Pendientes de Monitoreo / Validación
+## Validado en sesión (Daniel — 30 may)
 
-1. **Monitoreo de Lecturas en Firestore (en 48 horas):**
-   - Validar que el volumen de lecturas disminuya significativamente gracias al uso del listener centralizado `CalendarData.subscribe` y al límite de 80 notificaciones en `notifications.js`.
-2. **Validación de Cita Test:**
-   - Crear una cita de prueba para mañana para validar la bitácora de auditoría (`audit_logs`) a las 8:00 AM y verificar que se asocie correctamente el `entityId`.
+- Login admin: consola `agenda: all` (ya no aterriza en Diana por `users/{uid}`).
+- Lecturas: **F5 ≈ +200**; total día ~6.6K con varias pruebas (normal medir **delta** por hora).
+- Consola: `985 citas (servidor)` + `126 perfiles (getDocs 1× sesión)`.
+
+## Pendientes de Monitoreo / Validación (mañana)
+
+1. **Error Reporting (Google Cloud):**
+   - Revisar si los 4 errores históricos siguen sumando casos.
+   - Si no hay casos nuevos tras deploy 30 may → estado **Resuelto** en cada grupo.
+2. **Monitoreo de Lecturas Firestore (48 h):**
+   - Comparar un día laboral vs el sábado de pruebas (~6.6K); meta operación: ~1.1k por sesión admin, no por F5 repetido.
+3. **Logout:** consola `AppLifecycle: Apagando listeners` al cerrar sesión.
+4. **Validación de Cita Test (si aplica):**
+   - Cita con opt-in; cron 8 AM → Bitácora con `entityId` correcto.
