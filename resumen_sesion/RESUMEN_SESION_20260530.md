@@ -19,7 +19,13 @@
 5. **Apagado de Listeners en Logout (App Lifecycle):**
    - Se implementó `AppLifecycle.js` para cerrar todos los listeners de Firestore activos (`CalendarData`, `PatientManager`, `WaitlistCopilotService`, `QuietHoursCopilotService`, `Header`, `SettingsManager`, `notifications`) cuando el usuario cierra sesión. Esto evita excepciones de permisos/reglas debido a que las nuevas reglas restringen las consultas de usuarios no autenticados.
 
-6. **Sincronización de Repositorio (GitHub & Render):**
+6. **Optimización de Carga e Inicialización (Auth/Views):**
+   - Evita la doble inicialización del Header/módulos controlando el estado mediante variables de control y descartando ejecuciones redundantes en `handleAuthState`.
+   - Implementa un caché de ejecución segura (`_initUserInFlight`) en `AuthManager.initUser` para evitar múltiples llamadas concurrentes a base de datos de un mismo usuario durante la inicialización.
+   - Persistencia de la selección de terapeuta en administradores/recepción usando `sessionStorage` (`parlare_admin_therapist_view`).
+   - Logging informativo detallado de lecturas consumidas en Firestore desde `CalendarData.js` y `PatientManager.js` para simplificar la auditoría de costos.
+
+7. **Sincronización de Repositorio (GitHub & Render):**
    - Se subieron los cambios a la rama `main` en GitHub, lo que activa automáticamente el despliegue del bot de WhatsApp en Render.
 
 ## Pendientes de Monitoreo / Validación
