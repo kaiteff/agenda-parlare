@@ -16,7 +16,10 @@
 4. **Despliegue de Frontend (Hosting):**
    - Se desplegó la versión de producción a Firebase Hosting con los últimos cambios de UI (tarjetas moradas para Quiet Hours, fin del listener duplicado de notificaciones en `WaitlistCopilotService`, y límite de 80 notificaciones).
 
-5. **Sincronización de Repositorio (GitHub & Render):**
+5. **Apagado de Listeners en Logout (App Lifecycle):**
+   - Se implementó `AppLifecycle.js` para cerrar todos los listeners de Firestore activos (`CalendarData`, `PatientManager`, `WaitlistCopilotService`, `QuietHoursCopilotService`, `Header`, `SettingsManager`, `notifications`) cuando el usuario cierra sesión. Esto evita excepciones de permisos/reglas debido a que las nuevas reglas restringen las consultas de usuarios no autenticados.
+
+6. **Sincronización de Repositorio (GitHub & Render):**
    - Se subieron los cambios a la rama `main` en GitHub, lo que activa automáticamente el despliegue del bot de WhatsApp en Render.
 
 ## Pendientes de Monitoreo / Validación
