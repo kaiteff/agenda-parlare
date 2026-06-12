@@ -1,0 +1,518 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Agenda Parlare - Global Styles
+ * Design System & UI Components
+ */
+
+:root {
+    --header-height: 64px;
+    --bottom-nav-height: 4.5rem;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --success: #10b981;
+    --danger: #ef4444;
+}
+
+@layer utilities {
+    .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .touch-manipulation {
+        touch-action: manipulation;
+    }
+
+    .pb-bottom-nav {
+        padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+
+    .pt-safe-top {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .pb-safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .modal-sheet-mobile {
+        @apply w-full max-h-[92dvh] rounded-t-3xl md:max-w-lg md:max-h-[85vh] md:rounded-3xl;
+    }
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+    overscroll-behavior: none;
+    position: fixed;
+}
+
+/* ── Custom Scrollbar ─────────────────────────── */
+.scroller::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.scroller::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 999px;
+}
+
+.scroller::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ── Modal Animations ─────────────────────────── */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(16px) scale(0.97);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-backdrop {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-panel {
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Calendar Cell Interactions ────────────────── */
+#calendarGrid [class*="h-16"] {
+    transition: background-color 0.15s ease, box-shadow 0.2s ease;
+}
+
+#calendarGrid [class*="h-16"]:hover {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* ── Copiloto Colaborativo (Fase B) ───────────── */
+/* Glow ámbar/esmeralda en la celda cancelada mientras el Autopilot espera */
+@keyframes copilotSlotGlow {
+    0%, 100% {
+        box-shadow:
+            inset 0 0 0 2px rgba(245, 158, 11, 0.55),
+            0 0 16px rgba(245, 158, 11, 0.45),
+            0 0 32px rgba(16, 185, 129, 0.18);
+    }
+    50% {
+        box-shadow:
+            inset 0 0 0 2px rgba(16, 185, 129, 0.75),
+            0 0 22px rgba(16, 185, 129, 0.55),
+            0 0 44px rgba(245, 158, 11, 0.25);
+    }
+}
+
+.calendar-slot-glow {
+    position: relative;
+    animation: copilotSlotGlow 2.2s ease-in-out infinite;
+    border-radius: 6px;
+    z-index: 5;
+}
+
+.calendar-slot-glow::after {
+    content: "⚡";
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    line-height: 1;
+    color: rgba(245, 158, 11, 0.95);
+    text-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+    pointer-events: none;
+    animation: copilotSlotGlow 2.2s ease-in-out infinite;
+}
+
+/* En el chip cancelado dentro de una celda glow, levantamos opacidad */
+.calendar-slot-glow .opacity-60 {
+    opacity: 0.85 !important;
+}
+
+/* ── Event Chip Animations ────────────────────── */
+#calendarGrid [class*="rounded"] {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+#calendarGrid [class*="rounded"][class*="cursor-pointer"]:hover {
+    transform: scale(1.03);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    filter: brightness(1.05);
+}
+
+#calendarGrid [class*="rounded"][class*="cursor-pointer"]:active {
+    transform: scale(0.97);
+}
+
+/* ── Sidebar Patient Cards ────────────────────── */
+#patientsList > div {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+#patientsList > div:hover {
+    transform: translateX(4px);
+    background-color: #f9fafb !important;
+    border-color: #3b82f6 !important;
+}
+
+/* ── Glassmorphism & Effects ──────────────────── */
+.glass-effect {
+    backdrop-filter: blur(8px);
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+#notificationBadge:not(.hidden) {
+    animation: fadeIn 0.3s ease;
+}
+
+/* ── Header Gradient Line ─────────────────────── */
+header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+    opacity: 0.5;
+}
+
+/* ── Loading Skeleton ─────────────────────────── */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+/* ── Sidebar slide transition (mobile) ────────── */
+#mainSidebar {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 100dvh;
+}
+
+/* En móvil el bottom nav (z-70) tapa el drawer si el aside usa inset-y-0 a 100dvh */
+@media (max-width: 767px) {
+    #mainSidebar {
+        bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+        height: auto;
+    }
+
+    #mainSidebar #sidebarFooter {
+        flex-shrink: 0;
+    }
+
+    #mainSidebar #patientsList {
+        padding-bottom: 0.5rem;
+    }
+}
+
+#sidebarOverlay {
+    transition: opacity 0.2s ease;
+}
+
+/* ── Mobile bottom navigation (Fase 1) ─────────── */
+#mainBottomNav {
+    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#mainBottomNav .bottom-nav-item.is-active {
+    color: #2563eb;
+}
+
+#mainBottomNav .bottom-nav-item.is-active .bottom-nav-icon-wrap {
+    background-color: #eff6ff;
+}
+
+#mobileMoreSheet {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Appointment modal: bottom sheet en móvil ───── */
+@keyframes eventSheetSlideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0.85;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 767px) {
+    #eventModal:not(.hidden) #eventModalPanel,
+    #newPatientModal:not(.hidden) #newPatientModalPanel,
+    #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
+    #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel,
+    #adminSettingsModal:not(.hidden) #adminSettingsModalPanel {
+        animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #mainSidebar #searchInput {
+        padding-top: 0.875rem;
+        padding-bottom: 0.875rem;
+        font-size: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    #mainSidebar .relative.group > svg {
+        top: 0.875rem;
+    }
+
+    #mainSidebar #sidebarTabs button {
+        min-height: 44px;
+        font-size: 0.65rem;
+    }
+
+    #mainSidebar #addNewPatientBtn,
+    #mainSidebar #viewAuditLogBtn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    #mainSidebar #sidebarFooter button {
+        min-height: 44px;
+    }
+
+    #calendarToolbar {
+        padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    }
+
+    #calendarToolbar #currentMonthLabel {
+        max-width: 9.5rem;
+    }
+
+    main > .flex-1.overflow-y-auto {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+@media (min-width: 768px) {
+    #calendarToolbar #currentMonthLabel {
+        max-width: none;
+    }
+}
+
+@media (max-width: 767px) {
+    #helpManualModal:not(.hidden) #helpManualPanel {
+        animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+}
+
+#newPatientModalFooter,
+#patientHistoryModalFooter,
+#inactivePatientsModalFooter,
+#adminSettingsModalFooter,
+#absenceModalFooter {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+    #newPatientModalFooter,
+    #patientHistoryModalFooter,
+    #inactivePatientsModalFooter,
+    #adminSettingsModalFooter,
+    #absenceModalFooter {
+        padding-bottom: 1rem;
+    }
+}
+
+#eventModalFooter {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+    #eventModalFooter {
+        padding-bottom: 1rem;
+    }
+}
+
+@media (min-width: 768px) {
+    #mainBottomNav,
+    #mobileMoreOverlay,
+    #mobileMoreSheet {
+        display: none !important;
+    }
+}
+
+/* ── Print Styles ─────────────────────────────── */
+@media print {
+    header, #mainSidebar, #sidebarOverlay {
+        display: none !important;
+    }
+    main {
+        margin: 0 !important;
+    }
+}
+
+/* ── Sticky Calendar Headers ──────────────────── */
+#calendarGrid {
+    --cal-time-col: 4.5rem;
+}
+
+.sticky-column {
+    position: sticky !important;
+    left: 0;
+    z-index: 25 !important;
+    background-color: white !important;
+    box-shadow: 4px 0 8px -2px rgba(0,0,0,0.12);
+    min-width: var(--cal-time-col);
+    isolation: isolate;
+}
+
+/* Encabezado siempre encima de las celdas de hora al hacer scroll vertical */
+#calendarGrid .calendar-header-row {
+    z-index: 50 !important;
+}
+
+#calendarGrid .sticky-corner {
+    z-index: 55 !important;
+    min-height: 3.75rem;
+    overflow: hidden;
+}
+
+/* Calendario móvil: columna hora más angosta (~75% de 4.5rem) + semana sin scroll X */
+@media (max-width: 767px) {
+    #calendarGrid {
+        --cal-time-col: 3.25rem;
+    }
+
+    #calendarGrid .sticky-column,
+    #calendarGrid .sticky-corner {
+        min-width: var(--cal-time-col) !important;
+        max-width: var(--cal-time-col) !important;
+        width: var(--cal-time-col) !important;
+        padding-left: 0.125rem !important;
+        padding-right: 0.125rem !important;
+    }
+
+    #calendarGrid .cal-grid-day {
+        display: grid;
+        grid-template-columns: var(--cal-time-col) minmax(0, 1fr);
+    }
+
+    #calendarGrid .cal-grid-week {
+        display: grid;
+        grid-template-columns: var(--cal-time-col) repeat(6, minmax(0, 1fr));
+    }
+
+    #calendarGrid.calendar-week-fit {
+        min-width: 0 !important;
+        width: 100%;
+    }
+
+    #calendarScrollWrap.calendar-week-fit {
+        overflow-x: hidden !important;
+    }
+
+    #calendarGrid.calendar-week-fit .cal-day-header-num {
+        font-size: 1rem;
+        line-height: 1.25rem;
+    }
+
+    #calendarGrid.calendar-week-fit .cal-day-header-name {
+        font-size: 0.625rem;
+    }
+
+    #calendarGrid.calendar-week-fit .cal-event-chip {
+        font-size: 0.5625rem;
+        line-height: 0.75rem;
+        padding-left: 0.125rem;
+        padding-right: 0.125rem;
+    }
+
+    /* Línea «ahora»: solo sobre columnas de días, no sobre la hora ni scroll X */
+    #calendarGrid .live-time-line {
+        left: var(--cal-time-col) !important;
+        width: calc(100% - var(--cal-time-col)) !important;
+    }
+}
+
+#calendarGrid .grid > div:not(.sticky-column):not(.sticky-corner) {
+    position: relative;
+    z-index: 1;
+}
+
+#calendarGrid .absolute.inset-0 {
+    z-index: 2;
+}
+
+.sticky-corner {
+    position: sticky !important;
+    left: 0;
+    top: 0;
+    background-color: white !important;
+    box-shadow: 2px 2px 4px -2px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 767px) {
+    #patientHistoryModal #patientEditSection {
+        scroll-margin-top: 5rem;
+    }
+}
+
+.current-hour-row {
+    background-color: rgba(59, 130, 246, 0.05) !important;
+}
+
+.current-hour-cell {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    font-weight: 800 !important;
+    color: #2563eb !important;
+}
+
+/* ── Live Time Indicator ──────────────────────── */
+.live-time-line {
+    position: absolute !important;
+    left: var(--cal-time-col) !important;
+    width: calc(100% - var(--cal-time-col)) !important;
+    height: 2px !important;
+    background-color: #ef4444 !important;
+    z-index: 15 !important;
+    pointer-events: none !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4) !important;
+    display: block !important;
+    visibility: visible !important;
+}
+
+.live-time-line::before {
+    content: '' !important;
+    position: absolute !important;
+    left: -6px !important;
+    top: -5px !important;
+    width: 12px !important;
+    height: 12px !important;
+    background-color: #ef4444 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.8) !important;
+    z-index: 16 !important;
+}

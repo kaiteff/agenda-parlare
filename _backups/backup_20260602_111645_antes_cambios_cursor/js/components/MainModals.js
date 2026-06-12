@@ -1,0 +1,630 @@
+/**
+ * MainModals.js
+ * Contiene los modales principales del sistema (Cita, Cortes, Reportes)
+ */
+
+export const MainModals = {
+    inject(container = document.body) {
+        if (!container) return;
+        const div = document.createElement('div');
+        div.id = 'main-modals-container';
+        div.innerHTML = this.getHtml();
+        container.appendChild(div);
+        console.log('✅ MainModals: Inyectados al DOM');
+    },
+
+    getHtml() {
+        return `
+            <!-- 1. GENERIC ALERT MODAL -->
+            <div id="genericModal" class="hidden fixed inset-0 z-[99999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <div class="fixed inset-0 bg-gray-500/75 transition-opacity modal-backdrop" aria-hidden="true"></div>
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                    <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full modal-panel border border-gray-100">
+                        <!-- Botón Cerrar (X) -->
+                        <button id="genericModalCloseBtn" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors z-10">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div class="sm:flex sm:items-start">
+                                <div id="genericModalIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"></div>
+                                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="genericModalTitle">Titulo</h3>
+                                    <div class="mt-2 text-sm text-gray-500" id="genericModalMessage">Mensaje...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+                            <button id="genericModalConfirmBtn" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">Confirmar</button>
+                            <button id="genericModalCancelBtn" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. APPOINTMENT / EVENT MODAL (bottom-sheet móvil) -->
+            <div id="eventModal" onclick="if(event.target === this) import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="hidden fixed inset-0 z-[9000] flex items-end md:items-center justify-center bg-black/50 backdrop-blur-[2px] md:backdrop-blur-none p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+                <div id="eventModalPanel" class="bg-white w-full max-w-none md:max-w-lg h-[92dvh] md:h-[85vh] max-h-[92dvh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
+                    <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
+                    <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-center gap-3 bg-white flex-shrink-0">
+                        <h3 id="modalTitle" class="text-lg md:text-xl font-bold tracking-tight truncate pr-2">Detalles de Cita</h3>
+                        <button type="button" onclick="import('./js/modules/calendar/CalendarModal.js').then(m => m.CalendarModal.closeModal())" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 md:space-y-6 scroller min-h-0 bg-white overscroll-contain">
+                        <div class="flex flex-col gap-2.5 md:flex-row md:gap-4 md:flex-wrap">
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 text-sm cursor-pointer font-medium text-gray-700 touch-manipulation"><input type="radio" name="appointmentType" value="patient" checked class="text-blue-600 focus:ring-blue-500 w-5 h-5 md:w-4 md:h-4"><span>Paciente</span></label>
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 text-sm cursor-pointer font-medium text-gray-700 touch-manipulation"><input type="radio" name="appointmentType" value="school" class="text-blue-600 focus:ring-blue-500 w-5 h-5 md:w-4 md:h-4"><span>Escuela / Exterior</span></label>
+                            <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 text-sm cursor-pointer font-medium text-gray-700 touch-manipulation"><input type="radio" name="appointmentType" value="block" class="text-red-600 focus:ring-red-500 w-5 h-5 md:w-4 md:h-4"><span>Inhabilitar Hora</span></label>
+                        </div>
+                        <div class="relative">
+                            <label id="patientSearchLabel" class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente</label>
+                            <input type="text" id="patientSearch" placeholder="Buscar o escribir nombre..." class="w-full px-4 py-3.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg outline-none focus:ring-2 focus:ring-blue-100 touch-manipulation">
+                            <div id="patientSuggestions" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 mt-1"></div>
+                            
+                            <!-- Hidden but indexed for naming logic -->
+                            <div class="hidden">
+                                <input type="text" id="patientFirstName">
+                                <input type="text" id="patientLastName">
+                                <input type="hidden" id="appointmentDate">
+                            </div>
+
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp</label>
+                                <div class="flex gap-2">
+                                    <select id="patientCountryCode" class="w-28 md:w-24 px-2 py-3.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg bg-gray-50 touch-manipulation"><option value="52">🇲🇽 +52</option><option value="1">🇺🇸 +1</option><option value="custom">Otro</option></select>
+                                    <input type="tel" id="patientCustomPhone" placeholder="Número de celular..." class="flex-1 px-4 py-3.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg touch-manipulation">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-3.5 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation"><option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option></select></div>
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 uppercase">Costo Total ($)</label>
+                                    <button type="button" id="toggleFinancialBtn" class="text-[10px] font-bold text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Ajuste Manual
+                                    </button>
+                                </div>
+                                <input type="number" id="cost" class="w-full px-3 py-3.5 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- DESGLOSE FINANCIERO MANUAL -->
+                        <div id="financialBreakdownSection" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ajuste Financiero Especial</h4>
+                                <span class="text-[9px] text-slate-400 italic">Opcional</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Parláre</label>
+                                    <input type="number" id="manualClinicFee" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-100" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Sesión</label>
+                                    <input type="number" id="manualTherapistPay" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-100" placeholder="0">
+                                </div>
+                                <div>
+                                    <label id="labelPlanning" class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Planeación</label>
+                                    <input type="number" id="manualPlanningPay" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-orange-500 outline-none focus:ring-2 focus:ring-orange-100" placeholder="0">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">¿Quién realizó la planeación?</label>
+                                <select id="planningTherapist" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-blue-100">
+                                    <option value="">(Ninguno / Solo atención)</option>
+                                    <option value="diana">Diana</option>
+                                    <option value="sam">Sam</option>
+                                    <option value="vero">Vero</option>
+                                </select>
+                            </div>
+                            
+                            <p class="text-[9px] text-slate-400 leading-tight">* Usa estos campos solo para casos de relevos o acuerdos especiales de pago.</p>
+                        </div>
+                        <label class="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/80 md:border-0 md:bg-transparent md:min-h-0 md:px-0 md:py-0 cursor-pointer touch-manipulation">
+                            <input type="checkbox" id="isRecurring" class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300"><span class="text-sm text-gray-700 select-none">Agendar sesiones recurrentes</span>
+                        </label>
+                        <div id="recurringSection" class="hidden bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-blue-800 uppercase">Configuración</span>
+                                <select id="recurringDuration" class="text-xs bg-white border border-blue-200 rounded px-2 py-1">
+                                    <option value="4">4 sesiones</option>
+                                    <option value="8">8 sesiones</option>
+                                    <option value="12">12 sesiones</option>
+                                </select>
+                            </div>
+                            <div id="recurringDatesList" class="text-[10px] text-blue-700 space-y-1"></div>
+                        </div>
+
+                        <!-- Reschedule & Slots -->
+                        <div id="rescheduleSection" class="hidden space-y-3 pt-4 border-t border-gray-100">
+                             <label class="block text-xs font-bold text-gray-500 uppercase">Sugerencias (Hora)</label>
+                             <div id="rescheduleOptions" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+                        </div>
+
+                        <!-- Busy Slots (Debug/Info) -->
+                        <div id="busySlotsContainer" class="hidden pt-4 border-t border-gray-100">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Espacios Ocupados</label>
+                            <div id="busySlotsList" class="space-y-1 text-[10px] text-gray-500 italic scroller max-h-24"></div>
+                        </div>
+
+                        <!-- Justification Section (Only visible for cancelled appointments) -->
+                        <div id="justificationSection" class="hidden pt-4 border-t border-gray-100 space-y-3 bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                            <h4 class="text-xs font-bold text-red-800 uppercase flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Justificante Médico
+                            </h4>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="isJustified" class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+                                <span class="text-sm font-semibold text-gray-700 select-none">Inasistencia Justificada (No cobrar)</span>
+                            </label>
+                            
+                            <div id="justificationUploadArea" class="space-y-2 mt-2">
+                                <div id="justificationDropZone" class="border-2 border-dashed border-red-200 rounded-xl p-4 text-center cursor-pointer bg-white hover:bg-gray-50 hover:border-blue-400 transition-all flex flex-col items-center justify-center gap-1">
+                                    <svg class="w-8 h-8 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4v12"></path></svg>
+                                    <span class="text-xs font-bold text-red-700">Cargar Justificante Opcional</span>
+                                    <span class="text-[10px] text-gray-400">Arrastra aquí o haz clic (JPG, PNG, PDF - Máx 5MB)</span>
+                                    <input type="file" id="justificationFileInput" class="hidden" accept="image/*,.pdf">
+                                </div>
+                                <div id="justificationFilePreview" class="hidden flex items-center justify-between bg-white border border-red-200 rounded-xl p-2.5 text-xs shadow-sm">
+                                    <div class="flex items-center gap-2 truncate">
+                                        <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <span id="justificationFileName" class="truncate font-medium text-gray-700">archivo.png</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="button" id="viewJustificationBtn" class="min-h-[44px] px-3 py-2 touch-manipulation bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-bold transition-all">Ver</button>
+                                        <button type="button" id="removeJustificationBtn" class="min-h-[44px] px-3 py-2 touch-manipulation bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-bold transition-all">Quitar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Audit Info -->
+                        <div id="appointmentAuditInfo" class="hidden pt-4 border-t border-gray-100 space-y-1 text-[10px] text-gray-400">
+                            <p id="confirmedAtLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span> <span></span></p>
+                            <p id="cancelledByLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> <span></span></p>
+                            <p id="rescheduledByLabel" class="hidden flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span> <span></span></p>
+                        </div>
+                    </div>
+                    <div id="eventModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:shadow-none">
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" id="confirmBtn" class="col-span-2 min-h-[48px] touch-manipulation bg-blue-50 text-blue-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-100 font-bold border border-blue-200 transition-colors flex items-center justify-center gap-2">✓ Confirmar Asistencia</button>
+                            <button type="button" id="saveBtn" class="col-span-2 min-h-[48px] touch-manipulation bg-blue-600 text-white py-3 md:py-2.5 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-blue-700 font-bold shadow-md">Guardar Cita</button>
+                            <div class="col-span-2 flex flex-col sm:flex-row gap-2">
+                                <button type="button" id="payBtn" class="hidden flex-1 min-h-[48px] touch-manipulation bg-green-100 text-green-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-green-200 font-semibold">Pagado</button>
+                                <button type="button" id="cancelBtn" class="hidden flex-1 min-h-[48px] touch-manipulation bg-gray-100 text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-200 font-semibold">Cancelar Cita</button>
+                                <button type="button" id="deleteBtn" class="hidden flex-1 min-h-[48px] touch-manipulation bg-red-100 text-red-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-red-200 font-semibold">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. CORTE DE CAJA MODAL -->
+            <div id="corteDeCajaModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[9800] flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 modal-panel flex flex-col max-h-[90vh] overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex justify-between items-center text-white">
+                        <div>
+                            <h3 class="text-xl font-bold">💰 Corte de Caja</h3>
+                            <p id="corteFechaLabel" class="text-emerald-50 text-xs opacity-90 capitalize">...</p>
+                        </div>
+                        <button onclick="document.getElementById('corteDeCajaModal').classList.add('hidden')" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="p-6 overflow-y-auto bg-gray-50/50 flex-1 scroller">
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Atendidas</p>
+                                <h4 id="corteAtendidas" class="text-xl font-black text-gray-800">0</h4>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Pendientes</p>
+                                <h4 id="cortePendientes" class="text-xl font-black text-orange-500">0</h4>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Cobrado</p>
+                                <h4 id="corteCobrado" class="text-lg font-black text-emerald-600">$0</h4>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">Por Cobrar</p>
+                                <h4 id="cortePendienteTotal" class="text-lg font-black text-red-500">$0</h4>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-sm font-bold text-gray-700">Detalle de Sesiones (<span id="corteTotalCitas">0</span>)</h4>
+                            <div class="text-[10px] font-medium text-gray-400 flex gap-2">
+                                <span id="corteConfirmadas">0 confirmadas</span>
+                                <span id="corteCanceladas"></span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-50 text-gray-500 font-bold text-[10px] uppercase">
+                                    <tr>
+                                        <th class="px-4 py-3">Paciente</th>
+                                        <th class="px-4 py-3">Hora</th>
+                                        <th class="px-4 py-3">Terapeuta</th>
+                                        <th class="px-4 py-3 text-right">Monto</th>
+                                        <th class="px-4 py-3 text-center">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corteDetalleBody" class="divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Therapist Breakdown -->
+                        <div id="corteTherapistSection" class="hidden">
+                            <h4 class="text-sm font-bold text-gray-700 mb-3">Resumen por Terapeuta</h4>
+                            <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-50 text-gray-500 font-bold text-[10px] uppercase">
+                                        <tr>
+                                            <th class="px-4 py-2">Terapeuta</th>
+                                            <th class="px-4 py-2 text-center">Citas</th>
+                                            <th class="px-4 py-2 text-center">Pagadas</th>
+                                            <th class="px-4 py-2 text-right">Cobrado</th>
+                                            <th class="px-4 py-2 text-right">Pendiente</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="corteTherapistBody" class="divide-y divide-gray-50"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-white border-t border-gray-100 flex justify-between gap-3">
+                        <button id="corteCopyBtn" onclick="import('../modules/reports/CorteDeCaja.js').then(m => m.CorteDeCaja.copyToClipboard())" class="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold transition-all flex items-center justify-center gap-2">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                             Copiar Reporte
+                        </button>
+                        <button onclick="document.getElementById('corteDeCajaModal').classList.add('hidden')" class="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 transition-all">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. FINANCIAL REPORT MODAL -->
+            <div id="financialReportModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[9700] flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 modal-panel flex flex-col max-h-[90vh] overflow-hidden">
+                    <div class="bg-gray-800 px-6 py-4 flex justify-between items-center text-white">
+                        <div>
+                            <h3 class="text-xl font-bold">Reporte Financiero Mensual</h3>
+                            <p id="reportMonthLabel" class="text-gray-400 text-xs capitalize">...</p>
+                        </div>
+                        <button onclick="document.getElementById('financialReportModal').classList.add('hidden')" class="p-2 hover:bg-white/10 rounded-full">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="p-6 overflow-y-auto bg-gray-50 flex-1 scroller space-y-6">
+                        <!-- Key Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 text-gray-900">
+                                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                                <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Ingreso Total</p><h4 id="reportTotalIncome" class="text-2xl font-black">$0.00</h4></div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 text-gray-900">
+                                <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                                <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pendiente</p><h4 id="reportTotalPending" class="text-2xl font-black text-orange-600">$0.00</h4></div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 text-gray-900">
+                                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></div>
+                                <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Citas</p><h4 id="reportTotalCount" class="text-2xl font-black text-blue-600">0</h4><span id="reportCompletionRate" class="text-[10px] text-green-600 font-bold uppercase">0% Pagadas</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Debtors Section -->
+                        <div class="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 bg-red-50 border-b border-red-100"><h4 class="font-bold text-red-800 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Pendientes de Cobro (Histórico)</h4></div>
+                            <div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-900"><thead class="bg-gray-50 text-gray-400 font-bold text-[10px] uppercase"><tr><th class="px-6 py-3">Paciente</th><th class="px-6 py-3">Terapeuta</th><th class="px-6 py-3 text-right">Deuda</th><th class="px-6 py-3">Citas</th></tr></thead><tbody id="debtorsListBody" class="divide-y divide-gray-50"></tbody></table></div>
+                        </div>
+
+                        <div id="reportTherapistBody" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. SCHEDULE NEW PATIENT MODAL (Restaurado) -->
+            <div id="scheduleNewPatientModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col modal-panel overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                        <div>
+                            <h3 class="text-xl font-bold">Agendar Primera Cita</h3>
+                            <p id="schedulePatientName" class="text-indigo-100 text-xs mt-0.5">Paciente: ...</p>
+                        </div>
+                        <button id="closeScheduleNewPatientModalBtn" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 space-y-6 scroller">
+                        <!-- Week Navigation -->
+                        <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200">
+                            <button id="prevWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <div id="currentScheduleWeekLabel" class="text-sm font-bold text-gray-700 capitalize">...</div>
+                            <button id="nextWeekScheduleBtn" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                        </div>
+
+                        <!-- Slots Grid con Scroll Horizontal en Móvil -->
+                        <div class="overflow-x-auto pb-4 -mx-2 px-2 scroller">
+                            <div id="slotsGrid" class="flex md:grid md:grid-cols-6 gap-3 md:gap-4 min-w-[800px] md:min-w-full">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Configuration -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Configuración de Cita</h4>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1.5 ml-1">Costo por Sesión ($)</label>
+                                    <input type="number" id="scheduleCostInput" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-bold" value="800">
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Recurrencia Automática</h4>
+                                <div class="flex gap-4">
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="recurrenceType" value="none" class="hidden peer" checked>
+                                        <div class="peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 border border-gray-200 rounded-lg p-3 text-center text-sm font-medium hover:bg-gray-50 transition-all">Solo esta vez</div>
+                                    </label>
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="recurrenceType" value="weekly" class="hidden peer">
+                                        <div class="peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 border border-gray-200 rounded-lg p-3 text-center text-sm font-medium hover:bg-gray-50 transition-all">Semanal</div>
+                                    </label>
+                                    <label class="flex-1 cursor-pointer">
+                                        <input type="radio" name="recurrenceType" value="biweekly" class="hidden peer">
+                                        <div class="peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 border border-gray-200 rounded-lg p-3 text-center text-sm font-medium hover:bg-gray-50 transition-all">Quincenal</div>
+                                    </label>
+                                </div>
+
+                                <div id="sessionsCountContainer" class="hidden">
+                                     <label class="block text-sm text-gray-600 mb-1.5 ml-1">Número de sesiones</label>
+                                     <input type="number" id="sessionsCount" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value="1" min="1">
+                                     <p class="text-[10px] text-gray-400 mt-1 italic">* El sistema agendará automáticamente las citas futuras.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="p-4 bg-white border-t border-gray-100 flex justify-end">
+                        <button id="confirmScheduleBtn" class="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-2">
+                            Seleccione Horario
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. AUDIT LOG MODAL -->
+            <div id="auditLogModal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-[11000] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4">
+                <div id="auditLogModalPanel" class="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] md:max-h-[85vh] flex flex-col modal-panel overflow-hidden">
+                    <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-slate-800 rounded-t-3xl" aria-hidden="true">
+                        <span class="w-10 h-1 rounded-full bg-white/40"></span>
+                    </div>
+                    <div class="bg-slate-800 px-4 md:px-6 py-4 flex justify-between items-center text-white">
+                        <div>
+                            <h3 class="text-xl font-bold">📋 Bitácora de Auditoría</h3>
+                            <p class="text-slate-400 text-xs mt-0.5">Historial reciente de acciones en el sistema</p>
+                        </div>
+                        <button onclick="document.getElementById('auditLogModal').classList.add('hidden')" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="px-6 py-2 bg-gray-50 border-b border-gray-100 flex gap-4" id="auditTabs">
+                        <button data-tab="general" class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-blue-600 border-b-2 border-blue-600 transition-all">General</button>
+                        <button data-tab="whatsapp" class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-gray-600 border-b-2 border-transparent transition-all">WhatsApp</button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 bg-gray-50 scroller">
+
+                        <div id="auditLogList" class="space-y-3">
+                            <!-- Dynamically populated -->
+                            <div class="text-center py-10 text-gray-400 italic">Cargando registros...</div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white border-t border-gray-100 flex flex-wrap gap-2 justify-between">
+                        <div class="flex gap-2">
+                            <button id="exportAuditBtn" onclick="import('./js/modules/admin/AuditPanel.js').then(m => m.AuditPanel.export())" class="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Exportar a Excel
+                            </button>
+                            <button id="cleanupAuditBtn" onclick="import('./js/modules/admin/AuditPanel.js').then(m => m.AuditPanel.cleanup())" class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                Limpiar App
+                            </button>
+                        </div>
+                        <button onclick="document.getElementById('auditLogModal').classList.add('hidden')" class="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition-all">
+                            Cerrar
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. ABSENCE / VACATION MODAL -->
+            <div id="absenceModal" class="hidden fixed inset-0 z-[9500] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="absenceModalTitle">
+                <div id="absenceModalPanel" class="bg-white w-full max-w-none md:max-w-lg h-[92dvh] md:h-auto max-h-[92dvh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col modal-panel relative overflow-hidden text-gray-800">
+                    <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
+                    <!-- HEADER: degradado premium + subtítulo -->
+                    <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-start gap-3 bg-gradient-to-br from-white via-white to-amber-50/40 flex-shrink-0">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shadow-amber-500/30 text-xl" aria-hidden="true">
+                                🔒
+                            </div>
+                            <div class="min-w-0">
+                                <h3 id="absenceModalTitle" class="text-base md:text-lg font-extrabold tracking-tight text-gray-900 leading-tight">Registrar Ausencia / Vacaciones</h3>
+                                <p class="text-[11px] md:text-xs text-gray-500 font-medium mt-0.5">Bloquea días o rangos horarios y revisa las citas afectadas antes de guardar.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="touch-target touch-manipulation flex-shrink-0 p-2.5 -mt-1 -mr-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" aria-label="Cerrar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-5 scroller min-h-0 bg-white overscroll-contain">
+                        <!-- Therapist Selection -->
+                        <div>
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Terapeuta</label>
+                            <select id="absenceTherapist" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation disabled:bg-gray-50 disabled:text-gray-600">
+                                <option value="diana">Diana</option>
+                                <option value="sam">Sam</option>
+                                <option value="vero">Vero</option>
+                            </select>
+                        </div>
+
+                        <!-- Absence Type Selection — cards premium con has:checked -->
+                        <div>
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Tipo de Ausencia</label>
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5 md:gap-2">
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="vacation" checked class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">🏖️</span>
+                                    <span>Vacaciones</span>
+                                </label>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="medical" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">🏥</span>
+                                    <span>Médica</span>
+                                </label>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="training" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">📚</span>
+                                    <span>Capacitación</span>
+                                </label>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="personal" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">👤</span>
+                                    <span>Personal</span>
+                                </label>
+                                <label class="absence-type-card flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 border-2 border-gray-200 rounded-xl bg-white text-[11px] font-bold text-gray-600 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:checked]:shadow-sm touch-manipulation min-h-[64px]">
+                                    <input type="radio" name="absenceType" value="other" class="sr-only">
+                                    <span class="text-xl leading-none" aria-hidden="true">🚫</span>
+                                    <span>Otro</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Atajos rápidos de rango -->
+                        <div>
+                            <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Atajos rápidos</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" data-absence-quick="today" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">Hoy</button>
+                                <button type="button" data-absence-quick="week" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">Esta semana</button>
+                                <button type="button" data-absence-quick="nextweek" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">Próxima semana</button>
+                                <button type="button" data-absence-quick="twoweeks" class="absence-quick-btn px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all touch-manipulation">2 semanas</button>
+                            </div>
+                        </div>
+
+                        <!-- Date Range Selection -->
+                        <div class="grid grid-cols-2 gap-3 md:gap-4">
+                            <div>
+                                <label for="absenceStartDate" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Fecha Inicio</label>
+                                <input type="date" id="absenceStartDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation">
+                            </div>
+                            <div>
+                                <label for="absenceEndDate" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Fecha Fin</label>
+                                <input type="date" id="absenceEndDate" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation">
+                            </div>
+                        </div>
+
+                        <!-- Time Range Toggle and Selectors -->
+                        <div class="space-y-3">
+                            <label class="flex items-center justify-between gap-3 min-h-[48px] md:min-h-0 px-3 md:px-3 py-2.5 md:py-2 rounded-xl border border-gray-200 bg-gray-50/60 hover:bg-blue-50/40 hover:border-blue-200 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-300 cursor-pointer touch-manipulation transition-all">
+                                <span class="flex items-center gap-2">
+                                    <span class="text-base" aria-hidden="true">🕒</span>
+                                    <span class="text-sm text-gray-800 font-bold select-none">Todo el día</span>
+                                </span>
+                                <input type="checkbox" id="absenceAllDay" checked class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300 cursor-pointer">
+                            </label>
+                            
+                            <div id="absenceTimeRangeSelects" class="hidden grid grid-cols-2 gap-3 md:gap-4">
+                                <div>
+                                    <label for="absenceStartHour" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Hora Inicio</label>
+                                    <select id="absenceStartHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 touch-manipulation transition-all"></select>
+                                </div>
+                                <div>
+                                    <label for="absenceEndHour" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Hora Fin</label>
+                                    <select id="absenceEndHour" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 touch-manipulation transition-all"></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Note / Reason -->
+                        <div>
+                            <label for="absenceNote" class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Notas / Motivo interno <span class="text-gray-300 font-medium normal-case tracking-normal">(opcional)</span></label>
+                            <textarea id="absenceNote" placeholder="Ej: Capacitación en CDMX, retorno lunes 8 AM…" rows="2" class="w-full px-3 py-2.5 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 touch-manipulation resize-none transition-all"></textarea>
+                        </div>
+
+                        <!-- Resumen del rango -->
+                        <div id="absenceSummaryCard" class="hidden flex items-center gap-3 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl px-4 py-3">
+                            <span class="text-2xl flex-shrink-0" aria-hidden="true">📋</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Resumen</div>
+                                <div id="absenceSummaryText" class="text-sm font-bold text-indigo-950 leading-snug mt-0.5"></div>
+                            </div>
+                        </div>
+
+                        <!-- Sin conflictos (verde) -->
+                        <div id="absenceNoConflictsCard" class="hidden flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5">
+                            <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span class="text-xs font-bold text-emerald-800">Sin citas afectadas en este rango.</span>
+                        </div>
+
+                        <!-- Conflictos (ámbar) -->
+                        <div id="absenceConflictsCard" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3 animate-fade-in">
+                            <h4 class="text-xs font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Citas afectadas (<span id="absenceConflictsCount">0</span>)
+                            </h4>
+                            <div id="absenceConflictsList" class="max-h-28 overflow-y-auto divide-y divide-amber-100 text-xs font-semibold text-gray-700 scroller pt-1"></div>
+                            <div id="absenceConflictActions" class="space-y-2 pt-2 border-t border-amber-200/80">
+                                <p class="text-[11px] font-black text-amber-900 uppercase tracking-wider">¿Qué hacemos con estas citas?</p>
+                                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-100 bg-white cursor-pointer touch-manipulation has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50/50">
+                                    <input type="radio" name="absenceConflictAction" value="block_only" checked class="mt-0.5 text-blue-600">
+                                    <span class="text-xs text-gray-800 leading-snug"><strong>Solo bloquear</strong> — yo coordino las citas por fuera.</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-100 bg-white cursor-pointer touch-manipulation has-[:checked]:border-red-400 has-[:checked]:bg-red-50/40">
+                                    <input type="radio" name="absenceConflictAction" value="cancel" class="mt-0.5 text-red-600">
+                                    <span class="text-xs text-gray-800 leading-snug"><strong>Cancelar en Parláre</strong> — marca canceladas (sin WhatsApp al papá).</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-100 bg-white cursor-pointer touch-manipulation has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50/40">
+                                    <input type="radio" name="absenceConflictAction" value="reassign" class="mt-0.5 text-indigo-600">
+                                    <span class="text-xs text-gray-800 leading-snug"><strong>Pasar a otra terapeuta</strong> — misma hora y día (tú confirmas con el papá).</span>
+                                </label>
+                                <div id="absenceSubstituteWrap" class="hidden pl-1 space-y-1.5">
+                                    <label for="absenceSubstituteTherapist" class="block text-[10px] font-black text-indigo-800 uppercase tracking-wider">Terapeuta que cubre</label>
+                                    <select id="absenceSubstituteTherapist" class="w-full px-3 py-3 text-base font-semibold border border-indigo-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-100 touch-manipulation"></select>
+                                    <p id="absenceSubstituteHint" class="text-[11px] text-indigo-800/90 leading-snug">Reasignamos solo las que caben a la <strong>misma hora</strong> con la terapeuta que cubre. El aviso al tutor lo haces tú.</p>
+                                    <div id="absenceSubstituteFitSummary" class="hidden text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2"></div>
+                                    <div id="absenceSubstituteSuggestions" class="hidden max-h-40 overflow-y-auto scroller space-y-2 text-[11px] border border-indigo-100 rounded-xl p-2.5 bg-indigo-50/40"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="absenceModalFooter" class="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 rounded-b-none md:rounded-b-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.05)] md:shadow-none">
+                        <div class="flex gap-3">
+                            <button type="button" onclick="import('/js/modules/calendar/AbsenceModal.js').then(m => m.AbsenceModal.close())" class="flex-1 min-h-[48px] touch-manipulation bg-white text-gray-700 py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg hover:bg-gray-50 active:scale-[0.98] font-bold border border-gray-200 transition-all">Cancelar</button>
+                            <button type="button" id="absenceSaveBtn" class="flex-[1.2] min-h-[48px] touch-manipulation bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] text-white py-3 md:py-2 text-base md:text-sm rounded-xl md:rounded-lg font-bold shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                <span>Confirmar Bloqueo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+};

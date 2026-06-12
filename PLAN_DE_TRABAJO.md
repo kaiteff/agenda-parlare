@@ -6,6 +6,7 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Fix cuota Parláre → Google Sheets (11 Jun 2026)** — Al registrar paciente con cuota distinta (ej. $300) o configurarla en Panel → Costos, la columna Parláre en Excel ya no cae al $250 fijo: `SheetService`, `SyncService`, `CalendarData` y fallbacks usan config viva + `clinicFee` del perfil. **Deploy:** `firebase deploy --only hosting`.
 *   **Fase C: Consentimiento WhatsApp (Opt-In/Opt-Out) y Auditoría — 100% Listo y Desplegado (21 Mayo 2026)**:
     *   **Configuración y Base de Datos:** Campo `recurrentOptIn` (`pending` / `accepted` / `rejected`) en `patientProfiles`. Inicialización automática de nuevos perfiles en `on_patient_created` con `wantsWhatsapp = false` y `recurrentOptIn = 'pending'`.
     *   **Reglas de Consentimiento e Integración Backend/Frontend:**
@@ -269,7 +270,9 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 - [x] **Índices Firestore** — ✅ 26 may (Antigravity deploy): `firestore.indexes.json` con 6 índices compuestos en `appointments` (4) + `space_offers` (2). Todos `Enabled` en producción.
 - [x] **Limpieza Hosting Storage** (may 2026 — Daniel): revisado en consola; cuota al día.
 - [x] **Copiloto banner 8 min** (may 2026 — Daniel): validado en producción (contador alineado con backend).
-- [x] **Lecturas login admin (28 may — Cursor):** `patientProfiles` cache 1×/sesión (super); `Header` batchSync solo admin/recepción + un listener; Copiloto reusa `CalendarData`; notificaciones `limit(80)`. Deploy: `hosting` (+ `firestore:indexes` si falta índice notifications).
+- [x] **Redeploy functions (30 may — Antigravity):** `trigger_utils`, `secrets_config.py`, `release_quiet_hours_offers`, `on_quiet_hours_pending_written`, secrets en Copiloto. Error Reporting: revisar mañana si dejan de subir casos.
+- [x] **Lecturas login admin (28–30 may):** cache perfiles 1×/sesión, Copiloto sin 2.º listener, notif `limit(80)`, `AppLifecycle` logout. Validado Daniel: ~**+200 reads/F5**, ~985 citas + 126 perfiles en consola; `agenda: all`.
+- [x] **Auth admin vista Todas (30 may):** `AUTHORIZED_USERS` gana sobre `users/{uid}`; dedupe `initUser`/Header.
 
 ## 💡 Sugerencias (opcional — próximas sesiones)
 
@@ -292,4 +295,22 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
 
 ---
-*Última actualización: 26 de Mayo, 2026 (tarde) — **Optimización Firestore Fase 3 (Antigravity) — deploy en producción + Win 1 unificación de listeners + Hotfix sincronización Copiloto (Cursor) + Pop-up v9.3 con tarjeta del Copiloto para Yari**. Deploy exitoso de índices (6 compuestos `Enabled`) y `on_appointment_cancelled_trigger` con `timeout_sec=540` (límite máximo) y `total_wait=480 s` (8 min). `CalendarData.subscribe` ahora multicast: el listener de citas se comparte entre calendario y PatientManager (~30–50 % menos lecturas adicionales). **Bug crítico UX arreglado por Cursor**: `COPILOT_DELAY_MS` alineado a 8 min (antes 10) en frontend para que coincida con backend; banner y manual actualizados; constante única `COPILOT_DELAY_MS` derivada para evitar divergencias futuras. **Pendiente Daniel**: limpieza manual de revisiones de Hosting en consola (17.6 GB → 10 GB) → Release storage settings: mantener últimas 10–15 versiones. **Lecturas esperadas: 29 k → 8–12 k/día** tras propagación. Estado heredado: Fase 1.5 Ausencias UX premium + ejemplo paso a paso, Pop-up v9.2, sweep XSS S-011–S-016 reforzados, headers HTTP en `firebase.json`. Estado seguridad: 0 críticos, **2 altos** (S-002 y S-005 pendientes; S-003 y S-004 reforzados), 3 medios, 2 mejoras, **23 reforzados** (S-001, S-003, S-004, S-011–S-016, Q-001 a Q-006, sintaxis, timeout, índices, multicast).*
+
+## 💡 Propuesta documentada — Cola prioridad (pacientes especiales)
+
+> **No es prioridad de sprint actual** — spec lista para cuando dirección/Yari la pidan. Los asistentes IA deben **sugerirla** cuando hablemos de huecos libres, Copiloto o «deben cita».
+
+| Qué | Dónde |
+|-----|--------|
+| **Documento maestro** (reglas, fases, boceto código, checklist) | [`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`](PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md) |
+| **Resumen reglas** | Paciente **especial** que debe **1..N sesiones**; cola solo **semana en curso**; **cualquier día** lun–vie si hora cae en **±3 h** del horario referencia; **sin sábado**; misma **terapeuta**; Yari confirma WhatsApp |
+| **Fase mínima viable** | A: marcar cola + filtro Control Maestro → B: panel Copiloto → C: backend match |
+
+- [x] **Decisión dirección (28 may)** — ±3 h; cualquier día de la semana en curso (no mismo weekday obligatorio)
+- [x] **UX cancelación mismo día (Fase A0)** — opcional «¿debe sesión?»; si marca → «¿fuera del horario habitual?» (**siempre +1**); reagendar y **guardar** → no sumar; ver §2.1 doc maestro
+- [x] **Regla Oro 9** — backup en `_backups/` + `git status` antes de tocar código (`.cursor/rules/backup-y-git-antes-de-cambios.mdc`)
+- [x] **Fase A0 + A (frontend)** — 2 jun 2026: `SchedulingQueueService`, cancelar hoy «debe sesión», expediente (cola), filtro Control Maestro «Deben sesión», L-1 glow Copiloto
+- [ ] **Fase B** — panel Copiloto + backend `process_scheduling_queue_candidates` (ver checklist doc maestro)
+
+---
+*Última actualización: 2 de Junio, 2026 — Cola prioridad Fase A0+A en frontend. Heredado 28–30 may: Quiet Hours, lecturas, deploy functions.*

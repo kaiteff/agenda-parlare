@@ -34,6 +34,7 @@ export const WaitlistCopilotPanel = {
     _initialized: false,
     _unsubDay: null,
     _unsubQuiet: null,
+    _unsubGlow: null,
     _dayItems: [],
     _quietItems: [],
     _actionLocks: new Map(),
@@ -58,6 +59,16 @@ export const WaitlistCopilotPanel = {
             this.render(this._mergedItems());
         });
 
+        let lastGlowSignature = '';
+        this._unsubGlow = WaitlistCopilotService.subscribe((items) => {
+            const sig = items.map((i) => i.id).sort().join('|');
+            if (sig === lastGlowSignature) return;
+            lastGlowSignature = sig;
+            import('../modules/calendar/CalendarEvents.js')
+                .then(({ CalendarEvents }) => CalendarEvents.render?.())
+                .catch(() => {});
+        });
+
         this._initialized = true;
     },
 
@@ -68,8 +79,10 @@ export const WaitlistCopilotPanel = {
     destroy() {
         if (this._unsubDay) this._unsubDay();
         if (this._unsubQuiet) this._unsubQuiet();
+        if (this._unsubGlow) this._unsubGlow();
         this._unsubDay = null;
         this._unsubQuiet = null;
+        this._unsubGlow = null;
         WaitlistCopilotService.stop();
         QuietHoursCopilotService.stop();
         document.getElementById(CONTAINER_ID)?.remove();

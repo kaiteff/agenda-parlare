@@ -7,6 +7,7 @@ import { ToastService } from '../../utils/ToastService.js';
 import { GoogleAuthService } from './GoogleAuthService.js';
 import { SyncStatus } from '../SyncStatus.js';
 import { NetworkMonitor } from '../NetworkMonitor.js';
+import { AuthManager } from '../../managers/AuthManager.js';
 
 export const SheetService = {
     // Configuración MULTI-ARCHIVO
@@ -73,9 +74,11 @@ export const SheetService = {
             // Cálculos de desglose
             const totalAmount = paymentData.amount || 0;
             
-            // Lógica de cobro de clínica: Priorizar manual, si no usar default
-            const defaultFee = therapistKey === 'vero' ? 400 : 250;
-            const rawClinicFee = paymentData.clinicFee !== undefined ? paymentData.clinicFee : defaultFee;
+            // Lógica de cobro de clínica: manual → perfil/cita → config viva del panel (no hardcode 250)
+            const configuredFee = AuthManager.getTherapistDefaults(therapistKey).clinicFee;
+            const rawClinicFee = paymentData.clinicFee !== undefined && paymentData.clinicFee !== null
+                ? paymentData.clinicFee
+                : configuredFee;
 
             // Si el monto total es negativo (anulación), el desglose también debe ser negativo
             const finalClinicFee = totalAmount < 0 ? -Math.abs(rawClinicFee) : Math.abs(rawClinicFee);

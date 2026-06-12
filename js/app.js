@@ -113,21 +113,8 @@ async function initializeModules() {
         // Control de Recepción - Maestro
         await initModule('ReceptionControl', () => ReceptionControl.init());
 
-        // Copiloto Colaborativo (Fase B) — banner flotante + glow en agenda
-        await initModule('WaitlistCopilotPanel', () => {
-            WaitlistCopilotPanel.init();
-            // Re-renderizar la agenda SOLO cuando cambia el conjunto de IDs en delay
-            // (no cada segundo del contador, para no bloquear el render).
-            let lastGlowSignature = '';
-            WaitlistCopilotService.subscribe((items) => {
-                const sig = items.map(i => i.id).sort().join('|');
-                if (sig === lastGlowSignature) return;
-                lastGlowSignature = sig;
-                import('./modules/calendar/CalendarEvents.js')
-                    .then(({ CalendarEvents }) => CalendarEvents.render?.())
-                    .catch(() => { /* calendario aún no listo */ });
-            });
-        });
+        // Copiloto Colaborativo (Fase B) — banner + glow (suscripción en WaitlistCopilotPanel)
+        await initModule('WaitlistCopilotPanel', () => WaitlistCopilotPanel.init());
 
         // Google Auth (async pero no bloqueante)
         GoogleAuthService.init()

@@ -13,6 +13,7 @@ import { ToastService } from '../../utils/ToastService.js';
 import { CalendarData } from '../calendar/CalendarData.js';
 import { PatientModals } from '../../managers/patient/PatientModals.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
+import { SchedulingQueueService } from '../../services/SchedulingQueueService.js';
 import { ReceptionAlertsService } from '../../services/ReceptionAlertsService.js';
 import { escapeHTML } from '../../utils/sanitize.js';
 
@@ -114,6 +115,10 @@ export const ReceptionControl = {
                             <span class="w-2 h-2 rounded-full bg-orange-400"></span>
                             Sin Confirmar
                         </button>
+                        <button id="filterSessionDebtBtn" class="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-amber-400 transition-all flex items-center gap-2 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            Deben sesión
+                        </button>
                     </div>
 
                     <!-- Filtro por Terapeuta (NUEVO) -->
@@ -211,6 +216,21 @@ export const ReceptionControl = {
                 btn.classList.replace('bg-orange-500', 'bg-white');
                 btn.classList.replace('text-white', 'text-gray-700');
                 btn.classList.remove('ring-2', 'ring-orange-200', 'border-orange-500');
+            }
+            this.render();
+        });
+
+        document.getElementById('filterSessionDebtBtn')?.addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            const isActive = btn.classList.toggle('active-filter-amber');
+            if (isActive) {
+                btn.classList.replace('bg-white', 'bg-amber-500');
+                btn.classList.replace('text-gray-700', 'text-white');
+                btn.classList.add('ring-2', 'ring-amber-200', 'border-amber-500');
+            } else {
+                btn.classList.replace('bg-amber-500', 'bg-white');
+                btn.classList.replace('text-white', 'text-gray-700');
+                btn.classList.remove('ring-2', 'ring-amber-200', 'border-amber-500');
             }
             this.render();
         });
@@ -321,12 +341,16 @@ export const ReceptionControl = {
 
         const showOnlyDebtors = document.getElementById('filterDebtorsBtn').classList.contains('active-filter-red');
         const showOnlyPending = document.getElementById('filterPendingBtn').classList.contains('active-filter-orange');
+        const showOnlySessionDebt = document.getElementById('filterSessionDebtBtn')?.classList.contains('active-filter-amber');
         const therapistFilter = this.selectedTherapist || 'all';
         const query = searchInput.value.toLowerCase().trim();
         const activeView = this.currentView || 'today';
 
         const patients = PatientState.patients || [];
         const appointments = PatientState.appointments || [];
+        const sessionDebtIds = new Set(
+            SchedulingQueueService.listActivePatients(patients).map((p) => p.id)
+        );
         
         const now = new Date();
         const tomorrowStart = new Date();
@@ -402,6 +426,8 @@ export const ReceptionControl = {
                 if (!pendingConfirm) return false;
             }
 
+            if (showOnlySessionDebt && !sessionDebtIds.has(p.id)) return false;
+
             return true;
         });
 
@@ -416,6 +442,8 @@ export const ReceptionControl = {
         filtered.sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
             const pending = PatientFilters.getPendingPayments(p.name);
             const totalDebt = pending.reduce((sum, a) => sum + (a.cost || 0), 0);
+            const sq = p.schedulingQueue;
+            const sessionsOwed = sq?.active && (sq.sessionsOwed || 0) > 0 ? sq.sessionsOwed : 0;
             
             // Buscar próxima cita
             const upcomingApts = appointments
@@ -440,6 +468,7 @@ export const ReceptionControl = {
                         <span class="font-bold text-gray-800 text-sm md:text-base">${escapeHTML(p.name)}</span>
                         <span class="text-[10px] md:text-xs text-gray-500">${escapeHTML(p.parentName || 'Sin responsable')}</span>
                         <span class="text-[9px] md:text-[10px] text-gray-400 mt-0.5">${escapeHTML(p.phone || '')}</span>
+                        ${sessionsOwed > 0 ? `<span class="inline-flex mt-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">Debe ${sessionsOwed} sesión${sessionsOwed > 1 ? 'es' : ''}</span>` : ''}
                     </div>
                 </td>
                 <td class="px-4 md:px-6 py-3 md:py-4">
@@ -456,6 +485,7 @@ export const ReceptionControl = {
                              Al corriente
                            </span>`
                     }
+                    ${sessionsOwed > 0 ? `<span class="mt-1 inline-block text-[9px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">🟣 ${sessionsOwed} sesión${sessionsOwed > 1 ? 'es' : ''} por recuperar</span>` : ''}
                 </td>
                 <td class="px-4 md:px-6 py-3 md:py-4">
                     ${upcoming 

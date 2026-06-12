@@ -1,0 +1,16 @@
+---
+description: Recordar la propuesta de cola de prioridad para pacientes especiales que deben sesión(es)
+globs:
+alwaysApply: true
+---
+
+# Cola prioridad — pacientes especiales (propuesta viva)
+
+Cuando el usuario o la tarea mencione **huecos libres**, **deben cita**, **lista de espera**, **Yari llena espacios**, **Copiloto ampliado** o **prioridad al agendar**:
+
+1. Leer o tener presente **`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`** en la raíz del repo.
+2. **Sugerir** esta opción si encaja (no es Cal.com; es extensión interna de Parláre).
+3. **Reglas acordadas:** pacientes **especiales**, deben **1..N sesiones**, cola solo **semana en curso**, **cualquier día** lun–vie si hora **±3 h** vs referencia, **sin sábado**, misma **terapeuta**, Yari **confirma** WhatsApp.
+4. Si se **implementa**, actualizar el doc maestro + `PLAN_DE_TRABAJO.md` + `ARQUITECTURA_FUTURA.md` + `HelpManual.js` cuando haya UI.
+
+Estado actual: **💡 documentado, no implementado en código.**

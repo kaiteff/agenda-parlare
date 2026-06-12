@@ -335,7 +335,7 @@ Para asegurar que el backend y el Bot de WhatsApp sean 100% replicables sin modi
 | Módulo | Estado | Notas |
 |--------|--------|-------|
 | **Adelantar cita / optimizador** | ✅ Autopilot desplegado · ⏳ Copiloto dual + heurísticas | Pausa temporal en `space_optimizer.py` |
-| **Lista de espera inteligente** | 🔜 | Extensión del flujo de cancelación |
+| **Lista de espera inteligente** | 🔜 | Parcialmente cubierto por Copiloto «adelantar»; **cola pacientes especiales** (debe 1..N sesiones, semana actual, sin sábado) documentada en [`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`](PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md) |
 | **Asistente notas clínicas IA** | 🔜 | Dictado → nota SOAP/DAP |
 | **Portal del paciente** | 🔜 Opcional | Links WhatsApp; sujeto a dirección |
 | **Landing / Aparador digital** | 🔜 Opcional | Trauma-informed; solo pacientes registrados |

@@ -1,0 +1,50 @@
+---
+description: Antes de tocar código — backup local + punto de control git (obligatorio)
+alwaysApply: true
+---
+
+# Backup y Git ANTES de cambiar código
+
+**Regla absoluta:** Si la sesión va a **modificar** archivos del producto (JS, Python, rules, HTML, configs), el asistente **debe proponer o ejecutar** este protocolo **antes** del primer edit — salvo que el usuario diga explícitamente «sin backup» o «solo documentación».
+
+## Orden obligatorio
+
+### 1. Backup local (copia en `_backups/`)
+
+Crear carpeta con fecha y tema, **sin** `git add -A` (ver `AI_RULES.md` — repo anidado en `old/`).
+
+```powershell
+$fecha = Get-Date -Format "yyyyMMdd_HHmm"
+$nombre = "backup_${fecha}_DESCRIPCION_CORTA"
+Copy-Item -Path "d:\agbc\Ag_Pa\js", "d:\agbc\Ag_Pa\functions", "d:\agbc\Ag_Pa\firestore.rules", "d:\agbc\Ag_Pa\firestore.indexes.json", "d:\agbc\Ag_Pa\firebase.json", "d:\agbc\Ag_Pa\index.html" -Destination "d:\agbc\Ag_Pa\_backups\$nombre" -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+Ajustar archivos copiados según lo que se vaya a tocar. Si solo frontend: al menos `js/` + `index.html` + `dist/output.css` si Tailwind.
+
+### 2. Git — punto de control (no commit salvo que el usuario pida)
+
+```powershell
+cd d:\agbc\Ag_Pa
+git status
+git diff --stat
+```
+
+- Si hay cambios sin commitear: **avisar** al usuario y preguntar si commit/stash **antes** de seguir.
+- **No** hacer `git commit` ni `git push` sin petición explícita del usuario.
+- Tras terminar la tarea: recordar qué archivos tocaron para un commit cuando el usuario quiera.
+
+### 3. Anunciar en chat (una línea)
+
+Ejemplo: «Backup en `_backups/backup_YYYYMMDD_…` listo (o pendiente tu OK). `git status` revisado. Procedo con [tarea].»
+
+## Excepciones (no backup obligatorio)
+
+- Solo lectura (auditoría, comparar Cal.com, responder dudas).
+- Solo docs en `referencia-personal-daniel/` o `resumen_sesion/` sin tocar código producto.
+- Edits ya acordados como «solo markdown de propuesta» sin deploy.
+
+## Después de implementar
+
+Seguir `.cursor/rules/documentacion-viva-siempre.mdc` y, si hubo código, `seguridad-vulnerabilidades.mdc` si aplica.
+
+Documento de referencia equipo: `AI_RULES.md` → **Regla de Oro 9** (backup/git).

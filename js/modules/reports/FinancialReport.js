@@ -3,6 +3,8 @@
  * Genera reportes financieros basados en las citas cargadas.
  */
 
+import { AuthManager } from '../../managers/AuthManager.js';
+
 export const FinancialReport = {
     /**
      * Genera un reporte mensual desglosado por terapeuta
@@ -50,8 +52,8 @@ export const FinancialReport = {
 
         monthlyAppointments.forEach(appt => {
             const cost = parseFloat(appt.cost) || 0;
-            // NUEVO: Obtener la cuota de la clínica (si no está definida en la cita, usar default de 250)
-            const clinicFeePerApt = parseFloat(appt.clinicFee || appt.parlareFee || 250);
+            const defaultFee = AuthManager.getTherapistDefaults(appt.therapist).clinicFee;
+            const clinicFeePerApt = parseFloat(appt.clinicFee ?? appt.parlareFee ?? defaultFee);
             
             const therapistKey = (appt.therapist || 'diana').toLowerCase();
             const isPaid = appt.isPaid;

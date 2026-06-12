@@ -15,7 +15,7 @@ import { AuthManager } from '../../managers/AuthManager.js';
  * @param {string} patientName
  * @returns {Promise<number>}
  */
-async function getClinicFee(patientName) {
+async function getClinicFee(patientName, therapist = 'diana') {
     try {
         const q = fsQuery(
             collection(db, patientProfilesPath),
@@ -24,14 +24,15 @@ async function getClinicFee(patientName) {
         const snap = await getDocs(q);
         if (!snap.empty) {
             const data = snap.docs[0].data();
-            if (data.clinicFee !== undefined) {
+            if (data.therapist) therapist = data.therapist;
+            if (data.clinicFee !== undefined && data.clinicFee !== null) {
                 return parseFloat(data.clinicFee);
             }
         }
     } catch (err) {
         console.error('Error obteniendo clinicFee en CalendarData:', err);
     }
-    return 250; // Default
+    return AuthManager.getTherapistDefaults(therapist).clinicFee;
 }
 
 export const CalendarData = {
@@ -172,7 +173,7 @@ export const CalendarData = {
                 console.log("💰 CalendarData: Cita movida y estaba pagada. Actualizando en Sheets...", existingEvt.name);
                 
                 try {
-                    const clinicFee = await getClinicFee(existingEvt.name);
+                    const clinicFee = await getClinicFee(existingEvt.name, existingEvt.therapist);
 
                     // 1. Anular el pago en la fecha/hora anterior con monto negativo
                     await SheetService.logPayment({
@@ -210,9 +211,9 @@ export const CalendarData = {
     async togglePayment(id, currentStatus) {
         // 1. Obtener clinicFee primero para guardarlo en la DB
         const appointment = CalendarState.appointments.find(a => a.id === id);
-        let clinicFee = 250;
+        let clinicFee = AuthManager.getTherapistDefaults(appointment?.therapist).clinicFee;
         if (appointment) {
-            clinicFee = await getClinicFee(appointment.name);
+            clinicFee = await getClinicFee(appointment.name, appointment.therapist);
         }
 
         // 2. Ejecutar cambio de estado
@@ -224,7 +225,7 @@ export const CalendarData = {
 
             if (appointment) {
                 // Obtener clinicFee real del paciente desde Firestore
-                getClinicFee(appointment.name).then(clinicFee => {
+                getClinicFee(appointment.name, appointment.therapist).then(clinicFee => {
                     if (result.newState === true) {
                         // PAGO POSITIVO
                         console.log("💰 CalendarData: Marcado como PAGADO, enviando a Sheets...", appointment.name, '- clinicFee:', clinicFee);

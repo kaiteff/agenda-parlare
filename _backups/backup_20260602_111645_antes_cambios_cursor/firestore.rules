@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar si el usuario inició sesión
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Obtener el email del usuario logueado en la petición
+    function getEmail() {
+       return request.auth.token.email;
+    }
+    
+    // Verificar si es administrador o recepción (Super usuarios)
+    function isSuper() {
+       // Daniel (Admin), Diana (Admin) o Yari (Recepción)
+       return getEmail() == 'rodriguezd.danielrob@gmail.com' || 
+              getEmail() == 'lopezcarpio7@gmail.com' || 
+              getEmail() == 'yaritzajocgo@gmail.com' || 
+              getEmail() == 'kaiteff@gmail.com';
+    }
+    
+    // Verificar si el usuario que hace la petición es dueño del recurso
+    function isOwner(therapistKey) {
+       return (getEmail() == 'sammygtz90@gmail.com' && therapistKey == 'sam') ||
+              (getEmail() == 'lopezcarpio7@gmail.com' && therapistKey == 'diana') ||
+              (getEmail() == 'sanchezverooo21@gmail.com' && therapistKey == 'vero') ||
+              isSuper();
+    }
+
+    // Colección de Citas (Agenda)
+    match /appointments/{docId} {
+      // LECTURA: Super/recepción ven todo; cada terapeuta solo sus citas (S-002, 28 may 2026).
+      // La UI ya filtraba por `therapist` en CalendarData; las reglas cierran la vía consola.
+      allow read: if isAuthenticated() && (isSuper() || isOwner(resource.data.therapist));
+      
+      // ESCRITURA: Solo el dueño de la agenda o Super usuarios
+      allow create: if isAuthenticated() && isOwner(request.resource.data.therapist);
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.therapist);
+    }
+    
+    // Colección de Notas Clínicas (Privacidad Grado Médico)
+    match /clinicalNotes/{docId} {
+      // Solo el terapeuta asignado o Super usuarios pueden acceder
+      allow read, write: if isAuthenticated() && (isSuper() || (resource != null && isOwner(resource.data.therapist)) || (resource == null && isOwner(request.resource.data.therapist)));
+    }
+
+    // Colección de Perfiles de Pacientes (Información Sensible - Protección Legal)
+    match /patientProfiles/{docId} {
+      // Solo el terapeuta asignado o Super usuarios pueden acceder
+      allow read, write: if isAuthenticated() && (isSuper() || (resource != null && isOwner(resource.data.therapist)) || (resource == null && isOwner(request.resource.data.therapist))); 
+    }
+    
+    // Colección de Usuarios (Perfiles de terapeutas)
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow write: if isSuper();
+    }
+
+    // Colección de Configuración (Temas, Costos, etc.)
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuper();
+    }
+
+    // Alertas para Recepción (opt-out WhatsApp, etc.)
+    match /reception_alerts/{alertId} {
+      allow read, write: if isSuper();
+    }
+
+    // Overrides del Copiloto Colaborativo (Waitlist Autopilot, Fase B):
+    // Yari/Diana escriben aquí desde el frontend para abortar o acelerar
+    // el delay de 10 min del backend `space_optimizer`.
+    match /copilot_overrides/{appointmentId} {
+      allow read, write: if isSuper();
+    }
+
+    // Cola Copiloto — cancelaciones nocturnas (22:00–07:00 MX)
+    match /quiet_hours_pending/{appointmentId} {
+      allow read, write: if isSuper();
+    }
+
+    // Default para las demás colecciones (Fallback)
+    match /{document=**} {
+      allow read, write: if isSuper();
+    }
+  }
+}

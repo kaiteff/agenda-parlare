@@ -19,12 +19,17 @@ import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 import { TimeManager } from '../../utils/TimeManager.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { LoaderService } from '../../utils/LoaderService.js';
+import { SchedulingQueueService } from '../../services/SchedulingQueueService.js';
+import { isSameCalendarDay } from '../../utils/schedulingQueueRules.js';
+import { PatientManager } from '../../managers/PatientManager.js';
 
 
 
 
 export const CalendarModal = {
     originalTherapistOnOpen: null,
+    _cancelDebtContext: null,
+    _awaitingRescheduleSave: false,
     init() {
         this.bindEvents();
         this.bindGridEvents();
@@ -474,6 +479,15 @@ export const CalendarModal = {
         if (!patientOpen && !otherModalOpen && !moreSheetOpen) {
             document.body.classList.remove('overflow-hidden');
         }
+        if (this._awaitingRescheduleSave && this._cancelDebtContext?.isToday) {
+            this._offerSessionDebtMark(this._cancelDebtContext).finally(() => {
+                this._cancelDebtContext = null;
+                this._awaitingRescheduleSave = false;
+            });
+        } else {
+            this._cancelDebtContext = null;
+            this._awaitingRescheduleSave = false;
+        }
         CalendarState.selectedEventId = null;
         console.log('🚪 CalendarModal: Modal cerrado correctamente');
     },
@@ -865,6 +879,10 @@ export const CalendarModal = {
                     }
                 }
             }
+            if (this._awaitingRescheduleSave || CalendarState.rescheduledFromId) {
+                this._cancelDebtContext = null;
+                this._awaitingRescheduleSave = false;
+            }
             CalendarState.rescheduledFromId = null;
             this.closeModal();
             console.log("✅ Cita guardada y modal cerrado");
@@ -904,18 +922,30 @@ export const CalendarModal = {
     async handleCancel() {
         if (!CalendarState.selectedEventId) return;
 
-        // ⚠️ CRÍTICO: capturar eventId ANTES de cualquier await.
-        // Si durante el confirm dialog algo llama closeModal() (botón X, backdrop),
-        // selectedEventId se pone null — y sin esta captura anticipada el cancel falla.
         const eventId = CalendarState.selectedEventId;
+        const appointment = CalendarState.appointments.find((a) => a.id === eventId);
+        if (!appointment) return;
 
         if (!await ModalService.confirm("Cancelar Cita", "¿Estás seguro de que deseas cancelar esta cita?", "Sí, Cancelar", "No")) return;
-        
-        // 1. Ejecutar cancelación en base de datos
-        const userEmail = AuthManager.currentUser?.email || 'Manual';
+
+        const userEmail = AuthManager.currentUser?.email || 'unknown';
         await CalendarData.cancelEvent(eventId, userEmail);
 
-        // 2. Preguntar si quiere avisar por WhatsApp
+        const profile = PatientState.patients.find(
+            (p) => p.id === appointment.patientId || p.name === appointment.name
+        );
+        const debtContext = {
+            appointmentId: eventId,
+            patientId: profile?.id || appointment.patientId,
+            patientName: appointment.name,
+            cancelledSlot: appointment.date,
+            therapist: appointment.therapist,
+            habitualSlot: profile?.schedulingQueue?.habitualSlot || null,
+            isToday: isSameCalendarDay(appointment.date)
+        };
+        this._cancelDebtContext = debtContext;
+        this._awaitingRescheduleSave = false;
+
         const sendWA = await ModalService.confirm(
             "Aviso por WhatsApp",
             "¿Deseas enviar un mensaje automático de cancelación al responsable?",
@@ -924,8 +954,7 @@ export const CalendarModal = {
         );
 
         if (sendWA) {
-            const appointment = CalendarState.appointments.find(a => a.id === eventId);
-            if (appointment) WhatsAppMessaging.sendMessage(appointment, 'cancel');
+            WhatsAppMessaging.sendMessage(appointment, 'cancel');
         }
 
         const reschedule = await ModalService.confirm(
@@ -936,7 +965,7 @@ export const CalendarModal = {
         );
 
         if (reschedule) {
-            // Switch to create mode with same patient
+            this._awaitingRescheduleSave = true;
             CalendarState.rescheduledFromId = eventId;
             CalendarState.selectedEventId = null;
             const dom = CalendarState.dom;
@@ -948,20 +977,77 @@ export const CalendarModal = {
             dom.confirmBtn.classList.add('hidden');
             dom.cancelBtn.classList.add('hidden');
 
-            // Suggest next week same time
             if (dom.appointmentDateInput.value) {
                 const current = new Date(dom.appointmentDateInput.value);
                 const nextWeek = new Date(current);
                 nextWeek.setDate(nextWeek.getDate() + 7);
-                const iso = this._getLocalISOStringFormat(nextWeek);
-
-                dom.appointmentDateInput.value = iso;
-
-                // Update Grid UI
+                dom.appointmentDateInput.value = this._getLocalISOStringFormat(nextWeek);
                 this.renderDailySlots(nextWeek);
             }
-        } else {
-            this.closeModal();
+            return;
+        }
+
+        if (debtContext.isToday) {
+            await this._offerSessionDebtMark(debtContext);
+        }
+        this._cancelDebtContext = null;
+        this.closeModal();
+    },
+
+    async _offerSessionDebtMark(ctx) {
+        if (!ctx?.patientId || String(ctx.patientId).length < 12) {
+            const byName = PatientState.patients.find((p) => p.name === ctx.patientName);
+            if (!byName?.id || String(byName.id).length < 12) return;
+            ctx.patientId = byName.id;
+        }
+
+        const mark = await ModalService.confirm(
+            'Sesión adeudada',
+            '¿Marcar que este paciente <strong>debe una sesión</strong>?<br><span class="text-xs text-gray-500">Solo contador para recepción; no envía WhatsApp.</span>',
+            'Sí, marcar',
+            'No, gracias',
+            'info'
+        );
+        if (!mark) return;
+
+        const outside = await ModalService.confirm(
+            'Horario habitual',
+            '¿La cita cancelada era <strong>fuera</strong> del horario habitual (otro día u hora)?<br><br><span class="text-xs text-amber-800">Siempre suma 1 al contador. Si no estás segura, sigue con la siguiente pregunta.</span>',
+            'Sí, otro horario',
+            'No / habitual',
+            'info'
+        );
+
+        const unsure = !outside
+            ? await ModalService.confirm(
+                  '¿No estás seguro/a?',
+                  '¿Marcar como <strong>no seguro</strong> (igual cuenta en el contador)?',
+                  'Marcar no seguro',
+                  'Dejar como habitual',
+                  'info'
+              )
+            : false;
+
+        const debtOutsideHabitual = outside ? true : unsure ? null : false;
+
+        try {
+            const res = await SchedulingQueueService.markSessionOwed(ctx.patientId, {
+                cancelledSlot: ctx.cancelledSlot,
+                therapist: ctx.therapist,
+                debtOutsideHabitual,
+                habitualSlot: ctx.habitualSlot
+            });
+            if (res.success) {
+                await PatientManager.refreshProfiles(true);
+                await ModalService.alert(
+                    'Contador actualizado',
+                    `Marcado: debe <strong>${res.sessionsOwed}</strong> sesión(es) esta semana.`,
+                    'success'
+                );
+            }
+        } catch (e) {
+            console.warn('[SchedQueue] markSessionOwed:', e);
+            await ModalService.alert('No se pudo guardar', e.message || 'Error', 'error');
         }
     },
 

@@ -29,6 +29,8 @@ import { ToastService } from '../../utils/ToastService.js';
 import { getReimbursementReceiptFromDom } from '../../services/patientService.js';
 import { renderWhatsAppOptInBadge } from '../../utils/WhatsAppOptIn.js';
 import { escapeHTML } from '../../utils/sanitize.js';
+import { SchedulingQueueService } from '../../services/SchedulingQueueService.js';
+import { TimeManager } from '../../utils/TimeManager.js';
 
 /**
  * Gestión de modales
@@ -857,7 +859,7 @@ export const PatientModals = {
             dom.editPatientCost.value = patient.defaultCost || 0;
         }
         if (document.getElementById('editPatientClinicFee')) {
-            document.getElementById('editPatientClinicFee').value = patient.clinicFee || 250;
+            document.getElementById('editPatientClinicFee').value = patient.clinicFee ?? AuthManager.getTherapistDefaults(patient.therapist).clinicFee;
         }
         if (document.getElementById('editPatientPhone')) {
             let phoneVal = patient.phone || '';
@@ -894,6 +896,29 @@ export const PatientModals = {
         }
         if (document.getElementById('editPatientBirthday')) {
             document.getElementById('editPatientBirthday').value = patient.birthday || '';
+        }
+
+        const schedSection = document.getElementById('editPatientSchedulingQueueSection');
+        const canEditSchedQueue = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        if (schedSection) {
+            if (canEditSchedQueue && patient.id && String(patient.id).length >= 12) {
+                schedSection.classList.remove('hidden');
+                const sq = patient.schedulingQueue || {};
+                const activeEl = document.getElementById('editPatientSchedulingActive');
+                const owedEl = document.getElementById('editPatientSessionsOwed');
+                const prioEl = document.getElementById('editPatientSchedulingPriority');
+                const habitEl = document.getElementById('editPatientHabitualSlot');
+                if (activeEl) activeEl.checked = !!sq.active && (sq.sessionsOwed || 0) > 0;
+                if (owedEl) owedEl.value = sq.sessionsOwed || 0;
+                if (prioEl) prioEl.value = sq.priority === 'high' ? 'high' : 'normal';
+                if (habitEl && sq.habitualSlot) {
+                    const d = TimeManager.fromDate(sq.habitualSlot);
+                    const pad = (n) => String(n).padStart(2, '0');
+                    habitEl.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                } else if (habitEl) habitEl.value = '';
+            } else {
+                schedSection.classList.add('hidden');
+            }
         }
 
         const receipt = patient.reimbursementReceipt || {};
@@ -996,7 +1021,9 @@ export const PatientModals = {
             dom.savePatientEditBtn.onclick = async () => {
                 const newTherapist = dom.editPatientTherapist.value;
                 const newCost = dom.editPatientCost ? parseFloat(dom.editPatientCost.value) : 0;
-                const newClinicFee = document.getElementById('editPatientClinicFee') ? parseFloat(document.getElementById('editPatientClinicFee').value) : 250;
+                const editDefaults = AuthManager.getTherapistDefaults(newTherapist);
+                const parsedEditFee = parseFloat(document.getElementById('editPatientClinicFee')?.value);
+                const newClinicFee = Number.isFinite(parsedEditFee) ? parsedEditFee : editDefaults.clinicFee;
                 const newPhone = document.getElementById('editPatientPhone')?.value.trim() || '';
                 const countryCode = document.getElementById('editPatientCountryCode')?.value || '52';
                 const newParentName = document.getElementById('editPatientParentName')?.value.trim() || '';
@@ -1024,6 +1051,23 @@ export const PatientModals = {
                     },
                     patient.name
                 );
+
+                if (success && canEditSchedQueue && document.getElementById('editPatientSchedulingActive')) {
+                    const active = document.getElementById('editPatientSchedulingActive').checked;
+                    const sessionsOwed = parseInt(document.getElementById('editPatientSessionsOwed')?.value, 10) || 0;
+                    const priority = document.getElementById('editPatientSchedulingPriority')?.value || 'normal';
+                    const habitRaw = document.getElementById('editPatientHabitualSlot')?.value;
+                    const habitualSlot = habitRaw ? TimeManager.toFirestore(habitRaw.replace('T', ' ')) : undefined;
+                    await SchedulingQueueService.updateFromExpediente(patient.id, {
+                        active,
+                        sessionsOwed,
+                        isSpecialPatient: true,
+                        priority,
+                        habitualSlot
+                    });
+                    const { PatientManager } = await import('../PatientManager.js');
+                    await PatientManager.refreshProfiles(true);
+                }
 
                 if (success) {
                     await ModalService.alert("Éxito", 'Perfil actualizado correctamente', "success");

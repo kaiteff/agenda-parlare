@@ -85,7 +85,7 @@ export const PatientModalsHTML = {
                         </div>
                         <div>
                              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Cuota Parlare ($)</label>
-                             <input type="number" id="newPatientClinicFee" placeholder="250.00" value="250.00"
+                             <input type="number" id="newPatientClinicFee" placeholder="Cuota sugerida"
                                 class="${touchField} bg-blue-50">
                         </div>
                     </div>
@@ -237,6 +237,32 @@ export const PatientModalsHTML = {
                             <div>
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">🎂 Cumpleaños</label>
                                 <input type="date" id="editPatientBirthday" class="${touchField}">
+                            </div>
+                        </div>
+
+                        <div id="editPatientSchedulingQueueSection" class="mt-4 p-4 rounded-xl border border-amber-200/80 bg-amber-50/40 hidden">
+                            <p class="text-[10px] font-black uppercase tracking-wider text-amber-800 mb-3">Cola sesión (paciente especial)</p>
+                            <p class="text-[10px] text-amber-900/80 mb-3">Contador de sesiones que deben recuperarse esta semana. No es deuda de pago.</p>
+                            <label class="flex items-center gap-3 min-h-[44px] touch-manipulation cursor-pointer mb-3">
+                                <input type="checkbox" id="editPatientSchedulingActive" class="w-5 h-5 text-amber-600 rounded border-gray-300">
+                                <span class="text-xs font-bold text-gray-700">En cola activa (debe sesión)</span>
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Sesiones adeudadas</label>
+                                    <input type="number" id="editPatientSessionsOwed" min="0" max="8" value="0" class="${touchField}">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Prioridad</label>
+                                    <select id="editPatientSchedulingPriority" class="${touchSelect}">
+                                        <option value="normal">Normal</option>
+                                        <option value="high">Alta</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Horario habitual</label>
+                                    <input type="datetime-local" id="editPatientHabitualSlot" class="${touchField}">
+                                </div>
                             </div>
                         </div>
 

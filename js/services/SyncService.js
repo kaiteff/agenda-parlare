@@ -7,6 +7,7 @@ import { db, collectionPath, collection, query, where, getDocs, updateDoc, doc }
 import { SheetService } from './google/SheetService.js';
 import { Logger } from '../utils/Logger.js';
 import { ToastService } from '../utils/ToastService.js';
+import { AuthManager } from '../managers/AuthManager.js';
 
 const log = Logger.create('SyncService');
 
@@ -64,7 +65,11 @@ export const SyncService = {
                     amount: apt.cost || 0,
                     status: "Pagado",
                     therapist: apt.therapist,
-                    clinicFee: apt.manualClinicFee !== undefined ? apt.manualClinicFee : (apt.clinicFee || 250),
+                    clinicFee: apt.manualClinicFee !== undefined
+                        ? apt.manualClinicFee
+                        : (apt.clinicFee !== undefined && apt.clinicFee !== null
+                            ? apt.clinicFee
+                            : AuthManager.getTherapistDefaults(apt.therapist).clinicFee),
                     therapistPay: apt.manualTherapistPay,
                     planningPay: apt.manualPlanningPay,
                     planningTherapist: apt.planningTherapist

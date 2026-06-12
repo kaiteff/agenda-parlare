@@ -85,6 +85,7 @@ export const WaitlistCopilotService = {
             this._tickTimer = null;
         }
         this._pending.clear();
+        this._subscribers.clear();
         this._notify();
     },
 

@@ -6,7 +6,7 @@
 >
 > **Mapa operativo diario:** [`ANALISIS_ESTRATEGIA_MOVIL.md`](ANALISIS_ESTRATEGIA_MOVIL.md) · **Prioridades producto:** [`PLAN_DE_TRABAJO.md`](PLAN_DE_TRABAJO.md)
 
-*Última actualización: **26 de Mayo de 2026** — Registro extendido con 4 cambios mayores del 26 may: Optimización Firestore Fase 1 (Antigravity), Fase 2 hotfixes (Cursor), Win 1 multicast `CalendarData.subscribe` (Antigravity), Hotfix sincronización Copiloto (Cursor). Lecturas estimadas: 29 k → 8–12 k/día (-58 % a -75 %).*
+*Última actualización: **2 de Junio de 2026** — Cola prioridad **#12** Fase A0+A implementada; **#13 L-1** cerrado. Heredado 26–30 may: Firestore, Copiloto, AppLifecycle.*
 
 ---
 
@@ -77,6 +77,8 @@ Leyenda: ✅ hecho | 🔜 en curso | ⏳ pendiente | 💎 premium (más adelante
 |---|--------|--------|
 | 10 | Tokens de color marca Parláre en `tailwind.config.js` | 💎 |
 | 11 | Atajos teclado (← → semana, **H** = Hoy) | 💎 |
+| 12 | **Cola prioridad — pacientes especiales que deben sesión(es)** | ✅ A0+A | Fase **A0+A** 2 jun: servicio + UI expediente + Control Maestro. **B** pendiente (Copiloto + `space_optimizer`). |
+| 13 | **Logout — suscriptor glow Copiloto (L-1)** | ✅ | 2 jun: suscriptor glow en `WaitlistCopilotPanel`; `stop()` limpia `_subscribers`. |
 
 **Explícitamente fuera de premium por ahora:** virtualización React, reescritura completa del calendario, quitar vista semana.
 

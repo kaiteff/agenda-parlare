@@ -264,7 +264,7 @@ export const HelpManual = {
                                 </div>
                                 <div class="flex items-start gap-4">
                                     <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">2</div>
-                                    <p><strong>Llenado:</strong> Ingresa nombre, elige terapeuta y pon el WhatsApp (10 dígitos). El sistema ajustará mayúsculas y costos base por ti.</p>
+                                    <p><strong>Llenado:</strong> Ingresa nombre, elige terapeuta y pon el WhatsApp (10 dígitos). El sistema sugiere <strong>Costo</strong> y <strong>Cuota Parláre</strong> según la configuración del terapeuta — <em>puedes cambiarlas antes de guardar</em>. Esa cuota es la que verás en Excel (columna Parláre) cuando marquen la cita como pagada.</p>
                                 </div>
                                 <div class="flex items-start gap-4">
                                     <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">3</div>
@@ -418,6 +418,15 @@ export const HelpManual = {
                                 <div class="bg-red-50 p-4 rounded-xl border border-red-100">
                                     <h4 class="font-bold text-red-900 mb-2">🔔 Alertas en Control Maestro</h4>
                                     <p class="mb-2">Si un padre responde <strong>No</strong> al opt-in, aparece una alerta. En <strong>Más → Control Maestro</strong> usa el panel <strong>Seguimiento manual WhatsApp</strong>: <strong>Ver ficha</strong> y <strong>Atendido</strong> cuando Yari ya gestionó el caso.</p>
+                                </div>
+                                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                    <h4 class="font-bold text-amber-900 mb-2">🟣 Deben sesión (pacientes especiales)</h4>
+                                    <p class="mb-2">Es un <strong>contador de sesiones por recuperar</strong> esta semana — <em>no</em> es lo mismo que la deuda en pesos (rojo «Solo con deuda»).</p>
+                                    <ul class="list-disc ml-5 space-y-1.5 text-sm">
+                                        <li><strong>Al cancelar una cita de hoy</strong>, el sistema puede preguntar si marcas que el paciente debe una sesión. Si eliges <strong>Reagendar</strong> y <strong>guardas</strong> la cita nueva, <strong>no</strong> se suma al contador.</li>
+                                        <li>En el <strong>expediente</strong> (editar perfil), bloque «Cola sesión»: activar cola, número de sesiones (0–8), prioridad y horario habitual.</li>
+                                        <li>En <strong>Control Maestro</strong>, botón ámbar <strong>Deben sesión</strong> filtra solo quienes tienen contador activo en la semana.</li>
+                                    </ul>
                                 </div>
                                 <p>Iconos rápidos en tu agenda y barra lateral:</p>
                                 <ul class="list-none space-y-1">

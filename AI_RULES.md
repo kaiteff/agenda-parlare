@@ -28,6 +28,18 @@ Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de ar
 2. **Cero Duplicación de Esfuerzos:** No intentar proponer o reescribir funcionalidades que ya estén marcadas como completadas, evitando colisiones de código y desviaciones de la arquitectura SaaS.
 3. **Refactor y escritorio:** Para roadmap de agenda desktop, rendimiento y deuda técnica gradual, leer y actualizar **`ARQUITECTURA_FUTURA.md`** (registro de cambios con **para qué** y **cómo revertir**). Histórico: `old/ARQUITECTURA_FUTURA.md`.
 4. **Seguridad y vulnerabilidades:** Para auditorías, hallazgos de seguridad, XSS, reglas Firestore/Storage, secretos, dependencias, leer y actualizar **`SEGURIDAD_Y_VULNERABILIDADES.md`**. Cada hallazgo lleva ID `S-XXX`, severidad y estado. Nunca borrar hallazgos cerrados (se mueven a «✅ Reforzado»). Regla Cursor: `.cursor/rules/seguridad-vulnerabilidades.mdc`.
+5. **Cola prioridad (pacientes especiales):** Si la sesión habla de huecos libres, «deben cita», lista de espera, Copiloto ampliado o prioridad de agendado, **mencionar** la propuesta documentada en **`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`** (semana en curso, horario similar ±3 h, sin sábado, debe 1..N sesiones). No implementar sin decisión de dirección; actualizar ese doc si cambian las reglas de negocio.
+
+## 💾 REGLA DE ORO 9: Backup y Git ANTES de tocar código
+Antes del **primer cambio** en código producto (JS, `functions/`, rules, hosting):
+
+1. **Backup local** en `_backups/backup_YYYYMMDD_HHmm_tema/` (copia selectiva; **nunca** `git add -A`).
+2. **`git status`** + avisar si hay cambios sin commitear; **no** commit/push sin que el usuario lo pida.
+3. Anunciar en chat que el protocolo se cumplió o está pendiente de OK del usuario.
+
+Regla Cursor: `.cursor/rules/backup-y-git-antes-de-cambios.mdc` (`alwaysApply: true`).
+
+Excepción: solo lectura, solo docs de propuesta personal, o auditoría sin edits.
 
 
 ### Qué actualizar en ANALISIS_ESTRATEGIA_MOVIL.md:

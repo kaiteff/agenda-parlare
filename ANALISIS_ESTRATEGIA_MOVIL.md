@@ -73,9 +73,29 @@ HOY ─────────────────────────�
 
 ## Registro de avance y qué hacer ahora
 
-> **Última sesión de implementación:** **21 May 2026** — Opt-In WhatsApp + bitácora (ver bloque abajo).
->
-> **Complemento cerrado (agenda escritorio + docs):** Validación usuario de auto-scroll e índice slot; toggle **Día \| Semana** en desktop; `ARQUITECTURA_FUTURA.md` (roadmap + registro reversión); fusión **`VISION_PARLARE_V2.md`** (✅/⏳/🔜). Resumen: `resumen_sesion/RESUMEN_SESION_20260519.md` (sección complemento).
+### 🔄 Retomar aquí (sesión **11 jun 2026** — fix cuota Parláre → Drive)
+
+| Estado | Qué |
+|--------|-----|
+| ✅ **Hecho hoy** | Fix: cuota Parláre al registrar paciente (ej. $300) ya no cae a $250 en Google Sheets — `SheetService`, sync batch, fallbacks usan `AuthManager.getTherapistDefaults()` y `clinicFee` del perfil. |
+| ⏳ **Validar** | Admin: Panel → Costos poner $300 → nuevo paciente debe abrir con $300 → marcar cita pagada → columna H en Excel = $300. |
+
+### 🔄 Sesión anterior ( **2 jun 2026** — cola prioridad)
+
+**Pregunta «¿en qué nos quedamos?»** → leer en este orden: (1) este bloque, (2) [`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`](PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md) §10, (3) `PLAN_DE_TRABAJO.md` sección Cola prioridad.
+
+| Estado | Qué |
+|--------|-----|
+| ✅ **Hecho (código local, sin deploy en cierre)** | Fase **A0+A**: `SchedulingQueueService`, cancelar hoy «debe sesión», expediente «Cola sesión», Control Maestro filtro **Deben sesión**, **L-1** Copiloto/logout, **HelpManual**, pop-up **`parlare_onboarding_v9_5`**. |
+| ⏳ **Primero al volver** | `npm run build` + `firebase deploy --only hosting` (no functions). Validar con Yari: cancelar cita **hoy**, reagendar+guardar **no** suma, filtro ámbar, expediente. |
+| ⏳ **Siguiente sprint (Fase B+)** | Bloque cola en `WaitlistCopilotPanel.js` + `process_scheduling_queue_candidates` en `space_optimizer.py` + E2E oferta WhatsApp. Ver checklist §10 del doc maestro. |
+| 🚫 **No desplegado aún** | Todo lo de arriba — producción sigue sin cola hasta hosting deploy. |
+
+**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260602.md`
+
+---
+
+> **Sesión anterior documentada:** **21 May 2026** — Opt-In WhatsApp + bitácora (bloques históricos abajo).
 
 ### Cierre de sesión — 21 May 2026
 
@@ -132,7 +152,10 @@ firebase deploy --only hosting
 | 18 | **Cron Google sync híbrido A+B** | Tras deploy functions: domingo revisar logs `mode: nuke`; lunes `mode: incremental` con `skipped` alto si hubo pocos cambios. Cloud Scheduler solo `0 7 * * *` (sin job 20:00). |
 | 19 | **Hosting pop-up v9.4 + manual vacaciones** | Si no se hizo: `npm run build` + `firebase deploy --only hosting`. Pop-up `parlare_onboarding_v9_4` (2 días desde 28 may). |
 | 20 | **Recordatorio 8 AM — cita test mañana** | Cita jue 29 con opt-in + teléfono; tras cron 8 AM revisar Bitácora (`entityId` = ID cita) y `lastReminderSentAt`. |
-| 21 | **Dashboard lecturas 48 h** | Meta: bajar pico 7–9 AM vs semana del 26 may (C-Lite + sync 1×/día + incremental dom–sáb). |
+| 21 | **Dashboard lecturas 48 h** | Meta: bajar pico 7–9 AM vs semana del 26 may. **30 may:** Daniel validó ~+200 reads/F5; total día ~6.6K incluye varias recargas + crons (medir **delta** por hora, no total acumulado). |
+| 22 | **Error Reporting — validar (31 may)** | Tras deploy 30 may: si **no** suben casos nuevos en los 4 grupos (`NoneType.exists`, `_get_db`, Twilio) → marcar **Resuelto**. Si suben → revisar logs función. |
+| 23 | **Logout + reglas (31 may)** | Cerrar sesión → consola debe mostrar `AppLifecycle: Apagando listeners`; sin errores de permisos en pestaña abierta. |
+| 24 | ✅ **Deploy 30 may (Antigravity)** | Hosting + rules + functions (`on_quiet_hours_pending_written`, fixes receipt/cancel triggers). |
 | 13 | **Fase 1 Ausencias — hotfixes pendientes (S-011 a S-014)** | ✅ Completados (XSS mitigado, escrituras en batch implementadas, validación de hora y detección de duplicados añadidas). |
 | 14 | **Fase 1.5 Ausencias — Modal premium UX (25 may, noche)** | Validar con Vero/Sam/Yari en celular: (a) cards de tipo de ausencia se destacan al tocarse (borde y fondo azul + sombra suave); (b) chips «Hoy / Esta semana / Próxima semana / 2 semanas» rellenan los inputs de fecha y activan «Todo el día»; (c) tarjeta indigo «Resumen» muestra `Tipo · Terapeuta · rango · N días hábiles · horario`; (d) banner verde «Sin citas afectadas» aparece cuando el rango está bien y no choca con niños; (e) si pones hora fin antes que inicio, los dos selects se marcan en rojo en tiempo real; (f) botón Confirmar con icono candado y gradient azul→índigo no se solapa con el home indicator en iPhone (safe-area). |
 | 15 | ✅ **Optimización Firestore Fase 3 — deploy en producción** (26 may, Antigravity) | Índices `Enabled`, function con `timeout_sec=540` y delay 8 min en producción, **Win 1 multicast** `CalendarData.subscribe` implementado. ✅ (a) banner 8 min validado. ⏳ (b) Pausar 0–8 min, (c) envío auto a los 8 min, (d) cache historial >30 días, (e) dashboard lecturas 48 h, (f) login Vero/Sam sin «index required». |
@@ -174,6 +197,7 @@ firebase deploy --only hosting
 | Baja | En móvil, aviso al elegir **Semana**: «Para ver nombres completos, usa vista Día» | Refuerza UX sin quitar Semana. |
 | Roadmap | **Capacitor POC** en emulador Android | Validar login Firebase + UI en WebView antes de tiendas. |
 | Roadmap | Retirar **Render** cuando todo el bot esté en Functions | Un solo backend serverless. |
+| **Alta (producto)** | **Cola prioridad — Fase B (Copiloto + backend)** | Fase **A0+A** ✅ 2 jun: contador al cancelar hoy, expediente, filtro Control Maestro. Falta: banner cola en `WaitlistCopilotPanel` + `space_optimizer`. Spec: [`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`](PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md). |
 
 > **Regla de cierre:** cada sesión debe dejar esta subsección **Falta + Sugerencias** actualizada (no solo lo hecho).
 
@@ -310,6 +334,7 @@ firebase deploy --only hosting
 | **Recibos Fase 1 — Prep SaaS** | **Clínica** (`AdminSettingsModal` / tab Costos): por terapeuta `professionalLicense`, `graduationInstitution` (disabled, badge «SaaS Ready»). **Paciente** (nuevo + editar): `reimbursementReceipt.autoGenerate`, `reimbursementReceipt.tutorName` (disabled, «Próximamente»). Firestore: `settings/clinicConfig.baseCosts.{id}.*` y `patientProfiles.reimbursementReceipt`. |
 | **Fase C — Opt-In WhatsApp** | `recurrentOptIn` en `patientProfiles` (default `pending`). Badge en ficha (`js/utils/WhatsAppOptIn.js` + `PatientModals.js`). Webhook: `functions/whatsapp_optin.py` + `main.py` (`optin_yes` → accepted, `optin_no` → rejected + `reception_alerts`). Crons solo si `accepted`. Template **`bienvenida_con_optin`** SID `HX08f74d9b520b85acfbf9e678e434b1f6` (`js/config/whatsappTemplates.js`). |
 | **UX Fase C visible (frontend)** | **Sidebar:** punto verde/amarillo/rojo junto al nombre (`renderWhatsAppOptInDot` en `Sidebar.js`). **Control Maestro:** panel «Seguimiento manual WhatsApp» con listener `reception_alerts` (`ReceptionAlertsService.js` + `ReceptionControl.js`): Ver ficha (`window.openPatientHistoryById`), Atendido. **Móvil:** Control Maestro como bottom-sheet `92dvh` + pull-handle. **Onboarding:** `NewFeatureAlert.js` clave `parlare_onboarding_v9_0` (Modo Día, opt-in, recibos PDF). |
+| **Cola prioridad — Fase A0 + A (2 jun 2026)** | `SchedulingQueueService.js` + `schedulingQueueRules.js`. **Cancelar cita hoy:** opcional «debe sesión» (+1 siempre; pregunta horario habitual); **reagendar y guardar** no suma. **Expediente:** bloque «Cola sesión» (Yari/admin). **Control Maestro:** filtro ámbar «Deben sesión» + badge contador. **L-1:** glow Copiloto en `WaitlistCopilotPanel.destroy()`; `WaitlistCopilotService.stop()` limpia suscriptores. Deploy: **solo hosting** (`npm run build` + `firebase deploy --only hosting`). |
 | **Marca + PWA** | `assets/parlare-logo.png`, `js/utils/brandAssets.js`, login + `Header.js`, `index.html` (favicon, apple-touch-icon, `theme-color`), `manifest.webmanifest`. |
 | **SaaS Ready — copy UI** | `js/utils/saasReadyCopy.js`: banner en Configuración (`AdminSettingsModal.js`) y bloque recibos en paciente (`PatientModalsHTML.js`). Campos siguen `disabled` hasta activación comercial; no es bug. |
 | **Arquitectura pacientes** | Lista y búsqueda: **`js/components/Sidebar.js`** (`render()`). `PatientActions.js` refresca con `Sidebar.render()`. No usar `PatientUI.js` (solo backups/`old/`). |
@@ -836,8 +861,10 @@ Sprint 2 (Fase 1 continuación / polish)
 - Sesión **19 may 2026** — Calendario móvil; Bitácora en **Más**; Regla documentación siempre; manual actualizado.
 - Sesión **21 may 2026** — Reglas de excepción de Opt-In WhatsApp, inicialización en base de datos, flujo de Bienvenida manual/automático, webhook de actualización, y ampliación de bitácora WhatsApp con soporte para detalles de errores y mensajes omitidos.
 - Sesión **28 may 2026** — **Sincronización Híbrida de Google Calendar (Fase 1/2)** (nuke semanal en domingos, incremental 36h en días hábiles; Scheduler simplificado a solo 7 AM MX). **Vacaciones Fase 2a/2b en móvil** (Más -> Vacaciones en móvil, panel de ausencias, sugerencia de huecos de la sustituta, reasignación inteligente). **Fase C-Lite: Optimización de lecturas en recordatorios** (registro de profileId/phone en citas y queries optimizadas para evitar streamings masivos de perfiles).
+- Sesión **28 may 2026** — Cola prioridad (spec `PROPUESTA_COLA_…`). Decisiones: ±3 h, cualquier día lun–vie; aviso **opcional** al cancelar hoy «debe sesión» (contador). **Regla Oro 9:** backup + git antes de código. Auditoría #2: Copiloto OK; gap cola; logout L-1 pendiente.
+- Sesión **2 jun 2026** — Implementación **Fase A0 + A** + fix **L-1**: `CalendarModal`, `SchedulingQueueService`, expediente, Control Maestro. **HelpManual** + pop-up **`parlare_onboarding_v9_5`** (cola debe sesión). Pendiente validación Yari tras deploy hosting.
 
-*Última actualización de este documento: **28 de Mayo de 2026 (cierre sesión) — Functions desplegadas (C-Lite + fix bitácora `doc_id` + sync híbrido A+B). Hosting pendiente si falta v9.4. Modo leve documentado. Validar: cita test recordatorio mañana + lecturas en 48 h.***
+*Última actualización de este documento: **11 de Junio de 2026** — Fix cuota Parláre → Google Sheets respeta config del panel y perfil del paciente. Heredado 2 jun: cola prioridad A0+A.*
 
 ---
 

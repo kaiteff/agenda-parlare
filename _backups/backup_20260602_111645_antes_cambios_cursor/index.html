@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+    <title>Agenda Parláre</title>
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Parláre">
+    <link rel="icon" type="image/png" href="assets/parlare-logo.png">
+    <link rel="apple-touch-icon" href="assets/parlare-logo.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link href="dist/output.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://apis.google.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md transform transition-all">
+            <div class="text-center mb-8">
+                <!-- Logo -->
+                <div class="flex justify-center mb-4">
+                    <img src="assets/parlare-logo.png" alt="Parláre — Centro de atención en problemas de lenguaje y habla" class="h-20 w-auto max-w-[280px] object-contain" width="280" height="80" />
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Bienvenido</h2>
+                <p class="text-gray-500 text-sm mt-1">Ingresa tus credenciales para continuar</p>
+            </div>
+
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Correo Electrónico</label>
+                    <input type="email" id="emailInput" required
+                        class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800 placeholder-gray-400"
+                        placeholder="nombre@ejemplo.com">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Contraseña</label>
+                    <input type="password" id="passwordInput" required
+                        class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-800 placeholder-gray-400"
+                        placeholder="••••••••••">
+                </div>
+
+                <div id="loginError"
+                    class="hidden text-sm text-red-600 bg-red-50 p-3 rounded border border-red-100 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Error de autenticación</span>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all transform active:scale-95 shadow-lg shadow-blue-500/30">
+                    Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP CONTENT (Inicialmente oculto) -->
+    <div id="appContent" class="hidden flex-1 flex flex-col h-full relative">
+
+        <!-- MAIN LAYOUT -->
+        <div class="flex-1 flex overflow-hidden relative pb-bottom-nav md:pb-0">
+
+            <!-- Sidebar y Header inyectados dinámicamente -->
+
+            <!-- CENTER/RIGHT: CALENDAR -->
+            <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+                <!-- Calendar Toolbar (responsive móvil) -->
+                <div id="calendarToolbar" class="bg-white border-b border-gray-200 shadow-sm z-10 flex-shrink-0 p-3 md:p-4">
+                    <div class="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4">
+                        <div class="flex items-center gap-2 md:gap-4 min-w-0 md:flex-1">
+                            <div class="flex items-center gap-0.5 md:gap-4 flex-1 min-w-0 justify-center md:justify-start">
+                                <button type="button" id="prevWeekBtn"
+                                    class="touch-target touch-manipulation flex-shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 p-2.5 md:p-1.5 hover:bg-gray-100 rounded-xl md:rounded-full text-gray-600 transition-colors"
+                                    aria-label="Semana anterior">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                    </svg>
+                                </button>
+                                <div class="relative flex items-center gap-1 flex-1 min-w-0 justify-center px-1">
+                                    <h2 id="currentMonthLabel"
+                                        class="text-base md:text-xl font-bold text-gray-800 capitalize truncate text-center md:min-w-[140px] md:flex-none"></h2>
+                                    <button type="button" id="mobileDatePickerBtn"
+                                        class="md:hidden touch-target touch-manipulation flex-shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px] p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+                                        title="Saltar a fecha" aria-label="Elegir fecha">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    </button>
+                                    <input type="date" id="calendarJumpInput" class="sr-only" tabindex="-1" aria-hidden="true">
+                                </div>
+                                <button type="button" id="nextWeekBtn"
+                                    class="touch-target touch-manipulation flex-shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 p-2.5 md:p-1.5 hover:bg-gray-100 rounded-xl md:rounded-full text-gray-600 transition-colors"
+                                    aria-label="Semana siguiente">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <div id="calendarTherapistFilterWrap" class="md:hidden hidden min-w-0 flex-1 max-w-[5.5rem] sm:max-w-[7rem]">
+                                    <select id="therapistFilterMobile" aria-label="Filtrar terapeuta"
+                                        class="w-full min-h-[44px] text-xs font-bold uppercase tracking-wide text-gray-700 border border-gray-200 rounded-xl px-2 bg-gray-50 outline-none touch-manipulation truncate"
+                                        title="Terapeuta en agenda"></select>
+                                </div>
+                                <div id="calendarViewToggle"
+                                    class="flex items-center bg-gray-100 p-1 rounded-xl md:rounded-lg border border-gray-200"
+                                    role="group" aria-label="Vista del calendario">
+                                    <button type="button" id="toggleViewDayBtn"
+                                        class="px-3 py-1.5 md:px-2.5 md:py-1 text-xs font-bold rounded-lg transition-all touch-manipulation text-gray-500">Día</button>
+                                    <button type="button" id="toggleViewWeekBtn"
+                                        class="px-3 py-1.5 md:px-2.5 md:py-1 text-xs font-bold rounded-lg transition-all touch-manipulation text-gray-500">Semana</button>
+                                </div>
+                                <button type="button" id="todayBtn"
+                                    class="min-h-[44px] px-4 py-2.5 md:px-3 md:py-1.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl md:rounded-md transition-colors touch-manipulation whitespace-nowrap">
+                                    Hoy
+                                </button>
+                            </div>
+                        </div>
+                        <div id="statusMsg" class="text-xs md:text-sm font-medium text-gray-500 text-center md:text-right truncate min-h-[1.125rem] animate-pulse"></div>
+                    </div>
+                </div>
+
+                <!-- Calendar Content -->
+                <div class="flex-1 overflow-y-auto min-h-0 p-4 flex gap-6 scroller">
+                    <!-- Main Calendar Grid -->
+                    <!-- Added overflow-x-auto wrapper for mobile scrolling -->
+                    <div id="calendarScrollWrap" class="flex-1 overflow-x-auto pb-2">
+                        <div id="calendarGrid"
+                            class="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] min-w-0 w-full md:min-w-[700px]">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right Sidebar: Mini Calendar -->
+                    <div class="w-64 flex flex-col gap-6 hidden xl:flex">
+
+                        <!-- Mini Calendar -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between mb-4">
+                                <button id="miniPrevBtn" class="text-gray-400 hover:text-gray-600"><svg class="w-4 h-4"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 19l-7-7 7-7"></path>
+                                    </svg></button>
+                                <span id="miniMonthLabel" class="text-sm font-bold text-gray-800 capitalize"></span>
+                                <button id="miniNextBtn" class="text-gray-400 hover:text-gray-600"><svg class="w-4 h-4"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7"></path>
+                                    </svg></button>
+                            </div>
+                            <div id="miniCalendarGrid" class="grid grid-cols-7 gap-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ================= MODALES (INYECTADOS POR COMPONENTMANAGER) ================= -->
+        <div id="dynamic-modals-root"></div>
+
+    </div>
+
+    <!-- Global Error Handler & Script Loading Check -->
+    <script>
+        window.addEventListener('error', function (e) {
+            // Detectar errores de carga de scripts (Network Error / 404)
+            if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+                console.error('❌ Error de carga de recurso:', e.target.src || e.target.href);
+                const statusDiv = document.getElementById('loginError');
+                if (statusDiv) {
+                    statusDiv.innerHTML = `
+                        <div class="flex items-start gap-2">
+                            <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div>
+                                <strong>Error de Conexión:</strong><br>
+                                No se pudo cargar un componente del sistema.<br>
+                                <span class="text-xs opacity-75">Verifica tu conexión a internet. Recurso fallido: ${e.target.src ? e.target.src.split('/').pop() : 'desconocido'}</span>
+                            </div>
+                        </div>
+                    `;
+                    statusDiv.classList.remove('hidden');
+                    // Asegurar visibilidad
+                    statusDiv.style.display = 'block';
+                }
+
+                // Deshabilitar botón para evitar "refresh" inútil
+                const btn = document.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Sistema no disponible (Revisar conexión)";
+                    btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                }
+            }
+        }, true); // Captura en fase de captura para eventos de carga
+    </script>
+
+    <!-- Google APIs (Non-blocking) -->
+    <script src="https://apis.google.com/js/api.js" defer></script>
+    <script src="https://accounts.google.com/gsi/client" defer></script>
+    <script type="module" src="js/app.js?v=1408"></script>
+</body>
+
+</html>

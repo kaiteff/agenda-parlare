@@ -36,16 +36,20 @@ import { escapeHTML } from '../../utils/sanitize.js';
  * Obtiene el clinicFee de un paciente consultando Firestore directamente.
  * Evita depender del estado en memoria (PatientState.patients) que puede estar filtrado por terapeuta.
  * @param {string} patientName
- * @returns {Promise<number>} clinicFee del paciente, o 250 si no se encuentra
+ * @param {string} [therapist] - Terapeuta para fallback desde config viva del panel
+ * @returns {Promise<number>} clinicFee del paciente o cuota configurada del terapeuta
  */
-async function _getClinicFeeForPatient(patientName) {
+async function _getClinicFeeForPatient(patientName, therapist = 'diana') {
     try {
         // Primero intentar desde el estado en memoria (más rápido)
         const fromState = PatientState.patients.find(
             p => p.name?.toLowerCase() === patientName?.toLowerCase()
         );
-        if (fromState && fromState.clinicFee !== undefined) {
-            return parseFloat(fromState.clinicFee);
+        if (fromState) {
+            if (fromState.therapist) therapist = fromState.therapist;
+            if (fromState.clinicFee !== undefined && fromState.clinicFee !== null) {
+                return parseFloat(fromState.clinicFee);
+            }
         }
 
         // Si no está en memoria, consultar Firestore directamente
@@ -56,17 +60,19 @@ async function _getClinicFeeForPatient(patientName) {
         const snap = await getDocs(q);
         if (!snap.empty) {
             const profileData = snap.docs[0].data();
-            if (profileData.clinicFee !== undefined) {
+            if (profileData.therapist) therapist = profileData.therapist;
+            if (profileData.clinicFee !== undefined && profileData.clinicFee !== null) {
                 console.log(`💰 clinicFee para "${patientName}" (Firestore): ${profileData.clinicFee}`);
                 return parseFloat(profileData.clinicFee);
             }
         }
 
-        console.warn(`⚠️ No se encontró clinicFee para "${patientName}", usando default 250`);
-        return 250;
+        const fallback = AuthManager.getTherapistDefaults(therapist).clinicFee;
+        console.warn(`⚠️ No se encontró clinicFee para "${patientName}", usando config del terapeuta: ${fallback}`);
+        return fallback;
     } catch (err) {
         console.error('❌ Error obteniendo clinicFee:', err);
-        return 250;
+        return AuthManager.getTherapistDefaults(therapist).clinicFee;
     }
 }
 
@@ -105,8 +111,10 @@ export const PatientActions = {
         const firstName = dom.newPatientFirstName?.value.trim();
         const lastName = dom.newPatientLastName?.value.trim();
         const therapist = dom.newPatientTherapist?.value || 'diana';
+        const therapistDefaults = AuthManager.getTherapistDefaults(therapist);
         const defaultCost = dom.newPatientDefaultCost ? parseFloat(dom.newPatientDefaultCost.value) : 0;
-        const clinicFee = dom.newPatientClinicFee ? parseFloat(dom.newPatientClinicFee.value) : 250;
+        const parsedClinicFee = parseFloat(dom.newPatientClinicFee?.value);
+        const clinicFee = Number.isFinite(parsedClinicFee) ? parsedClinicFee : therapistDefaults.clinicFee;
         const phone = dom.newPatientPhone?.value.trim() || '';
         const parentName = dom.newPatientParentName?.value.trim() || '';
         const wantsWhatsapp = document.getElementById('newPatientWantsWhatsapp')?.checked !== false;
@@ -275,7 +283,7 @@ export const PatientActions = {
                 const cost = aptData.cost || 0;
 
                 // Buscar Clinic Fee leyendo directo de Firestore para evitar desfase de estado en memoria
-                const clinicFee = await _getClinicFeeForPatient(aptData.name);
+                const clinicFee = await _getClinicFeeForPatient(aptData.name, aptData.therapist);
 
                 SheetService.logPayment({
                     date: aptData.date,
@@ -307,7 +315,7 @@ export const PatientActions = {
                 const cost = aptData.cost || 0;
 
                 // Buscar Clinic Fee leyendo directo de Firestore para evitar desfase de estado en memoria
-                const clinicFee = await _getClinicFeeForPatient(aptData.name || '');
+                const clinicFee = await _getClinicFeeForPatient(aptData.name || '', aptData.therapist);
 
                 SheetService.logPayment({
                     date: aptData.date || new Date().toISOString(),

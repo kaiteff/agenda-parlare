@@ -2,6 +2,7 @@
 import { db, patientProfilesPath, collectionPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '../firebase.js';
 import { query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { validatePatientName, normalizeName } from '../utils/validators.js';
+import { AuthManager } from '../managers/AuthManager.js';
 import { ModalService } from '../utils/ModalService.js';
 import { escapeHTML } from '../utils/sanitize.js';
 
@@ -54,7 +55,9 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             dateInactivated: null,
             lastSessionDate: null,
             defaultCost: options.defaultCost || 0,
-            clinicFee: options.clinicFee !== undefined ? options.clinicFee : 250,
+            clinicFee: options.clinicFee !== undefined
+                ? options.clinicFee
+                : AuthManager.getTherapistDefaults(therapist).clinicFee,
             parentName: options.parentName || '',
             wantsWhatsapp: options.wantsWhatsapp !== false,
             recurrentOptIn: options.recurrentOptIn || 'pending',

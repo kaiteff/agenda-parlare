@@ -5,7 +5,7 @@
 import { BRAND } from './brandAssets.js';
 
 export const NewFeatureAlert = {
-    STORAGE_KEY: 'parlare_onboarding_v9_4',
+    STORAGE_KEY: 'parlare_onboarding_v9_5',
     // Claves antiguas en localStorage que ya no se usan y deben limpiarse.
     LEGACY_KEYS: [
         'parlare_onboarding_v8_0',
@@ -13,6 +13,7 @@ export const NewFeatureAlert = {
         'parlare_onboarding_v9_1',
         'parlare_onboarding_v9_2',
         'parlare_onboarding_v9_3',
+        'parlare_onboarding_v9_4',
     ],
     // Vigencia del pop-up: pasados N días desde launchDate, deja de mostrarse
     // y el contenido importante vive solo en HelpManual.js.
@@ -35,7 +36,7 @@ export const NewFeatureAlert = {
         const alreadySeen = localStorage.getItem(this.STORAGE_KEY);
         if (alreadySeen) return;
 
-        const launchDate = new Date('2026-05-28T00:00:00');
+        const launchDate = new Date('2026-06-02T00:00:00');
         const now = new Date();
         const diffDays = Math.ceil(Math.abs(now - launchDate) / (1000 * 60 * 60 * 24));
         if (diffDays > this.MAX_DAYS_VISIBLE) {
@@ -56,9 +57,23 @@ export const NewFeatureAlert = {
                 <div class="p-6 md:p-8 bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 text-white text-center shrink-0">
                     <img src="${BRAND.logoSrc}" alt="${BRAND.logoAlt}" class="h-14 w-auto mx-auto mb-3 object-contain bg-white/90 rounded-xl px-3 py-2" />
                     <h2 class="text-xl md:text-2xl font-bold">Novedades en Parláre</h2>
-                    <p class="text-orange-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 28 Mayo 2026</p>
+                    <p class="text-orange-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 2 Junio 2026</p>
                 </div>
                 <div class="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 scroller">
+                    <div class="flex gap-3 p-4 bg-gradient-to-br from-violet-50 via-amber-50 to-orange-50 rounded-2xl border border-amber-300 shadow-sm">
+                        <span class="text-xl shrink-0">🟣</span>
+                        <div>
+                            <h3 class="font-bold text-amber-900 text-sm">Deben sesión — pacientes especiales <span class="text-[9px] uppercase tracking-wider bg-amber-300 text-amber-950 px-1.5 py-0.5 rounded ml-1">Yari</span></h3>
+                            <p class="text-xs text-amber-950/85 mt-1 leading-relaxed">Contador de sesiones por recuperar <strong>esta semana</strong> — <em>no</em> es deuda en pesos (eso sigue siendo el filtro rojo).</p>
+                            <ul class="text-xs text-amber-950/85 mt-2 ml-3 space-y-1 list-disc">
+                                <li><strong>Cancelar cita de hoy</strong> → opcional «¿debe sesión?» (+1 al contador).</li>
+                                <li><strong>Reagendar y guardar</strong> → no suma deuda por esa cancelación.</li>
+                                <li><strong>Control Maestro</strong> → botón ámbar <strong>Deben sesión</strong>.</li>
+                                <li><strong>Expediente</strong> → bloque «Cola sesión» al editar perfil.</li>
+                            </ul>
+                            <p class="text-[11px] text-amber-800 mt-1.5 italic">Detalle en Manual → Mensajes de WhatsApp.</p>
+                        </div>
+                    </div>
                     <div class="flex gap-3 p-4 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 rounded-2xl border border-amber-300 shadow-sm">
                         <span class="text-xl shrink-0">🏖️</span>
                         <div>
