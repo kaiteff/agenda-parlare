@@ -1,4 +1,4 @@
-# 🚀 Plan de Trabajo - Actualizado (25 Mayo 2026)
+# 🚀 Plan de Trabajo - Actualizado (11 Junio 2026)
 
 Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva, justificantes médicos y el **Copiloto Colaborativo** (frontend listo el 25 may), y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
@@ -6,7 +6,8 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
-*   **Fix cuota Parláre → Google Sheets (11 Jun 2026)** — Al registrar paciente con cuota distinta (ej. $300) o configurarla en Panel → Costos, la columna Parláre en Excel ya no cae al $250 fijo: `SheetService`, `SyncService`, `CalendarData` y fallbacks usan config viva + `clinicFee` del perfil. **Deploy:** `firebase deploy --only hosting`.
+*   **Fix cuota Parláre → Google Sheets (11 Jun 2026)** — Cuota del paciente/config ya no cae a $250 en Excel (`SheetService`, fallbacks dinámicos).
+*   **Modales paciente — UX móvil iPhone (11 Jun 2026)** — Modales en `document.body`, altura casi pantalla completa (`92dvh`), scroll único con footer fijo, Nuevo Paciente en una columna, bitácora como bottom-sheet. Archivos: `PatientModalsHTML.js`, `PatientModals.js`, `ComponentManager.js`, `index.css`. **Deploy:** `npm run build` + `firebase deploy --only hosting`.
 *   **Fase C: Consentimiento WhatsApp (Opt-In/Opt-Out) y Auditoría — 100% Listo y Desplegado (21 Mayo 2026)**:
     *   **Configuración y Base de Datos:** Campo `recurrentOptIn` (`pending` / `accepted` / `rejected`) en `patientProfiles`. Inicialización automática de nuevos perfiles en `on_patient_created` con `wantsWhatsapp = false` y `recurrentOptIn = 'pending'`.
     *   **Reglas de Consentimiento e Integración Backend/Frontend:**

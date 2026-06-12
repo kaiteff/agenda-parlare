@@ -1145,10 +1145,6 @@ video {
   height: 80vh;
 }
 
-.h-\[85vh\] {
-  height: 85vh;
-}
-
 .h-\[92dvh\] {
   height: 92dvh;
 }
@@ -1202,8 +1198,8 @@ video {
   max-height: 24rem;
 }
 
-.max-h-\[300px\] {
-  max-height: 300px;
+.max-h-\[38vh\] {
+  max-height: 38vh;
 }
 
 .max-h-\[70vh\] {
@@ -1435,10 +1431,6 @@ video {
   max-width: 24rem;
 }
 
-.max-w-xs {
-  max-width: 20rem;
-}
-
 .flex-1 {
   flex: 1 1 0%;
 }
@@ -1621,6 +1613,10 @@ video {
 
 .flex-col {
   flex-direction: column;
+}
+
+.flex-col-reverse {
+  flex-direction: column-reverse;
 }
 
 .flex-wrap {
@@ -3216,6 +3212,10 @@ video {
   padding-left: 2rem;
 }
 
+.pr-1 {
+  padding-right: 0.25rem;
+}
+
 .pr-14 {
   padding-right: 3.5rem;
 }
@@ -4621,13 +4621,29 @@ header::after {
   }
 }
 
+/* Scroll suave en modales de paciente (iOS Safari) */
+
+.patient-modal-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 @media (max-width: 767px) {
   #eventModal:not(.hidden) #eventModalPanel,
     #newPatientModal:not(.hidden) #newPatientModalPanel,
     #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
     #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel,
+    #sessionNoteModal:not(.hidden) #sessionNoteModalPanel,
     #adminSettingsModal:not(.hidden) #adminSettingsModalPanel {
     animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem));
+  }
+
+  #newPatientModal:not(.hidden) #newPatientModalPanel,
+    #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
+    #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel,
+    #sessionNoteModal:not(.hidden) #sessionNoteModalPanel {
+    height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem));
   }
 
   #mainSidebar #searchInput {
@@ -4685,6 +4701,7 @@ header::after {
 #newPatientModalFooter,
 #patientHistoryModalFooter,
 #inactivePatientsModalFooter,
+#sessionNoteModalFooter,
 #adminSettingsModalFooter,
 #absenceModalFooter {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
@@ -4694,6 +4711,7 @@ header::after {
   #newPatientModalFooter,
     #patientHistoryModalFooter,
     #inactivePatientsModalFooter,
+    #sessionNoteModalFooter,
     #adminSettingsModalFooter,
     #absenceModalFooter {
     padding-bottom: 1rem;
@@ -5649,8 +5667,8 @@ header::after {
     align-items: flex-start;
   }
 
-  .sm\:items-center {
-    align-items: center;
+  .sm\:gap-3 {
+    gap: 0.75rem;
   }
 
   .sm\:p-0 {
@@ -5755,6 +5773,10 @@ header::after {
 
   .md\:h-auto {
     height: auto;
+  }
+
+  .md\:max-h-\[300px\] {
+    max-height: 300px;
   }
 
   .md\:max-h-\[85vh\] {
@@ -6101,6 +6123,11 @@ header::after {
 
   .md\:backdrop-blur-none {
     --tw-backdrop-blur:  ;
+    backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  }
+
+  .md\:backdrop-blur-sm {
+    --tw-backdrop-blur: blur(4px);
     backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   }
 

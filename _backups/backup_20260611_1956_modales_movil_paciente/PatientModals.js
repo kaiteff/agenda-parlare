@@ -106,17 +106,6 @@ export const PatientModals = {
      * @param {boolean} lock
      * @private
      */
-    /**
-     * Sube el modal a document.body para que fixed + scroll no queden atrapados en el layout.
-     * @param {HTMLElement|null} modal
-     * @private
-     */
-    _ensureModalOnBody(modal) {
-        if (modal && modal.parentNode !== document.body) {
-            document.body.appendChild(modal);
-        }
-    },
-
     _syncBodyScroll(lock) {
         if (lock) {
             document.body.classList.add('overflow-hidden');
@@ -201,7 +190,10 @@ export const PatientModals = {
             };
         }
 
-        this._ensureModalOnBody(modal);
+        // Mover al body para evitar problemas de stacking context
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
 
         // Forzar visualización usando clases y estilos estándar
         requestAnimationFrame(() => {
@@ -268,8 +260,6 @@ export const PatientModals = {
             console.warn('⚠️ PatientModals: Modal de historial no encontrado');
             return;
         }
-
-        this._ensureModalOnBody(dom.patientHistoryModal);
 
         // Forzar visualización de la estructura del modal
         dom.patientHistoryModal.classList.remove('hidden');
@@ -1301,7 +1291,6 @@ export const PatientModals = {
         }
 
         renderThemesList();
-        this._ensureModalOnBody(modal);
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         this._syncBodyScroll(true);
@@ -1328,7 +1317,6 @@ export const PatientModals = {
         // Renderizar lista
         this._renderInactivePatients(inactivePatients);
 
-        this._ensureModalOnBody(dom.inactivePatientsModal);
         dom.inactivePatientsModal.classList.remove('hidden');
         dom.inactivePatientsModal.style.display = 'flex';
         dom.inactivePatientsModal.style.zIndex = '9800';

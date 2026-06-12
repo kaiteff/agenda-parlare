@@ -10,7 +10,7 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 2 Jun 2026 — Cola prioridad Fase A0+A + L-1 Copiloto)
+## 📊 Resumen ejecutivo (Última actualización: 11 Jun 2026 — sin cambios de severidad; sesión cuota Sheets + UX móvil)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
@@ -175,4 +175,4 @@
 
 ---
 
-*Última actualización: 2 de Junio, 2026 — Cola prioridad Fase A0+A (`schedulingQueue`); L-1 Copiloto logout. Heredado 28–30 may: Quiet Hours, S-002 parcial, debounce S-006. Fase 2a Ausencias (cancelar / reasignar terapeuta sin WhatsApp) + entrada móvil «Vacaciones / Ausencia» + cron Google sync 1×/día (7 AM). 26 may (tarde) — Cerrados Q-001 a Q-008 en una sola jornada. Fase 1+2+3 de optimización Firestore desplegadas en producción: índices `Enabled`, function con `timeout_sec=540` y `total_wait=480` (8 min por límite Cloud Functions), **multicast `CalendarData.subscribe`** (Win 1 que cierra duplicación de listener de `appointments`), y **propagación de `COPILOT_DELAY_MS = 8 * 60 * 1000`** al frontend para evitar que el banner del Copiloto mienta a Yari con un contador inflado. Lecturas estimadas: 29 k → **8–12 k/día**. Estado de seguridad cierra el día con 0 críticos, 2 altos (S-002, S-005 — refactor de custom claims pendiente), 3 medios, 2 mejoras, **25 reforzados**. Pendiente Daniel: limpieza manual de revisiones Hosting (17.6 GB → 10 GB).*
+*Última actualización: 11 de Junio, 2026 — Sesión cuota Parláre→Sheets + modales paciente móvil; sin hallazgos nuevos ni cierre de S-XXX. Heredado 2 jun: cola A0+A, L-1 Copiloto. Heredado 28–30 may: Quiet Hours, S-002 parcial, debounce S-006. Fase 2a Ausencias (cancelar / reasignar terapeuta sin WhatsApp) + entrada móvil «Vacaciones / Ausencia» + cron Google sync 1×/día (7 AM). 26 may (tarde) — Cerrados Q-001 a Q-008 en una sola jornada. Fase 1+2+3 de optimización Firestore desplegadas en producción: índices `Enabled`, function con `timeout_sec=540` y `total_wait=480` (8 min por límite Cloud Functions), **multicast `CalendarData.subscribe`** (Win 1 que cierra duplicación de listener de `appointments`), y **propagación de `COPILOT_DELAY_MS = 8 * 60 * 1000`** al frontend para evitar que el banner del Copiloto mienta a Yari con un contador inflado. Lecturas estimadas: 29 k → **8–12 k/día**. Estado de seguridad cierra el día con 0 críticos, 2 altos (S-002, S-005 — refactor de custom claims pendiente), 3 medios, 2 mejoras, **25 reforzados**. Pendiente Daniel: limpieza manual de revisiones Hosting (17.6 GB → 10 GB).*

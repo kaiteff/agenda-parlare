@@ -53,7 +53,7 @@ export const PatientModalsHTML = {
         <!-- 2. NEW PATIENT MODAL (bottom-sheet móvil) -->
         <div id="newPatientModal" onclick="if(event.target === this && window.closeNewPatientModal) window.closeNewPatientModal();"
             class="hidden fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-black/50 backdrop-blur-[2px] md:backdrop-blur-none p-0 md:p-4" role="dialog" aria-modal="true" aria-labelledby="newPatientModalTitle">
-            <div id="newPatientModalPanel" class="bg-white w-full max-w-none md:max-w-md h-[92dvh] md:h-auto md:max-h-[90vh] max-h-[92dvh] flex flex-col min-h-0 rounded-t-3xl md:rounded-xl shadow-2xl modal-panel overflow-hidden text-gray-800">
+            <div id="newPatientModalPanel" class="bg-white w-full max-w-none md:max-w-md max-h-[92dvh] flex flex-col rounded-t-3xl md:rounded-xl shadow-2xl modal-panel overflow-hidden text-gray-800">
                 <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
                 <div class="flex justify-between items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex-shrink-0">
                     <h3 id="newPatientModalTitle" class="text-lg font-bold text-gray-800">Nuevo Paciente</h3>
@@ -65,9 +65,9 @@ export const PatientModalsHTML = {
                     </button>
                 </div>
 
-                <form id="newPatientForm" onsubmit="event.preventDefault();" class="flex flex-col flex-1 min-h-0 overflow-hidden">
-                    <div class="patient-modal-scroll flex-1 overflow-y-auto min-h-0 p-4 md:p-6 space-y-4 scroller overscroll-contain">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form id="newPatientForm" onsubmit="event.preventDefault();" class="flex flex-col flex-1 min-h-0">
+                    <div class="flex-1 overflow-y-auto min-h-0 p-4 md:p-6 space-y-4 scroller overscroll-contain">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre(s)</label>
                             <input type="text" id="newPatientFirstName" required class="${touchField}">
@@ -78,7 +78,7 @@ export const PatientModalsHTML = {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Costo ($)</label>
                              <input type="number" id="newPatientDefaultCost" placeholder="500.00" class="${touchField}">
@@ -95,7 +95,7 @@ export const PatientModalsHTML = {
                              <input type="text" id="newPatientParentName" placeholder="Ej: María Elena (Mamá)" class="${touchField}">
                     </div>
 
-                    <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Terapeuta Asignado</label>
                             <select id="newPatientTherapist" class="${touchSelect}">
@@ -132,11 +132,11 @@ export const PatientModalsHTML = {
                             <input type="date" id="newPatientBirthday" class="${touchField}">
                         </div>
                     </div>
-
-                    ${this._getReimbursementReceiptBlock('newPatient')}
                     </div>
 
-                    <div id="newPatientModalFooter" class="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex gap-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:shadow-none">
+                    ${this._getReimbursementReceiptBlock('newPatient')}
+
+                    <div id="newPatientModalFooter" class="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex gap-3">
                         <button type="button" id="cancelNewPatientBtn"
                             class="flex-1 px-4 py-3 ${touchBtn} bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
                         <button type="submit" id="saveNewPatientBtn"
@@ -177,7 +177,7 @@ export const PatientModalsHTML = {
                     </div>
                 </div>
 
-                <div class="patient-modal-scroll flex-1 overflow-y-auto min-h-0 p-4 md:p-6 bg-gray-50/50 scroller overscroll-contain">
+                <div class="flex-1 overflow-y-auto min-h-0 p-4 md:p-6 bg-gray-50/50 scroller overscroll-contain">
                     <div class="stats-container"></div>
 
                     <div id="patientEditSection"
@@ -292,7 +292,7 @@ export const PatientModalsHTML = {
         <!-- 5. INACTIVE PATIENTS MODAL (bottom-sheet móvil) -->
         <div id="inactivePatientsModal" onclick="if(event.target === this && window.closeInactivePatientsModal) window.closeInactivePatientsModal();"
             class="hidden fixed inset-0 z-[9800] flex items-end md:items-center justify-center bg-black/50 backdrop-blur-[2px] md:backdrop-blur-none p-0 md:p-4" role="dialog" aria-modal="true">
-            <div id="inactivePatientsModalPanel" class="bg-white w-full max-w-none md:max-w-2xl h-[92dvh] md:h-auto md:max-h-[85vh] max-h-[92dvh] flex flex-col min-h-0 rounded-t-3xl md:rounded-xl shadow-2xl modal-panel overflow-hidden text-gray-800">
+            <div id="inactivePatientsModalPanel" class="bg-white w-full max-w-none md:max-w-2xl max-h-[92dvh] flex flex-col rounded-t-3xl md:rounded-xl shadow-2xl modal-panel overflow-hidden text-gray-800">
                 <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
                 <div class="flex justify-between items-center gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex-shrink-0">
                     <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2 min-w-0">
@@ -310,58 +310,57 @@ export const PatientModalsHTML = {
                         </svg>
                     </button>
                 </div>
-                <div class="patient-modal-scroll flex-1 overflow-y-auto min-h-0 p-4 md:p-6 scroller overscroll-contain">
+                <div class="flex-1 overflow-y-auto min-h-0 p-4 md:p-6 scroller overscroll-contain">
                     <div id="inactivePatientsList" class="space-y-2"></div>
                 </div>
-                <div id="inactivePatientsModalFooter" class="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex justify-end shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:shadow-none">
+                <div id="inactivePatientsModalFooter" class="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex justify-end">
                     <button type="button" id="closeInactivePatientsFooterBtn"
                         class="min-h-[48px] touch-manipulation px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm font-medium">Cerrar</button>
                 </div>
             </div>
         </div>
         
-        <!-- 6. SESSION NOTE / CLINICAL PROGRESS MODAL (bottom-sheet móvil) -->
+        <!-- 6. SESSION NOTE / CLINICAL PROGRESS MODAL -->
         <div id="sessionNoteModal" onclick="if(event.target === this) this.classList.add('hidden')"
-            class="hidden fixed inset-0 z-[11000] flex items-end md:items-center justify-center bg-black/50 backdrop-blur-[2px] md:backdrop-blur-sm p-0 md:p-4">
-            <div id="sessionNoteModalPanel" class="bg-white w-full max-w-none md:max-w-2xl h-[92dvh] md:h-[85vh] max-h-[92dvh] flex flex-col min-h-0 rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden modal-panel">
-                <div class="md:hidden flex justify-center pt-2.5 pb-0 flex-shrink-0 bg-white" aria-hidden="true"><span class="w-10 h-1 rounded-full bg-gray-200"></span></div>
-                <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex justify-between items-center gap-3 bg-white flex-shrink-0">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl flex-shrink-0">
+            class="hidden fixed inset-0 z-[11000] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden animate-fade-in-up">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         </div>
-                        <div class="min-w-0">
-                            <h3 class="text-lg md:text-xl font-black text-gray-800 truncate">Bitácora de Sesión</h3>
-                            <p id="sessionNoteDate" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest truncate">Fecha de la Cita</p>
+                        <div>
+                            <h3 class="text-xl font-black text-gray-800">Bitácora de Sesión</h3>
+                            <p id="sessionNoteDate" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Fecha de la Cita</p>
                         </div>
                     </div>
-                    <button type="button" id="closeSessionNoteBtn" class="touch-target touch-manipulation flex-shrink-0 p-3 -m-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all" aria-label="Cerrar">
+                    <button id="closeSessionNoteBtn" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
 
-                <div class="patient-modal-scroll flex-1 overflow-y-auto min-h-0 p-4 md:p-6 bg-gray-50/30 scroller overscroll-contain space-y-5 md:space-y-6">
-                    <div id="sessionThemesSection" class="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                        <div class="flex flex-col gap-3">
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50/30 scroller space-y-6">
+                    <div id="sessionThemesSection" class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest">Plan de Trabajo Sugerido</h4>
-                            <div class="relative w-full">
-                                <input type="text" id="themeSearchInput" placeholder="Buscar actividad..." class="w-full pl-8 pr-3 py-3 md:py-1.5 text-base md:text-xs bg-gray-100 border-none rounded-xl md:rounded-lg font-medium focus:ring-2 focus:ring-indigo-100 outline-none touch-manipulation">
+                            <div class="relative flex-1 max-w-xs">
+                                <input type="text" id="themeSearchInput" placeholder="Buscar actividad..." class="w-full pl-8 pr-3 py-1.5 bg-gray-100 border-none rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-100 outline-none">
                                 <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             </div>
                         </div>
-                        <div id="sessionThemesList" class="space-y-4 max-h-[38vh] md:max-h-[300px] overflow-y-auto scroller pr-1 overscroll-contain">
+                        <div id="sessionThemesList" class="space-y-4 max-h-[300px] overflow-y-auto scroller pr-2">
                              <p class="text-xs text-gray-400 italic text-center py-4">No hay temas asignados para este paciente.</p>
                         </div>
                     </div>
                     <div class="space-y-2">
                         <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Observaciones Libres</h4>
-                        <textarea id="sessionGeneralNote" rows="5" class="w-full bg-white border border-gray-200 rounded-2xl p-4 text-base md:text-sm font-medium text-gray-700 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all outline-none resize-none touch-manipulation" placeholder="Escribe aquí cualquier observación adicional de la sesión..."></textarea>
+                        <textarea id="sessionGeneralNote" rows="6" class="w-full bg-white border border-gray-200 rounded-2xl p-4 text-sm font-medium text-gray-700 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all outline-none resize-none" placeholder="Escribe aquí cualquier observación adicional de la sesión..."></textarea>
                     </div>
                 </div>
 
-                <div id="sessionNoteModalFooter" class="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:shadow-none">
-                    <button type="button" id="cancelSessionNoteBtn" class="min-h-[48px] touch-manipulation px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Descartar</button>
-                    <button type="button" id="saveSessionNoteBtn" class="min-h-[48px] touch-manipulation px-8 py-3 text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2">
+                <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
+                    <button id="cancelSessionNoteBtn" class="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Descartar</button>
+                    <button id="saveSessionNoteBtn" class="px-8 py-2.5 text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2">
                          <span>Guardar Bitácora</span>
                     </button>
                 </div>

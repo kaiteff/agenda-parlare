@@ -264,7 +264,7 @@ export const HelpManual = {
                                 </div>
                                 <div class="flex items-start gap-4">
                                     <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">2</div>
-                                    <p><strong>Llenado:</strong> Ingresa nombre, elige terapeuta y pon el WhatsApp (10 dígitos). El sistema sugiere <strong>Costo</strong> y <strong>Cuota Parláre</strong> según la configuración del terapeuta — <em>puedes cambiarlas antes de guardar</em>. Esa cuota es la que verás en Excel (columna Parláre) cuando marquen la cita como pagada.</p>
+                                    <p><strong>Llenado:</strong> Ingresa nombre, elige terapeuta y pon el WhatsApp (10 dígitos). El sistema sugiere <strong>Costo</strong> y <strong>Cuota Parláre</strong> según la configuración del terapeuta — <em>puedes cambiarlas antes de guardar</em>. Esa cuota es la que verás en Excel (columna Parláre) cuando marquen la cita como pagada. En celular el formulario ocupa casi toda la pantalla: desliza hacia arriba para ver todos los campos; los botones <strong>Crear</strong> / <strong>Guardar</strong> quedan fijos abajo.</p>
                                 </div>
                                 <div class="flex items-start gap-4">
                                     <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">3</div>

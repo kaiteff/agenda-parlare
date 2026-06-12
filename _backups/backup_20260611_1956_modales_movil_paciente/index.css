@@ -267,28 +267,13 @@ header::after {
     }
 }
 
-/* Scroll suave en modales de paciente (iOS Safari) */
-.patient-modal-scroll {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-}
-
 @media (max-width: 767px) {
     #eventModal:not(.hidden) #eventModalPanel,
     #newPatientModal:not(.hidden) #newPatientModalPanel,
     #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
     #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel,
-    #sessionNoteModal:not(.hidden) #sessionNoteModalPanel,
     #adminSettingsModal:not(.hidden) #adminSettingsModalPanel {
         animation: eventSheetSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-        max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem));
-    }
-
-    #newPatientModal:not(.hidden) #newPatientModalPanel,
-    #patientHistoryModal:not(.hidden) #patientHistoryModalPanel,
-    #inactivePatientsModal:not(.hidden) #inactivePatientsModalPanel,
-    #sessionNoteModal:not(.hidden) #sessionNoteModalPanel {
-        height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 0.5rem));
     }
 
     #mainSidebar #searchInput {
@@ -346,7 +331,6 @@ header::after {
 #newPatientModalFooter,
 #patientHistoryModalFooter,
 #inactivePatientsModalFooter,
-#sessionNoteModalFooter,
 #adminSettingsModalFooter,
 #absenceModalFooter {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
@@ -356,7 +340,6 @@ header::after {
     #newPatientModalFooter,
     #patientHistoryModalFooter,
     #inactivePatientsModalFooter,
-    #sessionNoteModalFooter,
     #adminSettingsModalFooter,
     #absenceModalFooter {
         padding-bottom: 1rem;

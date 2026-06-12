@@ -30,11 +30,11 @@ export const ComponentManager = {
         MobileBottomNav.inject(appContent);
         MobileBottomNav.init();
 
-        // 3. Modales en document.body (evita scroll recortado por overflow-hidden del layout)
-        PatientModalsHTML.inject(document.body);
+        // 3. Inyectar Modales de Paciente (En la raíz de la App)
+        PatientModalsHTML.inject(appContent);
 
-        // 4. Modales principales (cita, etc.) también en body
-        MainModals.inject(document.body);
+        // 4. Inyectar Modales Principales (En la raíz de la App)
+        MainModals.inject(appContent);
 
         // 5. Inyectar Overlay de Sidebar para Mobile
         this.injectMobileOverlay(appContent);

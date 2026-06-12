@@ -6,7 +6,7 @@
 >
 > **Mapa operativo diario:** [`ANALISIS_ESTRATEGIA_MOVIL.md`](ANALISIS_ESTRATEGIA_MOVIL.md) · **Prioridades producto:** [`PLAN_DE_TRABAJO.md`](PLAN_DE_TRABAJO.md)
 
-*Última actualización: **2 de Junio de 2026** — Cola prioridad **#12** Fase A0+A implementada; **#13 L-1** cerrado. Heredado 26–30 may: Firestore, Copiloto, AppLifecycle.*
+*Última actualización: **11 de Junio de 2026** — Fix cuota Parláre→Sheets + modales paciente móvil (`document.body`, `92dvh`). Heredado 2 jun: cola A0+A, L-1.*
 
 ---
 
@@ -34,6 +34,8 @@
 | 26 May 2026 | **Optimización Firestore Fase 2 hotfixes** (Cursor) | `PatientManager.js`, `PatientModals.js`, `WaitlistCopilotService.js`, `Header.js`, `firestore.indexes.json` (nuevo), `firebase.json`, `space_optimizer.py` | Q-001 a Q-006: SyntaxError fatal por `const user` redeclarado, `timeout_sec=540`, cache historial con merge live, índices versionados (6 compuestos), unsubscribe en listeners, filtros de fecha en listeners gigantes. | Cada fix tiene su contra-cambio: restaurar `const user` doble (rompería el módulo), bajar timeout, borrar `_historyCache`, eliminar `firestore.indexes.json`, quitar `_teardownListeners()`, devolver listeners sin filtro `date`. NO conviene revertir ninguno. |
 | 26 May 2026 | **Win 1 — Multicast en `CalendarData.subscribe`** (Antigravity, tarde) | `CalendarData.js`, `PatientManager.js` | Patrón multicast: el primer suscriptor abre la conexión real, los siguientes la reusan + reciben `_lastData` cacheado. `PatientManager` quita su `onSnapshot` propio de `appointments` y se suscribe a CalendarData. Cuando todos se desuscriben, el listener real se apaga. **Ahorro extra 30–50 % adicional** sobre lecturas. | Revertir: volver a poner `_subscribers` como atributo de instancia única, hacer que `subscribe` reemplace siempre el listener anterior, y restaurar el `onSnapshot` propio de citas en `PatientManager._setupRealtimeListener` (era un listener con la misma query Ventana 90 días + filtro terapeuta). |
 | 26 May 2026 | **Hotfix sincronización Copiloto** (Cursor, tarde) | `WaitlistCopilotService.js`, `WaitlistCopilotPanel.js`, `HelpManual.js`, `CalendarUI.js` (comentarios) | Q-008: backend bajó delay a 8 min por límite Cloud Functions (540 s), pero frontend seguía con `COPILOT_DELAY_MS = 10 * 60 * 1000`. Propagada la constante única; los textos y cálculos del panel ahora derivan de `COPILOT_DELAY_MS / 60000`. Manual actualizado a «8 min». | Subir `COPILOT_DELAY_MS` a `10 * 60 * 1000` y volver a hardcodear «10 min» en los textos. **NO conviene** salvo que el backend vuelva a 10 min. |
+| 11 Jun 2026 | **Cuota Parláre → Google Sheets** | `SheetService.js`, `SyncService.js`, `CalendarData.js`, `PatientActions.js`, `patientService.js`, `FinancialReport.js` | Fallbacks de comisión ya no hardcodean $250; usan config del panel + `clinicFee` del perfil al registrar pagos en Excel. | Restaurar `defaultFee = therapistKey === 'vero' ? 400 : 250` en `SheetService.logPayment`. |
+| 11 Jun 2026 | **Modales paciente — scroll iPhone** | `PatientModalsHTML.js`, `PatientModals.js`, `ComponentManager.js`, `index.css` | Modales en `document.body`; panel `92dvh`; scroll único `.patient-modal-scroll`; bitácora bottom-sheet. Evita ventana «mini» por `overflow-hidden` del layout. | Volver a `PatientModalsHTML.inject(appContent)` y quitar `h-[92dvh]` / clase `patient-modal-scroll` en CSS. |
 
 ---
 
