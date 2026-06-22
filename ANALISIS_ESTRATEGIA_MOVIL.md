@@ -73,18 +73,34 @@ HOY ─────────────────────────�
 
 ## Registro de avance y qué hacer ahora
 
-### 🔄 Retomar aquí (sesión **22 jun 2026** — perfil del paciente manda en desglose cita)
+### 🔄 Retomar aquí (próxima sesión — tras deploy **22 jun 2026**)
 
 | Estado | Qué |
 |--------|-----|
-| ✅ **Hecho hoy** | **Seguro pago Excel (A+B):** confirmación con desglose antes de Pagado/No pagado; bloqueo si cambió costo o Ajuste Manual sin Guardar. Pago lee Firestore (no DOM). Flujo corrección cita pagada: Ajuste Manual → Guardar → No pagado → Pagado. |
-| ✅ **Heredado** | **Detalles de Cita prioriza perfil del paciente** (ej. Julian $150/$500). Override manual solo si excepción real en esa cita. |
-| ⏳ **Validar** | Julian Álvarez: abrir cita → Ajuste Manual → **150 / 500**. Marcar pagado → Excel Cuota_Parlare = **150**. Caso excepción: Ajuste Manual $200 → guardar → pagar → Excel = **200**. |
-| ⏳ **Deploy** | `npm run build` + `firebase deploy --only hosting` |
+| ⏳ **Primero** | `firebase deploy --only hosting` (build ✅ 22 jun). Paquete: perfil→desglose cita, seguro pago A+B, toast Excel pendiente, cancel fix App_Data. |
+| ⏳ **Validar Julian** | Abrir cita → Ajuste Manual **150/500** (no 250/400). Pagar → Excel Cuota_Parlare **150**. |
+| ⏳ **Validar corrección pagada** | Cita pagada → Ajuste Manual relevo → Guardar → No pagado (confirmación) → Pagado → Excel con desglose correcto. |
+| ⏳ **Validar Sam sin Excel Diana** | Marcar pagado falla Excel → aviso naranja → Diana/Yari botón **X pendientes** sincroniza. |
+| 💡 **Opcional** | Herramienta Control Maestro: simular reparación masiva cuotas históricas Excel (con aprobación Diana). |
 
-**Qué pasaba:** citas guardadas con `manualClinicFee: 250` (default Diana) ignoraban el perfil (`clinicFee: 150`). El modal mostraba 250/400 aunque el expediente dijera 150/650.
+**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260622.md`
 
-**Fix:** `resolveEffectiveFinancials()` en `appointmentFinancials.js` — perfil gana; stale panel default se descarta.
+### Cierre de sesión — 22 jun 2026
+
+**Entregado hoy:**
+- **Perfil del paciente manda en desglose de cita** — `resolveEffectiveFinancials()` descarta `manualClinicFee` stale (250 default panel vs perfil 150). Julian y todos: **150/500** al abrir, no 250/400.
+- **Seguro pago Excel (A+B)** — Confirmación con desglose antes de Pagado/No pagado; bloqueo si cambió costo/Ajuste Manual sin **Guardar cita**; aviso si cierras Ajuste Manual con override oculto.
+- **Excel sin permisos cruzados** — Pago queda en Firestore (`sheetSynced: false`); toast guía a Diana/Yari (botón naranja batch sync). Manual: flujo relevo Sam/Diana en citas ya pagadas.
+- **Heredado sesión** — Fix cancelaciones App_Data 250/-250; Ajuste Manual→App_Data (21 jun).
+
+**Deploy pendiente:**
+```powershell
+cd d:\agbc\Ag_Pa
+npm run build
+firebase deploy --only hosting
+```
+
+**Archivos tocados (22 jun):** `js/utils/appointmentFinancials.js`, `js/modules/calendar/CalendarModal.js`, `js/modules/calendar/CalendarData.js`, `js/services/SyncService.js`, `js/managers/patient/PatientActions.js`, `js/modules/reports/FinancialReport.js`, `js/modules/help/HelpManual.js`, `ANALISIS_ESTRATEGIA_MOVIL.md`, `PLAN_DE_TRABAJO.md`, `ARQUITECTURA_FUTURA.md`.
 
 ### 🔄 Sesión anterior (21 jun 2026 — fix Ajuste Manual → App_Data)
 
@@ -903,7 +919,9 @@ Sprint 2 (Fase 1 continuación / polish)
 - Sesión **2 jun 2026** — Implementación **Fase A0 + A** + fix **L-1**: `CalendarModal`, `SchedulingQueueService`, expediente, Control Maestro. **HelpManual** + pop-up **`parlare_onboarding_v9_5`** (cola debe sesión). Pendiente validación Yari tras deploy hosting.
 - Sesión **11 jun 2026** — Fix **cuota Parláre → Google Sheets** (no más $250 fijo si el paciente/config dice $300). **Modales paciente móvil** (scroll iPhone, `document.body`, bottom-sheet bitácora). `npm run build` hecho; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **22 de Junio de 2026** — Fix desglose cita prioriza perfil del paciente ($150/$500 vs stale $250/$400). Heredado 21 jun: Ajuste Manual→App_Data.*
+- Sesión **22 jun 2026** — **Desglose cita = perfil del paciente** (`appointmentFinancials.js`). **Seguro pago A+B** (confirmación Excel + guardar antes de pagar). **Toast + manual** sync pendiente Diana/Yari si terapeuta sin permiso Excel ajeno. Build OK; **deploy hosting pendiente**.
+
+*Última actualización de este documento: **22 de Junio de 2026** — Cierre sesión: perfil→desglose, seguro pago A+B, sync Excel delegado admin.*
 
 ---
 

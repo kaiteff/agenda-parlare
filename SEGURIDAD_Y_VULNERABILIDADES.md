@@ -10,7 +10,7 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 11 Jun 2026 — sin cambios de severidad; sesión cuota Sheets + UX móvil)
+## 📊 Resumen ejecutivo (Última actualización: 22 Jun 2026 — sesión desglose cita + seguro pago; sin cambios de severidad)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
@@ -18,7 +18,7 @@
 | ⚠️ Alto | 1 | Whitelist emails hardcoded (S-005) — custom claims pendiente |
 | 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 32 | Incl. cola `schedulingQueue` en perfiles (mismas rules `patientProfiles`); L-1 logout Copiloto |
+| ✅ Reforzado | 33 | Incl. confirmación desglose antes de pago Excel (22 jun); cola `schedulingQueue`; L-1 logout Copiloto |
 
 ---
 
@@ -105,6 +105,7 @@
 
 | Fecha | Área | Detalle |
 |-------|------|---------|
+| 22 jun 2026 | **Integridad pagos / Excel** | Confirmación obligatoria con desglose antes de Pagado/No pagado; bloqueo si cambios financieros sin Guardar (`CalendarModal.js`). Reduce clicks accidentales y registros Excel incorrectos. Pago lee Firestore guardado, no DOM sin persistir. |
 | 18 may 2026 | **Notas clínicas (`clinicalNotes`)** | Reglas Firestore restringen lectura/escritura al terapeuta dueño y super users. **Grado médico**. |
 | 18 may 2026 | **Perfiles de pacientes (`patientProfiles`)** | Mismas reglas estrictas que `clinicalNotes`. |
 | 18 may 2026 | **Configuración (`settings`)** | Lectura para autenticados, escritura solo super user. |
@@ -160,6 +161,7 @@
 | **25 May 2026 (4 pm)** | Claude (sweep XSS extendido tras hotfixes Antigravity) | Auditoría dirigida de `ModalService.confirm/alert` y listas con `innerHTML` que interpolan nombres de paciente. | S-015 (regresión XSS en `ModalService`) · S-016 (XSS en listas dinámicas: `Sidebar`, `ReceptionControl`, `PatientModals`, `CorteDeCaja`) | **Cerrados S-015 + S-016** aplicando `escapeHTML` centralizado. Además: safe-area iPhone en `#absenceModalFooter`. Recompilado con `npm run build` ✅. |
 | **26 May 2026 (mañana)** | Claude (revisión post-Antigravity Optimización Firestore Fase 1) | Auditoría de los 5 archivos tocados por Antigravity para la migración a ventana 90 días + historial bajo demanda + polling Copiloto: `PatientManager.js`, `PatientModals.js`, `PatientActions.js`, `CalendarData.js`, `space_optimizer.py`. Verificación con `node --input-type=module`, revisión de queries Firestore vs índices, lectura del dashboard Firebase (58.4 % lecturas). | Q-001 (SyntaxError fatal) · Q-002 (timeout Cloud Function) · Q-003 (índices Firestore no versionados) · Q-004 (modal historial pierde citas) · Q-005 (memory leak listeners) · Q-006 (listeners gigantes sin filtro fecha) | **Cerrados Q-001 a Q-006** en la misma sesión: refactor `_setupRealtimeListener`, `timeout_sec=720`, `firestore.indexes.json` con 6 índices, `PatientModals._historyCache` con merge live, `_unsubscribeApts/_unsubscribeProfiles`, filtros de fecha en Copilot+batchSync. Pendiente para Antigravity: `firebase deploy --only firestore:indexes,functions,hosting` y validación dashboard 24-48 h después. |
 | **26 May 2026 (tarde)** | Claude (revisión post-Antigravity deploy + Win 1 + ajuste de tiempos) | Auditoría del trabajo de Antigravity en la tarde: deploys exitosos de índices, function (con `timeout_sec=540` forzado por límite Cloud Functions = 540 s) y hosting; refactor de `CalendarData.subscribe` a patrón multicast para unificar listeners de citas (Win 1 que estaba marcado como pendiente alto-impacto en la mañana). Verificación de que los fixes Q-001 a Q-006 siguen intactos tras el refactor del listener compartido. | Q-007 (listener duplicado `appointments` ya cerrado por Antigravity como Win 1) · Q-008 (desync `COPILOT_DELAY_MS` 10 min frontend vs 8 min backend, detectado en review) | **Cerrados Q-007 y Q-008** en la misma sesión: Antigravity implementó el multicast (Q-007) y Cursor propagó la constante `COPILOT_DELAY_MS = 8 * 60 * 1000` desde service hacia panel (cálculos + textos visibles a Yari) + `HelpManual.js` con «8 min» (Q-008). Lecturas totales esperadas tras propagación: **29 k → 8–12 k/día** (de 58.4 % a probablemente <25 %). Pendiente Daniel (manual): limpieza Hosting Storage 17.6 GB → 10 GB en consola Firebase. |
+| **22 Jun 2026** | Cursor | Sesión desglose cita (perfil manda), seguro pago A+B, toast sync Excel delegado admin. | — | **Reforzado:** confirmación desglose antes de pago Excel (integridad operacional). |
 
 ---
 
@@ -175,4 +177,4 @@
 
 ---
 
-*Última actualización: 11 de Junio, 2026 — Sesión cuota Parláre→Sheets + modales paciente móvil; sin hallazgos nuevos ni cierre de S-XXX. Heredado 2 jun: cola A0+A, L-1 Copiloto. Heredado 28–30 may: Quiet Hours, S-002 parcial, debounce S-006. Fase 2a Ausencias (cancelar / reasignar terapeuta sin WhatsApp) + entrada móvil «Vacaciones / Ausencia» + cron Google sync 1×/día (7 AM). 26 may (tarde) — Cerrados Q-001 a Q-008 en una sola jornada. Fase 1+2+3 de optimización Firestore desplegadas en producción: índices `Enabled`, function con `timeout_sec=540` y `total_wait=480` (8 min por límite Cloud Functions), **multicast `CalendarData.subscribe`** (Win 1 que cierra duplicación de listener de `appointments`), y **propagación de `COPILOT_DELAY_MS = 8 * 60 * 1000`** al frontend para evitar que el banner del Copiloto mienta a Yari con un contador inflado. Lecturas estimadas: 29 k → **8–12 k/día**. Estado de seguridad cierra el día con 0 críticos, 2 altos (S-002, S-005 — refactor de custom claims pendiente), 3 medios, 2 mejoras, **25 reforzados**. Pendiente Daniel: limpieza manual de revisiones Hosting (17.6 GB → 10 GB).*
+*Última actualización: 22 de Junio, 2026 — Sesión desglose cita + seguro pago A+B; reforzado integridad pagos Excel. Sin hallazgos 🚨/⚠️ nuevos. Deploy hosting pendiente.*
