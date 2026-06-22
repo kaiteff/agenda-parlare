@@ -101,7 +101,8 @@ export const MainModals = {
                             <div class="grid grid-cols-3 gap-3">
                                 <div>
                                     <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Parláre</label>
-                                    <input type="number" id="manualClinicFee" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-100" placeholder="0">
+                                    <span id="financialParlareHint" class="block text-[8px] text-slate-400 italic mb-0.5 hidden"></span>
+                                    <input type="number" id="manualClinicFee" class="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-100" placeholder="Cuota">
                                 </div>
                                 <div>
                                     <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Sesión</label>

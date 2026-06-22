@@ -73,7 +73,22 @@ HOY ─────────────────────────�
 
 ## Registro de avance y qué hacer ahora
 
-### 🔄 Retomar aquí (próxima sesión — tras deploy hosting)
+### 🔄 Retomar aquí (sesión **22 jun 2026** — perfil del paciente manda en desglose cita)
+
+| Estado | Qué |
+|--------|-----|
+| ✅ **Hecho hoy** | **Seguro pago Excel (A+B):** confirmación con desglose antes de Pagado/No pagado; bloqueo si cambió costo o Ajuste Manual sin Guardar. Pago lee Firestore (no DOM). Flujo corrección cita pagada: Ajuste Manual → Guardar → No pagado → Pagado. |
+| ✅ **Heredado** | **Detalles de Cita prioriza perfil del paciente** (ej. Julian $150/$500). Override manual solo si excepción real en esa cita. |
+| ⏳ **Validar** | Julian Álvarez: abrir cita → Ajuste Manual → **150 / 500**. Marcar pagado → Excel Cuota_Parlare = **150**. Caso excepción: Ajuste Manual $200 → guardar → pagar → Excel = **200**. |
+| ⏳ **Deploy** | `npm run build` + `firebase deploy --only hosting` |
+
+**Qué pasaba:** citas guardadas con `manualClinicFee: 250` (default Diana) ignoraban el perfil (`clinicFee: 150`). El modal mostraba 250/400 aunque el expediente dijera 150/650.
+
+**Fix:** `resolveEffectiveFinancials()` en `appointmentFinancials.js` — perfil gana; stale panel default se descarta.
+
+### 🔄 Sesión anterior (21 jun 2026 — fix Ajuste Manual → App_Data)
+
+### 🔄 Sesión anterior (11 jun — deploy hosting pendiente)
 
 | Estado | Qué |
 |--------|-----|
@@ -888,7 +903,7 @@ Sprint 2 (Fase 1 continuación / polish)
 - Sesión **2 jun 2026** — Implementación **Fase A0 + A** + fix **L-1**: `CalendarModal`, `SchedulingQueueService`, expediente, Control Maestro. **HelpManual** + pop-up **`parlare_onboarding_v9_5`** (cola debe sesión). Pendiente validación Yari tras deploy hosting.
 - Sesión **11 jun 2026** — Fix **cuota Parláre → Google Sheets** (no más $250 fijo si el paciente/config dice $300). **Modales paciente móvil** (scroll iPhone, `document.body`, bottom-sheet bitácora). `npm run build` hecho; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **11 de Junio de 2026** — Cierre sesión: cuota Parláre→Sheets + modales paciente iPhone. Deploy hosting pendiente. Heredado 2 jun: cola A0+A.*
+*Última actualización de este documento: **22 de Junio de 2026** — Fix desglose cita prioriza perfil del paciente ($150/$500 vs stale $250/$400). Heredado 21 jun: Ajuste Manual→App_Data.*
 
 ---
 

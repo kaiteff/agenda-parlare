@@ -22,11 +22,22 @@ import { LoaderService } from '../../utils/LoaderService.js';
 import { SchedulingQueueService } from '../../services/SchedulingQueueService.js';
 import { isSameCalendarDay } from '../../utils/schedulingQueueRules.js';
 import { PatientManager } from '../../managers/PatientManager.js';
+import {
+    buildFinancialFieldsForSave,
+    buildPaymentExcelPreview,
+    collectManualFinancialsFromDom,
+    getProfileClinicFee,
+    resolveEffectiveFinancials
+} from '../../utils/appointmentFinancials.js';
 
 
 
 
 export const CalendarModal = {
+    _modalPatientProfile: null,
+    _financialIsIntentionalOverride: false,
+    _financialBaseline: null,
+    _financialFieldsDirty: false,
     originalTherapistOnOpen: null,
     _cancelDebtContext: null,
     _awaitingRescheduleSave: false,
@@ -173,6 +184,10 @@ export const CalendarModal = {
         if (dom.manualTherapistPay) dom.manualTherapistPay.value = '';
         if (dom.manualPlanningPay) dom.manualPlanningPay.value = '';
         if (dom.planningTherapist) dom.planningTherapist.value = '';
+        this._modalPatientProfile = null;
+        this._financialIsIntentionalOverride = false;
+        this._updateFinancialHint(dom.appointmentTherapistInput?.value || 'diana');
+        this._captureFinancialBaseline();
 
         dom.eventModal.classList.remove('hidden');
         dom.eventModal.style.setProperty('display', 'flex', 'important');
@@ -274,21 +289,25 @@ export const CalendarModal = {
                 dom.waBtn.classList.toggle('hidden', isSchool || !canEdit);
             }
 
-            // CARGAR DESGLOSE FINANCIERO SI EXISTE
+            // Desglose financiero: perfil del paciente (override manual solo si es intencional)
             if (dom.financialBreakdownSection) {
-                if (ev.manualClinicFee || ev.manualTherapistPay || ev.manualPlanningPay) {
+                const therapistDefaults = AuthManager.getTherapistDefaults(ev.therapist || 'diana');
+                this._modalPatientProfile = profile || null;
+                const fin = resolveEffectiveFinancials(ev, profile, therapistDefaults);
+
+                if (fin.showBreakdownSection) {
                     dom.financialBreakdownSection.classList.remove('hidden');
-                    dom.manualClinicFee.value = ev.manualClinicFee || '';
-                    dom.manualTherapistPay.value = ev.manualTherapistPay || '';
-                    dom.manualPlanningPay.value = ev.manualPlanningPay || '';
-                    dom.planningTherapist.value = ev.planningTherapist || '';
                 } else {
                     dom.financialBreakdownSection.classList.add('hidden');
-                    dom.manualClinicFee.value = '';
-                    dom.manualTherapistPay.value = '';
-                    dom.manualPlanningPay.value = '';
-                    dom.planningTherapist.value = '';
                 }
+
+                dom.manualClinicFee.value = fin.clinicFee;
+                dom.manualTherapistPay.value = fin.therapistPay;
+                dom.manualPlanningPay.value = fin.planningPay || '';
+                dom.planningTherapist.value = fin.planningTherapist || '';
+                this._financialIsIntentionalOverride = fin.isIntentionalOverride;
+                this._updateFinancialHint(ev.therapist || 'diana', profile);
+                this._captureFinancialBaseline();
             }
         }
 
@@ -698,6 +717,9 @@ export const CalendarModal = {
                     patientFirstNameInput.disabled = true;
                     patientLastNameInput.disabled = true;
 
+                    CalendarModal._modalPatientProfile = p;
+                    CalendarModal._financialIsIntentionalOverride = false;
+
                     // Auto-select therapist
                     if (appointmentTherapistInput) {
                         appointmentTherapistInput.value = p.therapist || 'diana';
@@ -706,6 +728,8 @@ export const CalendarModal = {
                     if (CalendarState.dom.costInput) {
                         CalendarState.dom.costInput.value = p.defaultCost || 800;
                     }
+
+                    CalendarModal._updateFinancialHint(p.therapist || 'diana', p);
 
                     // Auto-fill phone as reference
                     if (CalendarState.dom.phoneInput) {
@@ -836,13 +860,38 @@ export const CalendarModal = {
                 );
                 appointmentData.name = profile.name;
                 appointmentData.patientId = profile.id;
-                appointmentData.clinicFee = profile.clinicFee || therapistDefaults.clinicFee;
 
-                // AGREGAR DATOS FINANCIEROS MANUALES SI EXISTEN
-                if (dom.manualClinicFee && dom.manualClinicFee.value) appointmentData.manualClinicFee = parseFloat(dom.manualClinicFee.value);
-                if (dom.manualTherapistPay && dom.manualTherapistPay.value) appointmentData.manualTherapistPay = parseFloat(dom.manualTherapistPay.value);
-                if (dom.manualPlanningPay && dom.manualPlanningPay.value) appointmentData.manualPlanningPay = parseFloat(dom.manualPlanningPay.value);
-                if (dom.planningTherapist && dom.planningTherapist.value) appointmentData.planningTherapist = dom.planningTherapist.value;
+                const sectionOpen = dom.financialBreakdownSection
+                    && !dom.financialBreakdownSection.classList.contains('hidden');
+                const profileFin = resolveEffectiveFinancials(
+                    { cost: costPerSlot },
+                    profile,
+                    therapistDefaults
+                );
+                const domClinic = parseFloat(dom.manualClinicFee?.value);
+                const domSession = parseFloat(dom.manualTherapistPay?.value);
+                const domPlanning = parseFloat(dom.manualPlanningPay?.value);
+                const hasHiddenOverride = !sectionOpen && (
+                    (Number.isFinite(domClinic) && domClinic !== profileFin.clinicFee)
+                    || (Number.isFinite(domSession) && domSession !== profileFin.therapistPay)
+                    || (Number.isFinite(domPlanning) && domPlanning > 0)
+                    || !!dom.planningTherapist?.value
+                );
+                if (hasHiddenOverride) {
+                    await ModalService.alert(
+                        'Abre Ajuste Manual',
+                        'Hay un desglose especial en esta cita pero el panel <strong>Ajuste Manual</strong> está cerrado.<br><br>'
+                        + 'Ábrelo antes de <strong>Guardar cita</strong> para que se guarde Parláre / Sesión / Planeación.',
+                        'warning'
+                    );
+                    return;
+                }
+
+                const manualFinancials = collectManualFinancialsFromDom(dom);
+                Object.assign(
+                    appointmentData,
+                    buildFinancialFieldsForSave(manualFinancials, profile, therapistDefaults)
+                );
             }
 
             if (CalendarState.selectedEventId) {
@@ -884,6 +933,7 @@ export const CalendarModal = {
                 this._awaitingRescheduleSave = false;
             }
             CalendarState.rescheduledFromId = null;
+            this._captureFinancialBaseline();
             this.closeModal();
             console.log("✅ Cita guardada y modal cerrado");
             ToastService.success("Cita guardada correctamente");
@@ -903,11 +953,58 @@ export const CalendarModal = {
 
     async handlePaymentToggle() {
         if (!CalendarState.selectedEventId) return;
+        const dom = CalendarState.dom;
         const evt = CalendarState.appointments.find(a => a.id === CalendarState.selectedEventId);
-        if (evt) {
-            await CalendarData.togglePayment(CalendarState.selectedEventId, evt.isPaid);
-            this.closeModal();
+        if (!evt) return;
+
+        // B: bloquear si hay cambios sin guardar (costo o ajuste manual)
+        if (this._financialFieldsDirty) {
+            await ModalService.alert(
+                'Guarda antes de registrar pago',
+                'Cambiaste el <strong>costo</strong> o el <strong>Ajuste Manual</strong> pero aún no guardaste la cita.<br><br>'
+                + '1. Pulsa <strong>Guardar cita</strong><br>'
+                + '2. Vuelve a abrir la cita<br>'
+                + '3. Luego <strong>Marcar como No Pagado</strong> o <strong>Pagado</strong>',
+                'warning'
+            );
+            return;
         }
+
+        const profile = this._modalPatientProfile
+            || PatientState.patients.find(p => p.id === evt.patientId || p.name === evt.name);
+        const therapistDefaults = AuthManager.getTherapistDefaults(evt.therapist || 'diana');
+        const preview = buildPaymentExcelPreview(evt, profile, therapistDefaults);
+        const markingUnpaid = evt.isPaid === true;
+        const actionLabel = markingUnpaid ? 'No Pagado (ANULADO en Excel)' : 'Pagado';
+        const planningLine = preview.planningPay > 0
+            ? `<li><strong>Planeación${preview.planningTherapist ? ` (${preview.planningTherapist})` : ''}:</strong> $${preview.planningPay}</li>`
+            : '';
+        const annulNote = markingUnpaid
+            ? '<p class="text-amber-800 text-xs mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2">'
+                + 'La fila <strong>Pagado</strong> anterior permanece en Excel; se agrega una fila <strong>ANULADO</strong> de corrección. '
+                + 'Después puedes marcar <strong>Pagado</strong> otra vez con el desglose correcto.</p>'
+            : '';
+
+        const confirmed = await ModalService.confirm(
+            markingUnpaid ? 'Confirmar anulación en Excel' : 'Confirmar pago en Excel',
+            `<p class="mb-2">Se registrará en <strong>App_Data</strong>:</p>`
+            + `<ul class="text-sm space-y-1 list-disc ml-4">`
+            + `<li><strong>Acción:</strong> ${actionLabel}</li>`
+            + `<li><strong>Monto:</strong> $${preview.cost}${markingUnpaid ? ' (negativo en Excel)' : ''}</li>`
+            + `<li><strong>Parláre:</strong> $${preview.clinicFee}</li>`
+            + `<li><strong>Sesión (terapeuta):</strong> $${preview.therapistPay}</li>`
+            + planningLine
+            + `</ul>`
+            + annulNote,
+            markingUnpaid ? 'Sí, anular en Excel' : 'Sí, registrar pago',
+            'Cancelar',
+            markingUnpaid ? 'warning' : 'success'
+        );
+
+        if (!confirmed) return;
+
+        await CalendarData.togglePayment(CalendarState.selectedEventId, evt.isPaid, null);
+        this.closeModal();
     },
 
     async handleConfirmToggle() {
@@ -1070,24 +1167,7 @@ export const CalendarModal = {
             if (dom.appointmentTherapistInput) {
                 dom.appointmentTherapistInput.onchange = () => {
                     if (this.currentGridDate) this.renderDailySlots(this.currentGridDate);
-                    
-                    // Si cambia el terapeuta, mostrar el desglose para ajuste manual
-                    if (dom.financialBreakdownSection) {
-                        dom.financialBreakdownSection.classList.remove('hidden');
-                        
-                        // AUTO-SELECCIONAR PLANEADOR (La original)
-                        if (dom.planningTherapist && !dom.planningTherapist.value) {
-                            dom.planningTherapist.value = this.originalTherapistOnOpen;
-                        }
-
-                        // Sugerir valores basados en el costo actual
-                        const cost = parseFloat(dom.costInput.value) || 0;
-                        const t = dom.appointmentTherapistInput.value;
-                        const defaults = AuthManager.getTherapistDefaults(t);
-                        
-                        if (dom.manualClinicFee) dom.manualClinicFee.value = defaults.clinicFee;
-                        this.balanceFinancials();
-                    }
+                    this._updateFinancialHint(dom.appointmentTherapistInput.value);
                 };
             }
 
@@ -1095,15 +1175,14 @@ export const CalendarModal = {
                 dom.toggleFinancialBtn.onclick = (e) => {
                     e.preventDefault();
                     if (dom.financialBreakdownSection) {
+                        const willShow = dom.financialBreakdownSection.classList.contains('hidden');
                         dom.financialBreakdownSection.classList.toggle('hidden');
-                        
-                        // Si se abre y está vacío, sugerir valores
-                        if (!dom.financialBreakdownSection.classList.contains('hidden') && !dom.manualClinicFee.value) {
-                            const cost = parseFloat(dom.costInput.value) || 0;
-                            const t = dom.appointmentTherapistInput.value;
-                            const defaults = AuthManager.getTherapistDefaults(t);
-                            if (dom.manualClinicFee) dom.manualClinicFee.value = defaults.clinicFee;
-                            if (dom.manualTherapistPay) dom.manualTherapistPay.value = cost - defaults.clinicFee;
+                        if (willShow) {
+                            this._prefillFinancialFromProfile();
+                            this._updateFinancialHint(
+                                dom.appointmentTherapistInput?.value || 'diana',
+                                this._modalPatientProfile
+                            );
                         }
                     }
                 };
@@ -1112,11 +1191,70 @@ export const CalendarModal = {
             // LISTENERS PARA BALANCEO FINANCIERO EN TIEMPO REAL
             [dom.costInput, dom.manualClinicFee, dom.manualPlanningPay, dom.planningTherapist].forEach(el => {
                 if (el) {
-                    el.addEventListener('input', () => this.balanceFinancials());
-                    el.addEventListener('change', () => this.balanceFinancials());
+                    el.addEventListener('input', () => {
+                        this.balanceFinancials();
+                        this._checkFinancialDirty();
+                    });
+                    el.addEventListener('change', () => {
+                        this.balanceFinancials();
+                        this._checkFinancialDirty();
+                    });
                 }
             });
         }, 500); // Pequeño delay para asegurar DOM
+    },
+
+    _snapshotFinancialState() {
+        const dom = CalendarState.dom;
+        return JSON.stringify({
+            cost: dom.costInput?.value ?? '',
+            clinic: dom.manualClinicFee?.value ?? '',
+            session: dom.manualTherapistPay?.value ?? '',
+            planning: dom.manualPlanningPay?.value ?? '',
+            pTherapist: dom.planningTherapist?.value ?? ''
+        });
+    },
+
+    _captureFinancialBaseline() {
+        this._financialBaseline = this._snapshotFinancialState();
+        this._financialFieldsDirty = false;
+    },
+
+    _checkFinancialDirty() {
+        if (!this._financialBaseline) return;
+        this._financialFieldsDirty = this._snapshotFinancialState() !== this._financialBaseline;
+    },
+
+    _prefillFinancialFromProfile() {
+        if (this._financialIsIntentionalOverride) return;
+
+        const dom = CalendarState.dom;
+        const therapist = dom.appointmentTherapistInput?.value || 'diana';
+        const therapistDefaults = AuthManager.getTherapistDefaults(therapist);
+        const profile = this._modalPatientProfile;
+        const cost = parseFloat(dom.costInput?.value) || parseFloat(profile?.defaultCost) || therapistDefaults.cost;
+        const clinicFee = getProfileClinicFee(profile, therapistDefaults);
+        const planning = parseFloat(dom.manualPlanningPay?.value) || 0;
+        const session = Math.max(0, cost - clinicFee - planning);
+
+        if (dom.manualClinicFee) dom.manualClinicFee.value = clinicFee;
+        if (dom.manualTherapistPay) dom.manualTherapistPay.value = session;
+    },
+
+    _updateFinancialHint(therapist = 'diana', profile = null) {
+        const dom = CalendarState.dom;
+        const hint = dom.financialParlareHint;
+        if (!hint) return;
+
+        const therapistDefaults = AuthManager.getTherapistDefaults(therapist);
+        const suggested = getProfileClinicFee(profile, therapistDefaults);
+        const sourceLabel = profile?.clinicFee != null ? 'perfil del paciente' : 'config del terapeuta';
+        hint.textContent = `Sugerido: $${suggested} (${sourceLabel} — escribe solo si es distinto en esta cita)`;
+        hint.classList.remove('hidden');
+
+        if (dom.manualClinicFee) {
+            dom.manualClinicFee.placeholder = `ej. ${suggested}`;
+        }
     },
 
     /**
@@ -1125,11 +1263,18 @@ export const CalendarModal = {
     balanceFinancials() {
         const dom = CalendarState.dom;
         const total = parseFloat(dom.costInput.value) || 0;
-        const parlrare = parseFloat(dom.manualClinicFee.value) || 0;
-        const planning = parseFloat(dom.manualPlanningPay.value) || 0;
-        
-        // Sesión = Total - Parláre - Planeación
-        const session = total - parlrare - planning;
+        const parlareRaw = dom.manualClinicFee?.value;
+        const planningRaw = dom.manualPlanningPay?.value;
+        const parlare = parlareRaw === '' || parlareRaw === undefined ? null : parseFloat(parlareRaw);
+        const planning = planningRaw === '' || planningRaw === undefined ? 0 : (parseFloat(planningRaw) || 0);
+
+        if (parlare === null && !planning) {
+            if (dom.manualTherapistPay) dom.manualTherapistPay.value = '';
+            return;
+        }
+
+        const parlareAmount = parlare ?? 0;
+        const session = total - parlareAmount - planning;
         
         if (dom.manualTherapistPay) {
             dom.manualTherapistPay.value = session >= 0 ? session : 0;

@@ -3,13 +3,31 @@
  * Servicio para gestionar la sincronización por lotes (Batch Sync)
  */
 
-import { db, collectionPath, collection, query, where, getDocs, updateDoc, doc } from '../firebase.js';
+import { db, collectionPath, collection, query, where, getDocs, updateDoc, doc, patientProfilesPath } from '../firebase.js';
 import { SheetService } from './google/SheetService.js';
 import { Logger } from '../utils/Logger.js';
 import { ToastService } from '../utils/ToastService.js';
 import { AuthManager } from '../managers/AuthManager.js';
+import { alignClinicFeeSnapshot, buildSheetFinancialPayload } from '../utils/appointmentFinancials.js';
 
 const log = Logger.create('SyncService');
+
+async function getProfileClinicFeeForPatient(patientName, therapist = 'diana') {
+    try {
+        const q = query(collection(db, patientProfilesPath), where('name', '==', patientName));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            const data = snap.docs[0].data();
+            if (data.therapist) therapist = data.therapist;
+            if (data.clinicFee !== undefined && data.clinicFee !== null) {
+                return parseFloat(data.clinicFee);
+            }
+        }
+    } catch (err) {
+        log.error('Error leyendo clinicFee del perfil:', err);
+    }
+    return AuthManager.getTherapistDefaults(therapist).clinicFee;
+}
 
 export const SyncService = {
     
@@ -57,7 +75,11 @@ export const SyncService = {
 
         for (const apt of pending) {
             try {
-                // Para batch sync, no queremos alerts por cada uno, así que usamos un log silencioso
+                const therapistDefaults = AuthManager.getTherapistDefaults(apt.therapist);
+                const profileFee = await getProfileClinicFeeForPatient(apt.name, apt.therapist);
+                const financials = buildSheetFinancialPayload(apt, profileFee, therapistDefaults);
+                const feeSnapshot = alignClinicFeeSnapshot(apt, profileFee, therapistDefaults);
+
                 const success = await SheetService.logPayment({
                     id: apt.id,
                     date: apt.date,
@@ -65,19 +87,13 @@ export const SyncService = {
                     amount: apt.cost || 0,
                     status: "Pagado",
                     therapist: apt.therapist,
-                    clinicFee: apt.manualClinicFee !== undefined
-                        ? apt.manualClinicFee
-                        : (apt.clinicFee !== undefined && apt.clinicFee !== null
-                            ? apt.clinicFee
-                            : AuthManager.getTherapistDefaults(apt.therapist).clinicFee),
-                    therapistPay: apt.manualTherapistPay,
-                    planningPay: apt.manualPlanningPay,
-                    planningTherapist: apt.planningTherapist
+                    ...financials
                 });
 
                 if (success) {
                     await updateDoc(doc(db, collectionPath, apt.id), {
-                        sheetSynced: true
+                        sheetSynced: true,
+                        ...feeSnapshot
                     });
                     successCount++;
                 } else {

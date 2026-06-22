@@ -30,6 +30,7 @@ import { ToastService } from '../../utils/ToastService.js';
 import { SheetService } from '../../services/google/SheetService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
 import { escapeHTML } from '../../utils/sanitize.js';
+import { buildSheetFinancialPayload, alignClinicFeeSnapshot } from '../../utils/appointmentFinancials.js';
 // Redundant CDN imports removed for consistency
 
 /**
@@ -245,7 +246,7 @@ export const PatientActions = {
             // 1. Obtener datos para Sheet (antes o durante el update)
             const aptRef = doc(db, collectionPath, appointmentId);
             const aptSnap = await getDoc(aptRef);
-            const aptData = aptSnap.exists() ? aptSnap.data() : null;
+            const aptData = aptSnap.exists() ? { id: appointmentId, ...aptSnap.data() } : null;
 
             if (!aptData) {
                 ToastService.error("Error: No se encontró la cita.");
@@ -283,7 +284,9 @@ export const PatientActions = {
                 const cost = aptData.cost || 0;
 
                 // Buscar Clinic Fee leyendo directo de Firestore para evitar desfase de estado en memoria
-                const clinicFee = await _getClinicFeeForPatient(aptData.name, aptData.therapist);
+                const profileFee = await _getClinicFeeForPatient(aptData.name, aptData.therapist);
+                const therapistDefaults = AuthManager.getTherapistDefaults(aptData.therapist || 'diana');
+                const financials = buildSheetFinancialPayload(aptData, profileFee, therapistDefaults);
 
                 SheetService.logPayment({
                     date: aptData.date,
@@ -291,7 +294,7 @@ export const PatientActions = {
                     amount: -Math.abs(cost), // Monto negativo (corrección)
                     status: "ANULADO",
                     therapist: aptData.therapist || 'diana',
-                    clinicFee: clinicFee
+                    ...financials
                 }).then(success => {
                     if (success) updateDoc(aptRef, { sheetSynced: true });
                 }).catch(err => console.error("Error logging reversal:", err));
@@ -310,12 +313,14 @@ export const PatientActions = {
             } else {
                 // CASO 2: NO ESTABA PAGADO -> PAGAR NORMAL
 
-                await updateDoc(aptRef, { isPaid: true });
+                const profileFee = await _getClinicFeeForPatient(aptData.name || '', aptData.therapist);
+                const therapistDefaults = AuthManager.getTherapistDefaults(aptData.therapist || 'diana');
+                const financials = buildSheetFinancialPayload(aptData, profileFee, therapistDefaults);
+                const feeSnapshot = alignClinicFeeSnapshot(aptData, profileFee, therapistDefaults);
+
+                await updateDoc(aptRef, { isPaid: true, sheetSynced: false, ...feeSnapshot });
 
                 const cost = aptData.cost || 0;
-
-                // Buscar Clinic Fee leyendo directo de Firestore para evitar desfase de estado en memoria
-                const clinicFee = await _getClinicFeeForPatient(aptData.name || '', aptData.therapist);
 
                 SheetService.logPayment({
                     date: aptData.date || new Date().toISOString(),
@@ -323,7 +328,7 @@ export const PatientActions = {
                     amount: Math.abs(cost),
                     status: "Pagado",
                     therapist: aptData.therapist || 'diana',
-                    clinicFee: clinicFee
+                    ...financials
                 }).then(success => {
                     if (success) updateDoc(aptRef, { sheetSynced: true });
                 }).catch(err => console.error("Error logging payment:", err));
@@ -418,6 +423,7 @@ export const PatientActions = {
 
             // Log en Sheet
             SheetService.logAttendance({
+                id: appointment.id,
                 date: appointment.date,
                 patientName: patientName,
                 status: newStatus ? "CONFIRMADO" : "PENDIENTE",

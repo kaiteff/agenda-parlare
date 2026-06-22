@@ -4,6 +4,8 @@
  */
 
 import { AuthManager } from '../../managers/AuthManager.js';
+import { PatientState } from '../../managers/patient/PatientState.js';
+import { resolveEffectiveFinancials } from '../../utils/appointmentFinancials.js';
 
 export const FinancialReport = {
     /**
@@ -52,8 +54,11 @@ export const FinancialReport = {
 
         monthlyAppointments.forEach(appt => {
             const cost = parseFloat(appt.cost) || 0;
-            const defaultFee = AuthManager.getTherapistDefaults(appt.therapist).clinicFee;
-            const clinicFeePerApt = parseFloat(appt.clinicFee ?? appt.parlareFee ?? defaultFee);
+            const therapistDefaults = AuthManager.getTherapistDefaults(appt.therapist);
+            const profile = PatientState.patients.find(p => p.id === appt.patientId || p.name === appt.name);
+            const fin = resolveEffectiveFinancials(appt, profile, therapistDefaults);
+            const clinicFeePerApt = fin.clinicFee;
+            const planningPay = fin.planningPay || 0;
             
             const therapistKey = (appt.therapist || 'diana').toLowerCase();
             const isPaid = appt.isPaid;
@@ -84,8 +89,8 @@ export const FinancialReport = {
                 report.byTherapist[therapistKey].income += cost;
                 
                 // CÁLCULO DE REPARTO
-                const currentClinicFee = Math.min(cost, clinicFeePerApt); // No puede cobrar más de lo que entró
-                const currentTherapistPay = Math.max(0, cost - currentClinicFee);
+                const currentClinicFee = Math.min(cost, clinicFeePerApt);
+                const currentTherapistPay = fin.therapistPay;
 
                 report.byTherapist[therapistKey].clinicFee += currentClinicFee;
                 report.byTherapist[therapistKey].therapistPay += currentTherapistPay;

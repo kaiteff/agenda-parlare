@@ -55,7 +55,7 @@ export const CalendarEvents = {
             'rescheduleSection', 'rescheduleOptions', 'busySlotsContainer', 'busySlotsList',
             'patientSuggestions', 'isRecurring', 'recurringSection', 'recurringOptions', 'recurringDatesList',
             'patientCustomPhone', 'patientCountryCode',
-            'financialBreakdownSection', 'manualClinicFee', 'manualTherapistPay', 'manualPlanningPay', 'planningTherapist', 'toggleFinancialBtn', 'labelPlanning',
+            'financialBreakdownSection', 'manualClinicFee', 'manualTherapistPay', 'manualPlanningPay', 'planningTherapist', 'toggleFinancialBtn', 'labelPlanning', 'financialParlareHint',
             'justificationSection', 'isJustified', 'justificationUploadArea', 'justificationDropZone', 'justificationFileInput', 'justificationFilePreview', 'justificationFileName', 'viewJustificationBtn', 'removeJustificationBtn'
         ];
 

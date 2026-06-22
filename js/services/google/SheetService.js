@@ -73,19 +73,30 @@ export const SheetService = {
 
             // Cálculos de desglose
             const totalAmount = paymentData.amount || 0;
-            
-            // Lógica de cobro de clínica: manual → perfil/cita → config viva del panel (no hardcode 250)
-            const configuredFee = AuthManager.getTherapistDefaults(therapistKey).clinicFee;
-            const rawClinicFee = paymentData.clinicFee !== undefined && paymentData.clinicFee !== null
-                ? paymentData.clinicFee
-                : configuredFee;
+            const attendanceStatuses = new Set(['CANCELADO', 'CONFIRMADO', 'PENDIENTE']);
+            const isAttendanceOnly = attendanceStatuses.has(paymentData.status) && totalAmount === 0;
 
-            // Si el monto total es negativo (anulación), el desglose también debe ser negativo
-            const finalClinicFee = totalAmount < 0 ? -Math.abs(rawClinicFee) : Math.abs(rawClinicFee);
-            
-            // Priorizar pago manual a terapeuta si existe
-            const therapistIncome = paymentData.therapistPay !== undefined ? paymentData.therapistPay : (totalAmount - finalClinicFee);
-            const planningIncome = paymentData.planningPay || 0;
+            let finalClinicFee;
+            let therapistIncome;
+            let planningIncome;
+
+            // Cancelar/confirmar NO es pago: columnas financieras siempre en 0 (evita 250 / -250 fantasma)
+            if (isAttendanceOnly) {
+                finalClinicFee = 0;
+                therapistIncome = 0;
+                planningIncome = 0;
+            } else {
+                const configuredFee = AuthManager.getTherapistDefaults(therapistKey).clinicFee;
+                const rawClinicFee = paymentData.clinicFee !== undefined && paymentData.clinicFee !== null
+                    ? paymentData.clinicFee
+                    : configuredFee;
+
+                finalClinicFee = totalAmount < 0 ? -Math.abs(rawClinicFee) : Math.abs(rawClinicFee);
+                therapistIncome = paymentData.therapistPay !== undefined
+                    ? paymentData.therapistPay
+                    : (totalAmount - finalClinicFee);
+                planningIncome = paymentData.planningPay || 0;
+            }
 
             // Force DD/MM/YYYY format specifically for Sheets formulas
             const day = dateObj.getDate().toString().padStart(2, '0');
@@ -215,14 +226,17 @@ export const SheetService = {
      * @param {Object} eventData { date, patientName, status, therapist }
      */
     async logAttendance(eventData) {
-        console.log(`📝 SheetService: Registrando asistencia/estatus...`, eventData);
-        // Reutilizamos la lógica de logPayment pero con monto 0 y estatus personalizado
+        console.log(`📝 SheetService: Registrando asistencia/estatus (sin movimiento financiero)...`, eventData);
         return this.logPayment({
+            id: eventData.id,
             date: eventData.date,
             patientName: eventData.patientName,
             amount: 0,
             status: eventData.status,
-            therapist: eventData.therapist
+            therapist: eventData.therapist,
+            clinicFee: 0,
+            therapistPay: 0,
+            planningPay: 0
         });
     },
 

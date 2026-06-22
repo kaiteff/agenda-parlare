@@ -1,4 +1,4 @@
-# 🚀 Plan de Trabajo - Actualizado (11 Junio 2026)
+# 🚀 Plan de Trabajo - Actualizado (21 Junio 2026)
 
 Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva, justificantes médicos y el **Copiloto Colaborativo** (frontend listo el 25 may), y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
@@ -6,6 +6,10 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Seguro pago Excel A+B (22 Jun 2026)** — Confirmación con desglose antes de Pagado/No pagado; bloqueo si hay cambios sin Guardar. Flujo corrección cita pagada documentado en HelpManual.
+*   **Fix perfil del paciente en desglose de cita (22 Jun 2026)** — Detalles de Cita muestra cuota/sesión del **perfil**. Archivos: `appointmentFinancials.js`, `CalendarModal.js`, etc.
+*   **Fix App_Data cancelaciones/confirmaciones (22 Jun 2026)** — Cancelar o confirmar cita ya no escribe 250/-250 fantasma en Excel; solo Monto 0 y Parláre/Sesión en 0. ID de cita real en columna F. Archivos: `SheetService.js`, `CalendarData.js`, `PatientActions.js`. **Deploy:** `firebase deploy --only hosting`.
+*   **Fix Ajuste Manual Parláre → App_Data (21 Jun 2026)** — En modal Detalles de Cita, el desglose manual (Parláre/Sesión/Planeación) ya se respeta al guardar y al marcar pagado.
 *   **Fix cuota Parláre → Google Sheets (11 Jun 2026)** — Cuota del paciente/config ya no cae a $250 en Excel (`SheetService`, fallbacks dinámicos).
 *   **Modales paciente — UX móvil iPhone (11 Jun 2026)** — Modales en `document.body`, altura casi pantalla completa (`92dvh`), scroll único con footer fijo, Nuevo Paciente en una columna, bitácora como bottom-sheet. Archivos: `PatientModalsHTML.js`, `PatientModals.js`, `ComponentManager.js`, `index.css`. **Deploy:** `npm run build` + `firebase deploy --only hosting`.
 *   **Fase C: Consentimiento WhatsApp (Opt-In/Opt-Out) y Auditoría — 100% Listo y Desplegado (21 Mayo 2026)**:

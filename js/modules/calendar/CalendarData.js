@@ -7,8 +7,10 @@ import { db, collectionPath, patientProfilesPath, collection, onSnapshot, query,
 import { CalendarState } from './CalendarState.js';
 import { createAppointment, updateAppointment, deleteAppointment, togglePaymentStatus, toggleConfirmationStatus, cancelAppointment } from '../../services/appointmentService.js';
 import { SheetService } from '../../services/google/SheetService.js';
-import { getDocs, query as fsQuery, where as fsWhere } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getDocs, getDoc, doc, query as fsQuery, where as fsWhere } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { AuthManager } from '../../managers/AuthManager.js';
+import { ToastService } from '../../utils/ToastService.js';
+import { alignClinicFeeSnapshot, buildSheetFinancialPayload, resolveClinicFeeFromAppointment } from '../../utils/appointmentFinancials.js';
 
 /**
  * Obtiene el clinicFee de un paciente desde Firestore.
@@ -33,6 +35,33 @@ async function getClinicFee(patientName, therapist = 'diana') {
         console.error('Error obteniendo clinicFee en CalendarData:', err);
     }
     return AuthManager.getTherapistDefaults(therapist).clinicFee;
+}
+
+async function resolvePaymentFinancials(appointment) {
+    const therapist = appointment?.therapist || 'diana';
+    const therapistDefaults = AuthManager.getTherapistDefaults(therapist);
+    const profileFee = appointment
+        ? await getClinicFee(appointment.name, therapist)
+        : therapistDefaults.clinicFee;
+    return buildSheetFinancialPayload(appointment, profileFee, therapistDefaults);
+}
+
+async function fetchAppointmentForPayment(id, appointmentOverride = null) {
+    if (appointmentOverride) {
+        return { id, ...appointmentOverride };
+    }
+
+    try {
+        const snap = await getDoc(doc(db, collectionPath, id));
+        if (snap.exists()) {
+            return { id: snap.id, ...snap.data() };
+        }
+    } catch (err) {
+        console.error('Error leyendo cita para pago:', err);
+    }
+
+    const fromState = CalendarState.appointments.find(a => a.id === id);
+    return fromState ? { ...fromState } : null;
 }
 
 export const CalendarData = {
@@ -173,7 +202,8 @@ export const CalendarData = {
                 console.log("💰 CalendarData: Cita movida y estaba pagada. Actualizando en Sheets...", existingEvt.name);
                 
                 try {
-                    const clinicFee = await getClinicFee(existingEvt.name, existingEvt.therapist);
+                    const mergedEvt = { ...existingEvt, ...data };
+                    const financials = await resolvePaymentFinancials(mergedEvt);
 
                     // 1. Anular el pago en la fecha/hora anterior con monto negativo
                     await SheetService.logPayment({
@@ -182,7 +212,7 @@ export const CalendarData = {
                         amount: -Math.abs(existingEvt.cost || 0),
                         status: "Pagado",
                         therapist: existingEvt.therapist,
-                        clinicFee: clinicFee
+                        ...financials
                     });
                     
                     // 2. Registrar en la fecha nueva
@@ -192,7 +222,7 @@ export const CalendarData = {
                         amount: Math.abs(existingEvt.cost || 0),
                         status: "Pagado",
                         therapist: existingEvt.therapist,
-                        clinicFee: clinicFee
+                        ...financials
                     });
                 } catch (err) {
                     console.error("Error sincronizando cambios de fecha en Sheets:", err);
@@ -208,56 +238,67 @@ export const CalendarData = {
         return await deleteAppointment(id, appointment);
     },
 
-    async togglePayment(id, currentStatus) {
-        // 1. Obtener clinicFee primero para guardarlo en la DB
-        const appointment = CalendarState.appointments.find(a => a.id === id);
-        let clinicFee = AuthManager.getTherapistDefaults(appointment?.therapist).clinicFee;
-        if (appointment) {
-            clinicFee = await getClinicFee(appointment.name, appointment.therapist);
-        }
+    async togglePayment(id, currentStatus, appointmentOverride = null) {
+        const appointment = await fetchAppointmentForPayment(id, appointmentOverride);
 
-        // 2. Ejecutar cambio de estado
+        const therapistKey = appointment?.therapist || 'diana';
+        const therapistDefaults = AuthManager.getTherapistDefaults(therapistKey);
+        const profileFee = appointment
+            ? await getClinicFee(appointment.name, therapistKey)
+            : therapistDefaults.clinicFee;
+
+        const clinicFee = resolveClinicFeeFromAppointment(appointment, profileFee, therapistDefaults);
+        const feeSnapshot = alignClinicFeeSnapshot(appointment, profileFee, therapistDefaults);
+
         const result = await togglePaymentStatus(id, currentStatus, CalendarState.appointments, clinicFee);
 
-        // Si se marcó como pagado exitosamente, registrar en Sheets
-        if (result.success) {
-            const appointment = CalendarState.appointments.find(a => a.id === id);
+        if (result.success && appointment) {
+            try {
+                const financials = await resolvePaymentFinancials(appointment);
 
-            if (appointment) {
-                // Obtener clinicFee real del paciente desde Firestore
-                getClinicFee(appointment.name, appointment.therapist).then(clinicFee => {
-                    if (result.newState === true) {
-                        // PAGO POSITIVO
-                        console.log("💰 CalendarData: Marcado como PAGADO, enviando a Sheets...", appointment.name, '- clinicFee:', clinicFee);
-                        SheetService.logPayment({
-                            date: appointment.date,
-                            patientName: appointment.name,
-                            amount: Math.abs(appointment.cost || 0),
-                            status: "Pagado",
-                            therapist: appointment.therapist,
-                            clinicFee: clinicFee
-                        }).then(success => {
-                            if (success) {
-                                updateAppointment(id, { sheetSynced: true }, CalendarState.appointments);
-                            }
-                        }).catch(err => console.error("Error sheet logging:", err));
+                if (result.newState === true) {
+                    console.log("💰 CalendarData: Marcado como PAGADO, enviando a Sheets...", appointment.name, '- desglose:', financials);
+                    const success = await SheetService.logPayment({
+                        id,
+                        date: appointment.date,
+                        patientName: appointment.name,
+                        amount: Math.abs(appointment.cost || 0),
+                        status: "Pagado",
+                        therapist: appointment.therapist,
+                        ...financials
+                    });
+                    if (success) {
+                        await updateAppointment(id, { sheetSynced: true, ...feeSnapshot }, CalendarState.appointments);
                     } else {
-                        // PAGO NEGATIVO (ANULACIÓN)
-                        console.log("💰 CalendarData: Marcado como ANULADO, enviando corrección a Sheets...", appointment.name, '- clinicFee:', clinicFee);
-                        SheetService.logPayment({
-                            date: appointment.date,
-                            patientName: appointment.name,
-                            amount: -Math.abs(appointment.cost || 0),
-                            status: "ANULADO",
-                            therapist: appointment.therapist,
-                            clinicFee: clinicFee
-                        }).then(success => {
-                            if (success) {
-                                updateAppointment(id, { sheetSynced: true }, CalendarState.appointments);
-                            }
-                        }).catch(err => console.error("Error sheet logging (reversal):", err));
+                        ToastService.warning(
+                            'Pago guardado en Parláre. Excel no se actualizó (permisos o conexión). '
+                            + 'Diana o Yari pueden sincronizar con el botón naranja «pendientes» en la barra superior.',
+                            9000
+                        );
                     }
-                }).catch(err => console.error("Error obteniendo clinicFee para Sheets:", err));
+                } else {
+                    console.log("💰 CalendarData: Marcado como ANULADO, enviando corrección a Sheets...", appointment.name, '- desglose:', financials);
+                    const success = await SheetService.logPayment({
+                        id,
+                        date: appointment.date,
+                        patientName: appointment.name,
+                        amount: -Math.abs(appointment.cost || 0),
+                        status: "ANULADO",
+                        therapist: appointment.therapist,
+                        ...financials
+                    });
+                    if (success) {
+                        await updateAppointment(id, { sheetSynced: true }, CalendarState.appointments);
+                    } else {
+                        ToastService.warning(
+                            'Estado de pago actualizado en Parláre. La corrección en Excel no se envió. '
+                            + 'Pide a Diana o Yari que sincronicen, o repite el paso con una cuenta que tenga acceso al Excel del terapeuta.',
+                            9000
+                        );
+                    }
+                }
+            } catch (err) {
+                console.error("Error sincronizando pago con Sheets:", err);
             }
         }
         return result;
@@ -277,6 +318,7 @@ export const CalendarData = {
         
         if (result.success && evt) {
              SheetService.logAttendance({
+                id: evt.id,
                 date: evt.date,
                 patientName: evt.name,
                 status: "CANCELADO",

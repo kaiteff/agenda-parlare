@@ -94,9 +94,13 @@ export const HelpManual = {
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
                                 <p>Al agendar o editar una cita, verás un botón que dice <strong>"Ajuste Manual"</strong>. Úsalo para casos especiales:</p>
                                 <ul class="list-disc ml-5 space-y-2">
-                                    <li><strong>Reparto de Comisión:</strong> Puedes especificar cuánto se queda la clínica y cuánto la terapeuta.</li>
+                                    <li><strong>Reparto de Comisión:</strong> Al abrir una cita, el desglose usa la <strong>cuota y costo del perfil del paciente</strong> (ej. $150 Parláre + $500 Sesión si el total es $650). El texto gris muestra esa cuota — escribe otro monto solo si <em>esta cita</em> es excepción (relevo, acuerdo especial).</li>
                                     <li><strong>Pago de Planeación:</strong> Si una terapeuta planeó y otra ejecutó, aquí puedes poner el monto exacto para cada una.</li>
-                                    <li><strong>Balance Automático:</strong> El sistema suma todo por ti para que coincida siempre con el costo total de la cita.</li>
+                                    <li><strong>Balance Automático:</strong> Al escribir Parláre o Planeación, el sistema calcula Sesión para que coincida con el costo total.</li>
+                                    <li><strong>Corregir cita ya pagada</strong> (relevo Sam/Diana, etc.): abre la cita → <strong>Ajuste Manual</strong> (déjalo abierto) → pon Parláre / Sesión / Planeación → <strong>Guardar cita</strong> → vuelve a abrir → <strong>Marcar como No Pagado</strong> (confirma el resumen Excel) → <strong>Marcar como Pagado</strong> otra vez. No puedes pagar/des-pagar si cambiaste algo sin guardar antes.</li>
+                                    <li><strong>Sin permiso de Excel del otro terapeuta:</strong> Sam puede <strong>Guardar cita</strong> con el Ajuste Manual; el pago queda en Parláre aunque Excel falle. Aparece <strong>pendiente de sync</strong> — <strong>Diana o Yari</strong> (botón naranja arriba) sincronizan con su cuenta Google, que sí tiene acceso a los archivos. Si hay planeación para otra terapeuta, al sincronizar Diana se crea también la fila de planeación en el Excel correspondiente.</li>
+                                    <li><strong>Excel / App_Data:</strong> Al marcar pagado, va la cuota del <strong>perfil del paciente</strong> salvo que hayas guardado un ajuste manual distinto en esa cita.</li>
+                                    <li><strong>Citas con datos viejos (250/400):</strong> Si el perfil dice $150 pero la cita mostraba $250, al abrirla ya verás $150/$500. Guarda la cita o marca pagado para limpiar Firestore/Excel.</li>
                                 </ul>
                             </div>
                         </details>
