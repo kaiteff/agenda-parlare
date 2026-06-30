@@ -133,3 +133,5 @@ A partir del **domingo 17 de Mayo de 2026**, el desarrollo de la V2 se realiza d
 - **UI Grid vs Sidebar**: Las citas canceladas se OCULTAN de la cuadrícula central para liberar espacio visual, pero se MANTIENEN en el sidebar con etiqueta roja para control administrativo.
 - **Pestaña Dinámica**: La lógica de "Próxima Cita" debe saltar días sin citas ACTIVAS, pero mostrar TODO (activas+canceladas) una vez aterrizada en el día correcto.
 - **Refactorización Segura**: Al modificar funciones de filtrado como `_groupByPatient`, verificar rigurosamente que no se eliminen variables de contexto (como `existing` o `aptTime`).
+- **Idioma de las Respuestas**: Cuando el usuario diga «iniciar todo» o «inicia todo», el asistente de IA DEBE responder e interactuar siempre en español a lo largo de toda la sesión.
+

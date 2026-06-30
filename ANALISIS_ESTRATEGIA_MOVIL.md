@@ -73,17 +73,23 @@ HOY ─────────────────────────�
 
 ## Registro de avance y qué hacer ahora
 
-### 🔄 Retomar aquí (próxima sesión — tras deploy **22 jun 2026**)
+### 🔄 Retomar aquí (próxima sesión — tras deploy **30 jun 2026**)
 
 | Estado | Qué |
 |--------|-----|
-| ⏳ **Primero** | `firebase deploy --only hosting` (build ✅ 22 jun). Paquete: perfil→desglose cita, seguro pago A+B, toast Excel pendiente, cancel fix App_Data. |
+| ⏳ **Primero** | `firebase deploy --only hosting` (build ✅ 30 jun). Paquete: acceso Yari a baja y borrado de pacientes, perfil→desglose cita, seguro pago A+B, toast Excel pendiente, cancel fix App_Data. |
+| ⏳ **Validar con Yari** | Iniciar sesión como Yari (Recepción) -> Abrir expediente de paciente -> Intentar dar de baja y eliminar de forma permanente. |
 | ⏳ **Validar Julian** | Abrir cita → Ajuste Manual **150/500** (no 250/400). Pagar → Excel Cuota_Parlare **150**. |
 | ⏳ **Validar corrección pagada** | Cita pagada → Ajuste Manual relevo → Guardar → No pagado (confirmación) → Pagado → Excel con desglose correcto. |
 | ⏳ **Validar Sam sin Excel Diana** | Marcar pagado falla Excel → aviso naranja → Diana/Yari botón **X pendientes** sincroniza. |
 | 💡 **Opcional** | Herramienta Control Maestro: simular reparación masiva cuotas históricas Excel (con aprobación Diana). |
 
-**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260622.md`
+**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260630.md`
+
+### Cierre de sesión — 30 jun 2026
+
+**Entregado hoy:**
+- **Acceso Yari (Recepción) a baja y borrado de pacientes** — Se modificaron las reglas de validación en `PatientActions.js` para permitir al rol `receptionist` (Yari) eliminar permanentemente perfiles de pacientes en Firestore.
 
 ### Cierre de sesión — 22 jun 2026
 

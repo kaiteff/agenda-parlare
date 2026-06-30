@@ -1,4 +1,4 @@
-# 🚀 Plan de Trabajo - Actualizado (22 Junio 2026)
+# 🚀 Plan de Trabajo - Actualizado (30 Junio 2026)
 
 Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva, justificantes médicos y el **Copiloto Colaborativo** (frontend listo el 25 may), y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
@@ -6,6 +6,7 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Acceso Yari (Recepción) a baja y borrado de pacientes (30 Jun 2026)** — Se otorgó acceso al rol `receptionist` para eliminar pacientes permanentemente en la lógica de `PatientActions.js`, además de validar su acceso existente a la baja (desactivación).
 *   **Toast Excel pendiente + manual sync (22 Jun 2026)** — Si terapeuta no puede escribir Excel ajeno, pago queda en Parláre; Diana/Yari sincronizan con botón naranja. Aviso en `CalendarData.togglePayment`.
 *   **Fix perfil del paciente en desglose de cita (22 Jun 2026)** — Detalles de Cita muestra cuota/sesión del **perfil**. Archivos: `appointmentFinancials.js`, `CalendarModal.js`, etc.
 *   **Fix App_Data cancelaciones/confirmaciones (22 Jun 2026)** — Cancelar o confirmar cita ya no escribe 250/-250 fantasma en Excel; solo Monto 0 y Parláre/Sesión en 0. ID de cita real en columna F. Archivos: `SheetService.js`, `CalendarData.js`, `PatientActions.js`. **Deploy:** `firebase deploy --only hosting`.

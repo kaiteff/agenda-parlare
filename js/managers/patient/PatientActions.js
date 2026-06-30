@@ -578,8 +578,8 @@ export const PatientActions = {
      */
     async deletePatient(profileId, patientName) {
         // Verificar permisos
-        if (!AuthManager.isAdmin()) {
-            await ModalService.alert("Acceso Denegado", 'Solo los administradores pueden eliminar pacientes permanentemente.', "error");
+        if (!AuthManager.isAdmin() && AuthManager.currentUser?.role !== 'receptionist') {
+            await ModalService.alert("Acceso Denegado", 'Solo los administradores y el personal de recepción pueden eliminar pacientes permanentemente.', "error");
             return false;
         }
 
