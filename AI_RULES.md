@@ -29,6 +29,7 @@ Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de ar
 3. **Refactor y escritorio:** Para roadmap de agenda desktop, rendimiento y deuda técnica gradual, leer y actualizar **`ARQUITECTURA_FUTURA.md`** (registro de cambios con **para qué** y **cómo revertir**). Histórico: `old/ARQUITECTURA_FUTURA.md`.
 4. **Seguridad y vulnerabilidades:** Para auditorías, hallazgos de seguridad, XSS, reglas Firestore/Storage, secretos, dependencias, leer y actualizar **`SEGURIDAD_Y_VULNERABILIDADES.md`**. Cada hallazgo lleva ID `S-XXX`, severidad y estado. Nunca borrar hallazgos cerrados (se mueven a «✅ Reforzado»). Regla Cursor: `.cursor/rules/seguridad-vulnerabilidades.mdc`.
 5. **Cola prioridad (pacientes especiales):** Si la sesión habla de huecos libres, «deben cita», lista de espera, Copiloto ampliado o prioridad de agendado, **mencionar** la propuesta documentada en **`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`** (semana en curso, horario similar ±3 h, sin sábado, debe 1..N sesiones). No implementar sin decisión de dirección; actualizar ese doc si cambian las reglas de negocio.
+6. **Rama paralela SaaS (Modelo A):** Al **«iniciar todo»** / inicio de sesión, recordar que hay **dos pistas** en el mismo repo: (A) agenda Parláre en producción — prioridad; (B) multiclínica Support/`clinicId` — **apagada** con `SAAS_MULTICLINIC_ENABLED = false` en `js/core/clinicConstants.js`. No confundir ni bloquear la pista A al tocar B. Mapa: `js/saas/README.md`, roadmap: `ROADMAP_SAAS_CLINICAS.md`. Regla Cursor: `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`.
 
 ## 💾 REGLA DE ORO 9: Backup y Git ANTES de tocar código
 Antes del **primer cambio** en código producto (JS, `functions/`, rules, hosting):
@@ -133,5 +134,18 @@ A partir del **domingo 17 de Mayo de 2026**, el desarrollo de la V2 se realiza d
 - **UI Grid vs Sidebar**: Las citas canceladas se OCULTAN de la cuadrícula central para liberar espacio visual, pero se MANTIENEN en el sidebar con etiqueta roja para control administrativo.
 - **Pestaña Dinámica**: La lógica de "Próxima Cita" debe saltar días sin citas ACTIVAS, pero mostrar TODO (activas+canceladas) una vez aterrizada en el día correcto.
 - **Refactorización Segura**: Al modificar funciones de filtrado como `_groupByPatient`, verificar rigurosamente que no se eliminen variables de contexto (como `existing` o `aptTime`).
-- **Idioma de las Respuestas**: Cuando el usuario diga «iniciar todo» o «inicia todo», el asistente de IA DEBE responder e interactuar siempre en español a lo largo de toda la sesión.
+- **Idioma de las Respuestas**: Cuando el usuario diga «iniciar todo» o «inicia todo», el asistente de IA DEBE responder e interactuar siempre en español a lo largo de toda la sesión, y **recordar la rama paralela SaaS** (pista B apagada vs agenda Parláre pista A) — ver Regla de Oro 5 punto 6 y `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`.
+- **Resumen de Despliegues**: Tras realizar cualquier despliegue (`firebase deploy`), el asistente de IA DEBE presentar siempre al usuario un resumen detallado y amigable de qué cambios específicos fueron incluidos en ese despliegue.
+
+
+## 🏢 REGLA DE ORO 10: Rama paralela SaaS vs agenda Parláre (producción)
+
+Existen **dos pistas** en el mismo repositorio:
+
+1. **Pista A — Producción:** Agenda funcional de Centro Parláre (`settings/clinicConfig`, staff actual). **Nunca** degradar por cambios SaaS con el flag apagado.
+2. **Pista B — SaaS Modelo A:** Multiclínica, Support, `clinicId`, segunda clínica. Control: `SAAS_MULTICLINIC_ENABLED` en `js/core/clinicConstants.js` (**`false` en producción**).
+
+Documentos: `js/saas/README.md`, `ROADMAP_SAAS_CLINICAS.md`, `CONTABILIDAD_MULTICLINICA.md`, `SAAS_FASE0_SETUP.md`.
+
+Al codificar en archivos `js/core/`, `ClinicContext`, `ClinicSelector`: siempre guardar con `isSaasMulticlinicEnabled()`. Activar el flag solo en rama/preview acordada con Daniel.
 
