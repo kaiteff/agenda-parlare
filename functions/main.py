@@ -5,6 +5,7 @@ Migración completa de Flask/Render a Firebase Functions 2nd Gen en Python.
 """
 import json
 import re
+import unicodedata
 from datetime import datetime, timedelta
 import pytz
 
@@ -31,6 +32,17 @@ from whatsapp_optin import (
     parse_interactive_payload,
     patient_accepts_automated_whatsapp,
 )
+from whatsapp_templates import (
+    MOTIVO_CANCELACION_SID,
+    RECORDATORIO_EVALUACION_SID,
+    RECORDATORIO_CRON_SID,
+    DIANA_SESION_EVALUACION_SID,
+    DIANA_SIGUIENTE_ETAPA_SID,
+    COPY_INFO_PROXIMA_CITA_SID,
+    POST_CONFIRM_SID,
+    CANCEL_REASON_PAYLOADS,
+    DIANA_EVAL_PAYLOADS,
+)
 
 # ── 1. Inicialización Global y Secretos ────────────────────────────────────
 
@@ -49,10 +61,18 @@ MX_TZ = pytz.timezone('America/Mexico_City')
 from secrets_config import (
     TWILIO_SID,
     TWILIO_TOKEN,
+    REMINDERS_API_KEY,
     GOOGLE_REFRESH_TOKEN,
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     ALL_SECRETS,
+)
+from webhook_security import (
+    validate_twilio_webhook,
+    authorize_staff_or_api_key,
+    sanitize_whatsapp_user_text,
+    mask_phone_for_log,
+    staff_api_cors_headers,
 )
 
 TWILIO_WHATSAPP_FROM = "whatsapp:+16066451055"
@@ -140,6 +160,37 @@ def normalize_phone(phone):
         elif digits.startswith('52'): digits = digits[2:]
     return digits[-10:] if len(digits) >= 10 else digits
 
+def _normalize_match_name(name):
+    """Minúsculas sin acentos para comparar perfil vs cita."""
+    if not name:
+        return ''
+    s = str(name).strip().lower()
+    s = unicodedata.normalize('NFD', s)
+    return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+
+def _incoming_whatsapp_text(msg_body, raw_payload):
+    """Combina texto libre y payload de botones Twilio (a veces Body viene vacío)."""
+    parts = []
+    for part in (msg_body, raw_payload):
+        if not part:
+            continue
+        t = str(part).strip().lower()
+        if t and t not in parts:
+            parts.append(t)
+    return ' '.join(parts)
+
+def _message_has_keyword(text, keywords):
+    return bool(text) and any(w in text for w in keywords)
+
+WHATSAPP_CONFIRM_KEYWORDS = [
+    '1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro', 'sale', 'va'
+]
+WHATSAPP_CANCEL_KEYWORDS = [
+    '2', 'cancelar', 'no puedo', 'no asist', 'cancelado', 'no asistiremos', 'no asistira', 'no'
+]
+WHATSAPP_RECEPTION_KEYWORDS = ['3', 'recepcion', 'yari', 'duda']
+WHATSAPP_THANKS_KEYWORDS = ['gracias', 'mil gracias', 'muchas gracias', 'te lo agradezco']
+
 def update_google_sheet(appointment, status):
     sheets_service, _ = get_google_services()
     if not sheets_service: return
@@ -163,7 +214,7 @@ def update_google_sheet(appointment, status):
         print(f"❌ Error Sync Sheet: {e}")
 
 def update_google_calendar(appointment, status_text):
-    _, calendar_service = get_google_services()
+    calendar_service = get_user_calendar_service() or get_google_services()[1]
     if not calendar_service or not appointment.get('googleEventId'): return
     try:
         therapist = appointment.get('therapist', 'diana').lower()
@@ -171,13 +222,18 @@ def update_google_calendar(appointment, status_text):
         event = calendar_service.events().get(calendarId=target_cal_id, eventId=appointment['googleEventId']).execute()
         
         desc = event.get('description', '').replace("\n✅ Asistencia confirmada vía WhatsApp", "").replace("\n❌ CANCELADO vía WhatsApp", "")
+        summary = event.get('summary', appointment.get('name', 'Cita')).replace("✅ ", "").replace("❌ ", "")
+        
         if status_text == "CONFIRMADO":
             desc += "\n✅ Asistencia confirmada vía WhatsApp"
+            summary = "✅ " + summary
         elif status_text == "CANCELADO":
             desc += "\n❌ CANCELADO vía WhatsApp"
+            summary = "❌ " + summary
             event['colorId'] = '8'
             
         event['description'] = desc
+        event['summary'] = summary
         calendar_service.events().update(calendarId=target_cal_id, eventId=appointment['googleEventId'], body=event).execute()
         print(f"✅ Sync Calendar OK: {appointment.get('name')}")
     except Exception as e:
@@ -239,12 +295,71 @@ def _patient_match_from_doc(doc_id, data):
         'countryCode': data.get('countryCode', '52'),
     }
 
+def _tomorrow_firestore_bounds(mx_now):
+    """Rango amplio en Firestore para citas con fecha local = mañana (MX).
+
+    Las citas de tarde (p. ej. 7 PM) se guardan en UTC con día siguiente;
+    el cron de recordatorios ya usaba este rango — el webhook debe alinearse.
+    """
+    tomorrow = mx_now + timedelta(days=1)
+    day_str = tomorrow.strftime('%Y-%m-%d')
+    start_iso = f"{day_str}T00:00:00"
+    end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
+    return tomorrow.date(), start_iso, end_iso
+
+
+def find_confirmable_appointments(patients, mx_now=None):
+    """Citas de hoy o mañana (hora México) del paciente, listas para confirmar/cancelar."""
+    mx_now = mx_now or datetime.now(MX_TZ)
+    today = mx_now.date()
+    tomorrow = (mx_now + timedelta(days=1)).date()
+    target_dates = {today, tomorrow}
+    start_iso = f"{today.strftime('%Y-%m-%d')}T00:00:00"
+    end_iso = f"{(mx_now + timedelta(days=2)).strftime('%Y-%m-%d')}T08:00:00"
+
+    if isinstance(patients, list) and patients and isinstance(patients[0], dict):
+        patient_ids = {p['id'] for p in patients if p.get('id')}
+        names_norm = {_normalize_match_name(p.get('name', '')) for p in patients if p.get('name')}
+    else:
+        patient_ids = set()
+        names_norm = {_normalize_match_name(n) for n in (patients or [])}
+
+    results = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+    apts = []
+    for doc in results:
+        data = doc.to_dict()
+        if data.get('isCancelled'):
+            continue
+        p_id = data.get('patientId') or data.get('profileId')
+        name_norm = _normalize_match_name(data.get('name', ''))
+        if p_id not in patient_ids and name_norm not in names_norm:
+            continue
+        try:
+            if parse_mx_datetime(data['date']).date() not in target_dates:
+                continue
+        except Exception:
+            continue
+        apts.append({'id': doc.id, **data})
+    return apts
+
+
 def find_tomorrow_appointments(patient_names):
-    tomorrow = datetime.now(MX_TZ) + timedelta(days=1)
-    start, end = f"{tomorrow.strftime('%Y-%m-%d')}T00:00:00", f"{tomorrow.strftime('%Y-%m-%d')}T23:59:59"
+    mx_now = datetime.now(MX_TZ)
+    tomorrow_date, start_iso, end_iso = _tomorrow_firestore_bounds(mx_now)
     names_lower = [n.lower() for n in patient_names]
-    results = db.collection('appointments').where('date', '>=', start).where('date', '<=', end).stream()
-    return [{'id': d.id, **d.to_dict()} for d in results if not d.to_dict().get('isCancelled') and d.to_dict().get('name', '').lower() in names_lower]
+    results = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
+    apts = []
+    for doc in results:
+        data = doc.to_dict()
+        if data.get('isCancelled') or data.get('name', '').lower() not in names_lower:
+            continue
+        try:
+            if parse_mx_datetime(data['date']).date() != tomorrow_date:
+                continue
+        except Exception:
+            continue
+        apts.append({'id': doc.id, **data})
+    return apts
 
 def find_next_appointment(patient_names):
     now_iso = datetime.now(MX_TZ).strftime('%Y-%m-%dT%H:%M:%S')
@@ -256,10 +371,193 @@ def find_next_appointment(patient_names):
         return apts[0]
     return None
 
+MESES_ES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+def _format_apt_date_long(dt):
+    return f"{dt.strftime('%A').capitalize()} {dt.day} de {MESES_ES[dt.month]}"
+
+def _format_apt_date_short(dt):
+    return f"{dt.day} de {MESES_ES[dt.month]}"
+
+def _format_apt_hour(dt):
+    return dt.strftime('%I:%M %p').lstrip('0')
+
+def _evaluation_stage_display(apt):
+    if apt.get('stageName'):
+        return apt['stageName']
+    stage = apt.get('evaluationStage') or 1
+    name = {1: 'Entrevista', 2: 'Evaluación', 3: 'Entrega de resultados'}.get(stage, 'Evaluación')
+    return f"{name} — cita {stage} de 3"
+
+def _is_diana_phone(from_num):
+    return normalize_phone(from_num) == normalize_phone(THERAPIST_PHONES.get('diana', ''))
+
+def _patient_match_ids_names(patients):
+    if isinstance(patients, list) and patients and isinstance(patients[0], dict):
+        patient_ids = {p['id'] for p in patients if p.get('id')}
+        names_norm = {_normalize_match_name(p.get('name', '')) for p in patients if p.get('name')}
+    else:
+        patient_ids = set()
+        names_norm = {_normalize_match_name(n) for n in (patients or [])}
+    return patient_ids, names_norm
+
+def _apt_matches_patients(data, patient_ids, names_norm):
+    p_id = data.get('patientId') or data.get('profileId')
+    name_norm = _normalize_match_name(data.get('name', ''))
+    return p_id in patient_ids or name_norm in names_norm
+
+def _find_apt_with_flag(patients, flag_field):
+    patient_ids, names_norm = _patient_match_ids_names(patients)
+    try:
+        for doc in db.collection('appointments').where(flag_field, '==', True).limit(30).stream():
+            data = doc.to_dict()
+            if _apt_matches_patients(data, patient_ids, names_norm):
+                return {'id': doc.id, **data}
+    except Exception as e:
+        print(f"⚠️ _find_apt_with_flag({flag_field}): {e}")
+    return None
+
+def _send_content_template(to_num, content_sid, variables=None):
+    tw_args = {'from_': TWILIO_WHATSAPP_FROM, 'to': to_num, 'content_sid': content_sid}
+    if variables:
+        tw_args['content_variables'] = json.dumps(variables)
+    get_twilio_client().messages.create(**tw_args)
+
+def _reminder_content_for_apt(apt, dt):
+    therapist = apt.get('therapist', 'Diana').title()
+    hour_str = _format_apt_hour(dt)
+    if apt.get('isEvaluation'):
+        return RECORDATORIO_EVALUACION_SID, {
+            '1': _format_apt_date_long(dt),
+            '2': hour_str,
+            '3': therapist,
+            '4': _evaluation_stage_display(apt),
+        }
+    return RECORDATORIO_CRON_SID, {
+        '1': _format_apt_date_short(dt),
+        '2': hour_str,
+        '3': therapist,
+    }
+
+def _find_diana_eval_apt_today():
+    mx_now = datetime.now(MX_TZ)
+    today = mx_now.date()
+    start_iso = f"{today.strftime('%Y-%m-%d')}T00:00:00"
+    end_iso = f"{(mx_now + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
+    for doc in db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream():
+        data = doc.to_dict()
+        if not data.get('isEvaluation') or data.get('isCancelled') or data.get('dianaSessionConfirmed'):
+            continue
+        if str(data.get('therapist', '')).lower() != 'diana':
+            continue
+        try:
+            if parse_mx_datetime(data['date']).date() == today:
+                return {'id': doc.id, **data}
+        except Exception:
+            continue
+    return None
+
+def _find_diana_awaiting_next_stage():
+    try:
+        for doc in db.collection('patientProfiles').where('awaitingDianaNextStage', '==', True).limit(5).stream():
+            return {'id': doc.id, **doc.to_dict()}
+    except Exception as e:
+        print(f"⚠️ _find_diana_awaiting_next_stage: {e}")
+    return None
+
+def handle_diana_eval_interactive(raw_payload):
+    apt = _find_diana_eval_apt_today()
+    profile = _find_diana_awaiting_next_stage()
+    diana_dest = f"whatsapp:+{THERAPIST_PHONES['diana']}"
+
+    if raw_payload in ('eval_yes', 'eval_no'):
+        if not apt:
+            return "No encontré una sesión de evaluación de hoy pendiente de confirmar."
+        apt_ref = db.collection('appointments').document(apt['id'])
+        attended = raw_payload == 'eval_yes'
+        apt_ref.update({
+            'dianaSessionConfirmed': True,
+            'dianaSessionConfirmedAt': firestore.SERVER_TIMESTAMP,
+            'dianaSessionAttended': attended,
+            'confirmedBy': 'diana',
+            'confirmedSource': 'whatsapp',
+        })
+        _log_reminder_to_audit(
+            apt['id'], apt.get('name', ''), 'diana', diana_dest, apt.get('date', ''),
+            'WHATSAPP_DIANA_SESSION',
+            message=f"Diana respondió {'Sí realizada' if attended else 'No realizada'} (evaluación)"
+        )
+        if attended and (apt.get('evaluationStage') or 1) == 2:
+            p_id = apt.get('profileId') or apt.get('patientId')
+            if p_id:
+                db.collection('patientProfiles').document(p_id).update({'awaitingDianaNextStage': True})
+            try:
+                _send_content_template(diana_dest, DIANA_SIGUIENTE_ETAPA_SID, {'1': apt.get('name', 'paciente')})
+            except Exception as e:
+                print(f"⚠️ E3 a Diana falló: {e}")
+        return "Gracias Diana, quedó registrado. ✅" if attended else "Entendido, sesión marcada como no realizada."
+
+    if raw_payload in ('eval_extra', 'eval_entrega'):
+        if not profile:
+            return "No encontré un proceso de evaluación pendiente de siguiente etapa."
+        p_ref = db.collection('patientProfiles').document(profile['id'])
+        if raw_payload == 'eval_extra':
+            p_ref.update({
+                'evaluationMeta.optionalExtraEvaluation': True,
+                'awaitingDianaNextStage': False,
+            })
+            return "Anotado: habrá otra sesión de evaluación antes de la entrega."
+        p_ref.update({'evaluationStage': 3, 'awaitingDianaNextStage': False})
+        return "Anotado: la próxima cita es entrega de resultados."
+
+    return None
+
+def execute_send_diana_evaluation_followup():
+    """21:00 MX — E2 a Diana si hubo sesión de evaluación hoy sin respuesta."""
+    mx_now = datetime.now(MX_TZ)
+    today = mx_now.date()
+    start_iso = f"{today.strftime('%Y-%m-%d')}T00:00:00"
+    end_iso = f"{(mx_now + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
+    sent = 0
+    diana_dest = f"whatsapp:+{THERAPIST_PHONES['diana']}"
+    for doc in db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream():
+        apt = doc.to_dict()
+        if not apt.get('isEvaluation') or apt.get('isCancelled'):
+            continue
+        if str(apt.get('therapist', '')).lower() != 'diana':
+            continue
+        if apt.get('dianaSessionConfirmed') or apt.get('dianaFollowupSentAt'):
+            continue
+        try:
+            dt = parse_mx_datetime(apt['date'])
+        except Exception:
+            continue
+        if dt.date() != today or dt > mx_now:
+            continue
+        stage_label = apt.get('stageName') or _evaluation_stage_display(apt).split('—')[0].strip()
+        try:
+            _send_content_template(diana_dest, DIANA_SESION_EVALUACION_SID, {
+                '1': apt.get('name', ''),
+                '2': stage_label,
+                '3': _format_apt_hour(dt),
+            })
+            db.collection('appointments').document(doc.id).update({
+                'dianaFollowupSentAt': firestore.SERVER_TIMESTAMP,
+            })
+            sent += 1
+        except Exception as e:
+            print(f"⚠️ E2 Diana falló ({apt.get('name')}): {e}")
+    return {'sent': sent}
+
 # ── 5. Endpoints / Webhooks ───────────────────────────────────────────────
 
 @https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["POST", "OPTIONS"]), secrets=ALL_SECRETS)
 def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
+    if req.method == "OPTIONS":
+        return https_fn.Response(status=204)
+    if not validate_twilio_webhook(req, TWILIO_TOKEN.value):
+        print("🚫 Webhook WhatsApp rechazado: firma Twilio inválida")
+        return https_fn.Response("Forbidden", status=403)
     try:
         msg_body = req.form.get('Body', '').strip().lower()
         from_num = req.form.get('From', '')
@@ -270,7 +568,7 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
         else:
             raw_payload = msg_body
 
-        print(f"📥 Recibido de {from_num}: body={msg_body} raw_payload={raw_payload}")
+        print(f"📥 WhatsApp webhook payload={raw_payload} from={mask_phone_for_log(from_num)}")
 
         resp = MessagingResponse()
 
@@ -291,72 +589,170 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
                 resp.message(reply)
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
+        if _is_diana_phone(from_num) and raw_payload in DIANA_EVAL_PAYLOADS:
+            reply = handle_diana_eval_interactive(raw_payload)
+            if reply:
+                resp.message(reply)
+            return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
         if not patients:
             norm_from = normalize_phone(from_num)
             staff_name = next((k.capitalize() for k, p in THERAPIST_PHONES.items() if normalize_phone(p) == norm_from), None)
+            
+            if staff_name and staff_name.lower() in ('diana', 'sam', 'vero'):
+                from space_optimizer import handle_collaborative_approval_reply
+                reply = handle_collaborative_approval_reply(staff_name.lower(), raw_payload, msg_body)
+                if reply:
+                    resp.message(reply)
+                    return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
             if staff_name:
                 resp.message(f"¡Hola {staff_name}! Sesión abierta por 24h. Lista para notificaciones. 🤖✅")
             else:
                 resp.message("Tu número no está registrado. Contacta a Recepción de Parláre.")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
-        RECEPTION_KEYWORDS = ['3', 'recepcion', 'yari', 'duda']
-        CONFIRM_KEYWORDS = ['1', 'ok', 'si', 'sí', 'confirmar']
-        CANCEL_KEYWORDS = ['2', 'cancelar', 'no']
-        THANKS_KEYWORDS = ['gracias']
+        RECEPTION_KEYWORDS = WHATSAPP_RECEPTION_KEYWORDS
+        CONFIRM_KEYWORDS = WHATSAPP_CONFIRM_KEYWORDS
+        CANCEL_KEYWORDS = WHATSAPP_CANCEL_KEYWORDS
+        THANKS_KEYWORDS = WHATSAPP_THANKS_KEYWORDS
 
-        if any(w in msg_body for w in RECEPTION_KEYWORDS):
+        incoming = _incoming_whatsapp_text(msg_body, raw_payload)
+
+        if any(w in incoming for w in RECEPTION_KEYWORDS):
             resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
-        if any(w in msg_body for w in THANKS_KEYWORDS) and not any(w in msg_body for w in CONFIRM_KEYWORDS + CANCEL_KEYWORDS):
+        if any(w in incoming for w in THANKS_KEYWORDS) and not _message_has_keyword(incoming, CONFIRM_KEYWORDS + CANCEL_KEYWORDS):
             resp.message("¡De nada! Que tengas un muy bonito día. 😊")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
-        apts = find_tomorrow_appointments([p['name'] for p in patients])
-        if not apts:
-            next_apt = find_next_appointment([p['name'] for p in patients])
-            if next_apt:
-                dt = parse_mx_datetime(next_apt['date'])
-                meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-                day_str = f"{dt.strftime('%A').capitalize()} {dt.day} de {meses[dt.month]}"
-                get_twilio_client().messages.create(
-                    from_=TWILIO_WHATSAPP_FROM, to=from_num, content_sid='HXe500a927cfbef3321fc0ba7ae7aa86d7',
-                    content_variables=json.dumps({"1": day_str, "2": dt.strftime('%I:%M %p').lstrip('0')})
-                )
-                return https_fn.Response("", status=200)
+        if raw_payload in CANCEL_REASON_PAYLOADS:
+            apt = _find_apt_with_flag(patients, 'awaitingCancellationReason')
+            if not apt:
+                resp.message("No encontramos una cancelación reciente. Dudas: https://wa.me/523315196702")
+                return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+            reason = CANCEL_REASON_PAYLOADS[raw_payload]
+            apt_ref = db.collection('appointments').document(apt['id'])
+            updates = {
+                'cancellationReason': reason,
+                'cancellationReasonAt': firestore.SERVER_TIMESTAMP,
+                'awaitingCancellationReason': False,
+            }
+            if raw_payload == 'cancel_otro':
+                updates['awaitingCancellationNote'] = True
+            apt_ref.update(updates)
+            _log_reminder_to_audit(
+                apt['id'], apt.get('name', ''), apt.get('therapist', 'diana'),
+                from_num, apt.get('date', ''), 'WHATSAPP_CANCEL_REASON',
+                message=f"Motivo cancelación: {reason}"
+            )
+            if raw_payload == 'cancel_otro':
+                resp.message("Gracias. Cuéntanos brevemente el motivo (una línea).")
             else:
-                resp.message("Hola, no encontramos citas futuras. Contacta a Recepción: https://wa.me/523315196702")
+                resp.message("Gracias, quedó registrado. Para reagendar: https://wa.me/523315196702")
+            return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
+        apt_note = _find_apt_with_flag(patients, 'awaitingCancellationNote')
+        if apt_note and msg_body and raw_payload not in ('1', '2', '3', *CANCEL_REASON_PAYLOADS):
+            if not _message_has_keyword(incoming, CONFIRM_KEYWORDS + CANCEL_KEYWORDS + RECEPTION_KEYWORDS):
+                note = sanitize_whatsapp_user_text(req.form.get('Body', ''))
+                if note:
+                    db.collection('appointments').document(apt_note['id']).update({
+                        'cancellationReasonNote': note,
+                        'awaitingCancellationNote': False,
+                    })
+                    _log_reminder_to_audit(
+                        apt_note['id'], apt_note.get('name', ''), apt_note.get('therapist', 'diana'),
+                        from_num, apt_note.get('date', ''), 'WHATSAPP_CANCEL_REASON_NOTE',
+                        message=f"Nota motivo: {note[:120]}"
+                    )
+                    resp.message("Gracias, motivo registrado. Para reagendar: https://wa.me/523315196702")
+                    return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
+        is_confirm = _message_has_keyword(incoming, CONFIRM_KEYWORDS) or raw_payload in ('1', 'confirm', 'confirmar', 'ok')
+        is_cancel = _message_has_keyword(incoming, CANCEL_KEYWORDS) or raw_payload in ('2', 'cancel', 'cancelar')
+
+        if is_confirm or is_cancel:
+            apts = find_confirmable_appointments(patients)
+            if not apts:
+                resp.message("No encontramos una cita activa para hoy o mañana. Si ya confirmaste, ignora este mensaje. Dudas: https://wa.me/523315196702")
                 return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
-        if any(w in msg_body for w in CONFIRM_KEYWORDS):
-            for a in apts:
-                db.collection('appointments').document(a['id']).update({
-                    'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP,
-                    'confirmedBy': 'Robot Parláre', 'lastBotUpdate': 'WhatsApp-Confirm'
-                })
-                update_google_sheet(a, "CONFIRMADO")
-                update_google_calendar(a, "CONFIRMADO")
-            try:
-                get_twilio_client().messages.create(from_=TWILIO_WHATSAPP_FROM, to=from_num, content_sid='HX079c41d2222032d6c3ab41f44c7272f7', content_variables='{}')
-            except:
-                resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
-                return https_fn.Response(str(resp), status=200, mimetype='text/xml')
-            return https_fn.Response("", status=200)
+            if is_confirm:
+                for a in apts:
+                    db.collection('appointments').document(a['id']).update({
+                        'confirmed': True, 'confirmedAt': firestore.SERVER_TIMESTAMP,
+                        'confirmedBy': 'parent', 'confirmedSource': 'whatsapp',
+                        'lastBotUpdate': 'WhatsApp-Confirm',
+                        'updatedAt': firestore.SERVER_TIMESTAMP,
+                        'updatedBy': 'whatsapp_webhook'
+                    })
+                    update_google_sheet(a, "CONFIRMADO")
+                    update_google_calendar(a, "CONFIRMADO")
+                    _log_reminder_to_audit(
+                        a['id'], a.get('name', ''), a.get('therapist', 'diana'),
+                        from_num, a.get('date', ''), 'WHATSAPP_CONFIRM',
+                        message='✅ Confirmación registrada vía WhatsApp'
+                    )
+                try:
+                    get_twilio_client().messages.create(from_=TWILIO_WHATSAPP_FROM, to=from_num, content_sid=POST_CONFIRM_SID, content_variables='{}')
+                except:
+                    resp.message("✅ ¡Gracias! Se han confirmado las citas. ¡Nos vemos!")
+                    return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+                return https_fn.Response("", status=200)
 
-        elif any(w in msg_body for w in CANCEL_KEYWORDS):
+            cancelled_first = None
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
                     'isCancelled': True, 'cancelledBy': 'WhatsApp',
-                    'cancelledAt': firestore.SERVER_TIMESTAMP, 'lastBotUpdate': 'WhatsApp-Cancel'
+                    'cancelledAt': firestore.SERVER_TIMESTAMP, 'lastBotUpdate': 'WhatsApp-Cancel',
+                    'updatedAt': firestore.SERVER_TIMESTAMP,
+                    'updatedBy': 'whatsapp_webhook'
                 })
                 update_google_sheet(a, "CANCELADO")
                 update_google_calendar(a, "CANCELADO")
                 dt = parse_mx_datetime(a['date'])
                 notify_receptionist(a.get('name', ''), "CANCELADA", f"{dt.day}/{dt.month}", dt.strftime('%I:%M %p').lstrip('0'), a.get('therapist', 'Diana').title(), re.sub(r'\D', '', from_num))
-            resp.message("Cita cancelada. ¡Esperamos todo esté bien! 😊 Para reagendar y evitar cargos, envía tu justificante médico a Yari aquí: https://wa.me/523315196702")
-        else:
-            resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
+                _log_reminder_to_audit(
+                    a['id'], a.get('name', ''), a.get('therapist', 'diana'),
+                    from_num, a.get('date', ''), 'WHATSAPP_CANCEL',
+                    message='❌ Cancelación registrada vía WhatsApp'
+                )
+                if not cancelled_first:
+                    cancelled_first = a
+            if cancelled_first:
+                try:
+                    dt = parse_mx_datetime(cancelled_first['date'])
+                    _send_content_template(from_num, MOTIVO_CANCELACION_SID, {
+                        '1': _format_apt_date_long(dt),
+                        '2': _format_apt_hour(dt),
+                    })
+                    db.collection('appointments').document(cancelled_first['id']).update({
+                        'awaitingCancellationReason': True,
+                    })
+                    return https_fn.Response("", status=200)
+                except Exception as c1_err:
+                    print(f"⚠️ Plantilla C1 falló: {c1_err}")
+            resp.message("Cita cancelada. ¡Esperamos todo esté bien! 😊 Para reagendar: https://wa.me/523315196702")
+            return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
+        apts = find_tomorrow_appointments(patient_names)
+        if not apts:
+            next_apt = find_next_appointment(patient_names)
+            if next_apt:
+                dt = parse_mx_datetime(next_apt['date'])
+                meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+                day_str = f"{dt.strftime('%A').capitalize()} {dt.day} de {meses[dt.month]}"
+                get_twilio_client().messages.create(
+                    from_=TWILIO_WHATSAPP_FROM, to=from_num, content_sid=COPY_INFO_PROXIMA_CITA_SID,
+                    content_variables=json.dumps({"1": day_str, "2": dt.strftime('%I:%M %p').lstrip('0')})
+                )
+                return https_fn.Response("", status=200)
+            resp.message("Hola, no encontramos citas futuras. Contacta a Recepción: https://wa.me/523315196702")
+            return https_fn.Response(str(resp), status=200, mimetype='text/xml')
+
+        resp.message("Responde 1 para CONFIRMAR o 2 para CANCELAR.")
         return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
     except Exception as e:
@@ -367,8 +763,12 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
 
 @https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["POST", "OPTIONS"]), secrets=ALL_SECRETS)
 def send_message_api(req: https_fn.Request) -> https_fn.Response:
-    if req.method == "OPTIONS": return https_fn.Response(status=204)
+    cors = staff_api_cors_headers()
+    if req.method == "OPTIONS":
+        return https_fn.Response(status=204, headers=cors)
     data = req.get_json(silent=True) or {}
+    if not authorize_staff_or_api_key(req, REMINDERS_API_KEY.value, data):
+        return https_fn.Response(json.dumps({'error': 'Unauthorized'}), status=401, mimetype='application/json', headers=cors)
     dest = f"whatsapp:+52{normalize_phone(data.get('phone'))}"
     try:
         tw_args = {'from_': TWILIO_WHATSAPP_FROM, 'to': dest}
@@ -377,9 +777,114 @@ def send_message_api(req: https_fn.Request) -> https_fn.Response:
         else:
             tw_args.update({'body': data.get('message')})
         get_twilio_client().messages.create(**tw_args)
-        return https_fn.Response(json.dumps({'status': 'success'}), status=200, mimetype='application/json')
+        return https_fn.Response(json.dumps({'status': 'success'}), status=200, mimetype='application/json', headers=cors)
     except Exception as e:
-        return https_fn.Response(json.dumps({'error': str(e)}), status=500, mimetype='application/json')
+        return https_fn.Response(json.dumps({'error': str(e)}), status=500, mimetype='application/json', headers=cors)
+
+@https_fn.on_request(secrets=ALL_SECRETS)
+def migrate_claims_temp(req: https_fn.Request) -> https_fn.Response:
+    import firebase_admin
+    from firebase_admin import auth
+    
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app()
+        
+    AUTHORIZED_USERS = {
+        'lopezcarpio7@gmail.com': { 'role': 'admin', 'therapist': 'diana', 'displayName': 'Diana' },
+        'sammygtz90@gmail.com': { 'role': 'therapist', 'therapist': 'sam', 'displayName': 'Sam' },
+        'sanchezverooo21@gmail.com': { 'role': 'therapist', 'therapist': 'vero', 'displayName': 'Vero' },
+        'yaritzajocgo@gmail.com': { 'role': 'receptionist', 'therapist': 'all', 'displayName': 'Yari' },
+        'rodriguezd.danielrob@gmail.com': { 'role': 'admin', 'therapist': 'all', 'displayName': 'Daniel (Admin)' },
+        'kaiteff@gmail.com': { 'role': 'admin', 'therapist': 'all', 'displayName': 'Kaiteff (Admin)' }
+    }
+    
+    results = []
+    for email, data in AUTHORIZED_USERS.items():
+        try:
+            user = auth.get_user_by_email(email)
+            claims = { 'role': data['role'], 'therapist': data['therapist'] }
+            auth.set_custom_user_claims(user.uid, claims)
+            
+            db.collection('users').document(user.uid).set({
+                'email': email,
+                'displayName': data['displayName'],
+                'role': data['role'],
+                'therapist': data['therapist'],
+                'migratedAt': firestore.SERVER_TIMESTAMP
+            }, merge=True)
+            results.append(f"✅ {email}: claims set {claims}")
+        except Exception as e:
+            results.append(f"❌ {email}: error {str(e)}")
+            
+    return https_fn.Response("\n".join(results), status=200, mimetype='text/plain')
+
+@https_fn.on_call()
+def manage_staff_user(req: https_fn.CallableRequest) -> dict:
+    import firebase_admin
+    from firebase_admin import auth
+    
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app()
+        
+    caller_email = req.auth.token.get('email', '') if req.auth else ''
+    is_admin_claim = req.auth and req.auth.token.get('role') == 'admin'
+    is_legacy_admin = caller_email in ['lopezcarpio7@gmail.com', 'rodriguezd.danielrob@gmail.com']
+    
+    if not (is_admin_claim or is_legacy_admin):
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.PERMISSION_DENIED,
+            message="Solo los administradores pueden gestionar usuarios del staff."
+        )
+        
+    data = req.data
+    email = data.get('email', '').strip().lower()
+    name = data.get('name', '').strip()
+    role = data.get('role', 'therapist')
+    therapist_id = data.get('therapistId', '').strip().lower()
+    password = data.get('password', 'Parlare2026*')
+    
+    if not email or not name:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="Faltan datos obligatorios (email, nombre)."
+        )
+        
+    try:
+        try:
+            user_record = auth.get_user_by_email(email)
+            auth.update_user(user_record.uid, display_name=name)
+            uid = user_record.uid
+        except auth.UserNotFoundError:
+            user_record = auth.create_user(
+                email=email,
+                password=password,
+                display_name=name
+            )
+            uid = user_record.uid
+            
+        claims = {'role': role, 'therapist': therapist_id}
+        auth.set_custom_user_claims(uid, claims)
+        
+        db.collection('users').document(uid).set({
+            'email': email,
+            'displayName': name,
+            'role': role,
+            'therapist': therapist_id,
+            'updatedAt': firestore.SERVER_TIMESTAMP
+        }, merge=True)
+        
+        return {
+            'success': True,
+            'uid': uid,
+            'message': 'Usuario gestionado exitosamente con Custom Claims.'
+        }
+    except Exception as e:
+        print(f"Error en manage_staff_user: {e}")
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INTERNAL,
+            message=f"Error interno al gestionar usuario: {str(e)}"
+        )
+
 
 # ── 6. Tareas Programadas Automáticas (Cloud Scheduler) ───────────────────
 
@@ -410,11 +915,9 @@ def _log_reminder_to_audit(doc_id, p_name, therapist, phone, appointment_date, a
 def execute_send_reminders():
     """Lógica centralizada para enviar recordatorios automáticos de citas para el día de mañana"""
     mx_now = datetime.now(MX_TZ)
+    tomorrow_date, start_iso, end_iso = _tomorrow_firestore_bounds(mx_now)
     tomorrow = mx_now + timedelta(days=1)
-    day_str = tomorrow.strftime('%Y-%m-%d')
-    
-    start_iso = f"{day_str}T00:00:00"
-    end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
+    report_date = tomorrow.strftime('%Y-%m-%d')
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
 
     # Pre-cargar citas y recopilar profileIds/nombres
@@ -528,31 +1031,33 @@ def execute_send_reminders():
                 skipped_count += 1
                 continue
                 
-            meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-            date_str = f"{dt.day} de {meses[dt.month]}"
-            hour_str = dt.strftime('%I:%M %p').lstrip('0')
-            therapist = apt.get('therapist', 'Diana').title()
+            content_sid, content_vars = _reminder_content_for_apt(apt, dt)
+            date_str = content_vars.get('1', '')
+            hour_str = content_vars.get('2', '')
+            therapist = content_vars.get('3', apt.get('therapist', 'Diana').title())
             
             dest = f"whatsapp:+{p_info.get('countryCode', '52')}{normalize_phone(p_info['phone'])}"
             
             get_twilio_client().messages.create(
                 from_=TWILIO_WHATSAPP_FROM, to=dest,
-                content_sid='HX100149d5295d1839864ad33cc9e73567',
-                content_variables=json.dumps({"1": date_str, "2": hour_str, "3": therapist})
+                content_sid=content_sid,
+                content_variables=json.dumps(content_vars)
             )
             
             # Registrar en Firestore
             db.collection('appointments').document(doc_id).update({
                 'lastReminderSentAt': firestore.SERVER_TIMESTAMP,
-                'lastReminderType': 'AUTO_CRON',
+                'lastReminderType': 'AUTO_CRON_EVAL' if apt.get('isEvaluation') else 'AUTO_CRON',
                 'lastReminderBy': 'Robot Parláre'
             })
             
             # Registrar en Bitácora (Auditoría) para que Yari pueda verlo
+            eval_line = f"\n📋 Etapa: *{content_vars.get('4')}*\n" if apt.get('isEvaluation') else ""
             msg_log = (
                 f"🏥 *Recordatorio de Cita (8 AM)*\n\n"
                 f"Hola, te recordamos la cita programada para "
-                f"*{date_str}* a las *{hour_str}* con *{therapist}*.\n\n"
+                f"*{date_str}* a las *{hour_str}* con *{therapist}*."
+                f"{eval_line}\n"
                 f"Responde:\n"
                 f"1️⃣ *OK* para confirmar\n"
                 f"2️⃣ *NO* para cancelar\n"
@@ -582,7 +1087,7 @@ def execute_send_reminders():
         'skipped': skipped_count,
         'skipped_details': skipped_details,
         'errors': errors,
-        'date': day_str
+        'date': report_date
     }
 
 @scheduler_fn.on_schedule(schedule="0 8 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
@@ -594,18 +1099,24 @@ def send_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
 @https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["GET", "POST", "OPTIONS"]), secrets=ALL_SECRETS)
 def send_reminders_api(req: https_fn.Request) -> https_fn.Response:
     """Endpoint HTTPS que permite disparar manualmente los recordatorios desde el panel de control"""
+    cors = staff_api_cors_headers()
     if req.method == "OPTIONS":
-        return https_fn.Response(status=204)
-        
-    key = req.args.get('key') or (req.get_json(silent=True) or {}).get('key')
-    if key != 'parlare_secret_2026':
-        return https_fn.Response(json.dumps({'error': 'Unauthorized'}), status=401, mimetype='application/json')
-        
+        return https_fn.Response(status=204, headers=cors)
+
+    if not authorize_staff_or_api_key(req, REMINDERS_API_KEY.value):
+        return https_fn.Response(json.dumps({'error': 'Unauthorized'}), status=401, mimetype='application/json', headers=cors)
+
     try:
-        result = execute_send_reminders()
-        return https_fn.Response(json.dumps(result), status=200, mimetype='application/json')
+        task = (req.args.get('task') or 'morning').strip().lower()
+        if task in ('diana_eval', 'diana_eval_followup', 'e2'):
+            result = execute_send_diana_evaluation_followup()
+        elif task in ('evening', 'evening_reminders'):
+            result = execute_send_evening_reminders()
+        else:
+            result = execute_send_reminders()
+        return https_fn.Response(json.dumps(result), status=200, mimetype='application/json', headers=cors)
     except Exception as e:
-        return https_fn.Response(json.dumps({'error': str(e)}), status=500, mimetype='application/json')
+        return https_fn.Response(json.dumps({'error': str(e)}), status=500, mimetype='application/json', headers=cors)
 
 @scheduler_fn.on_schedule(schedule="0 9 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
@@ -696,11 +1207,9 @@ def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
 def execute_send_evening_reminders():
     """Lógica 8 PM — segundo recordatorio a pacientes que recibieron el de 8 AM pero no confirmaron."""
     mx_now = datetime.now(MX_TZ)
+    tomorrow_date, start_iso, end_iso = _tomorrow_firestore_bounds(mx_now)
     tomorrow = mx_now + timedelta(days=1)
-    day_str = tomorrow.strftime('%Y-%m-%d')
-
-    start_iso = f"{day_str}T00:00:00"
-    end_iso = f"{(tomorrow + timedelta(days=1)).strftime('%Y-%m-%d')}T08:00:00"
+    report_date = tomorrow.strftime('%Y-%m-%d')
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
 
     # Pre-cargar citas y recopilar profileIds/nombres
@@ -799,28 +1308,30 @@ def execute_send_evening_reminders():
                 skipped_count += 1
                 continue
 
-            meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-            date_str = f"{dt.day} de {meses[dt.month]}"
-            hour_str = dt.strftime('%I:%M %p').lstrip('0')
-            therapist = apt.get('therapist', 'Diana').title()
+            content_sid, content_vars = _reminder_content_for_apt(apt, dt)
+            date_str = content_vars.get('1', '')
+            hour_str = content_vars.get('2', '')
+            therapist = content_vars.get('3', apt.get('therapist', 'Diana').title())
             dest = f"whatsapp:+{p_info.get('countryCode', '52')}{normalize_phone(p_info['phone'])}"
 
             get_twilio_client().messages.create(
                 from_=TWILIO_WHATSAPP_FROM, to=dest,
-                content_sid='HX100149d5295d1839864ad33cc9e73567',
-                content_variables=json.dumps({"1": date_str, "2": hour_str, "3": therapist})
+                content_sid=content_sid,
+                content_variables=json.dumps(content_vars)
             )
 
             db.collection('appointments').document(doc_id).update({
                 'lastEveningReminderSentAt': firestore.SERVER_TIMESTAMP,
-                'lastReminderType': 'AUTO_CRON_PM',
+                'lastReminderType': 'AUTO_CRON_PM_EVAL' if apt.get('isEvaluation') else 'AUTO_CRON_PM',
                 'lastReminderBy': 'Robot Parláre'
             })
 
+            eval_line = f"\n📋 Etapa: *{content_vars.get('4')}*\n" if apt.get('isEvaluation') else ""
             msg_log = (
                 f"🌙 *Recordatorio de Tarde (8 PM)*\n\n"
                 f"Hola, te recordamos la cita programada para "
-                f"*{date_str}* a las *{hour_str}* con *{therapist}*.\n\n"
+                f"*{date_str}* a las *{hour_str}* con *{therapist}*."
+                f"{eval_line}\n"
                 f"Responde:\n"
                 f"1️⃣ *OK* para confirmar\n"
                 f"2️⃣ *NO* para cancelar\n"
@@ -844,13 +1355,19 @@ def execute_send_evening_reminders():
                 error=f"[8PM] {str(e)}"
             )
 
-    return {'sent': sent_count, 'skipped': skipped_count, 'errors': errors, 'date': day_str, 'wave': 'evening'}
+    return {'sent': sent_count, 'skipped': skipped_count, 'errors': errors, 'date': report_date, 'wave': 'evening'}
 
 @scheduler_fn.on_schedule(schedule="0 20 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def send_evening_reminders_cron(event: scheduler_fn.ScheduledEvent) -> None:
     """Cronjob a las 8:00 PM — Segundo recordatorio para pacientes que no confirmaron el de 8 AM"""
     result = execute_send_evening_reminders()
     print(f"🌙 Cron tarde de recordatorios ejecutado: {result}")
+
+@scheduler_fn.on_schedule(schedule="0 21 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+def send_diana_eval_followup_cron(event: scheduler_fn.ScheduledEvent) -> None:
+    """21:00 MX — Pregunta a Diana (E2) si hubo sesión de evaluación sin respuesta."""
+    result = execute_send_diana_evaluation_followup()
+    print(f"👩‍⚕️ Cron Diana evaluación ejecutado: {result}")
 
 # ── Google Calendar sync (híbrido A+B: incremental L–S, nuke suave domingo) ──
 
@@ -914,107 +1431,97 @@ def _gcal_event_body(t_key, apt):
     }
 
 
-def _sync_calendar_week_nuke(gcal, week_start, week_end, active_apts):
-    stats = {'mode': 'nuke', 'inserted': 0, 'deleted_gcal': 0, 'errors': 0}
-    for t_key, cal_id in THERAPIST_CALENDARS.items():
-        try:
-            existing = gcal.events().list(
-                calendarId=cal_id, timeMin=week_start.isoformat(), timeMax=week_end.isoformat(),
-                singleEvents=True, maxResults=2500,
-            ).execute().get('items', [])
-            for ev in existing:
-                gcal.events().delete(calendarId=cal_id, eventId=ev['id']).execute()
-                stats['deleted_gcal'] += 1
-        except Exception as e:
-            print(f"⚠️ Nuke list/delete {t_key}: {e}")
-            stats['errors'] += 1
-            continue
-
-        for apt in [a for a in active_apts if (a.get('therapist') or 'diana').lower() == t_key]:
-            try:
-                created_ev = gcal.events().insert(
-                    calendarId=cal_id, body=_gcal_event_body(t_key, apt),
-                ).execute()
-                db.collection('appointments').document(apt['_id']).update({'googleEventId': created_ev['id']})
-                stats['inserted'] += 1
-            except Exception as e:
-                print(f"⚠️ Nuke insert {t_key} {apt.get('_id')}: {e}")
-                stats['errors'] += 1
-        time.sleep(3)
-    return stats
-
-
-def _sync_calendar_week_incremental(gcal, week_start, week_end, week_apts, since_dt):
-    stats = {'mode': 'incremental', 'upserted': 0, 'deleted': 0, 'skipped': 0, 'errors': 0}
-    active = [a for a in week_apts if not a.get('isCancelled')]
-    cancelled = [a for a in week_apts if a.get('isCancelled') and a.get('googleEventId')]
-
-    for t_key, cal_id in THERAPIST_CALENDARS.items():
-        therapist_active = [a for a in active if (a.get('therapist') or 'diana').lower() == t_key]
-        to_upsert = [a for a in therapist_active if _apt_touched_since(a, since_dt)]
-        to_remove = [
-            a for a in cancelled
-            if (a.get('therapist') or 'diana').lower() == t_key and _apt_touched_since(a, since_dt)
-        ]
-        stats['skipped'] += len(therapist_active) - len(to_upsert)
-
-        for apt in to_remove:
-            try:
-                gcal.events().delete(calendarId=cal_id, eventId=apt['googleEventId']).execute()
-                db.collection('appointments').document(apt['_id']).update({
-                    'googleEventId': firestore.DELETE_FIELD,
-                })
-                stats['deleted'] += 1
-            except Exception as e:
-                print(f"⚠️ Incremental delete {t_key} {apt.get('_id')}: {e}")
-                stats['errors'] += 1
-
-        for apt in to_upsert:
-            body = _gcal_event_body(t_key, apt)
-            try:
-                event_id = apt.get('googleEventId')
-                if event_id:
-                    try:
-                        gcal.events().patch(calendarId=cal_id, eventId=event_id, body=body).execute()
-                    except Exception as patch_err:
-                        err_low = str(patch_err).lower()
-                        if '404' in err_low or 'not found' in err_low:
-                            created = gcal.events().insert(calendarId=cal_id, body=body).execute()
-                            db.collection('appointments').document(apt['_id']).update({'googleEventId': created['id']})
-                        else:
-                            raise
-                else:
-                    created = gcal.events().insert(calendarId=cal_id, body=body).execute()
-                    db.collection('appointments').document(apt['_id']).update({'googleEventId': created['id']})
-                stats['upserted'] += 1
-            except Exception as e:
-                print(f"⚠️ Incremental upsert {t_key} {apt.get('_id')}: {e}")
-                stats['errors'] += 1
-        time.sleep(2)
-    return stats
-
-
-@scheduler_fn.on_schedule(schedule="0 7 * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
-def server_calendar_sync(event: scheduler_fn.ScheduledEvent) -> None:
-    """7 AM MX — Dom: nuke suave semana en Google; Lun–Sáb: solo citas nuevas o tocadas (36 h)."""
-    gcal = get_user_calendar_service()
-    if not gcal:
-        print('⚠️ server_calendar_sync: sin cliente Google Calendar OAuth')
+@firestore_fn.on_document_written(
+    document="appointments/{appointmentId}",
+    memory=options.MemoryOption.MB_512,
+    secrets=ALL_SECRETS,
+)
+def on_appointment_calendar_sync(
+    event: firestore_fn.Event[firestore_fn.Change | None],
+) -> None:
+    """Sincroniza en tiempo real las citas con Google Calendar sin hacer reads extra."""
+    change = event.data
+    if change is None:
+        return
+        
+    from trigger_utils import change_before_after
+    before, after = change_before_after(change)
+    
+    appointment_id = event.params.get("appointmentId")
+    if not appointment_id:
         return
 
-    mx_now = datetime.now(MX_TZ)
-    week_start, week_end = _calendar_week_bounds(mx_now)
-    week_apts = _fetch_week_appointments(week_start, week_end)
-    active_apts = [a for a in week_apts if not a.get('isCancelled')]
+    gcal = get_user_calendar_service()
+    if not gcal:
+        print('⚠️ on_appointment_calendar_sync: sin cliente Google Calendar OAuth')
+        return
 
-    is_sunday = mx_now.weekday() == 6
-    if is_sunday:
-        result = _sync_calendar_week_nuke(gcal, week_start, week_end, active_apts)
-    else:
-        since_dt = mx_now - timedelta(hours=SYNC_LOOKBACK_HOURS)
-        result = _sync_calendar_week_incremental(gcal, week_start, week_end, week_apts, since_dt)
+    # Check if deleted or cancelled
+    is_deleted = after is None
+    is_cancelled = after.get('isCancelled', False) if after else False
+    
+    # Check if we should delete from Calendar
+    if is_deleted or is_cancelled:
+        google_event_id = (before.get('googleEventId') if before else None) or (after.get('googleEventId') if after else None)
+        therapist = (before.get('therapist') if before else None) or (after.get('therapist') if after else 'diana')
+        cal_id = THERAPIST_CALENDARS.get(therapist.lower(), THERAPIST_CALENDARS['diana'])
+        
+        if google_event_id:
+            try:
+                gcal.events().delete(calendarId=cal_id, eventId=google_event_id).execute()
+                print(f"🗑️ Eliminado de GCal: {appointment_id}")
+            except Exception as e:
+                err_str = str(e).lower()
+                if '404' not in err_str and 'not found' not in err_str and 'gone' not in err_str:
+                    print(f"⚠️ Error eliminando de GCal: {e}")
+            
+            # Remove googleEventId from Firestore if it was cancelled (not deleted)
+            if not is_deleted and after.get('googleEventId'):
+                try:
+                    db.collection('appointments').document(appointment_id).update({
+                        'googleEventId': firestore.DELETE_FIELD
+                    })
+                except Exception as e:
+                    print(f"⚠️ Error quitando googleEventId: {e}")
+        return
 
-    print(f"📅 server_calendar_sync ({result.get('mode')}): {result}")
+    # From here, it's an active appointment (created or updated)
+    if not after:
+        return
+        
+    therapist = after.get('therapist', 'diana').lower()
+    cal_id = THERAPIST_CALENDARS.get(therapist, THERAPIST_CALENDARS['diana'])
+    
+    # Check if relevant fields changed
+    if before:
+        relevant_fields = ['date', 'therapist', 'name', 'confirmed', 'isCancelled', 'cost']
+        changed = any(before.get(f) != after.get(f) for f in relevant_fields)
+        if not changed and after.get('googleEventId'):
+            # No relevant change, and event already created
+            return
+            
+    body = _gcal_event_body(therapist, after)
+    google_event_id = after.get('googleEventId')
+    
+    try:
+        if google_event_id:
+            try:
+                gcal.events().patch(calendarId=cal_id, eventId=google_event_id, body=body).execute()
+                print(f"🔄 Actualizado en GCal: {appointment_id}")
+            except Exception as e:
+                err_low = str(e).lower()
+                if '404' in err_low or 'not found' in err_low:
+                    created = gcal.events().insert(calendarId=cal_id, body=body).execute()
+                    db.collection('appointments').document(appointment_id).update({'googleEventId': created['id']})
+                    print(f"➕ Re-creado en GCal (404 anterior): {appointment_id}")
+                else:
+                    print(f"⚠️ Error patch en GCal: {e}")
+        else:
+            created = gcal.events().insert(calendarId=cal_id, body=body).execute()
+            db.collection('appointments').document(appointment_id).update({'googleEventId': created['id']})
+            print(f"➕ Creado en GCal: {appointment_id}")
+    except Exception as e:
+        print(f"⚠️ Error creando en GCal: {e}")
 
 # ── 7. Gatillos de Base de Datos (Firestore Triggers) ─────────────────────
 
@@ -1038,6 +1545,14 @@ def release_quiet_hours_offers(event: scheduler_fn.ScheduledEvent) -> None:
             count += 1
 
     logger.info(f"✅ Liberadas {count} cancelaciones de Quiet Hours.")
+
+@scheduler_fn.on_schedule(schedule="*/10 * * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
+def collaborative_approvals_expiration_cron(event: scheduler_fn.ScheduledEvent) -> None:
+    """Cronjob cada 10 min — Expira aprobaciones colaborativas (Autopilot) que lleven > 1 hora."""
+    from space_optimizer import check_expired_collaborative_approvals
+    count = check_expired_collaborative_approvals()
+    if count > 0:
+        print(f"⏳ Expiradas {count} aprobaciones colaborativas (alerta inteligente enviada).")
 
 @firestore_fn.on_document_created(document="patientProfiles/{patientId}", secrets=ALL_SECRETS)
 def on_patient_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) -> None:
@@ -1076,6 +1591,9 @@ from receipt_generator import on_appointment_receipt_trigger  # noqa: F401, E402
 from space_optimizer import (
     on_appointment_cancelled_trigger,
     on_quiet_hours_pending_written,
+    on_collaborative_approval_written,
 )  # noqa: F401, E402
 
+# SaaS Modelo A — backfill clinicId
+from clinic_saas import backfillClinicId  # noqa: F401, E402
 
