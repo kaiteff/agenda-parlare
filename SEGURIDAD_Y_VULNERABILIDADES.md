@@ -10,13 +10,13 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 22 Jun 2026 — sesión desglose cita + seguro pago; sin cambios de severidad)
+## 📊 Resumen ejecutivo (Última actualización: 2 Ago 2026 — auditoría backend/CF + AuthManager/GCal)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
 | 🚨 Crítico | 0 | Ninguno |
-| ⚠️ Alto | 1 | Whitelist emails hardcoded (S-005) — custom claims pendiente |
-| 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
+| ⚠️ Alto | 3 | S-005 whitelist emails; **S-017** AuthManager admin fallback; **S-018** Google OAuth token logout/confused deputy |
+| 🟡 Medio | 3 | S-007 console.log; S-008 custom claims; **S-019** GCal syncWeek/nuke sin authz por rol |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
 | ✅ Reforzado | 33 | Incl. confirmación desglose antes de pago Excel (22 jun); cola `schedulingQueue`; L-1 logout Copiloto |
 
@@ -49,11 +49,34 @@
   - Cambio de email no requiere redeploy de reglas.
 - **Estado:** ⚠️ Identificado 25 may. Refactor mayor — alinearlo con SaaS multi-clínica.
 
+### S-017 · AuthManager fallback catastrófico → `role: 'admin'`
 
+- **Archivo:** `js/managers/AuthManager.js` (`_initUserCore` catch); **live hosting** confirma el mismo patrón.
+- **Detalle:** Cualquier excepción en la inicialización del usuario (p. ej. `getIdTokenResult`) asigna `role: 'admin'`. Además `can()` devuelve `true` si `role` es falsy.
+- **Impacto:** Escalación de privilegios **cliente-side** (UI admin, permisos efectivos). Firestore sigue acotando por email, pero habilita acciones Google Calendar/Sheets y gates solo-UI.
+- **Mitigación:** Fallback restrictivo (`therapist` sin permisos elevados); nunca `admin` en catch; fallar cerrado.
+- **Estado:** ⚠️ Identificado 2 ago 2026 (auditoría).
+
+### S-018 · Token Google OAuth en `localStorage` sobrevive al logout Firebase (confused deputy)
+
+- **Archivo:** `js/services/google/GoogleAuthService.js` (`google_auth_token`); `AuthManager.logout` / `clear()` no llaman `invalidateToken()`.
+- **Detalle:** El access token de Calendar+Sheets no está ligado al UID de Firebase y permanece tras `signOut`.
+- **Impacto:** En PC compartido / tras logout, otro usuario Firebase (incl. signup abierto) puede usar Sync/Nuke/Sheets con el token del staff anterior → borrado/escritura en calendarios y hojas clínicas.
+- **Mitigación:** `invalidateToken()` en logout; guardar token keyed por `uid`; revalidar identidad Google vs usuario Parláre.
+- **Estado:** ⚠️ Identificado 2 ago 2026 (auditoría).
 
 ---
 
 ## 🟡 Medio — cola
+
+### S-019 · `GoogleCalendarService.syncWeek` / `nukeAndRebuildAll` sin authz por rol/terapeuta
+
+- **Archivo:** `js/services/google/GoogleCalendarService.js` (`syncWeek`, `nukeAndRebuildAll`, `deleteEvent`); `Header.js` opción «Todas» si `switch_therapist_view`.
+- **Detalle:** Sync borra **todos** los eventos de la semana en los calendarios seleccionados (no solo Parláre). `selectedTherapist = 'all'` (UI o asignación directa) amplía el wipe. `nukeAndRebuildAll` no valida rol en la función. Distinto del trust de `googleEventId` en CF.
+- **Impacto:** DoS/pérdida de agenda Google de otras terapeutas; repo workspace aún da `switch_therapist_view` a terapeutas (regresión vs live `staffPermissions`).
+- **Mitigación:** Forzar sync solo al calendario del `therapist` del usuario salvo admin; authz server-side o al menos `canViewAllAgenda()` antes de multi-cal; nuke solo owner.
+- **Estado:** 🟡 Identificado 2 ago 2026 (auditoría).
+
 
 ### S-006 · Rate-limit frontend Copiloto (debounce 1 s)
 
@@ -177,4 +200,4 @@
 
 ---
 
-*Última actualización: 22 de Junio, 2026 — Sesión desglose cita + seguro pago A+B; reforzado integridad pagos Excel. Sin hallazgos 🚨/⚠️ nuevos. Deploy hosting pendiente.*
+*Última actualización: 2 de Agosto, 2026 — Auditoría seguridad backend/CF: nuevos S-017 (AuthManager admin fallback), S-018 (Google OAuth logout/confused deputy), S-019 (GCal sync wipe sin authz). Confirmado live: CF webhook 403 unsigned; send_reminders_api rechaza key default; migrate_claims_temp abierto; Render cron reminders sigue con key default.*
