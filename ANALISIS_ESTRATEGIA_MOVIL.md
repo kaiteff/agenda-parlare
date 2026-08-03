@@ -192,6 +192,7 @@ firebase deploy --only hosting
 
 | # | Qué falta | Notas |
 |---|-----------|--------|
+| 29 | **Deploy S-020/S-021/S-022 (3 ago)** | `firebase deploy --only hosting,firestore:rules,functions`. Validar: terapeuta no puede `SheetService.cleanSheet('diana',…)` ni `logPayment` a hoja ajena; Yari no escribe `settings/clinicConfig` por consola; login sin rol no abre Bitácora. |
 | 28 | **Redeploy functions + Render tras S-018/S-019 (3 ago)** | Keywords WhatsApp token-safe + daily_summary sin fallback a Diana. `firebase deploy --only functions` y redeploy servicio Render `parlare-webhook`. |
 | 1 | **Validación final de opt-in en producción** | ✅ Validado en vivo por el usuario (nuevos pacientes en amarillo, autorizados en verde). |
 | 2 | **Recibos end-to-end** | Paciente con `reimbursementReceipt.autoGenerate: true` → cita **Pagada** → comprobar `receiptPdfUrl` + PDF en Storage. |
@@ -366,6 +367,7 @@ firebase deploy --only hosting
 
 | Área | Qué se hizo |
 |------|-------------|
+| **Seguridad 3 ago — S-020/021/022** | AuthManager: `can()` deniega sin rol; catch ya no → admin. SheetService: ownership en `logPayment`, `cleanSheet` solo admin. Reglas: `settings` write solo `isAdminUser()`. `manage_staff_user`: roles allowlist + password obligatorio. |
 | **Decisión estratégica** | Opción A: Capacitor + misma SPA web, con visión SaaS y serverless en Blaze documentadas. |
 | **Paso 0 — Fundamentos** | `--bottom-nav-height`, `.touch-target`, safe-areas, `.pb-bottom-nav`, estilos de barra inferior en `index.css`. Tokens en `tailwind.config.js`. Padding inferior en el layout (`index.html`). |
 | **Paso 1 — Bottom nav** | Nuevos `js/utils/MobileNav.js` y `js/components/MobileBottomNav.js`. Inyección en `ComponentManager.js`. Header usa `MobileNav` para el menú hamburguesa. |
@@ -928,7 +930,7 @@ Sprint 2 (Fase 1 continuación / polish)
 
 - Sesión **22 jun 2026** — **Desglose cita = perfil del paciente** (`appointmentFinancials.js`). **Seguro pago A+B** (confirmación Excel + guardar antes de pagar). **Toast + manual** sync pendiente Diana/Yari si terapeuta sin permiso Excel ajeno. Build OK; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **3 de Agosto de 2026** — Auditoría backend: S-018 keywords WhatsApp + S-019 daily_summary; redeploy functions/Render pendiente.*
+*Última actualización de este documento: **3 de Agosto de 2026** — Auditoría: S-020 AuthManager, S-021 SheetService, S-022 settings admin-only; deploy hosting+rules+functions pendiente.*
 
 ---
 

@@ -6,6 +6,7 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Seguridad S-020 / S-021 / S-022 (3 Ago 2026)** — AuthManager ya no eleva a admin ni concede permisos sin rol; SheetService bloquea wipe/escritura cruzada de Excel; `settings/**` write solo admin en `firestore.rules`. Archivos: `AuthManager.js`, `SheetService.js`, `firestore.rules`, `functions/main.py` (`manage_staff_user`). **Deploy:** `firebase deploy --only hosting,firestore:rules,functions`.
 *   **Seguridad backend S-018 + S-019 (3 Ago 2026)** — Keywords WhatsApp con match por token (evita falsos confirm/cancel); `daily_summary` ya no vuelca citas con `therapist` desconocido al WhatsApp de Diana. Archivos: `functions/main.py`, `whatsapp_webhook.py`, `SEGURIDAD_Y_VULNERABILIDADES.md`. **Deploy pendiente:** `firebase deploy --only functions` + redeploy Render.
 *   **Acceso Yari (Recepción) a baja y borrado de pacientes (30 Jun 2026)** — Se otorgó acceso al rol `receptionist` para eliminar pacientes permanentemente en la lógica de `PatientActions.js`, además de validar su acceso existente a la baja (desactivación).
 *   **Toast Excel pendiente + manual sync (22 Jun 2026)** — Si terapeuta no puede escribir Excel ajeno, pago queda en Parláre; Diana/Yari sincronizan con botón naranja. Aviso en `CalendarData.togglePayment`.

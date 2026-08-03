@@ -10,7 +10,7 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 3 Ago 2026 — backend review + XSS S-017)
+## 📊 Resumen ejecutivo (Última actualización: 3 Ago 2026 — review Sheets/Auth/settings S-020–S-022)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
@@ -18,7 +18,7 @@
 | ⚠️ Alto | 2 | Whitelist emails hardcoded (S-005); XSS `AuditPanel` `details.message` (S-017) |
 | 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 35 | Incl. S-018 keywords WhatsApp; S-019 daily_summary therapist allowlist (3 ago) |
+| ✅ Reforzado | 38 | Incl. S-020 AuthManager; S-021 SheetService; S-022 settings admin-only (3 ago) |
 
 ---
 
@@ -113,6 +113,9 @@
 
 | Fecha | Área | Detalle |
 |-------|------|---------|
+| 3 ago 2026 | **S-020 · AuthManager permissive `can()` + catch→admin** | `AuthManager.can()` ya no retorna `true` si falta `role`; el `catch` de `_initUserCore` asigna `therapist` (no `admin`). `manage_staff_user` exige rol allowlist y password explícito (sin default público). Deploy: `functions` + hosting. |
+| 3 ago 2026 | **S-021 · SheetService cross-therapist write/wipe** | `logPayment` exige ownership (admin/recepción o hoja propia; planeación secundaria solo con token interno). `cleanSheet` solo admin. `logAudit` solo admin/recepción. Distinct del nuke de Google Calendar. Deploy hosting. |
+| 3 ago 2026 | **S-022 · Receptionist settings write via isSuper** | `firestore.rules`: nueva `isAdminUser()`; `settings/**` write solo admin (Yari/recepción ya no puede alterar tarifas/temas por consola). Deploy: `firebase deploy --only firestore:rules`. |
 | 3 ago 2026 | **S-018 · Keywords WhatsApp substring** | `_message_has_keyword` en `functions/main.py` y `whatsapp_webhook.py` ahora exige tokens completos (y dígitos `1`/`2`/`3` solo como mensaje entero). Evita que «buenas noches», «posible», «vamos», «anotado» confirmen/cancelen citas. Redeploy `functions` + Render pendiente. |
 | 3 ago 2026 | **S-019 · daily_summary therapist fallback** | `daily_summary_cron` (CF) y `/cron/daily-summary` (Render) ya no vuelcan citas con `therapist` desconocido al roster WhatsApp de Diana. Se omiten con log. Redeploy pendiente. |
 | 22 jun 2026 | **Integridad pagos / Excel** | Confirmación obligatoria con desglose antes de Pagado/No pagado; bloqueo si cambios financieros sin Guardar (`CalendarModal.js`). Reduce clicks accidentales y registros Excel incorrectos. Pago lee Firestore guardado, no DOM sin persistir. |
@@ -189,4 +192,4 @@
 
 ---
 
-*Última actualización: 3 de Agosto, 2026 — Backend review: S-018 keywords WhatsApp + S-019 daily_summary therapist allowlist corregidos en repo (redeploy `functions` + Render pendiente). XSS frontend S-017 sigue abierto en AuditPanel.*
+*Última actualización: 3 de Agosto, 2026 — Review S-020 AuthManager / S-021 SheetService / S-022 settings admin-only mitigados en repo. Deploy pendiente: hosting + firestore:rules + functions. XSS S-017 AuditPanel sigue abierto.*
