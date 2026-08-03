@@ -13,13 +13,17 @@ service cloud.firestore {
        return request.auth.token.email;
     }
     
-    // Verificar si es administrador o recepción (Super usuarios)
-    function isSuper() {
-       // Daniel (Admin), Diana (Admin) o Yari (Recepción)
+    // Administradores de clínica (no incluye recepción)
+    function isAdminUser() {
        return getEmail() == 'rodriguezd.danielrob@gmail.com' || 
               getEmail() == 'lopezcarpio7@gmail.com' || 
-              getEmail() == 'yaritzajocgo@gmail.com' || 
               getEmail() == 'kaiteff@gmail.com';
+    }
+
+    // Verificar si es administrador o recepción (Super usuarios operativos)
+    function isSuper() {
+       // Daniel/Diana/Kaiteff (Admin) o Yari (Recepción)
+       return isAdminUser() || getEmail() == 'yaritzajocgo@gmail.com';
     }
     
     // Verificar si el usuario que hace la petición es dueño del recurso
@@ -60,9 +64,11 @@ service cloud.firestore {
     }
 
     // Colección de Configuración (Temas, Costos, etc.)
+    // Lectura: staff autenticado. Escritura: solo admin (S-022) — recepción no puede
+    // cambiar tarifas/temas vía consola aunque isSuper() le permita otras colecciones.
     match /settings/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isSuper();
+      allow write: if isAdminUser();
     }
 
     // Alertas para Recepción (opt-out WhatsApp, etc.)
