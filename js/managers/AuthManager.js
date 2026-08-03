@@ -234,11 +234,13 @@ export const AuthManager = {
 
         } catch (error) {
             console.error('❌ CRITICAL: Error fatal al inicializar usuario:', error);
-            // En caso de error catastrófico, devolver un usuario mínimo para no bloquear el login
+            // Fallback RESTRICTIVO: nunca elevar a admin por un error de inicialización (S-020).
             this.currentUser = {
                 ...firebaseUser,
-                role: 'admin',
+                role: 'therapist',
                 therapist: 'diana',
+                displayName: firebaseUser.displayName || 'Usuario',
+                isFallback: true,
                 error: error.message
             };
             return this.currentUser;
@@ -282,8 +284,8 @@ export const AuthManager = {
      */
     can(permission) {
         if (!this.currentUser) return false;
-        // Si no tiene rol definido, asumir sin permisos (o admin en dev si se prefiere)
-        if (!this.currentUser.role) return true; // Default permissivo para evitar bloqueos en dev
+        // Sin rol explícito → denegar (antes era `return true` y abría toda la UI) (S-020).
+        if (!this.currentUser.role) return false;
 
         const role = ROLES[this.currentUser.role];
         if (!role) {

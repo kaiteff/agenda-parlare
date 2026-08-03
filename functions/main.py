@@ -863,14 +863,32 @@ def manage_staff_user(req: https_fn.CallableRequest) -> dict:
     data = req.data
     email = data.get('email', '').strip().lower()
     name = data.get('name', '').strip()
-    role = data.get('role', 'therapist')
+    role = (data.get('role') or 'therapist').strip().lower()
     therapist_id = data.get('therapistId', '').strip().lower()
-    password = data.get('password', 'Parlare2026*')
+    password = data.get('password') or None
     
     if not email or not name:
         raise https_fn.HttpsError(
             code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
             message="Faltan datos obligatorios (email, nombre)."
+        )
+
+    # S-020: roles allowlist — evita role="" (AuthManager.can permissivo) o admin forjado
+    allowed_roles = {'admin', 'therapist', 'receptionist'}
+    if role not in allowed_roles:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message=f"Rol inválido. Use: {', '.join(sorted(allowed_roles))}."
+        )
+    if role == 'therapist' and therapist_id not in ('diana', 'sam', 'vero'):
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="therapistId debe ser diana, sam o vero para rol therapist."
+        )
+    if not password:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="Debes indicar un password temporal (ya no hay default público)."
         )
         
     try:
