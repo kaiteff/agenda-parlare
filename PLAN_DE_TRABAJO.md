@@ -6,6 +6,7 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Seguridad backend S-018 + S-019 (3 Ago 2026)** — Keywords WhatsApp con match por token (evita falsos confirm/cancel); `daily_summary` ya no vuelca citas con `therapist` desconocido al WhatsApp de Diana. Archivos: `functions/main.py`, `whatsapp_webhook.py`, `SEGURIDAD_Y_VULNERABILIDADES.md`. **Deploy pendiente:** `firebase deploy --only functions` + redeploy Render.
 *   **Acceso Yari (Recepción) a baja y borrado de pacientes (30 Jun 2026)** — Se otorgó acceso al rol `receptionist` para eliminar pacientes permanentemente en la lógica de `PatientActions.js`, además de validar su acceso existente a la baja (desactivación).
 *   **Toast Excel pendiente + manual sync (22 Jun 2026)** — Si terapeuta no puede escribir Excel ajeno, pago queda en Parláre; Diana/Yari sincronizan con botón naranja. Aviso en `CalendarData.togglePayment`.
 *   **Fix perfil del paciente en desglose de cita (22 Jun 2026)** — Detalles de Cita muestra cuota/sesión del **perfil**. Archivos: `appointmentFinancials.js`, `CalendarModal.js`, etc.

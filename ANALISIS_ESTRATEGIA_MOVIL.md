@@ -192,6 +192,7 @@ firebase deploy --only hosting
 
 | # | Qué falta | Notas |
 |---|-----------|--------|
+| 28 | **Redeploy functions + Render tras S-018/S-019 (3 ago)** | Keywords WhatsApp token-safe + daily_summary sin fallback a Diana. `firebase deploy --only functions` y redeploy servicio Render `parlare-webhook`. |
 | 1 | **Validación final de opt-in en producción** | ✅ Validado en vivo por el usuario (nuevos pacientes en amarillo, autorizados en verde). |
 | 2 | **Recibos end-to-end** | Paciente con `reimbursementReceipt.autoGenerate: true` → cita **Pagada** → comprobar `receiptPdfUrl` + PDF en Storage. |
 | 3 | **Toggle Día desktop en producción** | ✅ Validado en vivo por el usuario (probada la vista Día en PC). |
@@ -927,7 +928,7 @@ Sprint 2 (Fase 1 continuación / polish)
 
 - Sesión **22 jun 2026** — **Desglose cita = perfil del paciente** (`appointmentFinancials.js`). **Seguro pago A+B** (confirmación Excel + guardar antes de pagar). **Toast + manual** sync pendiente Diana/Yari si terapeuta sin permiso Excel ajeno. Build OK; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **22 de Junio de 2026** — Cierre sesión: perfil→desglose, seguro pago A+B, sync Excel delegado admin.*
+*Última actualización de este documento: **3 de Agosto de 2026** — Auditoría backend: S-018 keywords WhatsApp + S-019 daily_summary; redeploy functions/Render pendiente.*
 
 ---
 

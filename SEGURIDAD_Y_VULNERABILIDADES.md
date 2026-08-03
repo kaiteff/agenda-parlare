@@ -10,15 +10,15 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 22 Jun 2026 — sesión desglose cita + seguro pago; sin cambios de severidad)
+## 📊 Resumen ejecutivo (Última actualización: 3 Ago 2026 — backend review + XSS S-017)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
 | 🚨 Crítico | 0 | Ninguno |
-| ⚠️ Alto | 1 | Whitelist emails hardcoded (S-005) — custom claims pendiente |
+| ⚠️ Alto | 2 | Whitelist emails hardcoded (S-005); XSS `AuditPanel` `details.message` (S-017) |
 | 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 33 | Incl. confirmación desglose antes de pago Excel (22 jun); cola `schedulingQueue`; L-1 logout Copiloto |
+| ✅ Reforzado | 35 | Incl. S-018 keywords WhatsApp; S-019 daily_summary therapist allowlist (3 ago) |
 
 ---
 
@@ -49,7 +49,15 @@
   - Cambio de email no requiere redeploy de reglas.
 - **Estado:** ⚠️ Identificado 25 may. Refactor mayor — alinearlo con SaaS multi-clínica.
 
+### S-017 · XSS almacenado en panel «Ver detalle» de AuditPanel (`details.message` / `error`)
 
+- **Archivo:** `js/modules/admin/AuditPanel.js:206-214` (sink); escritura en `functions/main.py:656-668` (`WHATSAPP_CANCEL_REASON_NOTE`) y `~1056-1069` (`msg_log` con `therapist`)
+- **Detalle:** `createLogCard` inserta `log.details.message || log.details.error` en `innerHTML` sin `escapeHTML`. Distinto de los hallazgos previos de AuditPanel sobre `patientName` y la línea `details.therapist`.
+- **Ataque A (paciente → admin/recepción):** Tras cancelar por WhatsApp y elegir motivo «Otro», el Body libre se guarda como `message=f"Nota motivo: {note[:120]}"`. Al abrir Bitácora → pestaña WhatsApp → «Ver detalle», el HTML se ejecuta. `webhook_security.py` / `sanitize_whatsapp_user_text` **no están en el repo**; el escape en render es obligatorio.
+- **Ataque B (terapeuta → admin, sin depender de sanitize):** Una terapeuta actualiza `appointments.therapist` a markup en una cita de mañana (reglas: `isOwner` sobre el terapeuta *previo*). El cron de recordatorios arma `msg_log` con ese `therapist` y lo escribe en `details.message`. Misma UI «Ver detalle».
+- **Impacto:** XSS en sesión privilegiada (Yari/Diana/Daniel); robo de sesión / tokens Google en `localStorage`.
+- **Mitigación propuesta:** `escapeHTML` (o `textContent`) para `message`/`error`/`patientName`/`therapist`/`userName`/`action` antes de `innerHTML`; versionar `webhook_security.py` en git; allowlist de claves `therapist` en el cron.
+- **Estado:** ⚠️ Identificado 3 ago 2026 (auditoría XSS frontend).
 
 ---
 
@@ -105,6 +113,8 @@
 
 | Fecha | Área | Detalle |
 |-------|------|---------|
+| 3 ago 2026 | **S-018 · Keywords WhatsApp substring** | `_message_has_keyword` en `functions/main.py` y `whatsapp_webhook.py` ahora exige tokens completos (y dígitos `1`/`2`/`3` solo como mensaje entero). Evita que «buenas noches», «posible», «vamos», «anotado» confirmen/cancelen citas. Redeploy `functions` + Render pendiente. |
+| 3 ago 2026 | **S-019 · daily_summary therapist fallback** | `daily_summary_cron` (CF) y `/cron/daily-summary` (Render) ya no vuelcan citas con `therapist` desconocido al roster WhatsApp de Diana. Se omiten con log. Redeploy pendiente. |
 | 22 jun 2026 | **Integridad pagos / Excel** | Confirmación obligatoria con desglose antes de Pagado/No pagado; bloqueo si cambios financieros sin Guardar (`CalendarModal.js`). Reduce clicks accidentales y registros Excel incorrectos. Pago lee Firestore guardado, no DOM sin persistir. |
 | 18 may 2026 | **Notas clínicas (`clinicalNotes`)** | Reglas Firestore restringen lectura/escritura al terapeuta dueño y super users. **Grado médico**. |
 | 18 may 2026 | **Perfiles de pacientes (`patientProfiles`)** | Mismas reglas estrictas que `clinicalNotes`. |
@@ -162,6 +172,8 @@
 | **26 May 2026 (mañana)** | Claude (revisión post-Antigravity Optimización Firestore Fase 1) | Auditoría de los 5 archivos tocados por Antigravity para la migración a ventana 90 días + historial bajo demanda + polling Copiloto: `PatientManager.js`, `PatientModals.js`, `PatientActions.js`, `CalendarData.js`, `space_optimizer.py`. Verificación con `node --input-type=module`, revisión de queries Firestore vs índices, lectura del dashboard Firebase (58.4 % lecturas). | Q-001 (SyntaxError fatal) · Q-002 (timeout Cloud Function) · Q-003 (índices Firestore no versionados) · Q-004 (modal historial pierde citas) · Q-005 (memory leak listeners) · Q-006 (listeners gigantes sin filtro fecha) | **Cerrados Q-001 a Q-006** en la misma sesión: refactor `_setupRealtimeListener`, `timeout_sec=720`, `firestore.indexes.json` con 6 índices, `PatientModals._historyCache` con merge live, `_unsubscribeApts/_unsubscribeProfiles`, filtros de fecha en Copilot+batchSync. Pendiente para Antigravity: `firebase deploy --only firestore:indexes,functions,hosting` y validación dashboard 24-48 h después. |
 | **26 May 2026 (tarde)** | Claude (revisión post-Antigravity deploy + Win 1 + ajuste de tiempos) | Auditoría del trabajo de Antigravity en la tarde: deploys exitosos de índices, function (con `timeout_sec=540` forzado por límite Cloud Functions = 540 s) y hosting; refactor de `CalendarData.subscribe` a patrón multicast para unificar listeners de citas (Win 1 que estaba marcado como pendiente alto-impacto en la mañana). Verificación de que los fixes Q-001 a Q-006 siguen intactos tras el refactor del listener compartido. | Q-007 (listener duplicado `appointments` ya cerrado por Antigravity como Win 1) · Q-008 (desync `COPILOT_DELAY_MS` 10 min frontend vs 8 min backend, detectado en review) | **Cerrados Q-007 y Q-008** en la misma sesión: Antigravity implementó el multicast (Q-007) y Cursor propagó la constante `COPILOT_DELAY_MS = 8 * 60 * 1000` desde service hacia panel (cálculos + textos visibles a Yari) + `HelpManual.js` con «8 min» (Q-008). Lecturas totales esperadas tras propagación: **29 k → 8–12 k/día** (de 58.4 % a probablemente <25 %). Pendiente Daniel (manual): limpieza Hosting Storage 17.6 GB → 10 GB en consola Firebase. |
 | **22 Jun 2026** | Cursor | Sesión desglose cita (perfil manda), seguro pago A+B, toast sync Excel delegado admin. | — | **Reforzado:** confirmación desglose antes de pago Excel (integridad operacional). |
+| **3 Ago 2026** | Cursor Automation (XSS sweep) | Barrido `js/` innerHTML/insertAdjacentHTML en módulos poco revisados + callers de `ModalService`; contraste con hallazgos ya reportados (CalendarUI, Sidebar, PatientModals, ReceptionControl, AuditPanel patientName/therapist, etc.). | **S-017** (XSS `AuditPanel` `details.message` / cancel-note + `msg_log` therapist) | — |
+| **3 Ago 2026** | Cursor Automation (backend trust boundaries) | CF HTTPS/callables/triggers, space_optimizer/optin/receipts, Render legacy, firestore edge cases, SSRF/hosting secrets. | **S-018** (keywords substring confirm/cancel) · **S-019** (daily_summary unknown therapist → Diana WhatsApp PHI) | **Cerrados en código** S-018 + S-019 (redeploy pendiente). |
 
 ---
 
@@ -177,4 +189,4 @@
 
 ---
 
-*Última actualización: 22 de Junio, 2026 — Sesión desglose cita + seguro pago A+B; reforzado integridad pagos Excel. Sin hallazgos 🚨/⚠️ nuevos. Deploy hosting pendiente.*
+*Última actualización: 3 de Agosto, 2026 — Backend review: S-018 keywords WhatsApp + S-019 daily_summary therapist allowlist corregidos en repo (redeploy `functions` + Render pendiente). XSS frontend S-017 sigue abierto en AuditPanel.*
