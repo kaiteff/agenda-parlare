@@ -271,6 +271,27 @@ def notify_receptionist(patient_name, action_type, date_str="Mañana", hour_str=
         print(f"⚠️ Error notificando a Yari: {e}")
 
 # ── Helpers ──────────────────────────────────────────────────────────
+def _message_has_keyword(text, keywords):
+    """Whole-token match for short keywords; substring for multi-word phrases."""
+    if not text:
+        return False
+    normalized = str(text).strip().lower()
+    tokens = set(re.findall(r"[a-z0-9áéíóúüñ]+", normalized, flags=re.IGNORECASE))
+    for raw in keywords:
+        kw = str(raw).strip().lower()
+        if not kw:
+            continue
+        if " " in kw:
+            if kw in normalized:
+                return True
+        elif len(kw) == 1 and kw.isdigit():
+            if normalized == kw or tokens == {kw}:
+                return True
+        elif kw in tokens:
+            return True
+    return False
+
+
 def normalize_phone(phone):
     """Limpia el teléfono dejando solo los dígitos significativos (normalmente los últimos 10)"""
     digits = re.sub(r'\D', '', str(phone))
@@ -449,14 +470,14 @@ def webhook():
         CANCEL_KEYWORDS = ['2', 'cancelar', 'no', 'cancelado', 'no puedo', 'no asistiremos', 'no asistira']
         THANKS_KEYWORDS = ['gracias', 'mil gracias', 'muchas gracias', 'te lo agradezco', 'agradezco', 'grx']
 
-        if any(word in msg_body for word in RECEPTION_KEYWORDS):
+        if _message_has_keyword(msg_body, RECEPTION_KEYWORDS):
             print("📞 Solicitud de recepción detectada")
             resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
             return str(resp), 200
 
         # Si solo están dando las gracias y no están confirmando/cancelando
-        has_action = any(w in msg_body for w in CONFIRM_KEYWORDS + CANCEL_KEYWORDS)
-        if any(w in msg_body for w in THANKS_KEYWORDS) and not has_action:
+        has_action = _message_has_keyword(msg_body, CONFIRM_KEYWORDS + CANCEL_KEYWORDS)
+        if _message_has_keyword(msg_body, THANKS_KEYWORDS) and not has_action:
             print("🙏 Agradecimiento recibido")
             resp.message("¡De nada! Que tengas un muy bonito día. 😊")
             return str(resp), 200
@@ -499,7 +520,7 @@ def webhook():
                 resp.message("Hola, no encontramos citas futuras agendadas para tu número. Si deseas agendar, puedes hablar con Recepción aquí: https://wa.me/523315196702")
             return str(resp), 200
 
-        if any(word in msg_body for word in CONFIRM_KEYWORDS):
+        if _message_has_keyword(msg_body, CONFIRM_KEYWORDS):
             print("✅ Confirmación recibida")
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
@@ -525,7 +546,7 @@ def webhook():
                 return str(resp), 200
             
             return "", 200
-        elif any(word in msg_body for word in CANCEL_KEYWORDS):
+        elif _message_has_keyword(msg_body, CANCEL_KEYWORDS):
             print("🚫 Cancelación recibida")
             for a in apts:
                 db.collection('appointments').document(a['id']).update({
@@ -824,9 +845,8 @@ def send_daily_summary():
                 by_therapist[raw_t].append(a)
                 all_apts.append(a)
             else:
-                # Si es un nombre desconocido, lo asignamos a Diana por seguridad
-                by_therapist['diana'].append(a)
-                all_apts.append(a)
+                # Unknown keys must not leak another therapist's PHI onto Diana's WhatsApp summary
+                print(f"⚠️ daily-summary: therapist desconocido '{raw_t}' — cita omitida")
         
         print(f"📊 Citas agrupadas: Diana({len(by_therapist['diana'])}), Sam({len(by_therapist['sam'])}), Vero({len(by_therapist['vero'])})")
         

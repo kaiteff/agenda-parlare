@@ -22,6 +22,36 @@ export const SheetService = {
         targetSheetName: 'App_Data'
     },
 
+    /** Token opaco para la fila secundaria de planeación (evita forjas isPlanningRow desde consola). */
+    _planningSyncToken: null,
+
+    /**
+     * Admin/recepción → cualquier hoja. Terapeuta → solo la suya, o fila de planeación
+     * interna firmada hacia otra terapeuta (S-021).
+     */
+    _canWriteTherapistSheet(therapistKey, paymentData = null) {
+        const user = AuthManager.currentUser;
+        if (!user) return false;
+        if (AuthManager.isAdmin() || user.role === 'receptionist') return true;
+
+        const key = (therapistKey || '').toLowerCase();
+        if (!['diana', 'sam', 'vero'].includes(key)) return false;
+
+        const own = (user.therapist || '').toLowerCase();
+        if (own && own === key) return true;
+
+        // Solo la recursión interna de planeación puede escribir en hoja ajena
+        if (
+            paymentData?.isPlanningRow === true
+            && paymentData?._parlarePlanningSync
+            && this._planningSyncToken
+            && paymentData._parlarePlanningSync === this._planningSyncToken
+        ) {
+            return true;
+        }
+        return false;
+    },
+
     /**
      * Registra un pago en el archivo Google Sheet correspondiente al terapeuta
      * @param {Object} paymentData 
@@ -44,6 +74,12 @@ export const SheetService = {
         });
 
         const therapistKey = paymentData.therapist?.toLowerCase() || 'diana';
+        if (!this._canWriteTherapistSheet(therapistKey, paymentData)) {
+            console.warn(`🚫 SheetService: escritura denegada a hoja de ${therapistKey} (rol/ownership).`);
+            ToastService.error(`No tienes permiso para escribir en el Excel de ${therapistKey}.`);
+            SyncStatus.setError();
+            return false;
+        }
         const targetSpreadsheetId = this.config.spreadsheets[therapistKey];
 
         // 1. Validar configuración
@@ -134,16 +170,23 @@ export const SheetService = {
             // --- DOBLE SYNC: Si hay pago de planeación para OTRA persona ---
             if (planningIncome > 0 && paymentData.planningTherapist && !paymentData.isPlanningRow) {
                 console.log(`🔄 SheetService: Iniciando sync secundario para planeación (${paymentData.planningTherapist})...`);
-                await this.logPayment({
-                    ...paymentData,
-                    therapist: paymentData.planningTherapist,
-                    amount: 0, // No duplicar ingreso total en la clínica
-                    clinicFee: 0,
-                    therapistPay: 0, // No es pago de sesión
-                    planningPay: planningIncome, // Es pago de planeación
-                    status: `PLANEACIÓN (REF: ${paymentData.id || 'N/A'})`,
-                    isPlanningRow: true // Evitar bucle infinito
-                }, isAuthRetry, networkRetries);
+                const token = `planning_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                this._planningSyncToken = token;
+                try {
+                    await this.logPayment({
+                        ...paymentData,
+                        therapist: paymentData.planningTherapist,
+                        amount: 0, // No duplicar ingreso total en la clínica
+                        clinicFee: 0,
+                        therapistPay: 0, // No es pago de sesión
+                        planningPay: planningIncome, // Es pago de planeación
+                        status: `PLANEACIÓN (REF: ${paymentData.id || 'N/A'})`,
+                        isPlanningRow: true, // Evitar bucle infinito
+                        _parlarePlanningSync: token
+                    }, isAuthRetry, networkRetries);
+                } finally {
+                    this._planningSyncToken = null;
+                }
             }
 
             console.log("🛠️ DEBUG: Respuesta recibida de Google:", response);
@@ -248,6 +291,10 @@ export const SheetService = {
         // Usamos la hoja de Diana como repositorio central de auditoría
         const targetSpreadsheetId = this.config.spreadsheets.diana;
         if (!targetSpreadsheetId) return false;
+        // Bitácora Excel: solo admin/recepción (misma barra que audit_logs en Firestore)
+        if (!(AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist')) {
+            return false;
+        }
 
         try {
             await GoogleAuthService.ensureToken();
@@ -284,6 +331,13 @@ export const SheetService = {
      */
     async cleanSheet(therapist, activePatientNames) {
         if (!activePatientNames || activePatientNames.length === 0) return false;
+
+        // S-021: wipe de App_Data solo admin (nunca terapeutas ni consola con token compartido)
+        if (!AuthManager.isAdmin()) {
+            console.warn('🚫 SheetService.cleanSheet denegado: requiere admin.');
+            ToastService.error('Solo administradores pueden limpiar hojas de Excel.');
+            return false;
+        }
         
         const therapistKey = therapist?.toLowerCase() || 'diana';
         const spreadsheetId = this.config.spreadsheets[therapistKey];

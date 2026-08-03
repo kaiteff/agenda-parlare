@@ -180,7 +180,30 @@ def _incoming_whatsapp_text(msg_body, raw_payload):
     return ' '.join(parts)
 
 def _message_has_keyword(text, keywords):
-    return bool(text) and any(w in text for w in keywords)
+    """Match confirm/cancel intent without substring false positives.
+
+    Short tokens ('no', 'si', 'va', '1') must be whole words. Multi-word
+    phrases ('no puedo') may match as substrings. Prevents messages like
+    'buenas noches' / 'posible' / 'vamos' from cancelling or confirming.
+    """
+    if not text:
+        return False
+    normalized = str(text).strip().lower()
+    tokens = set(re.findall(r"[a-z0-9áéíóúüñ]+", normalized, flags=re.IGNORECASE))
+    for raw in keywords:
+        kw = str(raw).strip().lower()
+        if not kw:
+            continue
+        if " " in kw:
+            if kw in normalized:
+                return True
+        elif len(kw) == 1 and kw.isdigit():
+            # Digits like "1"/"2"/"3" only when they are the whole message
+            if normalized == kw or tokens == {kw}:
+                return True
+        elif kw in tokens:
+            return True
+    return False
 
 WHATSAPP_CONFIRM_KEYWORDS = [
     '1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro', 'sale', 'va'
@@ -619,11 +642,11 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
 
         incoming = _incoming_whatsapp_text(msg_body, raw_payload)
 
-        if any(w in incoming for w in RECEPTION_KEYWORDS):
+        if _message_has_keyword(incoming, RECEPTION_KEYWORDS):
             resp.message("Entendido. Puedes hablarnos directo aquí: https://wa.me/523315196702")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
-        if any(w in incoming for w in THANKS_KEYWORDS) and not _message_has_keyword(incoming, CONFIRM_KEYWORDS + CANCEL_KEYWORDS):
+        if _message_has_keyword(incoming, THANKS_KEYWORDS) and not _message_has_keyword(incoming, CONFIRM_KEYWORDS + CANCEL_KEYWORDS):
             resp.message("¡De nada! Que tengas un muy bonito día. 😊")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
@@ -737,6 +760,7 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
             resp.message("Cita cancelada. ¡Esperamos todo esté bien! 😊 Para reagendar: https://wa.me/523315196702")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
+        patient_names = [p.get('name', '') for p in patients if p.get('name')]
         apts = find_tomorrow_appointments(patient_names)
         if not apts:
             next_apt = find_next_appointment(patient_names)
@@ -839,14 +863,32 @@ def manage_staff_user(req: https_fn.CallableRequest) -> dict:
     data = req.data
     email = data.get('email', '').strip().lower()
     name = data.get('name', '').strip()
-    role = data.get('role', 'therapist')
+    role = (data.get('role') or 'therapist').strip().lower()
     therapist_id = data.get('therapistId', '').strip().lower()
-    password = data.get('password', 'Parlare2026*')
+    password = data.get('password') or None
     
     if not email or not name:
         raise https_fn.HttpsError(
             code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
             message="Faltan datos obligatorios (email, nombre)."
+        )
+
+    # S-020: roles allowlist — evita role="" (AuthManager.can permissivo) o admin forjado
+    allowed_roles = {'admin', 'therapist', 'receptionist'}
+    if role not in allowed_roles:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message=f"Rol inválido. Use: {', '.join(sorted(allowed_roles))}."
+        )
+    if role == 'therapist' and therapist_id not in ('diana', 'sam', 'vero'):
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="therapistId debe ser diana, sam o vero para rol therapist."
+        )
+    if not password:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="Debes indicar un password temporal (ya no hay default público)."
         )
         
     try:
@@ -1137,8 +1179,11 @@ def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
             if parse_mx_datetime(a['date']).date() != mx_now.date(): continue
         except: continue
         t = str(a.get('therapist', 'diana')).strip().lower()
-        if t in by_therapist: by_therapist[t].append(a)
-        else: by_therapist['diana'].append(a)
+        # Do not dump unknown/non-enum therapist keys onto Diana's WhatsApp roster (PHI).
+        if t in by_therapist:
+            by_therapist[t].append(a)
+        else:
+            print(f"⚠️ daily_summary: therapist desconocido '{t}' — cita omitida del resumen individual")
 
     for t_key in by_therapist: by_therapist[t_key].sort(key=lambda x: x.get('date', ''))
     

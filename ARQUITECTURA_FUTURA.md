@@ -6,7 +6,7 @@
 >
 > **Mapa operativo diario:** [`ANALISIS_ESTRATEGIA_MOVIL.md`](ANALISIS_ESTRATEGIA_MOVIL.md) · **Prioridades producto:** [`PLAN_DE_TRABAJO.md`](PLAN_DE_TRABAJO.md)
 
-*Última actualización: **11 de Junio de 2026** — Fix cuota Parláre→Sheets + modales paciente móvil (`document.body`, `92dvh`). Heredado 2 jun: cola A0+A, L-1.*
+*Última actualización: **3 de Agosto de 2026** — S-021 SheetService ownership + S-022 settings write solo admin. Heredado 11 jun: cuota Sheets + modales paciente.*
 
 ---
 
@@ -38,6 +38,7 @@
 | 11 Jun 2026 | **Modales paciente — scroll iPhone** | `PatientModalsHTML.js`, `PatientModals.js`, `ComponentManager.js`, `index.css` | Modales en `document.body`; panel `92dvh`; scroll único `.patient-modal-scroll`; bitácora bottom-sheet. Evita ventana «mini» por `overflow-hidden` del layout. | Volver a `PatientModalsHTML.inject(appContent)` y quitar `h-[92dvh]` / clase `patient-modal-scroll` en CSS. |
 | 22 Jun 2026 | **Perfil del paciente → desglose cita** | `appointmentFinancials.js`, `CalendarModal.js`, `CalendarData.js`, `SyncService.js`, `PatientActions.js`, `FinancialReport.js` | Citas con `manualClinicFee` stale (250 panel) ignoran perfil (150); UI/pagos/reportes usan `resolveEffectiveFinancials`. | Revertir `resolveEffectiveFinancials` y lógica stale en `openEditModal`. |
 | 22 Jun 2026 | **Seguro pago Excel A+B** | `CalendarModal.js`, `CalendarData.js`, `HelpManual.js` | Confirmación con desglose antes Pagado/No pagado; bloqueo pago si cambios sin Guardar; toast si Excel falla (Diana/Yari batch sync). | Quitar `_financialFieldsDirty` y `ModalService.confirm` en `handlePaymentToggle`. |
+| 3 Ago 2026 | **S-021/S-022 Sheets + settings** | `SheetService.js`, `firestore.rules`, `AuthManager.js` | Ownership en escritura Excel; `cleanSheet` solo admin; `settings/**` write solo `isAdminUser()` (recepción fuera). | Revertir `_canWriteTherapistSheet` / `isAdminUser` y volver `settings` write a `isSuper()`. |
 
 ---
 
