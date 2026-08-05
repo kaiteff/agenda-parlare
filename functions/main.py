@@ -439,6 +439,19 @@ def _reminder_content_for_apt(apt, dt):
         '3': therapist,
     }
 
+def _profile_therapist_is(profile_id, expected_therapist):
+    """True only if patientProfiles/{id}.therapist matches expected (blocks planted evals)."""
+    if not profile_id or not expected_therapist:
+        return False
+    try:
+        snap = db.collection('patientProfiles').document(profile_id).get()
+        if not snap.exists:
+            return False
+        return str((snap.to_dict() or {}).get('therapist', '')).lower() == str(expected_therapist).lower()
+    except Exception as e:
+        print(f"⚠️ _profile_therapist_is({profile_id}): {e}")
+        return False
+
 def _find_diana_eval_apt_today():
     mx_now = datetime.now(MX_TZ)
     today = mx_now.date()
@@ -450,6 +463,10 @@ def _find_diana_eval_apt_today():
             continue
         if str(data.get('therapist', '')).lower() != 'diana':
             continue
+        # Require a Diana-owned profile binding — blocks therapist-reassigned plants
+        p_id = data.get('profileId') or data.get('patientId')
+        if not _profile_therapist_is(p_id, 'diana'):
+            continue
         try:
             if parse_mx_datetime(data['date']).date() == today:
                 return {'id': doc.id, **data}
@@ -460,7 +477,10 @@ def _find_diana_eval_apt_today():
 def _find_diana_awaiting_next_stage():
     try:
         for doc in db.collection('patientProfiles').where('awaitingDianaNextStage', '==', True).limit(5).stream():
-            return {'id': doc.id, **doc.to_dict()}
+            data = doc.to_dict() or {}
+            if str(data.get('therapist', '')).lower() != 'diana':
+                continue
+            return {'id': doc.id, **data}
     except Exception as e:
         print(f"⚠️ _find_diana_awaiting_next_stage: {e}")
     return None
@@ -489,7 +509,7 @@ def handle_diana_eval_interactive(raw_payload):
         )
         if attended and (apt.get('evaluationStage') or 1) == 2:
             p_id = apt.get('profileId') or apt.get('patientId')
-            if p_id:
+            if p_id and _profile_therapist_is(p_id, 'diana'):
                 db.collection('patientProfiles').document(p_id).update({'awaitingDianaNextStage': True})
             try:
                 _send_content_template(diana_dest, DIANA_SIGUIENTE_ETAPA_SID, {'1': apt.get('name', 'paciente')})
@@ -527,6 +547,11 @@ def execute_send_diana_evaluation_followup():
         if str(apt.get('therapist', '')).lower() != 'diana':
             continue
         if apt.get('dianaSessionConfirmed') or apt.get('dianaFollowupSentAt'):
+            continue
+        # Ignore planted evals reassigned onto Diana without a Diana-owned profile
+        p_id = apt.get('profileId') or apt.get('patientId')
+        if not _profile_therapist_is(p_id, 'diana'):
+            print(f"⚠️ E2 omitido: cita {doc.id} sin perfil Diana válido")
             continue
         try:
             dt = parse_mx_datetime(apt['date'])
@@ -737,6 +762,7 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
             resp.message("Cita cancelada. ¡Esperamos todo esté bien! 😊 Para reagendar: https://wa.me/523315196702")
             return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 
+        patient_names = [p.get('name', '') for p in patients if p.get('name')]
         apts = find_tomorrow_appointments(patient_names)
         if not apts:
             next_apt = find_next_appointment(patient_names)
@@ -758,7 +784,7 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
     except Exception as e:
         print(f"💥 CRASH EN WEBHOOK: {e}")
         error_resp = MessagingResponse()
-        error_resp.message(f"Problema técnico (Error: {str(e)}). Contacta a Recepción.")
+        error_resp.message("Problema técnico. Contacta a Recepción.")
         return https_fn.Response(str(error_resp), status=200, mimetype='text/xml')
 
 @https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["POST", "OPTIONS"]), secrets=ALL_SECRETS)
@@ -912,6 +938,55 @@ def _log_reminder_to_audit(doc_id, p_name, therapist, phone, appointment_date, a
     except Exception as log_e:
         print(f"⚠️ Error guardando en audit_log: {log_e}")
 
+def _eligible_reminder_profile(data):
+    return bool(
+        data
+        and data.get('phone')
+        and data.get('wantsWhatsapp', True)
+        and patient_accepts_automated_whatsapp(data)
+    )
+
+def _load_reminder_profiles_by_id(profile_ids):
+    """Load opt-in profiles keyed ONLY by document id (never by name).
+
+    Indexing by name let therapist A forge tomorrow's appointment with patient B's
+    name and reuse B's phone from another appointment's profileId preload.
+    """
+    phone_map = {}
+    for p_id in profile_ids:
+        try:
+            p_doc = db.collection('patientProfiles').document(p_id).get()
+            if p_doc.exists:
+                data = p_doc.to_dict() or {}
+                if _eligible_reminder_profile(data):
+                    phone_map[p_id] = data
+        except Exception as e:
+            print(f"⚠️ Error al leer perfil {p_id}: {e}")
+    return phone_map
+
+def _resolve_reminder_profile(apt, phone_map_by_id):
+    """Resolve WhatsApp profile for an appointment without cross-therapist name reuse."""
+    p_id = apt.get('profileId') or apt.get('patientId')
+    if p_id and p_id in phone_map_by_id:
+        return phone_map_by_id[p_id]
+
+    # Legacy apts without profileId: name lookup constrained to same therapist
+    p_name = (apt.get('name') or '').strip()
+    if not p_name:
+        return None
+    apt_therapist = str(apt.get('therapist', '')).strip().lower()
+    try:
+        for doc in db.collection('patientProfiles').where('name', '==', p_name).limit(5).stream():
+            data = doc.to_dict() or {}
+            if not _eligible_reminder_profile(data):
+                continue
+            if apt_therapist and str(data.get('therapist', '')).strip().lower() != apt_therapist:
+                continue
+            return data
+    except Exception as e:
+        print(f"⚠️ Error buscando perfil por nombre {p_name}: {e}")
+    return None
+
 def execute_send_reminders():
     """Lógica centralizada para enviar recordatorios automáticos de citas para el día de mañana"""
     mx_now = datetime.now(MX_TZ)
@@ -920,44 +995,17 @@ def execute_send_reminders():
     report_date = tomorrow.strftime('%Y-%m-%d')
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
 
-    # Pre-cargar citas y recopilar profileIds/nombres
+    # Pre-cargar citas y recopilar profileIds
     appointments_list = []
     profile_ids = set()
-    names = set()
     for doc in query:
         apt = doc.to_dict()
         appointments_list.append((doc.id, apt))
         p_id = apt.get('profileId') or apt.get('patientId')
         if p_id:
             profile_ids.add(p_id)
-        if apt.get('name'):
-            names.add(apt.get('name').strip().lower())
 
-    phone_map = {}
-    # Leer perfiles específicos por profileId
-    for p_id in profile_ids:
-        try:
-            p_doc = db.collection('patientProfiles').document(p_id).get()
-            if p_doc.exists:
-                data = p_doc.to_dict()
-                if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
-                    phone_map[data.get('name', '').strip().lower()] = data
-                    phone_map[p_id] = data
-        except Exception as e:
-            print(f"⚠️ Error al leer perfil {p_id}: {e}")
-
-    # Complementar buscando por nombre para citas sin profileId (o no encontrados)
-    for name in names:
-        if name not in phone_map:
-            try:
-                docs = db.collection('patientProfiles').where('name', '==', name).stream()
-                for doc in docs:
-                    data = doc.to_dict()
-                    if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
-                        phone_map[name] = data
-                        phone_map[doc.id] = data
-            except Exception as e:
-                print(f"⚠️ Error buscando perfil por nombre {name}: {e}")
+    phone_map = _load_reminder_profiles_by_id(profile_ids)
 
     sent_count = 0
     skipped_count = 0
@@ -975,11 +1023,7 @@ def execute_send_reminders():
             continue
             
         p_name = apt.get('name', '')
-        # Intentar buscar por profileId primero, luego por nombre
-        p_id = apt.get('profileId') or apt.get('patientId')
-        p_info = phone_map.get(p_id) if p_id else None
-        if not p_info:
-            p_info = phone_map.get(p_name.strip().lower())
+        p_info = _resolve_reminder_profile(apt, phone_map)
 
         if not p_info:
             skipped_details.append({
@@ -1137,8 +1181,11 @@ def daily_summary_cron(event: scheduler_fn.ScheduledEvent) -> None:
             if parse_mx_datetime(a['date']).date() != mx_now.date(): continue
         except: continue
         t = str(a.get('therapist', 'diana')).strip().lower()
-        if t in by_therapist: by_therapist[t].append(a)
-        else: by_therapist['diana'].append(a)
+        if t in by_therapist:
+            by_therapist[t].append(a)
+        else:
+            # Do not dump unknown therapist keys onto Diana's WhatsApp roster (PHI)
+            print(f"⚠️ daily_summary: therapist desconocido '{t}' omitido")
 
     for t_key in by_therapist: by_therapist[t_key].sort(key=lambda x: x.get('date', ''))
     
@@ -1212,44 +1259,16 @@ def execute_send_evening_reminders():
     report_date = tomorrow.strftime('%Y-%m-%d')
     query = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
 
-    # Pre-cargar citas y recopilar profileIds/nombres
     appointments_list = []
     profile_ids = set()
-    names = set()
     for doc in query:
         apt = doc.to_dict()
         appointments_list.append((doc.id, apt))
         p_id = apt.get('profileId') or apt.get('patientId')
         if p_id:
             profile_ids.add(p_id)
-        if apt.get('name'):
-            names.add(apt.get('name').strip().lower())
 
-    phone_map = {}
-    # Leer perfiles específicos por profileId
-    for p_id in profile_ids:
-        try:
-            p_doc = db.collection('patientProfiles').document(p_id).get()
-            if p_doc.exists:
-                data = p_doc.to_dict()
-                if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
-                    phone_map[data.get('name', '').strip().lower()] = data
-                    phone_map[p_id] = data
-        except Exception as e:
-            print(f"⚠️ Error al leer perfil {p_id}: {e}")
-
-    # Complementar buscando por nombre para citas sin profileId (o no encontrados)
-    for name in names:
-        if name not in phone_map:
-            try:
-                docs = db.collection('patientProfiles').where('name', '==', name).stream()
-                for doc in docs:
-                    data = doc.to_dict()
-                    if data.get('phone') and data.get('wantsWhatsapp', True) and patient_accepts_automated_whatsapp(data):
-                        phone_map[name] = data
-                        phone_map[doc.id] = data
-            except Exception as e:
-                print(f"⚠️ Error buscando perfil por nombre {name}: {e}")
+    phone_map = _load_reminder_profiles_by_id(profile_ids)
 
     sent_count = 0
     skipped_count = 0
@@ -1261,11 +1280,7 @@ def execute_send_evening_reminders():
             continue
 
         p_name = apt.get('name', '')
-        # Intentar buscar por profileId primero, luego por nombre
-        p_id = apt.get('profileId') or apt.get('patientId')
-        p_info = phone_map.get(p_id) if p_id else None
-        if not p_info:
-            p_info = phone_map.get(p_name.strip().lower())
+        p_info = _resolve_reminder_profile(apt, phone_map)
         if not p_info:
             _log_reminder_to_audit(
                 doc_id, p_name, apt.get('therapist', 'diana'),
@@ -1544,7 +1559,7 @@ def release_quiet_hours_offers(event: scheduler_fn.ScheduledEvent) -> None:
         ):
             count += 1
 
-    logger.info(f"✅ Liberadas {count} cancelaciones de Quiet Hours.")
+    print(f"✅ Liberadas {count} cancelaciones de Quiet Hours.")
 
 @scheduler_fn.on_schedule(schedule="*/10 * * * *", timezone="America/Mexico_City", secrets=ALL_SECRETS)
 def collaborative_approvals_expiration_cron(event: scheduler_fn.ScheduledEvent) -> None:

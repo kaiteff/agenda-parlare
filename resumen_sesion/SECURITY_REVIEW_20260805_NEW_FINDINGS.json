@@ -1,0 +1,71 @@
+{
+  "scan_date": "2026-08-05",
+  "commit_hash": "5f74d955ebd92ae0198f323a8e0d9e421d1a7ed9",
+  "branch": "cursor/application-security-review-67a3",
+  "findings": [
+    {
+      "title": "Clinic baseCosts cost and fee values render as HTML in Admin Settings",
+      "severity": "high",
+      "location": "js/modules/admin/AdminSettingsModal.js",
+      "attacker": "Firestore isSuper() principal who can write settings/clinicConfig (receptionist via SDK/console bypassing SettingsManager.isAdmin UI gate; admins via UI).",
+      "controlled_input": "settings/clinicConfig.baseCosts.{diana|sam|vero}.cost and .fee",
+      "attack_path": "Write baseCosts.diana.cost to \"><img src=x onerror=...>. Admin opens Panel de Configuración → Costos y Comisiones. _renderCosts builds value=\"${data.cost}\" / value=\"${data.fee}\" into innerHTML with no escaping.",
+      "impact": "Stored XSS in the admin settings session (CSP allows unsafe-inline); theft of Firebase/Google tokens from localStorage and actions as the admin.",
+      "evidence": "AdminSettingsModal.js _renderCosts ~289-305 interpolates data.cost/data.fee into attribute values inside container.innerHTML. firestore.rules settings write: isSuper().",
+      "why_not_duplicate": "2026-08-01 theme-catalog finding covers themes[].name/subthemes/items/theme.id onclick and PatientModals theme UIs, not the Costs tab baseCosts.*.cost|fee sinks.",
+      "status": "active",
+      "commit_hash": "5f74d955ebd92ae0198f323a8e0d9e421d1a7ed9",
+      "detected_at_pst": "2026-08-05T13:09:00-07:00",
+      "reported_link": "",
+      "id": "S-017"
+    },
+    {
+      "title": "AuditPanel activity rows render userName as HTML",
+      "severity": "high",
+      "location": "js/modules/admin/AuditPanel.js",
+      "attacker": "Firestore isSuper() principal (receptionist/admin) who can create documents in audit_logs under the default isSuper write rule.",
+      "controlled_input": "audit_logs/{id}.userName",
+      "attack_path": "addDoc audit_logs with userName containing HTML. Admin/reception opens Bitácora. createLogCard inserts ${log.userName} into innerHTML without escapeHTML.",
+      "impact": "Stored XSS in the audit UI used by admin/reception; session/token theft.",
+      "evidence": "AuditPanel.js ~175 interpolates log.userName unescaped. audit_logs matched by default rule allow read,write if isSuper() with no field validation.",
+      "why_not_duplicate": "Prior AuditPanel findings cover details.patientName, details.therapist, and WhatsApp details.message/cancel notes — not userName.",
+      "status": "active",
+      "commit_hash": "5f74d955ebd92ae0198f323a8e0d9e421d1a7ed9",
+      "detected_at_pst": "2026-08-05T13:09:00-07:00",
+      "reported_link": "",
+      "id": "S-018"
+    },
+    {
+      "title": "Multi-therapist calendar chips render raw appointments.therapist as HTML",
+      "severity": "high",
+      "location": "js/modules/calendar/CalendarUI.js",
+      "attacker": "Authenticated therapist who can update an appointment they currently own under isOwner(resource.data.therapist) on the pre-update document.",
+      "controlled_input": "appointments/{id}.therapist set to HTML markup",
+      "attack_path": "Update owned appointment therapist to <img...>. Firestore checks ownership on existing therapist only. isSuper calendar 'Todas' view loads the doc; isViewAll chip path builds therapistName from tKey and interpolates it into chip.innerHTML without escape.",
+      "impact": "Stored therapist-to-admin/reception XSS on the main calendar; token theft / actions as privileged staff.",
+      "evidence": "CalendarUI.js ~235-288 isViewAll chip innerHTML uses therapistName derived from evt.therapist with no escapeHTML.",
+      "why_not_duplicate": "Prior CalendarUI items are appointment names and cancelledBy. Therapist-key XSS was flagged in Sidebar/Financial/Corte/Audit/PatientModals — not this CalendarUI all-view chip builder. Distinct from Firestore move-records privilege finding.",
+      "status": "active",
+      "commit_hash": "5f74d955ebd92ae0198f323a8e0d9e421d1a7ed9",
+      "detected_at_pst": "2026-08-05T13:09:00-07:00",
+      "reported_link": "",
+      "id": "S-019"
+    },
+    {
+      "title": "Appointment justification Ver button opens attacker-controlled URLs",
+      "severity": "medium",
+      "location": "js/modules/calendar/CalendarModal.js",
+      "attacker": "Authenticated therapist who can update an owned cancelled appointment.",
+      "controlled_input": "appointments/{id}.justificationUrl (with justified true)",
+      "attack_path": "Set justificationUrl to https://evil.example/phish or data:text/html,... Victim staff opens cancelled appointment modal and clicks Ver. Handler is window.open(ev.justificationUrl, '_blank') with no Storage URL allowlist.",
+      "impact": "Open redirect / phishing from a trusted clinic UI control; credential harvesting against staff.",
+      "evidence": "CalendarModal.js ~393-398 and ~640 bind viewJustificationBtn.onclick to window.open(ev.justificationUrl) without scheme/host checks.",
+      "why_not_duplicate": "Prior PatientModals finding is HTML attribute breakout inside inline onclick=window.open('${url}'). This is a programmatic window.open in CalendarModal (redirect/phishing vs attribute XSS).",
+      "status": "active",
+      "commit_hash": "5f74d955ebd92ae0198f323a8e0d9e421d1a7ed9",
+      "detected_at_pst": "2026-08-05T13:09:00-07:00",
+      "reported_link": "",
+      "id": "S-020"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "scan_date": "2026-08-05",
+  "focus": "backend Python: functions/*, whatsapp_webhook.py, serve.py",
+  "commit_hash_base": "4ac1933",
+  "new_findings_count": 2,
+  "findings": [
+    {
+      "title": "Reminder phone_map routes clinic WhatsApp to another therapist's patient by forged appointment name",
+      "severity": "high",
+      "location": "functions/main.py",
+      "status": "mitigated_in_repo",
+      "attacker": "An authenticated therapist who can create tomorrow-dated appointments they own under Firestore rules.",
+      "controlled_input": "appointments/{id}.name matching a peer therapist's patient display name, with missing or invalid profileId/patientId.",
+      "attack_path": "Peer therapist has a tomorrow appointment with profileId set. Reminder cron preloads that profile into phone_map keyed by name.lower(). Attacker creates an owned tomorrow appointment with the same name (and garbage/missing profileId). execute_send_reminders / execute_send_evening_reminders resolve the attacker appointment via the shared name key and Twilio-send the real parent's WhatsApp a clinic reminder for the forged slot/therapist.",
+      "impact": "Cross-therapist unsolicited WhatsApp to a real parent with attacker-controlled schedule details under clinic branding; increases chance of mistaken confirm/cancel via existing name matching.",
+      "evidence": "Previously phone_map[data.name.lower()]=data when loading by profileId; lookup fell back to phone_map[p_name.lower()]. Repo now uses _load_reminder_profiles_by_id (id-only) and _resolve_reminder_profile with same-therapist name fallback.",
+      "why_not_duplicate": "Not webhook confirm/cancel name matching; not Autopilot candidate name lookup. This is outbound reminder destination confusion via a shared name index built from other appointments' profileIds.",
+      "remediation": "Deploy functions. Prefer requiring profileId on reminder-eligible appointments; disallow therapist field reassignment without isOwner(new)."
+    },
+    {
+      "title": "Therapist-reassigned planted evaluation appointments hijack Diana eval WhatsApp and clinical stage flags",
+      "severity": "medium",
+      "location": "functions/main.py",
+      "status": "mitigated_in_repo",
+      "attacker": "An authenticated therapist who can update appointments they currently own.",
+      "controlled_input": "appointments/{id}.isEvaluation, .evaluationStage, .profileId, .date (earlier today), then .therapist set to diana in an owner-authorized update.",
+      "attack_path": "Create an evaluation appointment under the attacker therapist key. Update therapist to diana (rules authorize isOwner on pre-update therapist only). At 21:00 MX, execute_send_diana_evaluation_followup sends Diana the E2 WhatsApp template with attacker-controlled name/stage. If Diana responds eval_yes/eval_entrega (or the first matching awaiting profile is processed), handlers set dianaSession* and awaitingDianaNextStage/evaluationStage without verifying the bound profile is Diana's patient.",
+      "impact": "Clinic-branded WhatsApp spam/phishing to Diana's phone and corruption of evaluation workflow flags.",
+      "evidence": "execute_send_diana_evaluation_followup and _find_diana_eval_apt_today previously only checked appointments.therapist==diana. Repo adds _profile_therapist_is(profileId,'diana') gates and filters awaitingDianaNextStage to Diana-owned profiles.",
+      "why_not_duplicate": "Distinct from Autopilot cancel→peer therapist offers and from calendar sync unknown-therapist→Diana OAuth event writes. This path is Diana eval E2/E3 templates and patientProfiles evaluation flags.",
+      "remediation": "Deploy functions. Add Firestore rules isOwner(request.resource.data.therapist) and enum therapist keys."
+    }
+  ],
+  "rejected_candidates": [
+    "migrate_claims_temp still unauth 200 — already reported",
+    "Render unsigned webhook / default-key crons/send-message — already reported",
+    "CF send_* 401 for public default key; CF webhook 403 unsigned",
+    "Open-signup Bearer token cannot authorize send_message_api/send_reminders_api (live 401)",
+    "LOGO_URL receipt SSRF — env-only",
+    "serve.py 0.0.0.0 — local dev only",
+    "Missing webhook_security/whatsapp_templates/clinic_saas in git — deploy integrity",
+    "Autopilot/opt-in/receipt/staff/sheets/googleEventId/keywords/daily-summary Diana dump — already reported"
+  ]
+}
