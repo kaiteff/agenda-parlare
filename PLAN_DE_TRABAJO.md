@@ -266,6 +266,10 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 - [x] **Q-001 a Q-006** (26 may, Cursor — ver `SEGURIDAD_Y_VULNERABILIDADES.md`): SyntaxError fatal PatientManager, timeout Cloud Function, índices versionados, cache historial, listeners sin unsubscribe, listeners gigantes sin filtro de fecha.
 - [ ] **S-002 ⚠️ Lectura cruzada `appointments`**: cualquier terapeuta autenticada puede leer nombres+costos+teléfonos de pacientes de otra terapeuta vía consola del navegador. Plan: dividir en `slots` público + `appointment_details` privado, o migrar a custom claims (S-005).
 - [ ] **S-005 ⚠️ Whitelist de emails hardcoded en reglas**: migrar a custom claims de Firebase Auth para que cambios de email no requieran redeploy.
+- [ ] **S-017 ⚠️ XSS `baseCosts` en Admin Settings** (5 ago): escape + validar números; ver `SEGURIDAD_Y_VULNERABILIDADES.md`.
+- [ ] **S-018 ⚠️ XSS `userName` en AuditPanel** (5 ago): `escapeHTML` en bitácora.
+- [ ] **S-019 ⚠️ XSS `therapist` en chips CalendarUI vista Todas** (5 ago): allowlist + escape.
+- [ ] **S-020 🟡 Open redirect `justificationUrl` en CalendarModal** (5 ago): allowlist Storage URL.
 - [ ] **S-006/007/008 🟡 Medios**: rate-limit en `copilot_overrides`, suprimir `console.log` con datos sensibles en prod, custom claims (parte de S-005).
 - [ ] **S-009/010 💡 Mejoras**: bitácora de seguridad central, auditar dependencias npm/pip mensualmente.
 

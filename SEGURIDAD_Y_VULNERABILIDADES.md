@@ -10,13 +10,13 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 22 Jun 2026 — sesión desglose cita + seguro pago; sin cambios de severidad)
+## 📊 Resumen ejecutivo (Última actualización: 5 Ago 2026 — appsec review frontend/rules/hosting)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
 | 🚨 Crítico | 0 | Ninguno |
-| ⚠️ Alto | 1 | Whitelist emails hardcoded (S-005) — custom claims pendiente |
-| 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
+| ⚠️ Alto | 4 | Whitelist emails (S-005); baseCosts XSS Admin Settings (S-017); AuditPanel `userName` XSS (S-018); CalendarUI therapist-key XSS (S-019) |
+| 🟡 Medio | 3 | `console.log` sensibles (S-007); sin custom claims (S-008); justificationUrl open redirect CalendarModal (S-020) |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
 | ✅ Reforzado | 33 | Incl. confirmación desglose antes de pago Excel (22 jun); cola `schedulingQueue`; L-1 logout Copiloto |
 
@@ -30,6 +30,30 @@
 ---
 
 ## ⚠️ Alto — próximo sprint
+
+### S-017 · Admin Settings — `baseCosts` cost/fee como HTML (XSS almacenado)
+
+- **Archivo:** `js/modules/admin/AdminSettingsModal.js` (`_renderCosts`, ~300–304)
+- **Detalle:** `value="${data.cost}"` / `value="${data.fee}"` sin escape. Quien pueda escribir `settings/clinicConfig` (`isSuper()`, p. ej. recepción vía consola) planta `"><img onerror=…>` y se ejecuta al abrir **Costos y Comisiones**.
+- **Impacto:** XSS en sesión admin; robo de tokens Firebase/Google en `localStorage`.
+- **Mitigación propuesta:** `escapeHTML` / DOM APIs + `.value`; validar números en reglas; escritura settings solo admin (claims).
+- **Estado:** ⚠️ Identificado 5 ago 2026 (review `67a3`). Distinto del XSS de catálogo de temas (S-001 / hallazgo 1 ago en PatientModals).
+
+### S-018 · AuditPanel — `userName` sin escape (XSS almacenado)
+
+- **Archivo:** `js/modules/admin/AuditPanel.js` (~175)
+- **Detalle:** `${log.userName}` en `innerHTML`. `audit_logs` admite write `isSuper()` sin validar campos; se puede plantar `userName` malicioso.
+- **Impacto:** XSS en bitácora admin/recepción.
+- **Mitigación propuesta:** `escapeHTML(log.userName)`; preferir `textContent`; validar shape de `audit_logs` en reglas.
+- **Estado:** ⚠️ Identificado 5 ago 2026. Distinto de patientName / therapist / message ya reportados en el mismo panel.
+
+### S-019 · CalendarUI vista «Todas» — `therapist` crudo en chips (XSS almacenado)
+
+- **Archivo:** `js/modules/calendar/CalendarUI.js` (~235–288)
+- **Detalle:** `therapistName` se deriva del campo `therapist` y se inserta en `chip.innerHTML` sin escape. Un terapeuta puede actualizar `therapist` de una cita propia a markup (reglas solo checan dueño **previo**); admin/recepción lo cargan en vista Todas.
+- **Impacto:** XSS terapeuta → admin/recepción en el calendario principal.
+- **Mitigación propuesta:** allowlist `diana|sam|vero` en reglas de update; `escapeHTML` en chips; no cambiar `therapist` sin ser dueño del valor nuevo.
+- **Estado:** ⚠️ Identificado 5 ago 2026. Distinto de nombres/cancelledBy en CalendarUI y de therapist XSS en Sidebar/Reportes.
 
 ### S-002 · `appointments` — lectura cruzada (mitigación parcial en reglas)
 
@@ -54,6 +78,14 @@
 ---
 
 ## 🟡 Medio — cola
+
+### S-020 · CalendarModal — `justificationUrl` abierto sin allowlist
+
+- **Archivo:** `js/modules/calendar/CalendarModal.js` (~398, ~640)
+- **Detalle:** `window.open(ev.justificationUrl, '_blank')` sin restringir a URLs de Firebase Storage. Terapeuta puede setear `justificationUrl` https/data en una cita cancelada propia.
+- **Impacto:** Open redirect / phishing desde el botón «Ver» del justificante.
+- **Mitigación propuesta:** Allowlist `https://firebasestorage.googleapis.com/` (y bucket del proyecto); ignorar otros esquemas; no usar el string de Firestore como path de `deleteObject` sin normalizar.
+- **Estado:** 🟡 Identificado 5 ago 2026. Distinto del XSS por breakout de atributo `onclick` en PatientModals.
 
 ### S-006 · Rate-limit frontend Copiloto (debounce 1 s)
 
@@ -162,6 +194,7 @@
 | **26 May 2026 (mañana)** | Claude (revisión post-Antigravity Optimización Firestore Fase 1) | Auditoría de los 5 archivos tocados por Antigravity para la migración a ventana 90 días + historial bajo demanda + polling Copiloto: `PatientManager.js`, `PatientModals.js`, `PatientActions.js`, `CalendarData.js`, `space_optimizer.py`. Verificación con `node --input-type=module`, revisión de queries Firestore vs índices, lectura del dashboard Firebase (58.4 % lecturas). | Q-001 (SyntaxError fatal) · Q-002 (timeout Cloud Function) · Q-003 (índices Firestore no versionados) · Q-004 (modal historial pierde citas) · Q-005 (memory leak listeners) · Q-006 (listeners gigantes sin filtro fecha) | **Cerrados Q-001 a Q-006** en la misma sesión: refactor `_setupRealtimeListener`, `timeout_sec=720`, `firestore.indexes.json` con 6 índices, `PatientModals._historyCache` con merge live, `_unsubscribeApts/_unsubscribeProfiles`, filtros de fecha en Copilot+batchSync. Pendiente para Antigravity: `firebase deploy --only firestore:indexes,functions,hosting` y validación dashboard 24-48 h después. |
 | **26 May 2026 (tarde)** | Claude (revisión post-Antigravity deploy + Win 1 + ajuste de tiempos) | Auditoría del trabajo de Antigravity en la tarde: deploys exitosos de índices, function (con `timeout_sec=540` forzado por límite Cloud Functions = 540 s) y hosting; refactor de `CalendarData.subscribe` a patrón multicast para unificar listeners de citas (Win 1 que estaba marcado como pendiente alto-impacto en la mañana). Verificación de que los fixes Q-001 a Q-006 siguen intactos tras el refactor del listener compartido. | Q-007 (listener duplicado `appointments` ya cerrado por Antigravity como Win 1) · Q-008 (desync `COPILOT_DELAY_MS` 10 min frontend vs 8 min backend, detectado en review) | **Cerrados Q-007 y Q-008** en la misma sesión: Antigravity implementó el multicast (Q-007) y Cursor propagó la constante `COPILOT_DELAY_MS = 8 * 60 * 1000` desde service hacia panel (cálculos + textos visibles a Yari) + `HelpManual.js` con «8 min» (Q-008). Lecturas totales esperadas tras propagación: **29 k → 8–12 k/día** (de 58.4 % a probablemente <25 %). Pendiente Daniel (manual): limpieza Hosting Storage 17.6 GB → 10 GB en consola Firebase. |
 | **22 Jun 2026** | Cursor | Sesión desglose cita (perfil manda), seguro pago A+B, toast sync Excel delegado admin. | — | **Reforzado:** confirmación desglose antes de pago Excel (integridad operacional). |
+| **5 Ago 2026** | Cursor (appsec automation `67a3`) | Frontend JS foco AdminSettings/Header/Absence/Queue/Suggestions + rules + hosting. | **S-017** baseCosts XSS · **S-018** AuditPanel userName XSS · **S-019** CalendarUI therapist chip XSS · **S-020** justificationUrl open redirect | — (documentados; mitigación pendiente) |
 
 ---
 
@@ -177,4 +210,4 @@
 
 ---
 
-*Última actualización: 22 de Junio, 2026 — Sesión desglose cita + seguro pago A+B; reforzado integridad pagos Excel. Sin hallazgos 🚨/⚠️ nuevos. Deploy hosting pendiente.*
+*Última actualización: 5 de Agosto, 2026 — Appsec review frontend/rules/hosting: S-017…S-020 documentados. Detalle en `resumen_sesion/SECURITY_REVIEW_20260805_FRONTEND.md`.*

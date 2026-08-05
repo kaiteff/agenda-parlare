@@ -73,6 +73,17 @@ HOY ─────────────────────────�
 
 ## Registro de avance y qué hacer ahora
 
+### 🔒 Appsec review — 5 ago 2026 (sin deploy de producto)
+
+**Entregado:** auditoría frontend/rules/hosting en `cursor/application-security-review-67a3`. **4 hallazgos nuevos** documentados (S-017…S-020): XSS `baseCosts` Admin Settings, XSS `userName` AuditPanel, XSS `therapist` chips CalendarUI «Todas», open redirect `justificationUrl` CalendarModal. Detalle: `resumen_sesion/SECURITY_REVIEW_20260805_FRONTEND.md` + `SEGURIDAD_Y_VULNERABILIDADES.md`.
+
+#### ⏳ Falta
+- Mitigar S-017…S-020 en código + redeploy hosting (y rules si se endurece `therapist` / settings).
+- No re-reportar los 77 hallazgos ya flaggeados (XSS nombres, hosting SA/Twilio/docs, AuthManager catch, Sheets/Calendar client wipe, etc.).
+
+#### 💡 Sugerencias
+- Priorizar escape central + allowlist `diana|sam|vero` en update de `appointments.therapist` (cierra S-019 y refuerza move-records).
+
 ### 🔄 Retomar aquí (próxima sesión — tras deploy **30 jun 2026**)
 
 | Estado | Qué |
@@ -927,7 +938,7 @@ Sprint 2 (Fase 1 continuación / polish)
 
 - Sesión **22 jun 2026** — **Desglose cita = perfil del paciente** (`appointmentFinancials.js`). **Seguro pago A+B** (confirmación Excel + guardar antes de pagar). **Toast + manual** sync pendiente Diana/Yari si terapeuta sin permiso Excel ajeno. Build OK; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **22 de Junio de 2026** — Cierre sesión: perfil→desglose, seguro pago A+B, sync Excel delegado admin.*
+*Última actualización de este documento: **5 de Agosto de 2026** — Appsec review S-017…S-020 documentados (sin cambios de producto UI).*
 
 ---
 
