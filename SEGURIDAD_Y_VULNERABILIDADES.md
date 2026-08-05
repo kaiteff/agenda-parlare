@@ -10,7 +10,7 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 5 Ago 2026 — appsec review frontend/rules/hosting)
+## 📊 Resumen ejecutivo (Última actualización: 5 Ago 2026 — appsec backend CF/WhatsApp)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
@@ -18,7 +18,7 @@
 | ⚠️ Alto | 4 | Whitelist emails (S-005); baseCosts XSS Admin Settings (S-017); AuditPanel `userName` XSS (S-018); CalendarUI therapist-key XSS (S-019) |
 | 🟡 Medio | 3 | `console.log` sensibles (S-007); sin custom claims (S-008); justificationUrl open redirect CalendarModal (S-020) |
 | 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 33 | Incl. confirmación desglose antes de pago Excel (22 jun); cola `schedulingQueue`; L-1 logout Copiloto |
+| ✅ Reforzado | 35 | Incl. S-021 reminder phone_map + S-022 Diana eval planting (repo; falta redeploy functions) |
 
 ---
 
@@ -137,6 +137,8 @@
 
 | Fecha | Área | Detalle |
 |-------|------|---------|
+| 5 ago 2026 | **S-021 Recordatorios WhatsApp — phone_map por nombre** | `execute_send_reminders` / evening indexaban perfiles por `name.lower()` al precargar `profileId`, permitiendo a otra terapeuta crear cita mañana con el mismo nombre y reutilizar el teléfono del paciente real. **Cerrado en repo:** mapa solo por id + fallback nombre acotado al mismo `therapist`. Redeploy `functions` pendiente. |
+| 5 ago 2026 | **S-022 Diana eval — citas plantadas por reasignación** | Cron E2 / handlers `eval_*` confiaban en `appointments.therapist==diana` sin verificar que `profileId` sea paciente de Diana. Terapeuta podía crear eval propia, reasignar `therapist→diana` y disparar WhatsApp E2 + mutar flags clínicos. **Cerrado en repo:** `_profile_therapist_is(..., 'diana')` en cron y handlers. Redeploy pendiente. |
 | 22 jun 2026 | **Integridad pagos / Excel** | Confirmación obligatoria con desglose antes de Pagado/No pagado; bloqueo si cambios financieros sin Guardar (`CalendarModal.js`). Reduce clicks accidentales y registros Excel incorrectos. Pago lee Firestore guardado, no DOM sin persistir. |
 | 18 may 2026 | **Notas clínicas (`clinicalNotes`)** | Reglas Firestore restringen lectura/escritura al terapeuta dueño y super users. **Grado médico**. |
 | 18 may 2026 | **Perfiles de pacientes (`patientProfiles`)** | Mismas reglas estrictas que `clinicalNotes`. |
@@ -195,6 +197,7 @@
 | **26 May 2026 (tarde)** | Claude (revisión post-Antigravity deploy + Win 1 + ajuste de tiempos) | Auditoría del trabajo de Antigravity en la tarde: deploys exitosos de índices, function (con `timeout_sec=540` forzado por límite Cloud Functions = 540 s) y hosting; refactor de `CalendarData.subscribe` a patrón multicast para unificar listeners de citas (Win 1 que estaba marcado como pendiente alto-impacto en la mañana). Verificación de que los fixes Q-001 a Q-006 siguen intactos tras el refactor del listener compartido. | Q-007 (listener duplicado `appointments` ya cerrado por Antigravity como Win 1) · Q-008 (desync `COPILOT_DELAY_MS` 10 min frontend vs 8 min backend, detectado en review) | **Cerrados Q-007 y Q-008** en la misma sesión: Antigravity implementó el multicast (Q-007) y Cursor propagó la constante `COPILOT_DELAY_MS = 8 * 60 * 1000` desde service hacia panel (cálculos + textos visibles a Yari) + `HelpManual.js` con «8 min» (Q-008). Lecturas totales esperadas tras propagación: **29 k → 8–12 k/día** (de 58.4 % a probablemente <25 %). Pendiente Daniel (manual): limpieza Hosting Storage 17.6 GB → 10 GB en consola Firebase. |
 | **22 Jun 2026** | Cursor | Sesión desglose cita (perfil manda), seguro pago A+B, toast sync Excel delegado admin. | — | **Reforzado:** confirmación desglose antes de pago Excel (integridad operacional). |
 | **5 Ago 2026** | Cursor (appsec automation `67a3`) | Frontend JS foco AdminSettings/Header/Absence/Queue/Suggestions + rules + hosting. | **S-017** baseCosts XSS · **S-018** AuditPanel userName XSS · **S-019** CalendarUI therapist chip XSS · **S-020** justificationUrl open redirect | — (documentados; mitigación pendiente) |
+| **5 Ago 2026 (tarde)** | Cursor (appsec automation `67a3` — backend Python) | `functions/*`, `whatsapp_webhook.py`, `serve.py`. | **S-021** reminder phone_map cross-patient WhatsApp · **S-022** Diana eval planting via therapist reassignment | **Mitigados en repo** (S-021/S-022). Redeploy `functions` pendiente. No re-reportar lista ya flaggeada (migrate_claims, Render default key, etc.). |
 
 ---
 
@@ -210,4 +213,4 @@
 
 ---
 
-*Última actualización: 5 de Agosto, 2026 — Appsec review frontend/rules/hosting: S-017…S-020 documentados. Detalle en `resumen_sesion/SECURITY_REVIEW_20260805_FRONTEND.md`.*
+*Última actualización: 5 de Agosto, 2026 — Appsec backend CF: S-021/S-022 mitigados en repo. Frontend S-017…S-020 siguen pendientes. Detalle: `resumen_sesion/SECURITY_REVIEW_20260805_BACKEND.md`.*

@@ -270,6 +270,8 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 - [ ] **S-018 ⚠️ XSS `userName` en AuditPanel** (5 ago): `escapeHTML` en bitácora.
 - [ ] **S-019 ⚠️ XSS `therapist` en chips CalendarUI vista Todas** (5 ago): allowlist + escape.
 - [ ] **S-020 🟡 Open redirect `justificationUrl` en CalendarModal** (5 ago): allowlist Storage URL.
+- [x] **S-021 ⚠️ Reminder phone_map cross-patient** (5 ago backend): mitigado en `functions/main.py` — redeploy `functions` pendiente.
+- [x] **S-022 ⚠️ Diana eval planting** (5 ago backend): mitigado en `functions/main.py` — redeploy `functions` pendiente.
 - [ ] **S-006/007/008 🟡 Medios**: rate-limit en `copilot_overrides`, suprimir `console.log` con datos sensibles en prod, custom claims (parte de S-005).
 - [ ] **S-009/010 💡 Mejoras**: bitácora de seguridad central, auditar dependencias npm/pip mensualmente.
 

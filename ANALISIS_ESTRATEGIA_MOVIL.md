@@ -75,14 +75,18 @@ HOY ─────────────────────────�
 
 ### 🔒 Appsec review — 5 ago 2026 (sin deploy de producto)
 
-**Entregado:** auditoría frontend/rules/hosting en `cursor/application-security-review-67a3`. **4 hallazgos nuevos** documentados (S-017…S-020): XSS `baseCosts` Admin Settings, XSS `userName` AuditPanel, XSS `therapist` chips CalendarUI «Todas», open redirect `justificationUrl` CalendarModal. Detalle: `resumen_sesion/SECURITY_REVIEW_20260805_FRONTEND.md` + `SEGURIDAD_Y_VULNERABILIDADES.md`.
+**Entregado (frontend):** auditoría frontend/rules/hosting en `cursor/application-security-review-67a3`. **4 hallazgos** documentados (S-017…S-020). Detalle: `resumen_sesion/SECURITY_REVIEW_20260805_FRONTEND.md`.
+
+**Entregado (backend Python):** review `functions/*` + `whatsapp_webhook.py` + `serve.py`. **2 hallazgos nuevos** (S-021 reminder phone_map cross-patient; S-022 Diana eval planting). Mitigados en `functions/main.py` en esta rama. Detalle: `resumen_sesion/SECURITY_REVIEW_20260805_BACKEND.md`.
 
 #### ⏳ Falta
+- `firebase deploy --only functions` para activar S-021/S-022 (+ daily-summary unknown-therapist omit ya en el mismo archivo).
 - Mitigar S-017…S-020 en código + redeploy hosting (y rules si se endurece `therapist` / settings).
-- No re-reportar los 77 hallazgos ya flaggeados (XSS nombres, hosting SA/Twilio/docs, AuthManager catch, Sheets/Calendar client wipe, etc.).
+- No re-reportar los hallazgos ya flaggeados (migrate_claims, Render default key, unsigned Render webhook, Autopilot/name-only, etc.).
 
 #### 💡 Sugerencias
-- Priorizar escape central + allowlist `diana|sam|vero` en update de `appointments.therapist` (cierra S-019 y refuerza move-records).
+- Priorizar escape central + allowlist `diana|sam|vero` en update de `appointments.therapist` (cierra S-019 y refuerza move-records + S-022).
+- Versionar en git `webhook_security.py` / `whatsapp_templates.py` / `REMINDERS_API_KEY` (hoy solo en deploy).
 
 ### 🔄 Retomar aquí (próxima sesión — tras deploy **30 jun 2026**)
 
@@ -376,6 +380,7 @@ firebase deploy --only hosting
 
 | Área | Qué se hizo |
 |------|-------------|
+| **Appsec backend 5 ago** | S-021: recordatorios WhatsApp ya no reutilizan teléfonos por colisión de nombre entre terapeutas. S-022: cron/handlers eval Diana exigen `patientProfiles.therapist==diana`. Repo listo; falta deploy functions. |
 | **Decisión estratégica** | Opción A: Capacitor + misma SPA web, con visión SaaS y serverless en Blaze documentadas. |
 | **Paso 0 — Fundamentos** | `--bottom-nav-height`, `.touch-target`, safe-areas, `.pb-bottom-nav`, estilos de barra inferior en `index.css`. Tokens en `tailwind.config.js`. Padding inferior en el layout (`index.html`). |
 | **Paso 1 — Bottom nav** | Nuevos `js/utils/MobileNav.js` y `js/components/MobileBottomNav.js`. Inyección en `ComponentManager.js`. Header usa `MobileNav` para el menú hamburguesa. |
@@ -938,7 +943,7 @@ Sprint 2 (Fase 1 continuación / polish)
 
 - Sesión **22 jun 2026** — **Desglose cita = perfil del paciente** (`appointmentFinancials.js`). **Seguro pago A+B** (confirmación Excel + guardar antes de pagar). **Toast + manual** sync pendiente Diana/Yari si terapeuta sin permiso Excel ajeno. Build OK; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **5 de Agosto de 2026** — Appsec review S-017…S-020 documentados (sin cambios de producto UI).*
+*Última actualización de este documento: **5 de Agosto de 2026** — Appsec backend S-021/S-022 mitigados en repo (redeploy functions pendiente); frontend S-017…S-020 documentados.*
 
 ---
 
