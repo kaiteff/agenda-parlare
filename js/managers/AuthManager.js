@@ -17,20 +17,31 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import { SettingsManager } from './SettingsManager.js';
+import { isSaasMulticlinicEnabled } from '../core/clinicConstants.js';
+import {
+    CLINIC_OWNER_EMAIL,
+    ROLE_BASE_PERMISSIONS,
+    computeEffectivePermissions,
+    isClinicOwnerEmail
+} from '../config/staffPermissions.js';
 
-// Roles y Permisos
+// Roles y Permisos (etiquetas UI; permisos reales en staffPermissions.js + clinicConfig)
 const ROLES = {
     admin: {
         label: 'Administrador',
-        permissions: ['manage_users', 'manage_schedule', 'view_reports', 'manage_patients', 'view_all_patients', 'delete_records', 'switch_therapist_view', 'manage_blocks']
+        permissions: ROLE_BASE_PERMISSIONS.admin
     },
     therapist: {
         label: 'Terapeuta',
-        permissions: ['manage_own_schedule', 'view_own_patients', 'edit_own_records', 'view_schedule', 'switch_therapist_view']
+        permissions: ROLE_BASE_PERMISSIONS.therapist
     },
     receptionist: {
         label: 'Recepción',
-        permissions: ['view_schedule', 'create_appointment', 'manage_payments', 'manage_schedule', 'view_all_patients', 'edit_own_records', 'switch_therapist_view', 'manage_blocks', 'view_audit']
+        permissions: ROLE_BASE_PERMISSIONS.receptionist
+    },
+    platform_support: {
+        label: 'Parláre Support',
+        permissions: ROLE_BASE_PERMISSIONS.platform_support
     }
 };
 
@@ -47,29 +58,7 @@ function getDbInstance() {
     return db;
 }
 
-// Mapeo manual de seguridad y perfiles de costo (Fallback)
-const AUTHORIZED_USERS = {
-    'lopezcarpio7@gmail.com': { 
-        role: 'admin', therapist: 'diana', displayName: 'Diana',
-        defaultCost: 800, defaultClinicFee: 250 
-    },
-    'sammygtz90@gmail.com': { 
-        role: 'therapist', therapist: 'sam', displayName: 'Sam',
-        defaultCost: 800, defaultClinicFee: 250 
-    },
-    'sanchezverooo21@gmail.com': { 
-        role: 'therapist', therapist: 'vero', displayName: 'Vero',
-        defaultCost: 800, defaultClinicFee: 400 
-    },
-    'yaritzajocgo@gmail.com': { 
-        role: 'receptionist', therapist: 'all', displayName: 'Yari',
-        defaultCost: 800, defaultClinicFee: 250 
-    },
-    'rodriguezd.danielrob@gmail.com': { 
-        role: 'admin', therapist: 'all', displayName: 'Daniel (Admin)',
-        defaultCost: 800, defaultClinicFee: 250 
-    }
-};
+// Mapeo manual de seguridad eliminado. Los roles provienen de Firebase Custom Claims (request.auth.token.role)
 
 export const AuthManager = {
     // ... (anterior)
@@ -89,12 +78,9 @@ export const AuthManager = {
             };
         }
 
-        // 2. Fallback a mapeo manual si no hay configuración en el panel
-        const profile = Object.values(AUTHORIZED_USERS).find(u => u.therapist === id);
-        return {
-            cost: profile?.defaultCost || 800,
-            clinicFee: profile?.defaultClinicFee || 250
-        };
+        // 2. Fallback si no hay configuración en el panel
+        if (id === 'vero') return { cost: 800, clinicFee: 400 };
+        return { cost: 800, clinicFee: 250 };
     },
     currentUser: null,
     selectedTherapist: null, // Para admins: qué calendario están viendo
@@ -105,6 +91,13 @@ export const AuthManager = {
      * Inicializa el listener de estado de autenticación
      */
     async init() {
+        SettingsManager.subscribe(() => {
+            if (this.currentUser) {
+                this.refreshPermissions();
+                window.dispatchEvent(new CustomEvent('parlare:permissions-changed'));
+            }
+        });
+
         return new Promise((resolve) => {
             try {
                 const auth = getAuthInstance();
@@ -162,6 +155,7 @@ export const AuthManager = {
         this.selectedTherapist = null;
         this._initUserUid = null;
         this._initUserInFlight = null;
+        import('../core/ClinicContext.js').then(({ ClinicContext }) => ClinicContext.clear()).catch(() => {});
     },
 
     /**
@@ -190,44 +184,42 @@ export const AuthManager = {
     async _initUserCore(firebaseUser) {
         try {
             console.log("👤 AuthManager: Inicializando usuario...", firebaseUser.uid);
-            const firestoreData = await this.getUserData(firebaseUser.uid);
-            const manual = firebaseUser.email
-                ? AUTHORIZED_USERS[firebaseUser.email.toLowerCase()]
-                : null;
+            // 1. Obtener Custom Claims del token (forzamos refresh durante migración/desarrollo)
+            const tokenResult = await firebaseUser.getIdTokenResult(true);
+            const claims = tokenResult.claims || {};
+            
+            // 2. Obtener datos extra desde Firestore si existen
+            const firestoreData = await this.getUserData(firebaseUser.uid) || {};
 
-            // Email autorizado en código gana sobre users/{uid} (evita therapist:diana en Firestore para Daniel admin)
-            let userData = manual
-                ? { ...(firestoreData || {}), ...manual }
-                : firestoreData;
+            let userData = {
+                ...firestoreData,
+                role: claims.role || firestoreData.role || 'therapist', // Fallback seguro
+                therapist: claims.therapist || firestoreData.therapist || 'diana',
+                displayName: firestoreData.displayName || firebaseUser.displayName || 'Usuario',
+                isFallback: !claims.role
+            };
 
-            if (!userData && manual) {
-                console.log("🔍 Perfil desde mapeo manual:", firebaseUser.email);
-            }
-
-            if (userData) {
-                console.log("✅ Perfil encontrado/cargado correctamente.");
-                this.currentUser = { ...firebaseUser, ...userData };
+            if (claims.role) {
+                console.log("✅ Perfil cargado desde Custom Claims:", claims.role);
             } else {
-                console.warn('⚠️ Usuario sin perfil extendido (o error de lectura), usando fallback seguro.');
-                // Fallback RESTRICTIVO por seguridad
-                this.currentUser = {
-                    ...firebaseUser,
-                    role: 'therapist', // Por seguridad, si no lo conocemos, es rol básico
-                    therapist: 'diana',
-                    displayName: firebaseUser.displayName || 'Usuario',
-                    isFallback: true
-                };
+                console.warn('⚠️ Usuario sin Custom Claims asignados, usando fallback.');
             }
 
-            // Vista de agenda: admin/recepción → «Todas» por defecto (o última elección en sesión)
-            if (this.currentUser.role === 'receptionist' || this.isAdmin()) {
+            this.currentUser = { ...firebaseUser, ...userData, effectiveClaims: claims };
+
+            this.refreshPermissions();
+
+            // Vista de agenda: quien tenga permiso ve «Todas» por defecto (o última elección en sesión)
+            if (this.canViewAllAgenda()) {
                 const saved = sessionStorage.getItem('parlare_admin_therapist_view');
-                const allowed = ['diana', 'sam', 'vero', 'all'];
+                // Use StaffManager dynamically for allowed therapists, including 'all'
+                const dynamicAllowed = window.StaffManager ? window.StaffManager.getTherapists().map(t => t.id) : ['diana', 'sam', 'vero'];
+                const allowed = [...dynamicAllowed, 'all'];
                 this.selectedTherapist = allowed.includes(saved) ? saved : 'all';
             } else if (this.currentUser.therapist && this.currentUser.therapist !== 'all') {
                 this.selectedTherapist = this.currentUser.therapist;
             } else {
-                this.selectedTherapist = 'diana';
+                this.selectedTherapist = window.StaffManager ? window.StaffManager.getTherapists()[0]?.id || 'diana' : 'diana';
             }
 
             return this.currentUser;
@@ -277,24 +269,30 @@ export const AuthManager = {
         }
     },
 
+    refreshPermissions() {
+        if (!this.currentUser) return;
+        const staffPermissions = SettingsManager.config?.staffPermissions || {};
+        this.currentUser.effectivePermissions = Array.from(
+            computeEffectivePermissions(this.currentUser, staffPermissions)
+        );
+    },
+
+    _getEffectivePermissionSet() {
+        if (!this.currentUser) return new Set();
+        if (!this.currentUser.effectivePermissions) {
+            this.refreshPermissions();
+        }
+        return new Set(this.currentUser.effectivePermissions || []);
+    },
+
     /**
      * Verifica si el usuario tiene un permiso específico
      */
     can(permission) {
         if (!this.currentUser) return false;
-        // Si no tiene rol definido, asumir sin permisos (o admin en dev si se prefiere)
-        if (!this.currentUser.role) return true; // Default permissivo para evitar bloqueos en dev
+        if (!this.currentUser.role) return true;
 
-        const role = ROLES[this.currentUser.role];
-        if (!role) {
-            console.warn(`Role '${this.currentUser.role}' not found in configuration.`);
-            return false;
-        }
-
-        // Admin tiene acceso a todo si tiene el permiso o si es superadmin implícito
-        if (this.currentUser.role === 'admin') return true;
-
-        return role.permissions.includes(permission);
+        return this._getEffectivePermissionSet().has(permission);
     },
 
     /**
@@ -302,7 +300,7 @@ export const AuthManager = {
      */
     canManageBlockFor(therapistId) {
         if (!this.currentUser) return false;
-        if (this.isAdmin() || this.currentUser?.role === 'receptionist') return true;
+        if (this.canViewAllAgenda()) return true;
         if (this.currentUser?.role === 'therapist') {
             const userTherapist = (this.currentUser.therapist || '').toLowerCase();
             const targetTherapist = (therapistId || '').toLowerCase();
@@ -314,7 +312,7 @@ export const AuthManager = {
     /** Puede abrir el modal de vacaciones/ausencias (propia agenda o cualquiera si admin/recepción). */
     canOpenAbsenceModal() {
         if (!this.currentUser) return false;
-        if (this.isAdmin() || this.currentUser?.role === 'receptionist') return true;
+        if (this.canViewAllAgenda()) return true;
         if (this.currentUser?.role === 'therapist') {
             const t = (this.currentUser.therapist || '').toLowerCase();
             return t && t !== 'all';
@@ -329,6 +327,37 @@ export const AuthManager = {
         return this.currentUser?.role === 'admin';
     },
 
+    isClinicOwner() {
+        return isClinicOwnerEmail(this.currentUser?.email);
+    },
+
+    canManageClinicSettings() {
+        return this.can('manage_clinic_settings');
+    },
+
+    canManageStaffPermissions() {
+        return this.can('manage_staff_permissions');
+    },
+
+    canViewClinicFinancials() {
+        return this.can('view_clinic_financials');
+    },
+
+    canViewAllPatients() {
+        return this.can('view_all_patients') || this.canViewAllAgenda();
+    },
+
+    isPlatformSupport() {
+        return isSaasMulticlinicEnabled() && this.currentUser?.role === 'platform_support';
+    },
+
+    /** Admin, recepción, support o permiso explícito — ven toda la agenda. */
+    canViewAllAgenda() {
+        return this.can('view_all_agenda')
+            || this.can('manage_schedule')
+            || this.isPlatformSupport();
+    },
+
     isTherapist() {
         // Un admin también actúa como terapeuta si tiene 'therapist' asignado
         return this.currentUser?.role === 'therapist' || (this.isAdmin() && this.currentUser?.therapist);
@@ -339,7 +368,7 @@ export const AuthManager = {
      */
     getSelectedTherapist() {
         if (this.selectedTherapist) return this.selectedTherapist;
-        if (this.currentUser?.role === 'admin' || this.currentUser?.role === 'receptionist') return 'all';
+        if (this.canViewAllAgenda()) return 'all';
         return this.currentUser?.therapist || 'diana';
     },
 
@@ -349,7 +378,7 @@ export const AuthManager = {
     setSelectedTherapist(therapistId) {
         if (this.can('switch_therapist_view')) {
             this.selectedTherapist = therapistId;
-            if (this.isAdmin() || this.currentUser?.role === 'receptionist') {
+            if (this.canViewAllAgenda()) {
                 sessionStorage.setItem('parlare_admin_therapist_view', therapistId);
             }
             return true;
@@ -364,7 +393,7 @@ export const AuthManager = {
     canViewDetails(item) {
         if (!item) return false;
         // Admin y Recepción pueden ver detalles de todos
-        if (this.isAdmin() || this.currentUser?.role === 'receptionist') return true;
+        if (this.canViewAllAgenda()) return true;
 
         const itemTherapist = item.therapist || 'diana'; // Default legacy
         const userTherapist = this.currentUser?.therapist;
@@ -393,5 +422,8 @@ export const AuthManager = {
 
     getEmail() {
         return this.currentUser?.email || '';
-    }
+    },
+
+    /** Exportado para documentación y panel admin. */
+    CLINIC_OWNER_EMAIL
 };

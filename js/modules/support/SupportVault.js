@@ -19,11 +19,11 @@ export const SupportVault = {
 
     _checkVisibility() {
         const email = AuthManager.getEmail();
-        const isDaniel = email === 'rodriguezd.danielrob@gmail.com';
+        const isSupportStaff = email === 'rodriguezd.danielrob@gmail.com' || AuthManager.isPlatformSupport();
         
         const btn = document.getElementById('openSupportVaultBtn');
         if (btn) {
-            if (isDaniel) {
+            if (isSupportStaff) {
                 btn.classList.remove('hidden');
                 btn.classList.add('md:flex');
             } else {

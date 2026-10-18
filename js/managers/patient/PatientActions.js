@@ -120,6 +120,7 @@ export const PatientActions = {
         const parentName = dom.newPatientParentName?.value.trim() || '';
         const wantsWhatsapp = document.getElementById('newPatientWantsWhatsapp')?.checked !== false;
         const birthday = document.getElementById('newPatientBirthday')?.value || '';
+        const treatmentType = document.querySelector('input[name="newPatientTreatmentType"]:checked')?.value || 'regular';
 
         // Validación
         if (!firstName || !lastName) {
@@ -162,7 +163,8 @@ export const PatientActions = {
                 parentName: _toProperCase(parentName), 
                 wantsWhatsapp,
                 birthday,
-                reimbursementReceipt: getReimbursementReceiptFromDom('newPatient')
+                reimbursementReceipt: getReimbursementReceiptFromDom('newPatient'),
+                treatmentType
             });
 
             if (result.success) {
@@ -502,9 +504,9 @@ export const PatientActions = {
                 };
             }
 
-            // 1. Cancelar citas futuras
+            // 1. Cancelar citas futuras (por id + nombre — citas viejas a veces no tienen patientId)
             const { cancelFutureAppointments } = await import('../../services/patientService.js');
-            await cancelFutureAppointments(patientName);
+            await cancelFutureAppointments(patientName, profileId);
 
             // 2. Desactivar perfil guardando recordatorio
             const result = await deactivatePatientService(profileId, null, legacyData);
@@ -552,6 +554,28 @@ export const PatientActions = {
                 console.log('✅ PatientActions: Paciente reactivado:', patientName);
                 const { PatientManager } = await import('../PatientManager.js');
                 await PatientManager.refreshProfiles(true);
+
+                // Ofrecer agendar de inmediato (evita el flujo confuso baja→alta sin citas visibles)
+                const profile = PatientState.patients.find(p => p.id === profileId || p.name === patientName);
+                const therapist = profile?.therapist || AuthManager.currentUser?.therapist || 'diana';
+                const wantSchedule = await ModalService.confirm(
+                    'Agendar horario',
+                    `¿Agendar ahora el <strong>nuevo horario fijo</strong> de ${escapeHTML(patientName)} con <strong>${escapeHTML(String(therapist).toUpperCase())}</strong>?<br><br>`
+                    + `<span class="text-xs text-amber-800">Tip: elige el hueco, marca <strong>Semanal</strong> y confirma. No hace falta dar de baja otra vez.</span>`,
+                    'Sí, agendar',
+                    'Después'
+                );
+                if (wantSchedule) {
+                    PatientModals.closeInactivePatients?.();
+                    setTimeout(() => {
+                        ScheduleManager.openModal(
+                            profileId,
+                            patientName,
+                            therapist,
+                            profile?.defaultCost || 0
+                        );
+                    }, 250);
+                }
                 return true;
             } else {
                 await ModalService.alert("Error", 'Error al reactivar: ' + result.error, "error");
@@ -578,7 +602,7 @@ export const PatientActions = {
      */
     async deletePatient(profileId, patientName) {
         // Verificar permisos
-        if (!AuthManager.isAdmin() && AuthManager.currentUser?.role !== 'receptionist') {
+        if (!AuthManager.can('delete_records')) {
             await ModalService.alert("Acceso Denegado", 'Solo los administradores y el personal de recepción pueden eliminar pacientes permanentemente.', "error");
             return false;
         }

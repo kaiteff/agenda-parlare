@@ -3,6 +3,9 @@ import { PatientState } from '../managers/patient/PatientState.js';
 import { PatientFilters } from '../managers/patient/PatientFilters.js';
 import { ToastService } from '../utils/ToastService.js';
 import { LoaderService } from '../utils/LoaderService.js';
+import { getStaffApiHeaders } from '../services/WhatsAppMessaging.js';
+
+const SEND_REMINDERS_API = 'https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_reminders_api';
 
 export const WhatsAppDashboard = {
     render() {
@@ -86,13 +89,12 @@ export const WhatsAppDashboard = {
                     LoaderService.show('Enviando recordatorios...');
 
                     try {
-                        const response = await fetch('https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_reminders_api?key=parlare_secret_2026', {
+                        const headers = await getStaffApiHeaders(false);
+                        headers.Accept = 'application/json';
+                        const response = await fetch(SEND_REMINDERS_API, {
                             method: 'GET',
                             mode: 'cors',
-                            headers: {
-                                Accept: 'application/json',
-                                'Content-Type': 'application/json'
-                            }
+                            headers
                         });
                         const result = await response.json();
                         LoaderService.hide();
@@ -142,12 +144,15 @@ export const WhatsAppDashboard = {
             'yaritzajocgo': '👱‍♀️ Yari',
             'lopezcarpio7': '👩‍⚕️ Diana',
             'sammygtz90': '👩‍⚕️ Sammy',
-            'sam': '👩‍⚕️ Sammy',
-            'vero': '👩‍⚕️ Vero',
             'daniel': '👨‍💻 Daniel'
         };
         
-        return mapping[clean] || `🧑 ${clean}`;
+        if (mapping[clean]) return mapping[clean];
+        if (window.StaffManager) {
+            const name = window.StaffManager.getTherapistName(clean);
+            if (name && name.toLowerCase() !== clean) return `👩‍⚕️ ${name}`;
+        }
+        return `🧑 ${clean}`;
     },
 
     _calculateStats(range) {

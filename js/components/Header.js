@@ -11,6 +11,11 @@ import { CalendarState } from '../modules/calendar/CalendarState.js';
 import { SyncService } from '../services/SyncService.js';
 import { ToastService } from '../utils/ToastService.js';
 import { MobileNav } from '../utils/MobileNav.js';
+import { ClinicContext } from '../core/ClinicContext.js';
+import { ClinicSelector } from './ClinicSelector.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
+import { filterByClinic } from '../utils/clinicData.js';
+import { isSaasMulticlinicEnabled } from '../core/clinicConstants.js';
 
 export const Header = {
     _batchSyncUnsub: null,
@@ -121,12 +126,61 @@ export const Header = {
      * Renderiza la información del usuario en el header
      */
     render() {
+        this._renderSupportBanner();
         this._renderUserInfo();
         this._renderSyncStatus(); // Nuevo indicador
         this._renderBatchSyncButton(); // Botón de sincronización manual
         this._renderGoogleSyncStatus(); // Estado de Google Auth
         this._renderTherapistSelector();
         this._setupReportButton();
+    },
+
+    _renderSupportBanner() {
+        if (!isSaasMulticlinicEnabled()) {
+            document.getElementById('supportClinicBanner')?.remove();
+            return;
+        }
+
+        const header = document.getElementById('mainHeader');
+        if (!header) return;
+
+        let banner = document.getElementById('supportClinicBanner');
+        const show = AuthManager.isPlatformSupport() && ClinicContext.getActiveClinicId();
+
+        if (!show) {
+            banner?.remove();
+            return;
+        }
+
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'supportClinicBanner';
+            header.insertAdjacentElement('afterend', banner);
+        }
+
+        banner.className = 'bg-indigo-700 text-white text-xs md:text-sm px-4 py-2 flex flex-wrap items-center justify-between gap-2 z-[99]';
+        banner.innerHTML = `
+            <span class="font-semibold">
+                Modo Parláre Support — <strong>${ClinicContext.getActiveClinicName()}</strong>
+                <span class="opacity-80 font-normal hidden sm:inline"> · Los pagos a Excel usan la sesión Google conectada en este navegador</span>
+            </span>
+            <button type="button" id="changeClinicBtn" class="px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 font-bold text-xs uppercase tracking-wide">
+                Cambiar clínica
+            </button>
+        `;
+
+        banner.querySelector('#changeClinicBtn')?.addEventListener('click', async () => {
+            ClinicContext.clear();
+            document.getElementById('appContent')?.classList.add('hidden');
+            await ClinicSelector.show(async () => {
+                document.getElementById('appContent')?.classList.remove('hidden');
+                SettingsManager.shutdown();
+                await SettingsManager.init();
+                Header.render();
+                if (window.CalendarManager?.refresh) window.CalendarManager.refresh();
+                if (window.PatientManager?.refreshProfiles) await window.PatientManager.refreshProfiles(true);
+            });
+        });
     },
 
     /**
@@ -295,7 +349,10 @@ export const Header = {
         );
 
         this._batchSyncUnsub = onSnapshot(q, (snapshot) => {
-            this._updateBatchSyncUI(snapshot.size);
+            const raw = [];
+            snapshot.forEach((d) => raw.push({ id: d.id, ...d.data() }));
+            const filtered = filterByClinic(raw, ClinicContext.getActiveClinicId());
+            this._updateBatchSyncUI(filtered.length);
         });
     },
 
@@ -358,16 +415,18 @@ export const Header = {
                 const currentUser = AuthManager.currentUser;
                 const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'receptionist';
 
-                const optionsHtml = !isStaff
-                    ? (() => {
-                        const myId = currentUser?.therapist || 'diana';
-                        const myName = myId.charAt(0).toUpperCase() + myId.slice(1);
-                        return `<option value="${myId}">${myName}</option><option value="all">Todas</option>`;
-                    })()
-                    : `<option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option><option value="all">Todas</option>`;
+                import('../managers/StaffManager.js').then(({ StaffManager }) => {
+                    const optionsHtml = !isStaff
+                        ? (() => {
+                            const myId = currentUser?.therapist || 'diana';
+                            const myName = StaffManager.getTherapistName(myId) || myId.charAt(0).toUpperCase() + myId.slice(1);
+                            return `<option value="${myId}">${myName}</option><option value="all">Todas</option>`;
+                        })()
+                        : StaffManager.generateOptionsHtml(selected, true, 'Todas');
 
-                selector.innerHTML = optionsHtml;
-                if (mobileSelector) mobileSelector.innerHTML = optionsHtml;
+                    selector.innerHTML = optionsHtml;
+                    if (mobileSelector) mobileSelector.innerHTML = optionsHtml;
+                });
 
                 const selected = AuthManager.getSelectedTherapist() || 'all';
                 selector.value = selected;
@@ -389,9 +448,12 @@ export const Header = {
 
                 // Mostrar botón de configuración si es admin
                 const adminSettingsBtn = document.getElementById('adminSettingsBtn');
-                if (adminSettingsBtn && AuthManager.isAdmin()) {
+                if (adminSettingsBtn && AuthManager.canManageClinicSettings()) {
                     adminSettingsBtn.classList.remove('hidden');
                     adminSettingsBtn.classList.add('flex');
+                } else if (adminSettingsBtn) {
+                    adminSettingsBtn.classList.add('hidden');
+                    adminSettingsBtn.classList.remove('flex');
                 }
 
             } else {
@@ -418,8 +480,18 @@ export const Header = {
         if (!wrap || !label) return;
 
         const id = therapistId || 'all';
-        const names = { diana: 'Diana', sam: 'Sam', vero: 'Vero', all: 'Todas' };
-        const text = names[id] || id;
+        let text = id;
+        
+        if (id === 'all') {
+            text = 'Todas';
+        } else {
+            import('../managers/StaffManager.js').then(({ StaffManager }) => {
+                text = StaffManager.getTherapistName(id) || id;
+                label.textContent = text;
+                wrap.title = `Viendo agenda de ${text}`;
+            });
+        }
+        
         label.textContent = text;
         wrap.title = `Viendo agenda de ${text}`;
 
@@ -433,19 +505,16 @@ export const Header = {
      */
     _setupReportButton() {
         const openReportsBtn = document.getElementById('openReportsBtn');
-        const user = AuthManager.currentUser;
+        const openCorteBtn = document.getElementById('openCorteBtn');
+        const canFinancials = AuthManager.canViewClinicFinancials();
 
-        // Control de visibilidad
         if (openReportsBtn) {
-            if (user?.role !== 'admin') {
-                // Ocultar completamente para no admins
-                openReportsBtn.style.display = 'none';
-            } else {
-                // Para admins, dejar que las clases CSS (hidden md:flex) controlen la visibilidad responsive
-                openReportsBtn.style.display = '';
-                // Asegurarnos que NO quitamos 'hidden' si está presente por defecto en el HTML para mobile
-                // El bug anterior era: openReportsBtn.classList.remove('hidden'); -> Esto lo mostraba en mobile
-            }
+            openReportsBtn.style.display = canFinancials ? '' : 'none';
+        }
+        if (openCorteBtn) {
+            openCorteBtn.style.display = canFinancials ? '' : 'none';
+            if (!canFinancials) openCorteBtn.classList.add('hidden');
+            else openCorteBtn.classList.remove('hidden');
         }
     },
 
@@ -453,6 +522,10 @@ export const Header = {
      * Lógica para abrir el reporte financiero
      */
     async _openFinancialReport() {
+        if (!AuthManager.canViewClinicFinancials()) {
+            await ModalService.alert('Acceso restringido', 'Los reportes financieros consolidados solo están disponibles para la administradora de la clínica.', 'warning');
+            return;
+        }
         try {
             console.log("🔄 Cargando módulo de reportes...");
             // Dynamic import para reducir bundle inicial
@@ -522,6 +595,10 @@ export const Header = {
             if (corteBtn) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (!AuthManager.canViewClinicFinancials()) {
+                    await ModalService.alert('Acceso restringido', 'El corte de caja consolidado solo está disponible para la administradora de la clínica.', 'warning');
+                    return;
+                }
                 // Si es del sidebar, lo cerramos
                 if (corteBtn.id === 'sidebarCorteBtn') {
                     document.getElementById('mainSidebar')?.classList.add('-translate-x-full');
@@ -644,6 +721,16 @@ export const Header = {
                     console.error("Error abriendo Bóveda de Soporte:", err);
                 }
                 return;
+            }
+        });
+
+        window.addEventListener('parlare:permissions-changed', () => {
+            this._setupReportButton();
+            const adminSettingsBtn = document.getElementById('adminSettingsBtn');
+            if (adminSettingsBtn) {
+                const show = AuthManager.canManageClinicSettings();
+                adminSettingsBtn.classList.toggle('hidden', !show);
+                adminSettingsBtn.classList.toggle('flex', show);
             }
         });
     }

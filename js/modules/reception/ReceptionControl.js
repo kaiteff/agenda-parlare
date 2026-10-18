@@ -16,17 +16,24 @@ import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 import { SchedulingQueueService } from '../../services/SchedulingQueueService.js';
 import { ReceptionAlertsService } from '../../services/ReceptionAlertsService.js';
 import { escapeHTML } from '../../utils/sanitize.js';
+import {
+    collectTodayUnconfirmed,
+    formatAppointmentCountdown,
+    isCriticalUnconfirmed,
+    isTodayUnconfirmed
+} from '../../utils/receptionUrgency.js';
 
 export const ReceptionControl = {
     isInitialized: false,
     _alertsUnsub: null,
     _openAlerts: [],
+    _urgentRenderTimer: null,
 
     async init() {
         if (this.isInitialized) return;
 
         // Solo inyectar si el usuario tiene permiso (Admin o Recepción)
-        const canAccess = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        const canAccess = AuthManager.can('view_reception_control');
         console.log(`🛡️ ReceptionControl Check: Role=${AuthManager.currentUser?.role}, Access=${canAccess}`);
         
         if (canAccess) {
@@ -115,6 +122,11 @@ export const ReceptionControl = {
                             <span class="w-2 h-2 rounded-full bg-orange-400"></span>
                             Sin Confirmar
                         </button>
+                        <button id="filterUrgent2hBtn" class="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-rose-400 transition-all flex items-center gap-2 shadow-sm relative">
+                            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                            Hoy sin confirmar
+                            <span id="filterUrgent2hBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center">0</span>
+                        </button>
                         <button id="filterSessionDebtBtn" class="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-amber-400 transition-all flex items-center gap-2 shadow-sm">
                             <span class="w-2 h-2 rounded-full bg-amber-500"></span>
                             Deben sesión
@@ -122,16 +134,28 @@ export const ReceptionControl = {
                     </div>
 
                     <!-- Filtro por Terapeuta (NUEVO) -->
-                    <div class="flex items-center gap-1 bg-white p-1 rounded-xl border shadow-sm ml-2">
+                    <div id="receptionTherapistFilters" class="flex items-center gap-1 bg-white p-1 rounded-xl border shadow-sm ml-2">
                         <button id="filterTherapist_all" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all bg-indigo-600 text-white shadow-sm" data-therapist="all">Todas</button>
+                        ${window.StaffManager ? window.StaffManager.getTherapists().map(t => `<button id="filterTherapist_${t.id}" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="${t.id}">${t.name}</button>`).join('') : `
                         <button id="filterTherapist_diana" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="diana">Diana</button>
                         <button id="filterTherapist_sam" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="sam">Sam</button>
-                        <button id="filterTherapist_vero" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="vero">Vero</button>
+                        <button id="filterTherapist_vero" class="filter-therapist-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-gray-600 hover:bg-gray-100" data-therapist="vero">Vero</button>`}
                     </div>
 
                     <div class="ml-auto text-sm text-gray-500 bg-white px-3 py-1 rounded-full border">
                         <span id="receptionCount" class="font-bold text-indigo-600">0</span> registros
                     </div>
+                </div>
+
+                <div id="receptionUrgentPanel" class="hidden border-b border-rose-200 bg-gradient-to-r from-rose-50 to-orange-50 px-4 py-3 flex-shrink-0">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <h3 class="text-xs font-black uppercase text-rose-900 tracking-wide flex items-center gap-2">
+                            <span class="text-base">📋</span> Citas de hoy sin confirmar (papá)
+                        </h3>
+                        <span id="receptionUrgentCount" class="text-[10px] font-bold bg-rose-600 text-white px-2 py-0.5 rounded-full">0</span>
+                    </div>
+                    <p class="text-[11px] text-rose-800/90 mb-2">Las citas se agendan con días de anticipación; aquí ves las de <strong>hoy</strong> que el papá aún no confirmó. Si faltan ≤2 h, la fila se pone rosa con más urgencia.</p>
+                    <div id="receptionUrgentList" class="flex flex-wrap gap-2 text-xs"></div>
                 </div>
 
                 <div id="receptionAlertsPanel" class="hidden border-b border-red-200 bg-red-50 px-4 py-3 flex-shrink-0">
@@ -235,6 +259,21 @@ export const ReceptionControl = {
             this.render();
         });
 
+        document.getElementById('filterUrgent2hBtn')?.addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            const isActive = btn.classList.toggle('active-filter-rose');
+            if (isActive) {
+                btn.classList.replace('bg-white', 'bg-rose-600');
+                btn.classList.replace('text-gray-700', 'text-white');
+                btn.classList.add('ring-2', 'ring-rose-200', 'border-rose-600');
+            } else {
+                btn.classList.replace('bg-rose-600', 'bg-white');
+                btn.classList.replace('text-white', 'text-gray-700');
+                btn.classList.remove('ring-2', 'ring-rose-200', 'border-rose-600');
+            }
+            this.render();
+        });
+
         // Filtros de Terapeuta (NUEVO)
         document.querySelectorAll('.filter-therapist-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -259,6 +298,7 @@ export const ReceptionControl = {
         document.getElementById('receptionControlModal').classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
         this._startAlertsListener();
+        this._startUrgentRenderTimer();
         this.render();
         this._renderAlerts();
     },
@@ -266,10 +306,82 @@ export const ReceptionControl = {
     close() {
         document.getElementById('receptionControlModal').classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
+        this._stopUrgentRenderTimer();
         if (this._alertsUnsub) {
             this._alertsUnsub();
             this._alertsUnsub = null;
         }
+    },
+
+    _startUrgentRenderTimer() {
+        this._stopUrgentRenderTimer();
+        this._urgentRenderTimer = setInterval(() => {
+            if (document.getElementById('receptionControlModal')?.classList.contains('hidden')) return;
+            this.render();
+        }, 60_000);
+    },
+
+    _stopUrgentRenderTimer() {
+        if (this._urgentRenderTimer) {
+            clearInterval(this._urgentRenderTimer);
+            this._urgentRenderTimer = null;
+        }
+    },
+
+    _renderUrgentBanner(urgentApts, now) {
+        const panel = document.getElementById('receptionUrgentPanel');
+        const list = document.getElementById('receptionUrgentList');
+        const countEl = document.getElementById('receptionUrgentCount');
+        const filterBadge = document.getElementById('filterUrgent2hBadge');
+        const headerBtn = document.getElementById('openReceptionControlBtn');
+
+        if (countEl) countEl.textContent = String(urgentApts.length);
+        if (filterBadge) {
+            if (urgentApts.length > 0) {
+                filterBadge.textContent = String(urgentApts.length);
+                filterBadge.classList.remove('hidden');
+            } else {
+                filterBadge.classList.add('hidden');
+            }
+        }
+        if (headerBtn) {
+            let hdrBadge = headerBtn.querySelector('[data-urgent-hdr-badge]');
+            if (urgentApts.length > 0) {
+                if (!hdrBadge) {
+                    hdrBadge = document.createElement('span');
+                    hdrBadge.setAttribute('data-urgent-hdr-badge', '1');
+                    hdrBadge.className = 'absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white';
+                    headerBtn.classList.add('relative');
+                    headerBtn.appendChild(hdrBadge);
+                }
+                hdrBadge.textContent = String(urgentApts.length);
+            } else if (hdrBadge) {
+                hdrBadge.remove();
+            }
+        }
+
+        if (!panel || !list) return;
+
+        if (urgentApts.length === 0) {
+            panel.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        panel.classList.remove('hidden');
+        list.innerHTML = urgentApts
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .map((apt) => {
+                const when = formatAppointmentCountdown(apt.date, now) || 'hoy';
+                const critical = isCriticalUnconfirmed(apt, now);
+                const stage = apt.stageName ? ` · ${escapeHTML(apt.stageName)}` : '';
+                return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border ${critical ? 'border-rose-300 ring-1 ring-rose-200' : 'border-orange-200'} text-rose-900 font-semibold shadow-sm">
+                    <span class="${critical ? 'text-rose-600 animate-pulse' : 'text-orange-500'}">${critical ? '⚠️' : '⏳'}</span>
+                    ${escapeHTML(apt.name)}${stage}
+                    <span class="text-[10px] ${critical ? 'text-rose-600' : 'text-orange-600'} font-black uppercase">en ${when}</span>
+                </span>`;
+            })
+            .join('');
     },
 
     _startAlertsListener() {
@@ -342,17 +454,20 @@ export const ReceptionControl = {
         const showOnlyDebtors = document.getElementById('filterDebtorsBtn').classList.contains('active-filter-red');
         const showOnlyPending = document.getElementById('filterPendingBtn').classList.contains('active-filter-orange');
         const showOnlySessionDebt = document.getElementById('filterSessionDebtBtn')?.classList.contains('active-filter-amber');
+        const showOnlyUrgent2h = document.getElementById('filterUrgent2hBtn')?.classList.contains('active-filter-rose');
         const therapistFilter = this.selectedTherapist || 'all';
         const query = searchInput.value.toLowerCase().trim();
         const activeView = this.currentView || 'today';
 
         const patients = PatientState.patients || [];
         const appointments = PatientState.appointments || [];
+        const now = new Date();
+        const urgentApts = collectTodayUnconfirmed(appointments, now);
+        this._renderUrgentBanner(urgentApts, now);
         const sessionDebtIds = new Set(
             SchedulingQueueService.listActivePatients(patients).map((p) => p.id)
         );
         
-        const now = new Date();
         const tomorrowStart = new Date();
         tomorrowStart.setDate(tomorrowStart.getDate() + 1);
         tomorrowStart.setHours(0, 0, 0, 0);
@@ -428,6 +543,11 @@ export const ReceptionControl = {
 
             if (showOnlySessionDebt && !sessionDebtIds.has(p.id)) return false;
 
+            if (showOnlyUrgent2h) {
+                const todayUnconfirmed = pApts.some((a) => isTodayUnconfirmed(a, now));
+                if (!todayUnconfirmed) return false;
+            }
+
             return true;
         });
 
@@ -452,15 +572,24 @@ export const ReceptionControl = {
             
             // Preferir la primera activa, si no hay, la primera cancelada
             const upcoming = upcomingApts.find(a => !a.isCancelled) || upcomingApts[0];
+            const todayUnconfirmed = upcoming && isTodayUnconfirmed(upcoming, now);
+            const criticalUpcoming = upcoming && isCriticalUnconfirmed(upcoming, now);
+            const countdownLabel = todayUnconfirmed ? formatAppointmentCountdown(upcoming.date, now) : null;
 
             const tr = document.createElement('tr');
-            tr.className = 'hover:bg-indigo-50/30 transition-colors group text-sm md:text-base';
+            tr.className = `hover:bg-indigo-50/30 transition-colors group text-sm md:text-base${todayUnconfirmed ? (criticalUpcoming ? ' bg-rose-50/50' : ' bg-orange-50/30') : ''}`;
 
-            const therapistColor = {
-                'diana': 'text-pink-600 bg-pink-50',
-                'sam': 'text-purple-600 bg-purple-50',
-                'vero': 'text-emerald-600 bg-emerald-50'
-            }[p.therapist?.toLowerCase()] || 'text-gray-600 bg-gray-50';
+            const _getTherapistColor = (tId) => {
+                if (!tId) return 'text-gray-600 bg-gray-50';
+                if (tId === 'diana') return 'text-pink-600 bg-pink-50';
+                if (tId === 'sam') return 'text-purple-600 bg-purple-50';
+                if (tId === 'vero') return 'text-emerald-600 bg-emerald-50';
+                const colors = ['text-blue-600 bg-blue-50', 'text-amber-600 bg-amber-50', 'text-cyan-600 bg-cyan-50', 'text-indigo-600 bg-indigo-50'];
+                let hash = 0;
+                for (let i = 0; i < tId.length; i++) hash = tId.charCodeAt(i) + ((hash << 5) - hash);
+                return colors[Math.abs(hash) % colors.length];
+            };
+            const therapistColor = _getTherapistColor(p.therapist?.toLowerCase());
 
             tr.innerHTML = `
                 <td class="px-4 md:px-6 py-3 md:py-4">
@@ -472,7 +601,7 @@ export const ReceptionControl = {
                     </div>
                 </td>
                 <td class="px-4 md:px-6 py-3 md:py-4">
-                    <span class="text-[9px] md:text-[10px] uppercase font-bold px-2 py-0.5 rounded ${therapistColor}">${p.therapist || 'Diana'}</span>
+                    <span class="text-[9px] md:text-[10px] uppercase font-bold px-2 py-0.5 rounded ${therapistColor}">${window.StaffManager ? window.StaffManager.getTherapistName(p.therapist) : (p.therapist || 'Diana')}</span>
                 </td>
                 <td class="px-4 md:px-6 py-3 md:py-4">
                     ${totalDebt > 0 
@@ -494,8 +623,17 @@ export const ReceptionControl = {
                              <span class="text-[9px] md:text-[10px] uppercase font-bold">
                                 ${upcoming.isCancelled 
                                     ? `<span class="text-red-600 bg-red-50 px-1 rounded">❌ CANCELÓ: ${upcoming.cancelledBy || '?'}</span>` 
-                                    : (upcoming.confirmed ? '<span class="text-emerald-600">✅ Confirmada</span>' : '<span class="text-orange-500 animate-pulse text-[10px]">⏳ Pendiente</span>')}
+                                    : (upcoming.confirmed
+                                        ? '<span class="text-emerald-600">✅ Confirmada</span>'
+                                        : (todayUnconfirmed
+                                        ? (criticalUpcoming
+                                            ? `<span class="inline-flex items-center gap-1 text-rose-700 bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded animate-pulse">⚠️ Hoy sin confirmar — faltan ${countdownLabel}</span>`
+                                            : `<span class="inline-flex items-center gap-1 text-orange-700 bg-orange-100 border border-orange-200 px-1.5 py-0.5 rounded">⏳ Hoy sin confirmar — en ${countdownLabel}</span>`)
+                                        : '<span class="text-orange-500 animate-pulse text-[10px]">⏳ Pendiente</span>'))}
                              </span>
+                             ${upcoming.isEvaluation && upcoming.stageName && !upcoming.isCancelled
+                                ? `<span class="text-[9px] text-indigo-700 mt-0.5">${escapeHTML(upcoming.stageName)}</span>`
+                                : ''}
                            </div>`
                         : `<span class="text-[10px] md:text-xs text-gray-400 italic">Sin próxima</span>`
                     }

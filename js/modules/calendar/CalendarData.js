@@ -11,6 +11,8 @@ import { getDocs, getDoc, doc, query as fsQuery, where as fsWhere } from "https:
 import { AuthManager } from '../../managers/AuthManager.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { alignClinicFeeSnapshot, buildSheetFinancialPayload, resolveClinicFeeFromAppointment } from '../../utils/appointmentFinancials.js';
+import { filterByClinic } from '../../utils/clinicData.js';
+import { ClinicContext } from '../../core/ClinicContext.js';
 
 /**
  * Obtiene el clinicFee de un paciente desde Firestore.
@@ -111,7 +113,7 @@ export const CalendarData = {
             
             let q;
 
-            if (AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist') {
+            if (AuthManager.canViewAllAgenda()) {
                 q = query(
                     colRef,
                     where('date', '>=', startDateStr),
@@ -130,10 +132,13 @@ export const CalendarData = {
             console.log(`📡 CalendarData: Iniciando listener Firestore compartido (Rango ${startDateStr} - ${endDateStr}).`);
 
             this._unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-                const data = [];
-                snapshot.forEach((doc) => {
-                    data.push({ id: doc.id, ...doc.data() });
+                const raw = [];
+                snapshot.forEach((docSnap) => {
+                    raw.push({ id: docSnap.id, ...docSnap.data() });
                 });
+
+                const activeClinic = ClinicContext.getActiveClinicId();
+                const data = filterByClinic(raw, activeClinic);
 
                 const fromCache = snapshot.metadata?.fromCache ? 'caché' : 'servidor';
                 console.log(

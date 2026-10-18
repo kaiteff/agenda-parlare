@@ -11,7 +11,8 @@ import { CalendarSuggestions } from './CalendarSuggestions.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { PatientState } from '../../managers/patient/PatientState.js';
 import { ensurePatientProfile } from '../../services/patientService.js';
-import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday, isSlotFree, normalizeName } from '../../utils/validators.js';
+import { validateAppointment, checkSlotConflict, isWithinWorkingHours, isNotSunday, isSlotFree, normalizeName, formatConflictAppointment } from '../../utils/validators.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { GoogleAuthService } from '../../services/google/GoogleAuthService.js';
@@ -29,6 +30,7 @@ import {
     getProfileClinicFee,
     resolveEffectiveFinancials
 } from '../../utils/appointmentFinancials.js';
+import { buildEvaluationBatch, applyEvaluationTagsIfNeeded } from '../../config/evaluationStages.js';
 
 
 
@@ -48,6 +50,7 @@ export const CalendarModal = {
     },
 
     bindEvents() {
+        CalendarSuggestions.resolveRecurringControls();
         const dom = CalendarState.dom;
         if (dom.saveBtn) dom.saveBtn.onclick = () => this.handleSave();
         if (dom.deleteBtn) dom.deleteBtn.onclick = () => this.handleDelete();
@@ -68,18 +71,27 @@ export const CalendarModal = {
                 }
             };
         }
-        if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.onchange = () => {
-            dom.recurringSection.classList.toggle('hidden', !dom.isRecurringCheckbox.checked);
-            if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
-        };
-        if (dom.recurringOptions) dom.recurringOptions.onchange = () => CalendarSuggestions.generateRecurringDates();
-        if (document.getElementById('recurringDuration')) {
-            document.getElementById('recurringDuration').onchange = () => CalendarSuggestions.generateRecurringDates();
+        if (dom.isRecurringCheckbox) {
+            dom.isRecurringCheckbox.onchange = () => {
+                const controls = CalendarSuggestions.resolveRecurringControls();
+                controls.recurringSection?.classList.toggle('hidden', !controls.isRecurringCheckbox?.checked);
+                if (controls.isRecurringCheckbox?.checked) CalendarSuggestions.generateRecurringDates();
+            };
         }
-        if (dom.appointmentDateInput) dom.appointmentDateInput.onchange = (e) => {
-            if (dom.isRecurringCheckbox.checked) CalendarSuggestions.generateRecurringDates();
-            CalendarUI.renderBusySlots(e.target.value.split('T')[0]);
-        };
+        if (dom.recurringOptions) {
+            dom.recurringOptions.onchange = () => CalendarSuggestions.generateRecurringDates();
+        }
+        const durationSelect = document.getElementById('recurringDuration');
+        if (durationSelect) {
+            durationSelect.onchange = () => CalendarSuggestions.generateRecurringDates();
+        }
+        if (dom.appointmentDateInput) {
+            dom.appointmentDateInput.onchange = (e) => {
+                const controls = CalendarSuggestions.resolveRecurringControls();
+                if (controls.isRecurringCheckbox?.checked) CalendarSuggestions.generateRecurringDates();
+                CalendarUI.renderBusySlots((e.target.value || '').split('T')[0]);
+            };
+        }
 
         // Radio buttons "Tipo de cita"
         const typeRadios = document.querySelectorAll('input[name="appointmentType"]');
@@ -151,9 +163,7 @@ export const CalendarModal = {
         if (dom.rescheduleSection) dom.rescheduleSection.classList.add('hidden');
 
         // Recurrence reset
-        if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.checked = false;
-        if (dom.recurringSection) dom.recurringSection.classList.add('hidden');
-        if (dom.recurringDatesList) dom.recurringDatesList.innerHTML = '';
+        CalendarSuggestions.resetRecurrenceUi();
 
         // Set date
         const date = new Date(dateStr + 'T00:00:00');
@@ -164,7 +174,16 @@ export const CalendarModal = {
         
         const selectedTherapist = AuthManager.getSelectedTherapist();
         if (dom.appointmentTherapistInput) {
-            dom.appointmentTherapistInput.value = (selectedTherapist && selectedTherapist !== 'all') ? selectedTherapist : 'diana';
+            // Si la vista es «Todas», no forzar Diana: respeta terapeuta del usuario (Sam/Vero)
+            // o deja el valor previo; al elegir paciente se sobrescribe con el del perfil.
+            if (selectedTherapist && selectedTherapist !== 'all') {
+                dom.appointmentTherapistInput.value = selectedTherapist;
+            } else if (AuthManager.currentUser?.therapist && AuthManager.currentUser.therapist !== 'all') {
+                dom.appointmentTherapistInput.value = AuthManager.currentUser.therapist;
+            } else {
+                // Admin/Yari en «Todas»: default diana solo hasta que elijan paciente
+                dom.appointmentTherapistInput.value = 'diana';
+            }
         }
         this.originalTherapistOnOpen = dom.appointmentTherapistInput.value;
 
@@ -458,11 +477,8 @@ export const CalendarModal = {
             if (suggestionBox) suggestionBox.remove();
         }
 
-        // Recurrence (Allow in edit)
-        if (dom.isRecurringCheckbox) dom.isRecurringCheckbox.checked = false;
-        if (dom.recurringSection) dom.recurringSection.classList.add('hidden');
-        if (dom.recurringOptions) dom.recurringOptions.value = 'weekly';
-        if (document.getElementById('recurringDuration')) document.getElementById('recurringDuration').value = '3';
+        // Recurrence (Allow in edit) — cita simple: sin serie, select con default válido
+        CalendarSuggestions.resetRecurrenceUi();
 
         CalendarUI.renderBusySlots(localISOTime.split('T')[0]); // Mantiene compatibilidad si algo lo usa
 
@@ -774,21 +790,35 @@ export const CalendarModal = {
     },
 
     async _executeSave() {
+        const recurring = CalendarSuggestions.resolveRecurringControls();
         const dom = CalendarState.dom;
+
+        if (!dom.patientSearchInput || !dom.appointmentDateInput) {
+            await ModalService.alert(
+                "Formulario incompleto",
+                "No se pudo leer el formulario de la cita. Recarga la página e inténtalo de nuevo.",
+                "warning"
+            );
+            return;
+        }
 
         const typeRadio = document.querySelector('input[name="appointmentType"]:checked')?.value;
         const isBlock = typeRadio === 'block';
         
-        let name = dom.patientSearchInput.value.trim();
+        let name = (dom.patientSearchInput.value || '').trim();
         if (isBlock && !name) name = "⛔ Hora Inhábil";
         
-        const dateStr = dom.appointmentDateInput.value;
-        const cost = parseFloat(dom.costInput.value) || 0;
+        const dateStr = dom.appointmentDateInput.value || '';
+        const cost = parseFloat(dom.costInput?.value) || 0;
         console.log("   - Datos:", { name, dateStr, cost, typeRadio });
         const therapist = dom.appointmentTherapistInput ? dom.appointmentTherapistInput.value : (AuthManager.currentUser?.therapist || 'diana');
 
         if (!name && !isBlock) {
             await ModalService.alert("Campos Incompletos", "Por favor completa nombre y fecha", "warning");
+            return;
+        }
+        if (!dateStr) {
+            await ModalService.alert("Campos Incompletos", "Por favor selecciona fecha y hora", "warning");
             return;
         }
 
@@ -821,8 +851,16 @@ export const CalendarModal = {
                     return;
                 }
                 if (!CalendarState.selectedEventId || dateStrArray.length > 1) {
-                     if (checkSlotConflict(dateStr, CalendarState.appointments, CalendarState.selectedEventId)) {
-                        if (!await ModalService.confirm("Conflicto de Horario", `Ya hay una cita a las ${new Date(dateStr).toLocaleTimeString()}.<br>¿Deseas agregarla de todas formas?`, "Agregar igualmente", "Cancelar")) return;
+                     const conflict = checkSlotConflict(dateStr, CalendarState.appointments, CalendarState.selectedEventId, therapist);
+                     if (conflict) {
+                        const who = escapeHTML(formatConflictAppointment(conflict));
+                        const when = new Date(dateStr).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        if (!await ModalService.confirm(
+                            'Conflicto de horario',
+                            `A las ${when} ya está: <strong>${who}</strong>.<br>¿Deseas agregarla de todas formas?`,
+                            'Agregar igualmente',
+                            'Cancelar'
+                        )) return;
                      }
                 }
             }
@@ -843,6 +881,8 @@ export const CalendarModal = {
                 appointmentData.rescheduleSource = AuthManager.currentUser?.email || 'Manual';
             }
 
+            let profile = null;
+
             if (isSchoolVisit || isBlock) {
                 // No interactuar con pacientes, solo guardar el evento
                 appointmentData.name = name;
@@ -851,7 +891,7 @@ export const CalendarModal = {
             } else {
                 // Flujo normal de paciente
                 const therapistDefaults = AuthManager.getTherapistDefaults(therapist);
-                const profile = await ensurePatientProfile(
+                profile = await ensurePatientProfile(
                     name,
                     dom.patientFirstNameInput.value,
                     dom.patientLastNameInput.value,
@@ -916,15 +956,21 @@ export const CalendarModal = {
 
                 // Si seleccionó una segunda hora durante la edición, la creamos
                 if (dateStrArray.length > 1) {
-                    await CalendarData.createEvent({ ...appointmentData, date: dateStrArray[1] });
+                    const extraApt = applyEvaluationTagsIfNeeded(
+                        { ...appointmentData, date: dateStrArray[1] },
+                        profile
+                    );
+                    await CalendarData.createEvent(extraApt);
                 }
             } else {
-                // Create
-                if (dom.isRecurringCheckbox.checked) {
-                    await this._processRecurrenceCreation(appointmentData, dateStrArray);
+                // Create — recurrencia solo si el checkbox está marcado (cita simple = una sola)
+                if (recurring.wantsRecurring) {
+                    await this._processRecurrenceCreation(appointmentData, dateStrArray, profile);
                 } else {
-                    for (const dateStr of dateStrArray) {
-                        await CalendarData.createEvent({ ...appointmentData, date: dateStr });
+                    const entries = dateStrArray.map((dateStr) => ({ ...appointmentData, date: dateStr }));
+                    const batch = buildEvaluationBatch(entries, profile);
+                    for (const apt of batch) {
+                        await CalendarData.createEvent(apt);
                     }
                 }
             }
@@ -1066,15 +1112,16 @@ export const CalendarModal = {
             CalendarState.rescheduledFromId = eventId;
             CalendarState.selectedEventId = null;
             const dom = CalendarState.dom;
+            CalendarSuggestions.resetRecurrenceUi();
 
-            dom.modalTitle.textContent = 'Nueva Cita';
-            dom.saveBtn.classList.remove('hidden');
-            dom.deleteBtn.classList.add('hidden');
-            dom.payBtn.classList.add('hidden');
-            dom.confirmBtn.classList.add('hidden');
-            dom.cancelBtn.classList.add('hidden');
+            if (dom.modalTitle) dom.modalTitle.textContent = 'Nueva Cita';
+            if (dom.saveBtn) dom.saveBtn.classList.remove('hidden');
+            if (dom.deleteBtn) dom.deleteBtn.classList.add('hidden');
+            if (dom.payBtn) dom.payBtn.classList.add('hidden');
+            if (dom.confirmBtn) dom.confirmBtn.classList.add('hidden');
+            if (dom.cancelBtn) dom.cancelBtn.classList.add('hidden');
 
-            if (dom.appointmentDateInput.value) {
+            if (dom.appointmentDateInput?.value) {
                 const current = new Date(dom.appointmentDateInput.value);
                 const nextWeek = new Date(current);
                 nextWeek.setDate(nextWeek.getDate() + 7);
@@ -1347,6 +1394,12 @@ export const CalendarModal = {
             // Verificar disponibilidad con utils
             // Pasar excludeId para que la cita actual no se bloquee a sí misma
             const isFree = isSlotFree(slotDate, CalendarState.appointments, CalendarState.selectedEventId, selectedTherapist);
+            const conflictAppt = isFree ? null : checkSlotConflict(
+                slotDate.toISOString(),
+                CalendarState.appointments,
+                CalendarState.selectedEventId,
+                selectedTherapist
+            );
 
             // Verificar si es la hora seleccionada actualmente
             let isSelected = false;
@@ -1371,10 +1424,12 @@ export const CalendarModal = {
                     this.selectSlot(slotDate);
                 };
             } else if (!isFree) {
-                // Ocupado
-                btn.className = "bg-gray-100 text-gray-400 py-2 rounded cursor-not-allowed border border-gray-100 text-xs";
-                btn.textContent = timeStr;
+                // Ocupado — mostrar quién tiene la cita
+                btn.className = "bg-red-50 text-red-700 py-1.5 px-1 rounded cursor-not-allowed border border-red-100 text-[10px] leading-tight";
                 btn.disabled = true;
+                btn.title = conflictAppt ? formatConflictAppointment(conflictAppt) : 'Ocupado';
+                const shortName = (conflictAppt?.name || 'Ocupado').split(' ')[0];
+                btn.innerHTML = `<span class="block font-bold">${escapeHTML(timeStr)}</span><span class="block truncate">${escapeHTML(shortName)}</span>`;
             } else {
                 // Libre
                 btn.className = "bg-white text-gray-700 border border-gray-200 py-2 rounded hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all font-medium text-sm";
@@ -1466,23 +1521,57 @@ export const CalendarModal = {
         return TimeManager.toFirestore(dateObj);
     },
 
-    async _processRecurrenceCreation(appointmentData, dateStrArray) {
-        const dom = CalendarState.dom;
-        const mainDate = dom.appointmentDateInput.value.split(',')[0];
-        dom.appointmentDateInput.value = mainDate; // temporal for CalendarSuggestions
-        const dates = CalendarSuggestions.generateRecurringDates();
-        dom.appointmentDateInput.value = dateStrArray.join(','); // restore
-        
+    async _processRecurrenceCreation(appointmentData, dateStrArray, profile = null) {
+        const controls = CalendarSuggestions.resolveRecurringControls();
+        const dateInput = controls.appointmentDateInput;
+        if (!dateInput?.value) {
+            const fallback = (dateStrArray || []).map((d) => ({ ...appointmentData, date: d }));
+            const batch = buildEvaluationBatch(fallback, profile);
+            for (const apt of batch) await CalendarData.createEvent(apt);
+            return;
+        }
+
+        const mainDate = dateInput.value.split(',')[0];
+        const previousValue = dateInput.value;
+        dateInput.value = mainDate;
+
+        let dates = [];
+        try {
+            dates = CalendarSuggestions.generateRecurringDates() || [];
+        } catch (err) {
+            console.warn('Recurrencia: no se pudieron generar fechas', err);
+            dates = [];
+        }
+        dateInput.value = (dateStrArray || []).join(',') || previousValue;
+
+        if (!dates.length) {
+            const fallback = (dateStrArray || []).map((d) => ({ ...appointmentData, date: d }));
+            const batch = buildEvaluationBatch(fallback, profile);
+            for (const apt of batch) await CalendarData.createEvent(apt);
+            return;
+        }
+
+        const therapist = CalendarState.dom.appointmentTherapistInput?.value
+            || AuthManager.currentUser?.therapist
+            || 'diana';
+
+        const entries = [];
         for (const date of dates) {
             for (let i = 0; i < dateStrArray.length; i++) {
                 const offsetObj = new Date(date);
                 offsetObj.setHours(offsetObj.getHours() + i);
                 const iso = TimeManager.toFirestore(offsetObj);
 
-                if (!checkSlotConflict(iso, CalendarState.appointments)) {
-                    await CalendarData.createEvent({ ...appointmentData, date: iso });
+                if (!checkSlotConflict(iso, CalendarState.appointments, null, therapist)) {
+                    entries.push({ ...appointmentData, date: iso });
                 }
             }
+        }
+
+        const toCreate = entries.length ? entries : (dateStrArray || []).map((d) => ({ ...appointmentData, date: d }));
+        const batch = buildEvaluationBatch(toCreate, profile);
+        for (const apt of batch) {
+            await CalendarData.createEvent(apt);
         }
     }
 };

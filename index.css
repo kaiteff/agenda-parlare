@@ -533,3 +533,349 @@ header::after {
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.8) !important;
     z-index: 16 !important;
 }
+
+/* ── Celular landscape — gana UX móvil (no desktop) ─
+   Fuente de verdad: html.phone-landscape (viewport.js).
+   CSS media al final = respaldo si JS aún no corrió.
+   Pixel 10 Pro landscape suele superar 560px de alto → umbral JS 780. */
+html.phone-landscape {
+    --phone-landscape-sidebar: min(11rem, 28vw);
+    --bottom-nav-height: 3.75rem;
+}
+
+html.phone-landscape #mainHeader {
+    height: 2.5rem !important;
+    min-height: 2.5rem;
+}
+
+html.phone-landscape #mainHeader > .h-full {
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    gap: 0.2rem;
+}
+
+html.phone-landscape #mainHeader .absolute.left-1\/2 {
+    display: none !important;
+}
+
+html.phone-landscape #mainHeader .md\:hidden.flex-1 {
+    display: flex !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+    max-width: 4.75rem;
+}
+
+html.phone-landscape #mainHeader .md\:hidden.flex-1 img {
+    height: 1.25rem !important;
+    max-height: 1.25rem !important;
+}
+
+html.phone-landscape #userInfo > div > div:not(.rounded-full) {
+    display: none !important;
+}
+
+html.phone-landscape #userInfo .w-8.h-8 {
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.7rem;
+}
+
+html.phone-landscape #openCorteBtn,
+html.phone-landscape #openReportsBtn,
+html.phone-landscape #openSupportVaultBtn,
+html.phone-landscape #logoutBtn,
+html.phone-landscape #therapistSelectorContainer,
+html.phone-landscape #googleSyncBtn,
+html.phone-landscape #forceSyncAllBtn,
+html.phone-landscape #openReceptionControlBtn,
+html.phone-landscape #syncStatusContainer {
+    display: none !important;
+}
+
+html.phone-landscape #batchSyncBtn {
+    padding: 0.2rem 0.4rem !important;
+    gap: 0.2rem !important;
+    margin-left: 0.15rem !important;
+}
+
+html.phone-landscape #batchSyncBtn span {
+    font-size: 0.6rem !important;
+    max-width: 4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html.phone-landscape #mainHeader .flex.items-center.gap-1,
+html.phone-landscape #mainHeader .flex.items-center.justify-end {
+    max-width: 52% !important;
+    gap: 0.1rem !important;
+}
+
+html.phone-landscape #adminSettingsBtn,
+html.phone-landscape #notificationBell {
+    padding: 0.3rem !important;
+}
+
+html.phone-landscape #adminSettingsBtn svg,
+html.phone-landscape #notificationBell svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+/* Sidebar estrecho + altura acotada para poder hacer scroll en la lista */
+html.phone-landscape #mainSidebar {
+    width: var(--phone-landscape-sidebar) !important;
+    max-width: 28vw !important;
+    min-width: 9.5rem !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 6px 0 16px rgba(0, 0, 0, 0.07) !important;
+    bottom: auto !important;
+}
+
+html.phone-landscape #mainSidebar > .p-4,
+html.phone-landscape #mainSidebar > .border-b {
+    flex-shrink: 0 !important;
+    padding: 0.4rem 0.45rem !important;
+}
+
+html.phone-landscape #mainSidebar #patientsHeader h2 {
+    font-size: 0.85rem !important;
+    line-height: 1.15;
+}
+
+html.phone-landscape #mainSidebar #searchInput {
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 0.45rem !important;
+}
+
+html.phone-landscape #mainSidebar #sidebarTabs {
+    margin-top: 0.3rem !important;
+}
+
+html.phone-landscape #mainSidebar #sidebarTabs button {
+    min-height: 1.75rem !important;
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+    font-size: 0.5rem !important;
+}
+
+html.phone-landscape #waDashboardContainer {
+    flex-shrink: 0 !important;
+    padding: 0.3rem 0.4rem !important;
+}
+
+html.phone-landscape #waDashboardContainer .grid.grid-cols-3 > div {
+    padding: 0.2rem !important;
+}
+
+html.phone-landscape #waDashboardContainer .grid.grid-cols-3 span.text-lg {
+    font-size: 0.75rem !important;
+    line-height: 1.05;
+}
+
+html.phone-landscape #waDashboardContainer .max-h-28 {
+    max-height: 2.75rem !important;
+}
+
+/* Lista patients: debe scrollear (antes height:auto rompía el overflow) */
+html.phone-landscape #mainSidebar #patientsList {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 0.5rem !important;
+}
+
+html.phone-landscape #mainSidebar #sidebarFooter {
+    display: none !important;
+}
+
+/* Bottom nav Agenda | Pacientes | Más — siempre visible en landscape teléfono */
+html.phone-landscape #mainBottomNav {
+    display: block !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 80 !important;
+}
+
+html.phone-landscape #mobileMoreOverlay:not(.hidden) {
+    display: block !important;
+}
+
+html.phone-landscape #mobileMoreSheet:not(.hidden) {
+    display: flex !important;
+}
+
+html.phone-landscape #appContent > .flex-1.flex.overflow-hidden {
+    min-height: 0 !important;
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+html.phone-landscape #calendarToolbar {
+    padding: 0.3rem 0.4rem !important;
+}
+
+html.phone-landscape #calendarToolbar > div {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    flex-wrap: nowrap;
+}
+
+html.phone-landscape #calendarToolbar #currentMonthLabel {
+    font-size: 0.75rem !important;
+    max-width: 7rem;
+}
+
+html.phone-landscape #calendarToolbar #prevWeekBtn,
+html.phone-landscape #calendarToolbar #nextWeekBtn,
+html.phone-landscape #calendarToolbar #mobileDatePickerBtn,
+html.phone-landscape #calendarToolbar #todayBtn {
+    min-height: 1.85rem !important;
+    min-width: 1.85rem !important;
+    padding: 0.2rem !important;
+    font-size: 0.65rem !important;
+}
+
+html.phone-landscape #calendarToolbar #mobileDatePickerBtn {
+    display: flex !important;
+}
+
+html.phone-landscape #calendarToolbar #calendarTherapistFilterWrap:not(.hidden) {
+    display: block !important;
+    max-width: 4.75rem !important;
+}
+
+html.phone-landscape #calendarToolbar #therapistFilterMobile {
+    min-height: 1.85rem !important;
+    font-size: 0.55rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+html.phone-landscape #calendarToolbar #toggleViewDayBtn,
+html.phone-landscape #calendarToolbar #toggleViewWeekBtn {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.6rem !important;
+}
+
+html.phone-landscape #statusMsg {
+    display: none !important;
+}
+
+html.phone-landscape main > .flex-1.overflow-y-auto.scroller,
+html.phone-landscape main > .flex-1.overflow-y-auto {
+    padding: 0.3rem 0.35rem !important;
+    gap: 0 !important;
+    min-height: 0 !important;
+}
+
+html.phone-landscape #calendarGrid {
+    --cal-time-col: 2.5rem;
+    min-height: 0 !important;
+    border-radius: 0.65rem;
+}
+
+html.phone-landscape #calendarGrid .sticky-column,
+html.phone-landscape #calendarGrid .sticky-corner {
+    min-width: var(--cal-time-col) !important;
+    max-width: var(--cal-time-col) !important;
+    width: var(--cal-time-col) !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
+    min-height: 1.75rem !important;
+}
+
+html.phone-landscape #calendarGrid .cal-grid-day {
+    display: grid !important;
+    grid-template-columns: var(--cal-time-col) minmax(0, 1fr) !important;
+}
+
+html.phone-landscape #calendarGrid .cal-grid-week {
+    display: grid !important;
+    grid-template-columns: var(--cal-time-col) repeat(6, minmax(0, 1fr)) !important;
+}
+
+html.phone-landscape #calendarGrid.calendar-week-fit {
+    min-width: 0 !important;
+    width: 100%;
+}
+
+html.phone-landscape #calendarScrollWrap.calendar-week-fit {
+    overflow-x: hidden !important;
+}
+
+html.phone-landscape #calendarGrid .cal-day-selected-label {
+    padding-top: 0.3rem !important;
+    padding-bottom: 0.3rem !important;
+}
+
+html.phone-landscape #calendarGrid .cal-day-selected-label p:last-child {
+    font-size: 0.85rem !important;
+}
+
+/* Vista Día: el encabezado NO debe flotar sobre las citas al scrollear */
+#calendarGrid .cal-day-header-static,
+#calendarGrid .cal-day-header-static .sticky-corner {
+    position: relative !important;
+    top: auto !important;
+    z-index: 1 !important;
+    box-shadow: none !important;
+    min-height: 1.5rem !important;
+}
+
+html.phone-landscape #calendarGrid .calendar-header-row.cal-day-header-static {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Respaldo media query (si JS no ha puesto la clase aún) */
+@media (orientation: landscape) and (max-height: 780px) and (max-width: 1100px) {
+    #mainBottomNav {
+        display: block !important;
+    }
+
+    #mainSidebar {
+        width: min(11rem, 28vw) !important;
+        max-width: 28vw !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    #mainSidebar #patientsList {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #openCorteBtn,
+    #openReportsBtn,
+    #openSupportVaultBtn,
+    #logoutBtn,
+    #therapistSelectorContainer,
+    #googleSyncBtn,
+    #openReceptionControlBtn,
+    #syncStatusContainer {
+        display: none !important;
+    }
+}
+

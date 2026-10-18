@@ -1,4 +1,5 @@
 import { renderSaasReadyBanner, SAAS_READY_EXPLANATION } from '../../utils/saasReadyCopy.js';
+import { StaffManager } from '../StaffManager.js';
 
 export const PatientModalsHTML = {
     /**
@@ -98,10 +99,25 @@ export const PatientModalsHTML = {
                     <div class="grid grid-cols-1 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Terapeuta Asignado</label>
+                    <div id="newPatientTreatmentTypeRow" class="hidden col-span-2 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 space-y-2">
+                        <p class="text-xs font-semibold text-indigo-800">Tipo de proceso</p>
+                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer touch-manipulation min-h-[44px]">
+                                <input type="radio" name="newPatientTreatmentType" value="regular" checked
+                                    class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                <span>Paciente regular</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer touch-manipulation min-h-[44px]">
+                                <input type="radio" name="newPatientTreatmentType" value="evaluation"
+                                    class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                <span>Proceso de evaluación</span>
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-indigo-700/80 leading-snug">Al agendar, cada cita se etiqueta (Entrevista, Evaluación, Entrega) para recordatorios WhatsApp.</p>
+                    </div>
+
                             <select id="newPatientTherapist" class="${touchSelect}">
-                                <option value="diana">Diana</option>
-                                <option value="sam">Sam</option>
-                                <option value="vero">Vero</option>
+                                ${StaffManager.generateOptionsHtml()}
                             </select>
                         </div>
                         <div>
@@ -194,9 +210,7 @@ export const PatientModalsHTML = {
                             <div>
                                 <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Terapeuta Responsable</label>
                                 <select id="editPatientTherapist" class="${touchSelect}">
-                                    <option value="diana">Diana</option>
-                                    <option value="sam">Sam</option>
-                                    <option value="vero">Vero</option>
+                                    ${StaffManager.generateOptionsHtml()}
                                 </select>
                             </div>
                             <div>

@@ -32,6 +32,8 @@ export const GoogleCalendarService = {
     _enabled: false,
     _calendarId: null, // Legacy, kept for compatibility if needed
     _autoSyncInterval: null,
+    _storageKey: 'parlare_gcal_mappings',
+    _calIdKey: 'parlare_calendar_id',
 
     // Configuración del calendario dedicado
     CALENDAR_NAME: 'Parlare Citas',
@@ -190,6 +192,27 @@ export const GoogleCalendarService = {
         return `${base}-06:00`;
     },
 
+    /** Borra instancia o serie completa si el evento viene de un RRULE (singleEvents: true). */
+    _resolveGcalDeleteId(ev, deletedRecurringMasters) {
+        const masterId = ev.recurringEventId;
+        if (masterId) {
+            if (deletedRecurringMasters.has(masterId)) return null;
+            deletedRecurringMasters.add(masterId);
+            return masterId;
+        }
+        return ev.id;
+    },
+
+    async _deleteGcalEvent(calendarId, ev, deletedRecurringMasters) {
+        const eventId = this._resolveGcalDeleteId(ev, deletedRecurringMasters);
+        if (!eventId) return false;
+        await this._callGapi(() => window.gapi.client.calendar.events.delete({
+            calendarId,
+            eventId
+        }));
+        return true;
+    },
+
     // ── Conversión de cita → evento ─────────────────────────────
 
     _toGoogleEvent(appointment) {
@@ -209,6 +232,9 @@ export const GoogleCalendarService = {
         }
 
         let summary = appointment.name || '(Sin nombre)';
+        if (appointment.isEvaluation && appointment.stageName) {
+            summary = `${appointment.stageName} — ${summary}`;
+        }
         if (appointment.confirmed) summary = `✅ ${summary}`;
 
         const pKey = (appointment.planningTherapist || '').toLowerCase();
@@ -258,9 +284,9 @@ export const GoogleCalendarService = {
             // Colores: Diana = Rosa (4), Sam = Azul (7), Vero = Morado (3)
             // Bloqueos = Gris Grafito (8)
             colorId: (appointment.isFullDayBlock || appointment.isHourlyBlock) ? '8' : (tKey === 'diana' ? '4' : tKey === 'sam' ? '7' : '3'),
-            // Si es un bloque de "Hora Inhábil", hacerlo recurrente de Lunes a Sábado por 4 semanas
-            // para que cubra la semana laboral y persista un mes.
-            recurrence: appointment.isHourlyBlock ? ['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA;COUNT=24'] : []
+            // Hora Inhábil: un solo evento en la fecha/hora del doc (sin RRULE).
+            // Antes se subía MO–SA recurrente y desalineaba Google vs Parláre.
+            recurrence: []
         };
     },
 
@@ -535,13 +561,13 @@ export const GoogleCalendarService = {
 
                     log.info(`[NUKE] 🗑️ ${tKey}: ${events.length} evento(s) encontrados`);
 
+                    const deletedRecurringMasters = new Set();
                     for (const ev of events) {
                         try {
                             await new Promise(r => setTimeout(r, 80));
-                            await this._callGapi(() => window.gapi.client.calendar.events.delete({
-                                calendarId, eventId: ev.id
-                            }));
-                            deleted++;
+                            if (await this._deleteGcalEvent(calendarId, ev, deletedRecurringMasters)) {
+                                deleted++;
+                            }
                         } catch (e) {
                             log.warn(`[NUKE] No se pudo borrar ${ev.id}`, e);
                         }
@@ -683,14 +709,13 @@ export const GoogleCalendarService = {
                 const events = response.result.items || [];
                 log.info(`[syncWeek] 🗑️ ${tKey}: ${events.length} evento(s) a borrar`);
 
+                const deletedRecurringMasters = new Set();
                 for (const ev of events) {
                     try {
                         await new Promise(r => setTimeout(r, 80));
-                        await this._callGapi(() => window.gapi.client.calendar.events.delete({
-                            calendarId,
-                            eventId: ev.id
-                        }));
-                        deleted++;
+                        if (await this._deleteGcalEvent(calendarId, ev, deletedRecurringMasters)) {
+                            deleted++;
+                        }
                     } catch (e) {
                         log.warn(`No se pudo borrar evento ${ev.id}`, e);
                     }

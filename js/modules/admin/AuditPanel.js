@@ -8,6 +8,7 @@ import { AuthManager } from '../../managers/AuthManager.js';
 import { AuditService } from '../../services/AuditService.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 
 export const AuditPanel = {
     activeTab: 'general',
@@ -161,6 +162,10 @@ export const AuditPanel = {
         });
 
         const iconConfig = this.getIcon(log.action);
+        const safeUserName = escapeHTML(log.userName || '');
+        const safePatientName = escapeHTML(log.details?.patientName || '');
+        const safeTherapist = escapeHTML(log.details?.therapist || '');
+        const safeWaDetail = escapeHTML(log.details?.message || log.details?.error || '');
 
         div.innerHTML = `
             <div class="flex-shrink-0 w-8 h-8 ${iconConfig.bg} ${iconConfig.text} rounded-lg flex items-center justify-center">
@@ -168,15 +173,15 @@ export const AuditPanel = {
             </div>
             <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-start mb-1">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">${log.action}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">${escapeHTML(log.action || '')}</span>
                     <span class="text-[10px] text-gray-400">${timeStr}</span>
                 </div>
                 <p class="text-xs text-gray-700 font-medium">
-                    <span class="font-bold text-gray-900">${log.userName}</span> 
+                    <span class="font-bold text-gray-900">${safeUserName}</span> 
                     ${this.getActionText(log)}
                 </p>
-                ${log.details?.patientName ? `<p class="text-[10px] text-indigo-600 font-semibold mt-1">🏷️ Paciente: ${log.details.patientName}</p>` : ''}
-                ${log.details?.therapist ? `<p class="text-[10px] text-gray-500 italic">Agenda: ${log.details.therapist}</p>` : ''}
+                ${log.details?.patientName ? `<p class="text-[10px] text-indigo-600 font-semibold mt-1">🏷️ Paciente: ${safePatientName}</p>` : ''}
+                ${log.details?.therapist ? `<p class="text-[10px] text-gray-500 italic">Agenda: ${safeTherapist}</p>` : ''}
                 ${log.details?.appointmentDate ? (() => {
                     try {
                         const dateParts = log.details.appointmentDate.split('T');
@@ -197,9 +202,9 @@ export const AuditPanel = {
                             const formatted = `${day}/${mesNombre} a las ${hr}:${minStr} ${ampm}`;
                             return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: <span class="font-bold text-gray-800">${formatted}</span></p>`;
                         }
-                        return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: ${log.details.appointmentDate}</p>`;
+                        return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: ${escapeHTML(log.details.appointmentDate)}</p>`;
                     } catch(e) {
-                        return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: ${log.details.appointmentDate}</p>`;
+                        return `<p class="text-[10px] text-gray-600 mt-0.5">📅 Cita enviada: ${escapeHTML(log.details.appointmentDate)}</p>`;
                     }
                 })() : ''}
                 
@@ -211,7 +216,7 @@ export const AuditPanel = {
                         💬 Ver detalle
                     </button>
                     <div class="hidden mt-1.5 p-2 bg-green-50 border border-green-100 rounded-lg text-[10px] text-green-800 whitespace-pre-wrap font-mono leading-tight">
-                        ${log.details.message || log.details.error}
+                        ${safeWaDetail}
                     </div>
                 ` : ''}
             </div>
@@ -238,7 +243,10 @@ export const AuditPanel = {
     getActionText(log) {
         switch(log.action) {
             case 'CREATE': return 'agendó una nueva cita';
-            case 'UPDATE': return `modificó una cita (${log.details?.changes?.join(', ') || 'campos'})`;
+            case 'UPDATE': return `modificó una cita (${(log.details?.changes || []).map((c) => escapeHTML(c)).join(', ') || 'campos'})`;
+            case 'WHATSAPP_CANCEL_REASON': return 'registró motivo de cancelación vía WhatsApp';
+            case 'WHATSAPP_CANCEL_REASON_NOTE': return 'registró nota de motivo de cancelación vía WhatsApp';
+            case 'WHATSAPP_DIANA_SESSION': return 'Diana confirmó sesión de evaluación vía WhatsApp';
             case 'DELETE_PERMANENT': return 'eliminó permanentemente un registro';
             case 'CANCEL': return 'canceló una cita';
             case 'PAYMENT': return log.details?.isPaid ? 'marcó como PAGADA una cita' : 'quitó el estado de pagado';
@@ -260,7 +268,7 @@ export const AuditPanel = {
                 if (errMsg.includes('no_profile_phone_optin_or_wantsWhatsapp')) {
                     errMsg = 'el paciente no tiene celular registrado o tiene los recordatorios desactivados';
                 }
-                return `error al enviar recordatorio de WhatsApp: ${errMsg}`;
+                return `error al enviar recordatorio de WhatsApp: ${escapeHTML(errMsg)}`;
             }
             default: return 'realizó una acción';
         }

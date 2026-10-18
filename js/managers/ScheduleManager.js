@@ -5,10 +5,13 @@
 
 import { PatientState } from './patient/PatientState.js';
 import { AuthManager } from './AuthManager.js';
-import { isSlotFree } from '../utils/validators.js';
+import { buildEvaluationBatch } from '../config/evaluationStages.js';
+import { checkSlotConflict, formatConflictAppointment } from '../utils/validators.js';
+import { escapeHTML } from '../utils/sanitize.js';
 import { GoogleAuthService } from '../services/google/GoogleAuthService.js';
 import { createAppointment } from '../services/appointmentService.js';
 import { getStartOfWeek } from '../utils/dateUtils.js';
+import { TimeManager } from '../utils/TimeManager.js';
 import { ModalService } from '../utils/ModalService.js';
 import { ToastService } from '../utils/ToastService.js';
 import { Logger } from '../utils/Logger.js';
@@ -92,7 +95,14 @@ export const ScheduleManager = {
     openModal(patientId, patientName, therapist, defaultCost = 0) {
         this.state.patientId = patientId;
         this.state.patientName = patientName;
-        this.state.therapist = therapist || 'diana';
+        const profile = PatientState.patients.find(p => p.id === patientId || p.name === patientName);
+        // Prioridad: argumento → perfil → filtro agenda → usuario → diana
+        // (si queda 'diana' por error, Sam no ve las citas en su calendario)
+        const fromArg = therapist && therapist !== 'all' ? therapist : null;
+        const fromProfile = profile?.therapist && profile.therapist !== 'all' ? profile.therapist : null;
+        const fromFilter = AuthManager.getSelectedTherapist?.();
+        const fromFilterOk = fromFilter && fromFilter !== 'all' ? fromFilter : null;
+        this.state.therapist = fromArg || fromProfile || fromFilterOk || AuthManager.currentUser?.therapist || 'diana';
         const now = new Date();
         let weekStart = getStartOfWeek(now);
         // Si hoy es domingo (0), la semana hábil (Lun-Sab) ya pasó, mostrar la siguiente semana
@@ -105,7 +115,9 @@ export const ScheduleManager = {
         this.state.recurrenceType = 'none';
         this.state.sessionsCount = 1;
 
-        if (this.dom.patientName) this.dom.patientName.textContent = `Paciente: ${patientName}`;
+        if (this.dom.patientName) {
+            this.dom.patientName.textContent = `Paciente: ${patientName} · ${String(this.state.therapist).toUpperCase()}`;
+        }
         if (this.dom.confirmBtn) {
             this.dom.confirmBtn.disabled = true;
             this.dom.confirmBtn.textContent = 'Seleccione Horario';
@@ -113,7 +125,6 @@ export const ScheduleManager = {
 
         let finalCost = defaultCost;
         if (!finalCost || finalCost === 0) {
-            const profile = PatientState.patients.find(p => p.id === patientId || p.name === patientName);
             finalCost = profile?.defaultCost || 800;
         }
         if (this.dom.costInput) this.dom.costInput.value = finalCost;
@@ -220,9 +231,12 @@ export const ScheduleManager = {
                     const isSelected = this.state.selectedSlots.some(s => s.getTime() === slot.date.getTime());
 
                     if (!slot.isFree) {
-                        slotBtn.className = 'w-full py-2 rounded text-[10px] font-medium bg-gray-100 text-gray-400 border border-gray-100 cursor-not-allowed';
-                        slotBtn.textContent = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        slotBtn.className = 'w-full py-1.5 px-0.5 rounded text-[9px] font-medium bg-red-50 text-red-700 border border-red-100 cursor-not-allowed leading-tight';
                         slotBtn.disabled = true;
+                        slotBtn.title = slot.conflictLabel || 'Horario ocupado';
+                        const timeStr = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        const shortName = (slot.conflictName || 'Ocupado').split(' ')[0];
+                        slotBtn.innerHTML = `<span class="block font-bold">${escapeHTML(timeStr)}</span><span class="block truncate opacity-90">${escapeHTML(shortName)}</span>`;
                     } else {
                         slotBtn.className = `w-full py-2 rounded text-[10px] font-bold transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-300 scale-105' : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-400 hover:bg-indigo-50'}`;
                         slotBtn.textContent = slot.date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -261,8 +275,19 @@ export const ScheduleManager = {
             
             const slotDate = new Date(date);
             slotDate.setHours(hour, 0, 0, 0);
-            const isFree = isSlotFree(slotDate, PatientState.appointments || [], null, this.state.therapist);
-            slots.push({ date: slotDate, isFree });
+            const conflict = checkSlotConflict(
+                TimeManager.toFirestore(slotDate),
+                PatientState.appointments || [],
+                null,
+                this.state.therapist
+            );
+            const isFree = !conflict;
+            slots.push({
+                date: slotDate,
+                isFree,
+                conflictName: conflict?.name || null,
+                conflictLabel: conflict ? formatConflictAppointment(conflict) : null
+            });
         }
         return slots;
     },
@@ -317,9 +342,15 @@ export const ScheduleManager = {
             this.dom.confirmBtn.textContent = 'Agendando...';
 
             let createdTotal = 0;
+            const skippedConflicts = [];
             const patientData = PatientState.patients.find(p => p.id === this.state.patientId);
             const therapistDefaults = AuthManager.getTherapistDefaults(this.state.therapist);
             const clinicFee = patientData?.clinicFee || therapistDefaults.clinicFee;
+
+            const pendingAppointments = [];
+            // Acumular citas ya armadas en este batch para detectar conflictos entre sí
+            // (PatientState aún no las tiene hasta que responda el listener).
+            const batchLocal = [...(PatientState.appointments || [])];
 
             // Bucle por cada horario seleccionado (Multidía)
             for (const baseDate of this.state.selectedSlots) {
@@ -330,16 +361,26 @@ export const ScheduleManager = {
                     if (this.state.recurrenceType === 'weekly') aptDate.setDate(aptDate.getDate() + (i * 7));
                     else if (this.state.recurrenceType === 'biweekly') aptDate.setDate(aptDate.getDate() + (i * 14));
 
-                    // Verificar disponibilidad futura
-                    if (!isSlotFree(aptDate, PatientState.appointments || [], null, this.state.therapist)) {
-                         console.warn(`Slot ocupado saltado: ${aptDate.toISOString()}`);
-                         continue; 
+                    const dateIso = TimeManager.toFirestore(aptDate);
+                    const conflict = checkSlotConflict(
+                        dateIso,
+                        batchLocal,
+                        null,
+                        this.state.therapist
+                    );
+                    if (conflict) {
+                        skippedConflicts.push({
+                            date: aptDate,
+                            label: formatConflictAppointment(conflict)
+                        });
+                        continue;
                     }
 
                     const appointmentData = {
                         name: this.state.patientName,
                         patientId: this.state.patientId,
-                        date: aptDate.toISOString(),
+                        profileId: this.state.patientId,
+                        date: dateIso,
                         cost: cost,
                         therapist: this.state.therapist,
                         clinicFee: clinicFee,
@@ -347,14 +388,51 @@ export const ScheduleManager = {
                         isPaid: false,
                         isCancelled: false
                     };
-
-                    const result = await createAppointment(appointmentData, PatientState.appointments);
-                    if (result.success) createdTotal++;
+                    pendingAppointments.push(appointmentData);
+                    batchLocal.push(appointmentData);
                 }
             }
 
-            await ToastService.success(`¡Éxito! Se agendaron ${createdTotal} citas en total.`);
-            this.closeModal();
+            const batch = buildEvaluationBatch(pendingAppointments, patientData);
+            const createErrors = [];
+
+            for (const appointmentData of batch) {
+                const result = await createAppointment(appointmentData, batchLocal);
+                if (result.success) {
+                    createdTotal++;
+                    if (result.id) {
+                        batchLocal.push({ ...appointmentData, id: result.id });
+                    }
+                } else if (result.error) {
+                    createErrors.push(result.error);
+                }
+            }
+
+            if (createdTotal === 0) {
+                if (skippedConflicts.length > 0) {
+                    const list = skippedConflicts.slice(0, 5).map((s) => {
+                        const when = s.date.toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        return `• ${when}: ${s.label}`;
+                    }).join('<br>');
+                    await ModalService.alert(
+                        'Huecos ocupados',
+                        `No se pudo agendar ninguna cita. Ya hay cita en:<br><br>${list}`,
+                        'warning'
+                    );
+                } else {
+                    const detail = createErrors[0] ? `<br><br><span class="text-xs text-red-600">${escapeHTML(createErrors[0])}</span>` : '';
+                    await ModalService.alert('Sin citas', `No se creó ninguna cita. Revisa horarios, costo y terapeuta (${escapeHTML(this.state.therapist)}).${detail}`, 'warning');
+                }
+                this.dom.confirmBtn.disabled = false;
+                this._updateConfirmButton();
+            } else {
+                await ToastService.success(`¡Éxito! Se agendaron ${createdTotal} cita${createdTotal > 1 ? 's' : ''} con ${String(this.state.therapist).toUpperCase()}.`);
+                if (skippedConflicts.length > 0) {
+                    const list = skippedConflicts.slice(0, 4).map((s) => s.label).join(', ');
+                    ToastService.warning(`${skippedConflicts.length} hueco(s) ocupado(s): ${list}`);
+                }
+                this.closeModal();
+            }
 
         } catch (error) {
             log.error('Error al agendar:', error);

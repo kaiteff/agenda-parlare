@@ -93,6 +93,7 @@ export const CorteDeCaja = {
      * Renderiza el modal del corte de caja
      */
     open() {
+        if (!AuthManager.canViewClinicFinancials()) return;
         const report = this.generate();
         const dateStr = report.date.toLocaleDateString('es-MX', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'

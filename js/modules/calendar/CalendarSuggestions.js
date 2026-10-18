@@ -5,7 +5,8 @@
 
 import { CalendarState } from './CalendarState.js';
 import { CalendarUI } from './CalendarUI.js';
-import { checkSlotConflict, isNotSunday } from '../../utils/validators.js';
+import { checkSlotConflict, isNotSunday, formatConflictAppointment } from '../../utils/validators.js';
+import { escapeHTML } from '../../utils/sanitize.js';
 import { addDays, formatTime12h } from '../../utils/dateUtils.js';
 import { TimeManager } from '../../utils/TimeManager.js';
 import { db, addDoc, collection } from '../../firebase.js';
@@ -13,6 +14,54 @@ import { AuthManager } from '../../managers/AuthManager.js';
 
 
 export const CalendarSuggestions = {
+    DEFAULT_FREQUENCY: 'weekly',
+
+    _getTherapistForConflict() {
+        return CalendarState.dom.appointmentTherapistInput?.value
+            || AuthManager.getSelectedTherapist()
+            || AuthManager.currentUser?.therapist
+            || 'diana';
+    },
+
+    /**
+     * Lee controles de recurrencia en vivo (no solo el cache de CalendarState.dom).
+     * Si el select no existe, frequency cae a 'weekly' y wantsRecurring a false.
+     */
+    resolveRecurringControls() {
+        const appointmentDateInput = CalendarState.ensureDom('appointmentDateInput', 'appointmentDate');
+        const recurringOptions = CalendarState.ensureDom('recurringOptions', 'recurringOptions');
+        const recurringDatesList = CalendarState.ensureDom('recurringDatesList', 'recurringDatesList');
+        const isRecurringCheckbox = CalendarState.ensureDom('isRecurringCheckbox', 'isRecurring');
+        const recurringSection = CalendarState.ensureDom('recurringSection', 'recurringSection');
+        const durationSelect = document.getElementById('recurringDuration');
+
+        if (recurringOptions && !recurringOptions.value) {
+            recurringOptions.value = this.DEFAULT_FREQUENCY;
+        }
+
+        const raw = recurringOptions?.value ?? this.DEFAULT_FREQUENCY;
+        const frequency = raw === 'biweekly' ? 'biweekly' : 'weekly';
+
+        return {
+            appointmentDateInput,
+            recurringOptions,
+            recurringDatesList,
+            isRecurringCheckbox,
+            recurringSection,
+            durationSelect,
+            frequency,
+            wantsRecurring: !!isRecurringCheckbox?.checked
+        };
+    },
+
+    resetRecurrenceUi() {
+        const c = this.resolveRecurringControls();
+        if (c.isRecurringCheckbox) c.isRecurringCheckbox.checked = false;
+        if (c.recurringSection) c.recurringSection.classList.add('hidden');
+        if (c.recurringOptions) c.recurringOptions.value = this.DEFAULT_FREQUENCY;
+        if (c.durationSelect) c.durationSelect.value = '4';
+        if (c.recurringDatesList) c.recurringDatesList.innerHTML = '';
+    },
 
     /**
      * Analiza el historial del paciente y sugiere un horario habitual
@@ -70,13 +119,13 @@ export const CalendarSuggestions = {
             nextDate.setDate(today.getDate() + daysToAdd);
 
             // Verificar conflicto en la fecha sugerida
-            let conflict = checkSlotConflict(nextDate.toISOString(), CalendarState.appointments);
+            let conflict = checkSlotConflict(nextDate.toISOString(), CalendarState.appointments, null, this._getTherapistForConflict());
 
             // Si hay conflicto, intentar la semana siguiente
             if (conflict) {
                 console.log('🔍 Sugerencias: Conflicto en primera fecha sugerida, intentando semana siguiente...');
                 nextDate.setDate(nextDate.getDate() + 7);
-                conflict = checkSlotConflict(nextDate.toISOString(), CalendarState.appointments);
+                conflict = checkSlotConflict(nextDate.toISOString(), CalendarState.appointments, null, this._getTherapistForConflict());
             }
 
             // Si sigue habiendo conflicto, buscar otra semana más
@@ -105,13 +154,15 @@ export const CalendarSuggestions = {
 
             div.querySelector('button').onclick = () => {
                 const localISOTime = TimeManager.toFirestore(nextDate);
-
-                CalendarState.dom.appointmentDateInput.value = localISOTime;
+                const controls = this.resolveRecurringControls();
+                if (controls.appointmentDateInput) {
+                    controls.appointmentDateInput.value = localISOTime;
+                }
 
                 // Activar recurrencia automáticamente si el patrón es fuerte (>1 vez)
-                if (maxCount > 1 && CalendarState.dom.isRecurringCheckbox) {
-                    CalendarState.dom.isRecurringCheckbox.checked = true;
-                    CalendarState.dom.recurringSection.classList.remove('hidden');
+                if (maxCount > 1 && controls.isRecurringCheckbox) {
+                    controls.isRecurringCheckbox.checked = true;
+                    controls.recurringSection?.classList.remove('hidden');
                     this.generateRecurringDates();
                 }
 
@@ -142,21 +193,33 @@ export const CalendarSuggestions = {
      * Genera lista de fechas recurrentes
      */
     generateRecurringDates() {
-        const { appointmentDateInput, recurringOptions, recurringDatesList } = CalendarState.dom;
-        const durationSelect = document.getElementById('recurringDuration');
-        if (!appointmentDateInput.value) return [];
+        try {
+            return this._generateRecurringDatesUnsafe();
+        } catch (err) {
+            console.warn('CalendarSuggestions.generateRecurringDates:', err);
+            return [];
+        }
+    },
 
-        const baseDate = new Date(appointmentDateInput.value);
-        const frequency = recurringOptions.value; // 'weekly' or 'biweekly'
-        const months = durationSelect ? parseInt(durationSelect.value) : 3;
-        
-        // Calculate total sessions: approx 4.3 weeks per month
-        const sessionsPerMonth = frequency === 'weekly' ? 4.3 : 2.15;
-        const count = Math.ceil(months * sessionsPerMonth);
-        
+    _generateRecurringDatesUnsafe() {
+        const {
+            appointmentDateInput,
+            recurringDatesList,
+            durationSelect,
+            frequency
+        } = this.resolveRecurringControls();
+        if (!appointmentDateInput?.value) return [];
+
+        const baseDateStr = appointmentDateInput.value.split(',')[0];
+        const baseDate = new Date(baseDateStr);
+        if (Number.isNaN(baseDate.getTime())) return [];
+
+        const count = Math.max(1, parseInt(durationSelect?.value, 10) || 4);
+        const selectedTherapist = this._getTherapistForConflict();
+
         const dates = [];
 
-        recurringDatesList.innerHTML = '';
+        if (recurringDatesList) recurringDatesList.innerHTML = '';
 
         for (let i = 0; i < count; i++) {
             const d = new Date(baseDate);
@@ -168,14 +231,17 @@ export const CalendarSuggestions = {
 
             // Verificación de conflicto para cada fecha recurrente
             const iso = TimeManager.toFirestore(d);
-            const isConflict = checkSlotConflict(iso, CalendarState.appointments);
+            const conflict = checkSlotConflict(iso, CalendarState.appointments, null, selectedTherapist);
+            const isConflict = !!conflict;
 
-            li.className = `text-xs flex justify-between items-center p-1 rounded ${isConflict ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'}`;
+            li.className = `text-xs flex justify-between items-center gap-2 p-1.5 rounded ${isConflict ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'}`;
             li.innerHTML = `
                 <span>${d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                ${isConflict ? '<span class="font-bold text-red-600">Ocupado</span>' : '<span class="text-green-600">Disponible</span>'}
+                ${isConflict
+                    ? `<span class="font-bold text-red-600 text-right leading-tight" title="${escapeHTML(formatConflictAppointment(conflict))}">Ocupado: ${escapeHTML(conflict.name || '—')}</span>`
+                    : '<span class="text-green-600 shrink-0">Disponible</span>'}
             `;
-            recurringDatesList.appendChild(li);
+            if (recurringDatesList) recurringDatesList.appendChild(li);
         }
         return dates;
     },
@@ -184,7 +250,8 @@ export const CalendarSuggestions = {
      * Genera opciones para reagendar (Chips)
      */
     generateRescheduleOptions(currentDate) {
-        const { rescheduleOptions } = CalendarState.dom;
+        const rescheduleOptions = CalendarState.ensureDom('rescheduleOptions', 'rescheduleOptions');
+        if (!rescheduleOptions) return;
         rescheduleOptions.innerHTML = '';
 
         // 1. Opciones "Hoy y esta Semana" (Slots disponibles próximos)
@@ -194,11 +261,12 @@ export const CalendarSuggestions = {
         const nextWeek = addDays(currentDate, 7);
         const next2Weeks = addDays(currentDate, 14);
 
-        if (!checkSlotConflict(nextWeek.toISOString(), CalendarState.appointments)) {
+        const therapist = this._getTherapistForConflict();
+        if (!checkSlotConflict(nextWeek.toISOString(), CalendarState.appointments, null, therapist)) {
             rescheduleOptions.appendChild(this.createRescheduleChip('Misma hora prox. semana', nextWeek));
         }
 
-        if (!checkSlotConflict(next2Weeks.toISOString(), CalendarState.appointments)) {
+        if (!checkSlotConflict(next2Weeks.toISOString(), CalendarState.appointments, null, therapist)) {
             rescheduleOptions.appendChild(this.createRescheduleChip('En 2 semanas', next2Weeks));
         }
     },
@@ -229,7 +297,7 @@ export const CalendarSuggestions = {
                 // Verificar conflicto (usando ISOString local manual para asegurar fecha correcta)
                 const iso = TimeManager.toFirestore(d);
 
-                if (!checkSlotConflict(iso, CalendarState.appointments)) {
+                if (!checkSlotConflict(iso, CalendarState.appointments, null, this._getTherapistForConflict())) {
                     candidates.push({ date: d, label: `${labelPrefix} ${formatTime12h(h)}` });
                 }
             }
@@ -264,8 +332,10 @@ export const CalendarSuggestions = {
         chip.className = `${bgClass} px-3 py-1 rounded-full text-xs cursor-pointer border transition-colors whitespace-nowrap`;
         chip.textContent = label;
         chip.onclick = () => {
+            const input = CalendarState.ensureDom('appointmentDateInput', 'appointmentDate');
+            if (!input) return;
             const localISOTime = TimeManager.toFirestore(dateObj);
-            CalendarState.dom.appointmentDateInput.value = localISOTime;
+            input.value = localISOTime;
             CalendarUI.renderBusySlots(localISOTime.split('T')[0]);
         };
         return chip;

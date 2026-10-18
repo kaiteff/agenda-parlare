@@ -2,10 +2,12 @@
  * MainModals.js
  * Contiene los modales principales del sistema (Cita, Cortes, Reportes)
  */
+import { StaffManager } from '../managers/StaffManager.js';
 
 export const MainModals = {
     inject(container = document.body) {
         if (!container) return;
+        if (document.getElementById('main-modals-container')) return;
         const div = document.createElement('div');
         div.id = 'main-modals-container';
         div.innerHTML = this.getHtml();
@@ -79,7 +81,7 @@ export const MainModals = {
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-3.5 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation"><option value="diana">Diana</option><option value="sam">Sam</option><option value="vero">Vero</option></select></div>
+                            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label><select id="appointmentTherapist" class="w-full px-3 py-3.5 md:py-2 text-base md:text-sm border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 outline-none touch-manipulation">${StaffManager.generateOptionsHtml()}</select></div>
                             <div>
                                 <div class="flex items-center justify-between mb-1">
                                     <label class="block text-xs font-bold text-gray-500 uppercase">Costo Total ($)</label>
@@ -118,9 +120,7 @@ export const MainModals = {
                                 <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">¿Quién realizó la planeación?</label>
                                 <select id="planningTherapist" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-blue-100">
                                     <option value="">(Ninguno / Solo atención)</option>
-                                    <option value="diana">Diana</option>
-                                    <option value="sam">Sam</option>
-                                    <option value="vero">Vero</option>
+                                    ${StaffManager.generateOptionsHtml()}
                                 </select>
                             </div>
                             
@@ -130,13 +130,19 @@ export const MainModals = {
                             <input type="checkbox" id="isRecurring" class="w-5 h-5 md:w-4 md:h-4 text-blue-600 rounded border-gray-300"><span class="text-sm text-gray-700 select-none">Agendar sesiones recurrentes</span>
                         </label>
                         <div id="recurringSection" class="hidden bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col gap-3">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <span class="text-xs font-bold text-blue-800 uppercase">Configuración</span>
-                                <select id="recurringDuration" class="text-xs bg-white border border-blue-200 rounded px-2 py-1">
-                                    <option value="4">4 sesiones</option>
-                                    <option value="8">8 sesiones</option>
-                                    <option value="12">12 sesiones</option>
-                                </select>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <select id="recurringOptions" class="text-xs bg-white border border-blue-200 rounded px-2 py-1 min-h-[36px] touch-manipulation">
+                                        <option value="weekly">Cada semana</option>
+                                        <option value="biweekly">Cada 2 semanas</option>
+                                    </select>
+                                    <select id="recurringDuration" class="text-xs bg-white border border-blue-200 rounded px-2 py-1 min-h-[36px] touch-manipulation">
+                                        <option value="4">4 sesiones</option>
+                                        <option value="8">8 sesiones</option>
+                                        <option value="12">12 sesiones</option>
+                                    </select>
+                                </div>
                             </div>
                             <div id="recurringDatesList" class="text-[10px] text-blue-700 space-y-1"></div>
                         </div>
@@ -479,10 +485,8 @@ export const MainModals = {
                         <!-- Therapist Selection -->
                         <div>
                             <label class="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Terapeuta</label>
-                            <select id="absenceTherapist" class="w-full px-3 py-3 md:py-2 text-base md:text-sm font-semibold border border-gray-200 rounded-xl md:rounded-lg bg-white transition-all focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none touch-manipulation disabled:bg-gray-50 disabled:text-gray-600">
-                                <option value="diana">Diana</option>
-                                <option value="sam">Sam</option>
-                                <option value="vero">Vero</option>
+                            <select id="absenceTherapist" class="w-full px-4 py-3 md:py-2 text-base md:text-sm border border-gray-300 rounded-xl md:rounded-lg bg-white outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                                ${StaffManager.generateOptionsHtml()}
                             </select>
                         </div>
 

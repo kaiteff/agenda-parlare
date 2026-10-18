@@ -71,7 +71,7 @@ export const FinancialReport = {
             // Asegurar que existe la clave del terapeuta
             if (!report.byTherapist[therapistKey]) {
                 report.byTherapist[therapistKey] = { 
-                    name: therapistKey.charAt(0).toUpperCase() + therapistKey.slice(1), 
+                    name: window.StaffManager ? window.StaffManager.getTherapistName(therapistKey) : (therapistKey.charAt(0).toUpperCase() + therapistKey.slice(1)), 
                     income: 0, 
                     pending: 0, 
                     clinicFee: 0, 

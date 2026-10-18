@@ -116,6 +116,10 @@ export const AbsenceModal = {
 
     _therapistLabel(id) {
         const k = (id || '').toLowerCase();
+        if (window.StaffManager) {
+            const name = window.StaffManager.getTherapistName(k);
+            if (name) return name;
+        }
         if (k === 'diana') return 'Diana';
         if (k === 'sam') return 'Sam';
         if (k === 'vero') return 'Vero';
@@ -212,9 +216,16 @@ export const AbsenceModal = {
         const select = document.getElementById('absenceSubstituteTherapist');
         if (!select) return;
         const away = (awayTherapist || '').toLowerCase();
-        const labels = { diana: 'Diana', sam: 'Sam', vero: 'Vero' };
-        const options = ['diana', 'sam', 'vero'].filter(t => t !== away);
-        select.innerHTML = options.map(t => `<option value="${t}">${labels[t]}</option>`).join('');
+        let optionsHtml = '';
+        if (window.StaffManager) {
+            const therapists = window.StaffManager.getTherapists().filter(t => t.id !== away);
+            optionsHtml = therapists.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        } else {
+            const labels = { diana: 'Diana', sam: 'Sam', vero: 'Vero' };
+            const options = ['diana', 'sam', 'vero'].filter(t => t !== away);
+            optionsHtml = options.map(t => `<option value="${t}">${labels[t]}</option>`).join('');
+        }
+        select.innerHTML = optionsHtml;
     },
 
     _substituteHasPatientAtSlot(substituteId, appt) {

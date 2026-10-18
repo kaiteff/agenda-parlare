@@ -65,7 +65,14 @@ export async function createPatientProfile(name, firstName = '', lastName = '', 
             reimbursementReceipt: {
                 autoGenerate: options.reimbursementReceipt?.autoGenerate === true,
                 tutorName: options.reimbursementReceipt?.tutorName || ''
-            }
+            },
+            treatmentType: options.treatmentType || 'regular',
+            evaluationStage: options.treatmentType === 'evaluation' ? 1 : null,
+            evaluationMeta: options.treatmentType === 'evaluation' ? {
+                plannedSessions: options.evaluationMeta?.plannedSessions ?? 3,
+                optionalExtraEvaluation: options.evaluationMeta?.optionalExtraEvaluation === true,
+                schedulingNotes: options.evaluationMeta?.schedulingNotes || ''
+            } : null
         };
 
         const docRef = await addDoc(collection(db, patientProfilesPath), profileData);
@@ -126,38 +133,71 @@ export async function reactivatePatient(id) {
 }
 
 /**
- * Cancela (elimina) citas futuras de un paciente a partir de hoy
+ * Cancela (elimina) citas futuras de un paciente a partir de hoy.
+ * Busca por patientId/profileId Y por nombre exacto (por si citas viejas no tienen id).
  * @param {string} patientName - Nombre del paciente
+ * @param {string} [patientId] - ID del perfil (recomendado)
  * @returns {Promise<number>} - Número de citas eliminadas
  */
-export async function cancelFutureAppointments(patientName) {
+export async function cancelFutureAppointments(patientName, patientId = null) {
     try {
-        // Obtener fecha de hoy inicio del día para incluir hoy
+        // Medianoche local → ISO naive México (alineado con TimeManager / citas sin Z)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const todayIso = today.toISOString();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        const todayIso = `${y}-${m}-${d}T00:00`;
 
-        const q = query(
-            collection(db, collectionPath),
-            where("name", "==", patientName)
-        );
+        const seen = new Set();
+        const toDelete = [];
 
-        const querySnapshot = await getDocs(q);
-        const batch = writeBatch(db);
+        const collect = (querySnapshot) => {
+            querySnapshot.forEach((docSnapshot) => {
+                if (seen.has(docSnapshot.id)) return;
+                const appointment = docSnapshot.data();
+                if (appointment.isCancelled) return;
+                if (appointment.date >= todayIso) {
+                    seen.add(docSnapshot.id);
+                    toDelete.push(docSnapshot.ref);
+                }
+            });
+        };
+
+        if (patientId) {
+            const byPatientId = await getDocs(query(
+                collection(db, collectionPath),
+                where('patientId', '==', patientId)
+            ));
+            collect(byPatientId);
+
+            const byProfileId = await getDocs(query(
+                collection(db, collectionPath),
+                where('profileId', '==', patientId)
+            ));
+            collect(byProfileId);
+        }
+
+        if (patientName) {
+            const byName = await getDocs(query(
+                collection(db, collectionPath),
+                where('name', '==', patientName)
+            ));
+            collect(byName);
+        }
+
+        // Firestore batch máx. 500
         let deletedCount = 0;
-
-        querySnapshot.forEach((docSnapshot) => {
-            const appointment = docSnapshot.data();
-            // Filtrar localmente: eliminar si es >= hoy
-            if (appointment.date >= todayIso) {
-                batch.delete(docSnapshot.ref);
-                deletedCount++;
-            }
-        });
+        for (let i = 0; i < toDelete.length; i += 450) {
+            const chunk = toDelete.slice(i, i + 450);
+            const batch = writeBatch(db);
+            chunk.forEach((ref) => batch.delete(ref));
+            await batch.commit();
+            deletedCount += chunk.length;
+        }
 
         if (deletedCount > 0) {
-            await batch.commit();
-            console.log(`🗑️ Se eliminaron ${deletedCount} citas futuras/hoy para ${patientName}`);
+            console.log(`🗑️ Se eliminaron ${deletedCount} citas futuras/hoy para ${patientName || patientId}`);
         }
 
         return deletedCount;

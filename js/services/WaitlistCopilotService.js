@@ -31,21 +31,13 @@ import {
     doc,
     setDoc,
     serverTimestamp,
-    getDocs
+    getDocs,
+    onSnapshot
 } from '../firebase.js';
-import { CalendarData } from '../modules/calendar/CalendarData.js';
 
-const APPOINTMENTS = 'appointments';
-const OVERRIDES = 'copilot_overrides';
+const APPROVALS = 'collaborative_approvals';
 
-// 8 minutos en milisegundos — DEBE coincidir con `total_wait = 480` en
-// `functions/space_optimizer.py:174`. Cambiar uno sin cambiar el otro rompe
-// la UX (banner dice "te quedan X min" pero el backend ya terminó hace rato).
-export const COPILOT_DELAY_MS = 8 * 60 * 1000;
-
-// Ventana de antelación: 8 h a 24 h antes de la cita
-const MIN_HOURS_BEFORE = 8;
-const MAX_HOURS_BEFORE = 24;
+export const COPILOT_DELAY_MS = 60 * 60 * 1000; // 60 minutos
 
 export const WaitlistCopilotService = {
     /** Cancelaciones en delay actualmente visibles para Yari. */
@@ -66,10 +58,13 @@ export const WaitlistCopilotService = {
     start() {
         if (this._unsub) return;
 
-        // 28 may 2026: reutilizar el listener compartido de CalendarData (~90 días).
-        // Antes había un segundo onSnapshot solo de canceladas → duplicaba lecturas al login.
-        this._unsub = CalendarData.subscribe((appointments) => {
-            this._handleAppointments(appointments);
+        const q = query(
+            collection(db, APPROVALS),
+            where('status', '==', 'pending')
+        );
+
+        this._unsub = onSnapshot(q, (snap) => {
+            this._handleApprovals(snap);
         });
 
         this._tickTimer = setInterval(() => this._tick(), 1000);
@@ -99,11 +94,8 @@ export const WaitlistCopilotService = {
         return () => this._subscribers.delete(callback);
     },
 
-    /**
-     * Salta el delay (ver `COPILOT_DELAY_MS`) y dispara Autopilot YA.
-     */
     async skipDelay(appointmentId) {
-        await this._writeOverride(appointmentId, 'skip_delay');
+        await this._writeOverride(appointmentId, 'approved');
         const item = this._pending.get(appointmentId);
         if (item) {
             item.localStatus = 'launching';
@@ -115,7 +107,7 @@ export const WaitlistCopilotService = {
      * Aborta el Autopilot para este espacio. Yari lo llenará a mano.
      */
     async pauseAutopilot(appointmentId) {
-        await this._writeOverride(appointmentId, 'pause');
+        await this._writeOverride(appointmentId, 'rejected');
         const item = this._pending.get(appointmentId);
         if (item) {
             item.localStatus = 'paused';
@@ -132,9 +124,7 @@ export const WaitlistCopilotService = {
      * Marca que Yari abrió la búsqueda manual (solo trazabilidad).
      */
     async markManualSearch(appointmentId) {
-        try {
-            await this._writeOverride(appointmentId, 'manual_search');
-        } catch (_) { /* trazabilidad opcional, ignorar fallos */ }
+        // No hacemos nada en este caso, la búsqueda manual no rechaza el Autopilot automáticamente.
     },
 
     /**
@@ -189,7 +179,7 @@ export const WaitlistCopilotService = {
         dayEnd.setHours(23, 59, 59, 999);
 
         const q = query(
-            collection(db, APPOINTMENTS),
+            collection(db, 'appointments'),
             where('therapist', '==', therapist),
             where('date', '>', slot.date),
             where('date', '<=', dayEnd.toISOString())
@@ -219,41 +209,28 @@ export const WaitlistCopilotService = {
 
     // ─────────────────────── internos ───────────────────────
 
-    _handleAppointments(appointments) {
-        const now = Date.now();
+    _handleApprovals(snap) {
         const activeIds = new Set();
+        const now = Date.now();
 
-        for (const data of appointments) {
-            const id = data.id;
-            if (!data.isCancelled) {
-                continue;
-            }
-
-            if (!data.date) continue;
-            const aptDate = new Date(data.date);
-            const hoursBefore = (aptDate - new Date()) / (1000 * 60 * 60);
-            if (hoursBefore < MIN_HOURS_BEFORE || hoursBefore > MAX_HOURS_BEFORE) {
-                continue;
-            }
-
-            const cancelledAt = this._toMillis(data.cancelledAt) || now;
-            const elapsed = now - cancelledAt;
-            if (elapsed >= COPILOT_DELAY_MS) {
-                continue;
-            }
-
+        snap.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
             activeIds.add(id);
+
+            const createdAt = this._toMillis(data.createdAt) || now;
             const existing = this._pending.get(id);
+
             this._pending.set(id, {
                 id,
-                date: data.date,
+                appointmentId: data.appointmentId,
+                date: data.cancelledDate,
                 therapist: data.therapist || 'diana',
-                patientName: data.name || 'Paciente',
-                cancelledAt,
-                cancelledBy: data.cancelledBy || null,
+                patientName: data.patientName || 'Paciente',
+                cancelledAt: createdAt,
                 localStatus: existing?.localStatus || 'waiting'
             });
-        }
+        });
 
         for (const id of [...this._pending.keys()]) {
             if (!activeIds.has(id)) this._pending.delete(id);
@@ -302,14 +279,14 @@ export const WaitlistCopilotService = {
         });
     },
 
-    async _writeOverride(appointmentId, action) {
+    async _writeOverride(appointmentId, status) {
         try {
-            await setDoc(doc(db, OVERRIDES, appointmentId), {
-                appointmentId,
-                action,
-                createdAt: serverTimestamp(),
-                source: 'frontend_copilot_panel'
-            });
+            await setDoc(doc(db, APPROVALS, appointmentId), {
+                status: status,
+                approvedBy: status === 'approved' ? 'yari' : null,
+                rejectedBy: status === 'rejected' ? 'yari' : null,
+                [`${status}At`]: serverTimestamp()
+            }, { merge: true });
         } catch (e) {
             console.warn('[WaitlistCopilot] write override:', e);
             throw e;

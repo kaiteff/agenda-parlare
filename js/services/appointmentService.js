@@ -1,9 +1,12 @@
 // appointmentService.js - Servicio para gestión de citas
-import { db, collectionPath, notificationsPath, patientProfilesPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs, query, where } from '../firebase.js';
+import { db, collectionPath, notificationsPath, patientProfilesPath, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDocs, getDoc, query, where } from '../firebase.js';
 import { validateAppointment } from '../utils/validators.js';
 import { Logger } from '../utils/Logger.js';
 import { AuditService } from './AuditService.js';
 import { AuthManager } from '../managers/AuthManager.js';
+import { stampClinicId } from '../utils/clinicData.js';
+import { ClinicContext } from '../core/ClinicContext.js';
+import { applyEvaluationTagsIfNeeded } from '../config/evaluationStages.js';
 
 const log = Logger.create('AptService');
 
@@ -63,9 +66,10 @@ async function _syncToCalendar(action, data) {
 
         // Si se creó un evento y devolvió un ID de Google, lo guardamos en el documento
         if (result && result.success && result.googleEventId && (action === 'create' || action === 'update')) {
-            const docRef = doc(db, collectionPath, data.id);
+            const targetId = action === 'update' ? data.current.id : data.id;
+            const docRef = doc(db, collectionPath, targetId);
             await updateDoc(docRef, { googleEventId: result.googleEventId });
-            log.debug(`googleEventId [${result.googleEventId}] guardado en Firestore.`);
+            log.debug(`googleEventId [${result.googleEventId}] guardado en Firestore para cita [${targetId}].`);
         }
     } catch (err) {
         log.warn('Calendar sync error (non-blocking):', err.message);
@@ -73,14 +77,27 @@ async function _syncToCalendar(action, data) {
 }
 
 /**
- * Enriches appointment data with profileId and phone from the patient profile
+ * Enriches appointment data with profileId, phone and evaluation tags from patient profile
  */
 async function enrichWithProfileData(appointmentData) {
     let profileId = appointmentData.profileId || appointmentData.patientId || null;
     let phone = appointmentData.phone || null;
+    let profileData = null;
+
+    if (profileId) {
+        try {
+            const docSnap = await getDoc(doc(db, patientProfilesPath, profileId));
+            if (docSnap.exists()) {
+                profileData = { id: docSnap.id, ...docSnap.data() };
+                if (!phone) phone = profileData.phone || null;
+            }
+        } catch (err) {
+            log.warn('Error resolving patient profile by id:', err);
+        }
+    }
 
     const name = appointmentData.name?.trim();
-    if (name && (!profileId || !phone)) {
+    if (name && !profileData) {
         try {
             const q = query(
                 collection(db, patientProfilesPath),
@@ -89,19 +106,40 @@ async function enrichWithProfileData(appointmentData) {
             const snap = await getDocs(q);
             if (!snap.empty) {
                 const docSnap = snap.docs[0];
-                const data = docSnap.data();
+                profileData = { id: docSnap.id, ...docSnap.data() };
                 if (!profileId) profileId = docSnap.id;
-                if (!phone) phone = data.phone || null;
+                if (!phone) phone = profileData.phone || null;
             }
         } catch (err) {
             log.warn('Error resolving patient profile for enrichment:', err);
         }
     }
 
-    return {
+    let result = {
         ...appointmentData,
         profileId,
         phone
+    };
+
+    if (profileData) {
+        result = applyEvaluationTagsIfNeeded(result, profileData);
+        if (!result.patientId && profileData.id) {
+            result.patientId = profileData.id;
+        }
+    }
+
+    return result;
+}
+
+function resolveConfirmationMeta() {
+    if (AuthManager.isClinicOwner()) {
+        return { confirmedBy: 'diana', confirmedSource: 'app' };
+    }
+    const user = AuthManager.currentUser;
+    const email = user?.email || 'unknown';
+    return {
+        confirmedBy: user?.displayName || email,
+        confirmedSource: 'app'
     };
 }
 
@@ -121,31 +159,37 @@ export async function createAppointment(appointmentData, existingAppointments) {
         }
 
         const enrichedData = await enrichWithProfileData(appointmentData);
-
-        const docRef = await addDoc(collection(db, collectionPath), {
+        const payload = stampClinicId({
             ...enrichedData,
             name: enrichedData.name.trim(),
             date: enrichedData.date,
             cost: enrichedData.cost || 0,
-            therapist: enrichedData.therapist || 'diana', // Default a diana si no se especifica
+            therapist: enrichedData.therapist || 'diana',
             isPaid: false,
             confirmed: false,
             isCancelled: false,
-            sheetSynced: true, // Por defecto sincronizado hasta que ocurra un evento (pago/cancelación)
+            sheetSynced: true,
             createdAt: serverTimestamp(),
             createdBy: AuthManager.currentUser?.email || 'unknown',
             updatedBy: AuthManager.currentUser?.email || 'unknown'
-        });
+        }, ClinicContext.getActiveClinicId());
+
+        const docRef = await addDoc(collection(db, collectionPath), payload);
 
         const newId = docRef.id;
         log.success(`Cita creada [${newId}] para ${enrichedData.name}`);
 
         // Bitácora de Auditoría
-        await AuditService.log('CREATE', 'APPOINTMENT', newId, { 
-            patientName: enrichedData.name, 
+        const auditDetails = {
+            patientName: enrichedData.name,
             date: enrichedData.date,
-            therapist: enrichedData.therapist 
-        });
+            therapist: enrichedData.therapist
+        };
+        if (enrichedData.isEvaluation) {
+            auditDetails.evaluationStage = enrichedData.evaluationStage;
+            auditDetails.stageName = enrichedData.stageName;
+        }
+        await AuditService.log('CREATE', 'APPOINTMENT', newId, auditDetails);
 
         // Crear notificación interna
         _createNotification(
@@ -396,23 +440,40 @@ export async function toggleConfirmationStatus(id, currentStatus, existingAppoin
     try {
         const newStatus = !currentStatus;
         const docRef = doc(db, collectionPath, id);
-        const userName = source || AuthManager.currentUser?.displayName || AuthManager.currentUser?.email || 'unknown';
-        
+        const existing = existingAppointments.find(a => a.id === id);
+
         const updateData = { confirmed: newStatus };
         if (newStatus) {
             updateData.confirmedAt = serverTimestamp();
-            updateData.confirmedBy = userName;
+            if (source) {
+                updateData.confirmedBy = source;
+                updateData.confirmedSource = 'app';
+            } else {
+                const meta = resolveConfirmationMeta();
+                updateData.confirmedBy = meta.confirmedBy;
+                updateData.confirmedSource = meta.confirmedSource;
+            }
         } else {
-            // Si desconfirmamos, limpiamos el rastro
             updateData.confirmedAt = null;
             updateData.confirmedBy = null;
+            updateData.confirmedSource = null;
         }
-        
+
         await updateDoc(docRef, updateData);
-        log.info(`Cita [${id}] confirmación: ${newStatus} por ${userName}`);
+        log.info(`Cita [${id}] confirmación: ${newStatus} por ${updateData.confirmedBy || '—'}`);
+
+        if (newStatus && existing?.isEvaluation) {
+            await AuditService.log('APPOINTMENT_CONFIRMED', 'APPOINTMENT', id, {
+                patientName: existing.name,
+                confirmedBy: updateData.confirmedBy,
+                confirmedSource: updateData.confirmedSource,
+                evaluationStage: existing.evaluationStage,
+                stageName: existing.stageName,
+                message: 'Confirmado desde la app'
+            });
+        }
 
         // Re-sync Google Calendar con estado actualizado
-        const existing = existingAppointments.find(a => a.id === id);
         if (existing) _syncToCalendar('update', { ...existing, confirmed: newStatus });
 
         return { success: true, newState: newStatus };

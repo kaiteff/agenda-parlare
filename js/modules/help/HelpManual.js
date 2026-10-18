@@ -79,6 +79,44 @@ export const HelpManual = {
                                 Jamás edites, crees o elimines citas directamente en Google Calendar. Todo movimiento debe registrarse en esta app para que el bot de WhatsApp funcione, las comisiones se calculen y no se dupliquen eventos.
                             </p>
                         </div>
+
+                        <!-- Resumen novedades 9 jul 2026 -->
+                        <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-lg mb-6">
+                            <h3 class="font-bold text-base flex items-center gap-2 mb-2">
+                                <span>✨</span> Novedades del 9 de julio de 2026
+                            </h3>
+                            <p class="text-indigo-100 text-xs mb-3">Todo lo implementado hoy — guía rápida por rol:</p>
+                            <div class="grid md:grid-cols-2 gap-3 text-xs">
+                                <div class="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                                    <p class="font-bold text-white mb-1.5">👩‍⚕️ Diana</p>
+                                    <ul class="list-disc ml-4 space-y-1 text-indigo-50">
+                                        <li>Alta <strong>Proceso de evaluación</strong> al crear paciente (o delegar permiso a Yari).</li>
+                                        <li>Agenda con etapas; Google Calendar muestra «Entrevista — cita 1 de 3 — …».</li>
+                                        <li>Confirmar cita en app (✓) → bitácora <code class="bg-white/20 px-1 rounded">confirmedBy: diana</code>.</li>
+                                        <li><strong>9 PM celular:</strong> bot pregunta si hubo sesión de evaluación; tras Evaluación, si sigue otra evaluación o entrega.</li>
+                                        <li><strong>Equipo y permisos</strong> en Configuración (pestaña ya enlazada).</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                                    <p class="font-bold text-white mb-1.5">👱‍♀️ Yari</p>
+                                    <ul class="list-disc ml-4 space-y-1 text-indigo-50">
+                                        <li>Agendar etapas 1→2→3 (varios huecos o desde agenda).</li>
+                                        <li>Recordatorios papá con etapa (8 AM / 8 PM); cancelar pide <strong>motivo</strong> (enfermedad / viaje / otro).</li>
+                                        <li><strong>Control Maestro → Hoy sin confirmar:</strong> citas de hoy que el papá no confirmó; rosa si faltan ≤2 h → WhatsApp manual.</li>
+                                        <li>Hueco ocupado muestra <strong>quién</strong> está ahí (y etapa si es evaluación).</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-white/10 rounded-xl p-3 backdrop-blur-sm md:col-span-2">
+                                    <p class="font-bold text-white mb-1.5">Sam y Vero</p>
+                                    <ul class="list-disc ml-4 space-y-1 text-indigo-50">
+                                        <li>Misma libertad en <strong>su agenda</strong>: mover, recurrencia y citas sueltas de pacientes en evaluación (sin bloqueo extra).</li>
+                                        <li>No ven el selector «Proceso de evaluación» al crear paciente salvo que Diana les dé permiso.</li>
+                                        <li>Si agendan a un paciente en evaluación, las etapas se etiquetan igual al guardar la cita.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-indigo-200 mt-3 italic">Detalle abajo: sección «Evaluaciones», «Crear paciente», «Mensajes WhatsApp» y «Citas y Calendario».</p>
+                        </div>
                         
                         <p class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">Índice de Ayuda (Orden Alfabético)</p>
 
@@ -97,8 +135,10 @@ export const HelpManual = {
                                     <li><strong>Reparto de Comisión:</strong> Al abrir una cita, el desglose usa la <strong>cuota y costo del perfil del paciente</strong> (ej. $150 Parláre + $500 Sesión si el total es $650). El texto gris muestra esa cuota — escribe otro monto solo si <em>esta cita</em> es excepción (relevo, acuerdo especial).</li>
                                     <li><strong>Pago de Planeación:</strong> Si una terapeuta planeó y otra ejecutó, aquí puedes poner el monto exacto para cada una.</li>
                                     <li><strong>Balance Automático:</strong> Al escribir Parláre o Planeación, el sistema calcula Sesión para que coincida con el costo total.</li>
+                                    <li><strong>Antes de Pagado / No pagado:</strong> La app muestra un <strong>resumen del desglose</strong> (Parláre, Sesión, Planeación) para que confirmes antes de escribir en Excel.</li>
                                     <li><strong>Corregir cita ya pagada</strong> (relevo Sam/Diana, etc.): abre la cita → <strong>Ajuste Manual</strong> (déjalo abierto) → pon Parláre / Sesión / Planeación → <strong>Guardar cita</strong> → vuelve a abrir → <strong>Marcar como No Pagado</strong> (confirma el resumen Excel) → <strong>Marcar como Pagado</strong> otra vez. No puedes pagar/des-pagar si cambiaste algo sin guardar antes.</li>
                                     <li><strong>Sin permiso de Excel del otro terapeuta:</strong> Sam puede <strong>Guardar cita</strong> con el Ajuste Manual; el pago queda en Parláre aunque Excel falle. Aparece <strong>pendiente de sync</strong> — <strong>Diana o Yari</strong> (botón naranja arriba) sincronizan con su cuenta Google, que sí tiene acceso a los archivos. Si hay planeación para otra terapeuta, al sincronizar Diana se crea también la fila de planeación en el Excel correspondiente.</li>
+                                    <li><strong>Pendientes aunque sea «solo mi Excel» (ej. Vero):</strong> el pago de una cita de Vero va al <strong>Excel de Vero</strong>, no al de Diana. Si Google no abre el permiso o la cuenta elegida no puede editar ese archivo, el pago <strong>sí queda en la app</strong> y arriba sale el botón naranja «X pendientes». Diana o Yari lo tocan una vez para empujar las filas a <strong>App_Data</strong>. Vero no ve ese botón (solo admin/recepción).</li>
                                     <li><strong>Excel / App_Data:</strong> Al marcar pagado, va la cuota del <strong>perfil del paciente</strong> salvo que hayas guardado un ajuste manual distinto en esa cita.</li>
                                     <li><strong>Citas con datos viejos (250/400):</strong> Si el perfil dice $150 pero la cita mostraba $250, al abrirla ya verás $150/$500. Guarda la cita o marca pagado para limpiar Firestore/Excel.</li>
                                 </ul>
@@ -127,6 +167,7 @@ export const HelpManual = {
                                     </li>
                                     <li><strong>Identificación Staff:</strong> Los movimientos aparecen con el nombre de quien los hizo (👱‍♀️ Yari, 👩‍⚕️ Diana, etc).</li>
                                     <li><strong>Admin (Diana):</strong> <strong>Exportar a Excel</strong> y <strong>Limpiar App</strong> (más de 60 días). Exporta antes de limpiar si necesitas historial.</li>
+                                    <li><strong>Nuevo 9 jul — evaluaciones y cancelaciones:</strong> en la bitácora puedes ver <code>WHATSAPP_CANCEL_REASON</code> (motivo enfermedad/viaje/otro), <code>WHATSAPP_DIANA_SESSION</code> (Diana respondió Sí/No por celular) y <code>APPOINTMENT_CONFIRMED</code> con etapa si la cita era de evaluación.</li>
                                 </ul>
                                 <p class="text-xs text-gray-500 italic">En celular el panel abre como hoja desde abajo; desliza o toca fuera para cerrar.</p>
                             </div>
@@ -150,6 +191,9 @@ export const HelpManual = {
                                     <li><strong>📱 Tip:</strong> al teclear, automáticamente se cambia a la pestaña <strong>Todos</strong> para encontrar pacientes recién creados aunque no tengan cita hoy.</li>
                                 </ul>
                                 <p class="text-xs text-gray-500 italic">Si usas iPhone y antes la búsqueda no encontraba a un paciente nuevo, ahora es a prueba de iOS: la pestaña «Todos» se activa sola en cuanto escribes, funciona con dictado por voz, pegar texto y autocompletado del teclado.</p>
+                                <div class="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900">
+                                    <strong>Proceso de evaluación (9 jul):</strong> al crear paciente, elige <strong>Proceso de evaluación</strong> si tienes permiso (Diana o quien ella autorice en Equipo y permisos). Al agendar citas — varios huecos o recurrencia — Parláre etiqueta Entrevista → Evaluación → Entrega en orden de fecha.
+                                </div>
                             </div>
                         </details>
 
@@ -210,11 +254,11 @@ export const HelpManual = {
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
                                 <div class="bg-emerald-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-emerald-800 mb-1">📅 Recurrencia (Citas Seguidas)</h4>
-                                    <p>¿El paciente vendrá todos los lunes? Marca la casilla <strong>"Es una cita recurrente"</strong>. Puedes elegir si es semanal o quincenal y por cuántas semanas. ¡El sistema agendará todas de un solo golpe!</p>
+                                    <p>¿El paciente vendrá todos los jueves (u otro día fijo)? Marca <strong>«Agendar sesiones recurrentes»</strong>. Elige <strong>cada semana</strong> o <strong>cada 2 semanas</strong> y cuántas sesiones (4, 8 o 12). El sistema crea todas de un solo golpe y te muestra cuáles huecos están libres u ocupados — si un horario ya tiene cita, verás <strong>el nombre</strong> de quién está ahí (Sam y Vero en su agenda pueden mover fechas y usar recurrencia igual que siempre).</p>
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-xl">
                                     <h4 class="font-bold text-blue-800 mb-1">🔄 Reagendado Automático</h4>
-                                    <p>Si cancelas una cita, el sistema te preguntará si quieres reagendar. Si dices que sí, automáticamente te llevará a la <strong>siguiente semana</strong> en el mismo horario para que no tengas que buscar el día manualmente.</p>
+                                    <p>Si cancelas una cita, el sistema te preguntará si quieres reagendar. Si dices que sí, automáticamente te llevará a la <strong>siguiente semana</strong> en el mismo horario para que no tengas que buscar el día manualmente. Al reagendar una cita suelta <strong>no hace falta marcar recurrentes</strong>: Guardar crea solo ese nuevo horario.</p>
                                 </div>
                                 <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                     <h4 class="font-bold text-indigo-900 mb-1">📅 Agenda — vista Día / Semana</h4>
@@ -223,8 +267,79 @@ export const HelpManual = {
                                         <li><strong>Día</strong> — Un solo día a la vez, con pestañas Lun–Sáb debajo del encabezado. Ideal para leer nombres completos y trabajar citas con detalle.</li>
                                         <li><strong>Semana</strong> — Los seis días laborables a la vez. En celular los nombres van abreviados (ej. <code>S·Pedro</code>); en computadora puedes desplazarte horizontalmente si hace falta.</li>
                                     </ul>
-                                    <p class="text-xs text-indigo-800 mt-2 italic">En celular la columna de hora es más angosta. En computadora, al abrir la agenda suele mostrarse la semana completa; usa <strong>Día</strong> cuando quieras enfocarte en un solo día.</p>
+                                    <p class="text-xs text-indigo-800 mt-2 italic">En celular la columna de hora es más angosta. Si giras el teléfono (horizontal): barra <strong>Agenda · Pacientes · Más</strong> abajo; pacientes más estrechos; el día elegido se lee en el selector (ya no se pega encima de las citas al scrollear). Control Maestro / Corte / Google van en <strong>Más</strong>. En computadora usa <strong>Día</strong> cuando quieras un solo día.</p>
                                 </div>
+                                <div class="bg-violet-50 p-4 rounded-xl border border-violet-200">
+                                    <h4 class="font-bold text-violet-900 mb-1">📋 Citas de evaluación en la agenda <span class="text-[10px] uppercase tracking-wider bg-violet-200 px-1.5 py-0.5 rounded">9 jul</span></h4>
+                                    <ul class="list-disc ml-5 space-y-1.5 text-sm">
+                                        <li>Al agendar un paciente en <strong>proceso de evaluación</strong>, cada cita guarda su etapa (Entrevista / Evaluación / Entrega).</li>
+                                        <li>Si el horario ya está ocupado, el aviso muestra <strong>nombre + etapa</strong> de quien está ahí (no solo «ocupado»).</li>
+                                        <li>En <strong>Google Calendar</strong> el título lleva la etapa delante del nombre del niño.</li>
+                                        <li><strong>Diana:</strong> puedes marcar <strong>confirmada</strong> la asistencia desde la cita (botón ✓) o desde Control Maestro — queda registrado en bitácora.</li>
+                                        <li><strong>Sam / Vero:</strong> pueden mover y reagendar citas de evaluación en su terapeuta como cualquier otra cita.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </details>
+
+                        <!-- Ev. Evaluaciones — guía equipo -->
+                        <details class="group bg-violet-50 rounded-2xl border border-violet-200 shadow-md overflow-hidden transition-all">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none bg-white">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-violet-600 text-white rounded-lg flex items-center justify-center text-sm">Ev</span>
+                                    Evaluaciones — guía para el equipo (9 jul)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-3 text-sm text-gray-700 space-y-4 animate-fade-in">
+                                <p>Flujo para <strong>paciente nuevo en evaluación</strong> (no es lo mismo que terapia regular semanal):</p>
+                                <ol class="list-decimal ml-5 space-y-2">
+                                    <li><strong>Alta</strong> — Botón <strong>+</strong> en pacientes → <strong>Proceso de evaluación</strong> (Diana o quien tenga permiso en Equipo y permisos).</li>
+                                    <li><strong>Agendar 3 citas</strong> (orden flexible: misma semana con urgencia o semanas aparte):
+                                        <ul class="list-disc ml-5 mt-1 space-y-0.5 text-xs">
+                                            <li>Etapa 1 — Entrevista</li>
+                                            <li>Etapa 2 — Evaluación</li>
+                                            <li>Etapa 3 — Entrega de resultados</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Recordatorios al papá</strong> — 8 AM y 8 PM el día anterior; el mensaje incluye la etapa. Botones: 1 Confirmar · 2 Cancelar · 3 Recepción.</li>
+                                    <li><strong>Si cancela (botón 2)</strong> — llega segundo mensaje pidiendo motivo (enfermedad / viaje / otro). Yari ve alerta en Control Maestro.</li>
+                                    <li><strong>Día de la sesión — Diana (celular ~9 PM)</strong> — si hubo evaluación hoy, el bot pregunta si se realizó. Si fue sesión de <strong>Evaluación</strong> y respondes Sí, puede preguntar si la próxima es otra evaluación o ya entrega de resultados.</li>
+                                    <li><strong>Confirmación</strong> — El papá confirma por WhatsApp; Diana puede confirmar en la app; todo queda en bitácora con quién confirmó.</li>
+                                </ol>
+                                <div class="bg-white border border-violet-200 rounded-xl p-4 space-y-3">
+                                    <h4 class="font-bold text-violet-900 text-sm">Quién hace qué</h4>
+                                    <table class="w-full text-xs">
+                                        <thead><tr class="text-left text-violet-700 border-b"><th class="pb-1 pr-2">Rol</th><th class="pb-1">Acción</th></tr></thead>
+                                        <tbody class="divide-y">
+                                            <tr><td class="py-1.5 pr-2 font-semibold">Diana</td><td>Alta evaluación, permisos equipo, confirmar en app/celular, bot 9 PM</td></tr>
+                                            <tr><td class="py-1.5 pr-2 font-semibold">Yari</td><td>Agendar etapas, Control Maestro, WhatsApp manual si hoy sin confirmar, motivo cancelación</td></tr>
+                                            <tr><td class="py-1.5 pr-2 font-semibold">Sam / Vero</td><td>Agenda propia: mover y recurrencia en citas de evaluación sin restricción extra</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="text-xs text-violet-800 italic">Las citas no se crean «con 2 h de anticipación» — se planean con normalidad; el aviso de 2 h en Control Maestro es solo para avisar al papá si aún no confirmó el día de la cita.</p>
+                            </div>
+                        </details>
+
+                        <!-- P. Expediente — baja y eliminación -->
+                        <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-rose-200">
+                            <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                <h3 class="text-gray-800 font-bold flex items-center gap-3">
+                                    <span class="w-8 h-8 bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center text-sm">P</span>
+                                    Expediente — baja y eliminación (Yari)
+                                </h3>
+                                <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </summary>
+                            <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-3 animate-fade-in">
+                                <p><strong>Yari (Recepción)</strong> y las administradoras pueden gestionar pacientes que ya no continúan:</p>
+                                <ul class="list-disc ml-5 space-y-2">
+                                    <li><strong>Dar de baja:</strong> desde el expediente → el paciente pasa a inactivos (no aparece en la lista principal). Solo cuando el niño <em>deja la clínica</em>, no para cambiar de horario.</li>
+                                    <li><strong>Cambiar horario fijo (Sam/Vero/Diana/Yari):</strong> <span class="text-amber-800 font-semibold">no des de baja</span>. Cancela o elimina las citas futuras del horario viejo → abre el expediente → <strong>Agendar Ahora</strong> → elige el hueco nuevo → marca <strong>Semanal</strong> → confirma. En el toast debe decir la terapeuta correcta (ej. SAM). Recarga y mira el filtro de esa terapeuta.</li>
+                                    <li><strong>Si reactivas un inactivo:</strong> la app te pregunta si quieres agendar el nuevo horario al momento.</li>
+                                    <li><strong>Eliminar permanentemente:</strong> en la ficha o lista de inactivos — borra el perfil de Firestore. <strong>Irreversible.</strong> Usar solo si el expediente se creó por error o dirección lo autoriza.</li>
+                                </ul>
+                                <p class="text-xs bg-rose-50 border-l-4 border-rose-300 p-3 rounded text-rose-900">Las citas pasadas y pagos en Excel <strong>no se borran solos</strong> al eliminar el perfil. Si hay duda, consulta con Diana antes de eliminar permanentemente.</p>
                             </div>
                         </details>
 
@@ -243,7 +358,8 @@ export const HelpManual = {
                                     <li><strong>Acceso:</strong> Desde computadoras usando el icono de engrane ⚙️ en el menú superior derecho, o en celulares desde el menú <strong>Más → Configuración de Clínica</strong>.</li>
                                     <li><strong>Temas y Metodología:</strong> Administra el catálogo global de temas, secciones (subtemas) y actividades de intervención. Al editar nombres o eliminar temas, los cambios se aplican de forma inmediata.</li>
                                     <li><strong>Costos y Comisiones:</strong> Configura los costos sugeridos de sesión y las cuotas de recuperación de la clínica para cada terapeuta de manera independiente.</li>
-                                    <li><strong>Reportes Financieros Rápidos:</strong> Acceso rápido a los análisis de utilidad neta y rendimiento mensual.</li>
+                                    <li><strong>Equipo y permisos (solo Diana):</strong> Pestaña para activar o quitar permisos de Sam, Vero y Yari (agenda, pacientes, recepción). Los <strong>reportes de utilidad Parláre y el corte de caja</strong> siguen siendo solo tuyos.</li>
+                                    <li><strong>Reportes Financieros Rápidos:</strong> Acceso rápido a los análisis de utilidad neta (solo administradora dueña).</li>
                                 </ul>
                                 <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                     <h4 class="font-bold text-indigo-900 mb-1">🏷️ Campos «SaaS Ready» (en gris)</h4>
@@ -253,7 +369,7 @@ export const HelpManual = {
                         </details>
 
                         <!-- C. Crear Paciente -->
-                        <details open class="group bg-blue-50 rounded-2xl border border-blue-200 shadow-md overflow-hidden transition-all">
+                        <details class="group bg-blue-50 rounded-2xl border border-blue-200 shadow-sm overflow-hidden transition-all">
                             <summary class="flex items-center justify-between p-5 cursor-pointer list-none bg-white">
                                 <h3 class="text-gray-800 font-bold flex items-center gap-3">
                                     <span class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-sm">+</span>
@@ -268,11 +384,45 @@ export const HelpManual = {
                                 </div>
                                 <div class="flex items-start gap-4">
                                     <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">2</div>
-                                    <p><strong>Llenado:</strong> Ingresa nombre, elige terapeuta y pon el WhatsApp (10 dígitos). El sistema sugiere <strong>Costo</strong> y <strong>Cuota Parláre</strong> según la configuración del terapeuta — <em>puedes cambiarlas antes de guardar</em>. Esa cuota es la que verás en Excel (columna Parláre) cuando marquen la cita como pagada. En celular el formulario ocupa casi toda la pantalla: desliza hacia arriba para ver todos los campos; los botones <strong>Crear</strong> / <strong>Guardar</strong> quedan fijos abajo.</p>
+                                    <div>
+                                        <p class="mb-2"><strong>Llenado:</strong> Ingresa nombre, elige terapeuta y pon el WhatsApp (10 dígitos). El sistema sugiere <strong>Costo</strong> y <strong>Cuota Parláre</strong> según la configuración del terapeuta — <em>puedes cambiarlas antes de guardar</em>. Esa cuota es la que verás en Excel (columna Parláre) cuando marquen la cita como pagada.</p>
+                                        <p class="mb-2">En celular el formulario ocupa casi toda la pantalla: desliza hacia arriba para ver todos los campos; los botones <strong>Crear</strong> / <strong>Guardar</strong> quedan fijos abajo.</p>
+                                        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-indigo-950">
+                                            <p class="font-bold text-indigo-900 mb-1">Tipo de proceso <span class="text-[10px] uppercase tracking-wider bg-indigo-200 px-1.5 py-0.5 rounded">Nuevo 9 jul</span></p>
+                                            <ul class="list-disc ml-5 space-y-1 text-sm">
+                                                <li><strong>Paciente regular</strong> — terapia habitual (opción por defecto).</li>
+                                                <li><strong>Proceso de evaluación</strong> — ciclo Entrevista → Evaluación → Entrega de resultados (paciente nuevo en evaluación).</li>
+                                            </ul>
+                                            <p class="text-xs mt-2 text-indigo-800">Solo lo ven <strong>Diana</strong> o quien ella autorice en <strong>Configuración → Equipo y permisos</strong> (permiso «Crear paciente en proceso de evaluación»). Sam y Vero no ven el selector si no tienen permiso.</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="flex items-start gap-4">
                                     <div class="w-6 h-6 rounded-full bg-blue-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">3</div>
-                                    <p><strong>Resultado:</strong> Al guardar, el paciente se añade a la lista y **automáticamente** se abre la ventana de horarios para agendar su primera sesión.</p>
+                                    <p><strong>Resultado:</strong> Al guardar, el paciente se añade a la lista y <strong>automáticamente</strong> se abre la ventana de horarios para agendar su primera sesión.</p>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">4</div>
+                                    <div>
+                                        <p class="font-bold text-gray-800 mb-2">Si elegiste «Proceso de evaluación» — agendar las etapas</p>
+                                        <p class="mb-2">Las citas se agendan con <strong>días o semanas de anticipación</strong> (no hace falta pedir sesión con 2 h de margen). Parláre etiqueta cada cita sola:</p>
+                                        <ol class="list-decimal ml-5 space-y-1.5 mb-3">
+                                            <li><strong>Entrevista</strong> — cita 1 de 3</li>
+                                            <li><strong>Evaluación</strong> — cita 2 de 3</li>
+                                            <li><strong>Entrega de resultados</strong> — cita 3 de 3</li>
+                                        </ol>
+                                        <p class="mb-2"><strong>Dos formas de agendar</strong> (elige la que encaje):</p>
+                                        <ul class="list-disc ml-5 space-y-1.5 mb-3">
+                                            <li><strong>Varios huecos a la vez:</strong> en la ventana que se abre al crear el paciente, marca varios horarios y confirma — cada uno lleva su etapa en orden de fecha.</li>
+                                            <li><strong>Desde la agenda:</strong> abre el calendario, crea citas con recurrencia semanal/quincenal o una por una en días distintos (incluso varias en la misma semana si hay urgencia).</li>
+                                        </ul>
+                                        <p class="mb-2">Después puedes <strong>mover o editar</strong> citas como siempre. El título en Google Calendar incluye la etapa (ej. <em>Entrevista — cita 1 de 3 — Juan Pérez</em>).</p>
+                                        <div class="bg-purple-50 border border-purple-200 rounded-xl p-3 text-purple-950 text-xs space-y-2">
+                                            <p><strong>Recordatorios al papá (8 AM y 8 PM):</strong> el WhatsApp incluye la etapa. Botones: <strong>1 Confirmar</strong>, <strong>2 Cancelar</strong>, <strong>3 Recepción</strong>.</p>
+                                            <p><strong>Diana por celular (9 PM):</strong> si hubo sesión de evaluación hoy, el bot pregunta si se realizó (<em>Sí / No</em>). Tras una sesión de Evaluación, puede preguntar si la próxima es otra evaluación o entrega de resultados.</p>
+                                            <p><strong>Yari — Control Maestro:</strong> las citas de <strong>hoy</strong> sin confirmar del papá aparecen en el banner «Hoy sin confirmar». Si faltan ≤2 h, la fila se pone rosa — ahí conviene WhatsApp manual.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </details>
@@ -309,8 +459,8 @@ export const HelpManual = {
                                 <p>¿Quieres saber quién hizo cambios? Al abrir cualquier cita verás la sección de <strong>Auditoría</strong>:</p>
                                 <ul class="list-disc ml-5 space-y-1">
                                     <li><strong>Identificación Staff:</strong> Ahora verás nombres reales (👱‍♀️ Yari, 👩‍⚕️ Diana, 👩‍⚕️ Sammy, etc.) en lugar de correos técnicos.</li>
-                                    <li><strong>Confirmado por:</strong> Muestra quién confirmó la cita y a qué hora.</li>
-                                    <li><strong>Cancelado por:</strong> Indica si fue el robot de WhatsApp (🤖 WA) o un miembro del staff.</li>
+                                    <li><strong>Confirmado por:</strong> Muestra quién confirmó — papá vía WhatsApp (<code>parent</code>), Diana desde app/celular (<code>diana</code>) o el sistema.</li>
+                                    <li><strong>Cancelado por:</strong> Indica si fue WhatsApp del papá, staff o el robot. Si canceló por WhatsApp, busca también <code>WHATSAPP_CANCEL_REASON</code> para ver el motivo (enfermedad / viaje / otro).</li>
                                 </ul>
                             </div>
                         </details>
@@ -332,14 +482,14 @@ export const HelpManual = {
                                     </h4>
                                     <ul class="list-disc ml-5 space-y-1.5 text-emerald-950 font-medium">
                                         <li>Abre la cita cancelada en el calendario.</li>
-                                        <li>Verás la sección **"Justificante Médico"** (con fondo rojizo tenue).</li>
-                                        <li>Activa la casilla **"Inasistencia Justificada (No cobrar)"**; esto se guardará de forma instantánea.</li>
+                                        <li>Verás la sección <strong>Justificante Médico</strong> (con fondo rojizo tenue).</li>
+                                        <li>Activa la casilla <strong>Inasistencia Justificada (No cobrar)</strong>; esto se guardará de forma instantánea.</li>
                                         <li>Arrastra el justificante (imagen o PDF) o haz clic en la zona de subida (caja punteada) para subirlo directamente a Firebase Storage de forma gratuita.</li>
                                     </ul>
                                 </div>
                                 <div class="bg-indigo-50 p-4 rounded-xl space-y-1">
                                     <h4 class="font-bold text-indigo-800">🔍 Auditoría Visual Rápida:</h4>
-                                    <p>Las citas justificadas se mostrarán en el historial del paciente con un distintivo esmeralda premium: **«💚 Justificada»** en lugar del botón rojo normal de cancelada, permitiendo ver a simple vista qué inasistencias no deben cobrarse.</p>
+                                    <p>Las citas justificadas se mostrarán en el historial del paciente con un distintivo esmeralda premium: <strong>«💚 Justificada»</strong> en lugar del botón rojo normal de cancelada, permitiendo ver a simple vista qué inasistencias no deben cobrarse.</p>
                                 </div>
                                 <p class="text-xs text-gray-400 italic">Nota: Para cumplir con las políticas de ahorro de datos, los justificantes almacenados en el sistema se eliminan de forma automática a los 120 días de antigüedad.</p>
                             </div>
@@ -358,13 +508,13 @@ export const HelpManual = {
                                 <p>En la barra inferior, toca <strong>Más</strong> para ver accesos que en computadora están en el header o sidebar:</p>
                                 <ul class="list-disc ml-5 space-y-1.5">
                                     <li><strong>Conexión Google Sync</strong> — semáforo y sincronizar calendario.</li>
-                                    <li><strong>Control Maestro</strong> — recepción/admin (alertas WhatsApp, panel de seguimiento manual).</li>
+                                    <li><strong>Control Maestro</strong> — recepción/admin: pagos, confirmar asistencia, <strong>Hoy sin confirmar</strong> (9 jul), alertas opt-in y motivos de cancelación.</li>
                                     <li><strong>Corte de Caja / Reportes / Configuración</strong> — solo administradoras.</li>
                                     <li><strong>Bitácora de Auditoría</strong> — admin y recepción (historial de cambios y WhatsApp).</li>
                                     <li><strong>Manual de Usuario</strong> — esta guía.</li>
                                     <li><strong>Enviar Sugerencia</strong> — ideas para mejorar el sistema.</li>
                                 </ul>
-                                <p class="text-xs text-gray-500">Navegación principal: <strong>Agenda</strong> (calendario) y <strong>Pacientes</strong> (lista y fichas).</p>
+                                <p class="text-xs text-gray-500 mt-2">Al crear un paciente nuevo, si tienes permiso verás <strong>Paciente regular</strong> o <strong>Proceso de evaluación</strong>. Con evaluación, al agendar (varios huecos o recurrencia) Parláre asigna Entrevista → Evaluación → Entrega en orden de fecha.</p>
                             </div>
                         </details>
 
@@ -389,11 +539,41 @@ export const HelpManual = {
                                             <li class="flex items-start gap-2"><span class="mt-0.5 text-purple-500">🌅</span> <span><strong>8:00 AM</strong> — Primer recordatorio a todos los pacientes con cita mañana que no hayan confirmado.</span></li>
                                             <li class="flex items-start gap-2"><span class="mt-0.5 text-purple-500">🌙</span> <span><strong>8:00 PM</strong> — Segundo recordatorio <em>solo</em> a quienes recibieron el de la mañana pero no contestaron.</span></li>
                                         </ul>
-                                        <p class="mt-2 text-xs text-purple-700 italic">Si el paciente confirma o cancela en cualquier momento, no recibirá el siguiente recordatorio. Si no responde ninguno, Yari y Diana lo ven al día siguiente.</p>
+                                        <p class="mt-2 text-xs text-purple-700 italic">Si el papá confirma o cancela en cualquier momento, no recibirá el siguiente recordatorio. Si no responde ninguno, Yari y Diana lo ven al día siguiente.</p>
+                                        <p class="mt-2 text-xs text-purple-800"><strong>Confirmación del papá:</strong> si responde <strong>1</strong> o pulsa Confirmar, en la bitácora queda <code>confirmedBy: parent</code> y la cita muestra ✅ en agenda.</p>
                                     </div>
-                                <div class="bg-cyan-50 p-4 rounded-xl">
-                                    <h4 class="font-bold text-cyan-800 mb-1">❌ Flujos de Cancelación</h4>
-                                    <p>Cuando un padre cancela vía WhatsApp, el bot le informa automáticamente que <strong>Recepción se pondrá en contacto</strong>. Además, la Bitácora guarda qué texto exacto recibió cada padre.</p>
+                                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                        <h4 class="font-bold text-indigo-900 mb-1">📋 Recordatorios — proceso de evaluación <span class="text-[10px] uppercase tracking-wider bg-indigo-200 text-indigo-900 px-1.5 py-0.5 rounded">Nuevo 9 jul</span></h4>
+                                        <p class="mb-2">Cuando la cita es de <strong>evaluación</strong> (Entrevista, Evaluación o Entrega de resultados), el recordatorio de 8 AM / 8 PM incluye la <strong>etapa</strong> en el mensaje — por ejemplo: <em>«Esta sesión es: Entrevista — cita 1 de 3»</em>. Los botones son los mismos: <strong>1 Confirmar</strong>, <strong>2 Cancelar</strong>, <strong>3 Recepción</strong>.</p>
+                                        <ul class="list-disc ml-5 space-y-1.5 text-sm">
+                                            <li><strong>Yari:</strong> agenda las citas del proceso como siempre; cuando la cita tenga etapa registrada, el papá verá el texto especial en WhatsApp.</li>
+                                            <li><strong>~2 horas antes sin confirmar:</strong> si el papá no respondió al recordatorio y faltan pocas horas, <strong>Yari manda mensaje manual</strong> por WhatsApp Business (regla operativa de siempre — el bot no envía un tercer recordatorio automático).</li>
+                                            <li><strong>Diana (9:00 PM):</strong> si hubo sesión de evaluación hoy y no contestaste, el bot te escribe a tu celular con botones <strong>«Sí, se realizó»</strong> / <strong>«No, faltó»</strong>.</li>
+                                            <li><strong>Diana (tras evaluación):</strong> después de marcar que sí se realizó una sesión de <strong>Evaluación</strong>, el bot puede preguntar si la próxima cita es <strong>otra evaluación</strong> o ya es <strong>entrega de resultados</strong> — responde con los botones; no hace falta escribir texto libre.</li>
+                                        </ul>
+                                        <p class="text-xs text-indigo-800 mt-2 italic">💡 Al dar de alta un paciente, elige <strong>Proceso de evaluación</strong> (si tienes permiso). Al agendar, cada cita se etiqueta sola y el recordatorio E1 incluye la etapa.</p>
+                                    </div>
+                                <div class="bg-cyan-50 p-4 rounded-xl border border-cyan-200">
+                                    <h4 class="font-bold text-cyan-900 mb-1">❌ Cancelaciones con motivo <span class="text-[10px] uppercase tracking-wider bg-cyan-200 text-cyan-900 px-1.5 py-0.5 rounded">Nuevo 9 jul</span></h4>
+                                    <p class="mb-2">Cuando un papá pulsa <strong>2 — Cancelar</strong> (o escribe cancelar) en el recordatorio:</p>
+                                    <ol class="list-decimal ml-5 space-y-1.5 text-sm">
+                                        <li>La cita se <strong>cancela en Parláre</strong>, Google Calendar y Excel — igual que antes.</li>
+                                        <li><strong>Yari recibe alerta</strong> en Control Maestro (como siempre).</li>
+                                        <li>Al papá le llega un <strong>segundo mensaje automático</strong> con la fecha/hora cancelada y tres botones:
+                                            <ul class="list-disc ml-5 mt-1 space-y-0.5">
+                                                <li><strong>Enfermedad</strong></li>
+                                                <li><strong>Viaje o imprevisto</strong></li>
+                                                <li><strong>Otro</strong> — el bot pide una línea de texto libre.</li>
+                                            </ul>
+                                        </li>
+                                    </ol>
+                                    <p class="mt-3 text-sm"><strong>Qué hacer tú (Yari):</strong></p>
+                                    <ul class="list-disc ml-5 space-y-1 text-sm">
+                                        <li>Si el papá <strong>elige un motivo</strong>, lo verás en la <strong>Bitácora</strong> (<code>WHATSAPP_CANCEL_REASON</code>). Coordina reagendar y pide justificante médico si aplica enfermedad.</li>
+                                        <li>Si <strong>no responde</strong> al mensaje de motivo, la cancelación ya quedó hecha — usa la alerta de Control Maestro y contáctalo tú para reagendar (igual que antes).</li>
+                                        <li><strong>No envíes</strong> otro mensaje de cancelación manual: el bot ya mandó la plantilla oficial.</li>
+                                    </ul>
+                                    <p class="text-xs text-cyan-800 mt-2 italic">Aplica a <strong>todos</strong> los pacientes (evaluación y terapia regular). En evaluación, la bitácora también guarda la etapa de la cita cancelada.</p>
                                 </div>
                                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
                                      <h4 class="font-bold text-amber-900 mb-2">🚦 Semáforo de consentimiento (Ficha del paciente)</h4>
@@ -405,7 +585,7 @@ export const HelpManual = {
                                      </ul>
                                      <p class="text-xs text-amber-800 mt-2 italic"><strong>Reglas de Consentimiento:</strong>
                                          <br>• Al crear un paciente nuevo o presionar <strong>Bienvenida</strong>, se desactiva la casilla de recordatorios automáticos (<code>wantsWhatsapp = false</code>) y se envía la plantilla de bienvenida solicitando opt-in.
-                                         <br>• Cuando el paciente responde **"Sí, autorizo"**, el sistema <strong>activa la casilla automáticamente</strong> (<code>wantsWhatsapp = true</code>) y activa el bot.
+                                         <br>• Cuando el paciente responde <strong>Sí, autorizo</strong>, el sistema <strong>activa la casilla automáticamente</strong> (<code>wantsWhatsapp = true</code>) y activa el bot.
                                          <br>• Si activas la casilla manualmente en el expediente, los recordatorios se enviarán inmediatamente sin bloquear, facilitando la transición de pacientes antiguos.
                                      </p>
                                  </div>
@@ -430,6 +610,15 @@ export const HelpManual = {
                                         <li><strong>Al cancelar una cita de hoy</strong>, el sistema puede preguntar si marcas que el paciente debe una sesión. Si eliges <strong>Reagendar</strong> y <strong>guardas</strong> la cita nueva, <strong>no</strong> se suma al contador.</li>
                                         <li>En el <strong>expediente</strong> (editar perfil), bloque «Cola sesión»: activar cola, número de sesiones (0–8), prioridad y horario habitual.</li>
                                         <li>En <strong>Control Maestro</strong>, botón ámbar <strong>Deben sesión</strong> filtra solo quienes tienen contador activo en la semana.</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-rose-50 p-4 rounded-xl border border-rose-200">
+                                    <h4 class="font-bold text-rose-900 mb-2">📋 Hoy sin confirmar (papá) <span class="text-[10px] uppercase tracking-wider bg-rose-200 text-rose-900 px-1.5 py-0.5 rounded">9 jul</span></h4>
+                                    <p class="mb-2">Las citas se agendan con <strong>días de anticipación</strong>; el aviso no es «sesión pedida hace 2 h». Control Maestro lista las citas de <strong>hoy</strong> que el papá aún no confirmó (recordatorio 8 AM / 8 PM).</p>
+                                    <ul class="list-disc ml-5 space-y-1.5 text-sm">
+                                        <li>Filtro <strong>Hoy sin confirmar</strong> y banner arriba de la tabla.</li>
+                                        <li>Si además faltan <strong>≤2 h</strong>, la fila se pone rosa con más urgencia — ahí Yari manda WhatsApp manual.</li>
+                                        <li>Botón verde WhatsApp en cada fila para contactar al papá.</li>
                                     </ul>
                                 </div>
                                 <p>Iconos rápidos en tu agenda y barra lateral:</p>
@@ -470,8 +659,14 @@ export const HelpManual = {
                             </summary>
                             <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-4 animate-fade-in">
                                 <div class="bg-rose-50 p-4 rounded-xl">
-                                    <h4 class="font-bold text-rose-800 mb-1">⛔ Inhabilitar Hora</h4>
-                                    <p>¿Vas a salir a comer o tienes un compromiso? Elige "Inhabilitar" desde el modal de cita para que nadie pueda agendarte en ese espacio.</p>
+                                    <h4 class="font-bold text-rose-800 mb-1">⛔ Inhabilitar Hora <span class="text-[10px] uppercase tracking-wider bg-rose-200 text-rose-900 px-1.5 py-0.5 rounded">Actualizado 10 jul</span></h4>
+                                    <p class="mb-2">¿Vas a salir a comer o tienes un compromiso? Elige <strong>Inhabilitar</strong> desde el modal de cita para que nadie pueda agendarte en ese espacio.</p>
+                                    <ul class="list-disc pl-5 space-y-1 text-sm">
+                                        <li>En <strong>Parláre</strong> solo se bloquea el día y la hora que eliges.</li>
+                                        <li>En <strong>Google Calendar</strong> ahora también sale <strong>un solo evento</strong> en esa fecha — ya no se repite de lunes a sábado.</li>
+                                        <li>Si ves bloques viejos en Google (misma hora todos los días): bórralos <strong>una vez</strong> como serie completa y pulsa <strong>Sincronizar</strong> en Parláre.</li>
+                                        <li><strong>No bloquees en Google Calendar directo</strong> — usa siempre Parláre para que WhatsApp y pagos sigan al día.</li>
+                                    </ul>
                                 </div>
                                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
                                     <h4 class="font-bold text-amber-900 mb-1">🏖️ Vacaciones / Día completo — <span class="text-[10px] uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded">Actualizado 28 may</span></h4>
@@ -547,7 +742,7 @@ export const HelpManual = {
 
                 <!-- Footer -->
                 <div class="p-6 bg-white border-t border-gray-100 flex justify-center shrink-0">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Parláre Clinical Intelligence v7.9.0</p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Parláre · Manual actualizado 9 jul 2026</p>
                 </div>
             </div>
         </div>

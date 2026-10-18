@@ -59,14 +59,14 @@ export const Sidebar = {
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 mt-1">
-                    ${AuthManager.isAdmin() ? `
+                    ${AuthManager.canViewClinicFinancials() ? `
                         <button id="sidebarCorteBtn" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100 transition-all active:scale-95 shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                             Corte
                         </button>
                     ` : '<div class="hidden"></div>'}
                     
-                    <button id="sidebarLogoutBtn" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100 transition-all active:scale-95 shadow-sm ${!AuthManager.isAdmin() ? 'col-span-2' : ''}">
+                    <button id="sidebarLogoutBtn" class="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100 transition-all active:scale-95 shadow-sm ${!AuthManager.canViewClinicFinancials() ? 'col-span-2' : ''}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         Salir
                     </button>
@@ -293,9 +293,6 @@ export const Sidebar = {
         }
     },
 
-    /**
-     * Traduce IDs técnicos a nombres amigables
-     */
     _formatStaffName(id) {
         if (!id) return '—';
         if (id === 'WhatsApp' || id === 'Robot Parláre') return '🤖 WA';
@@ -305,12 +302,15 @@ export const Sidebar = {
             'yaritzajocgo': '👱‍♀️ Yari',
             'lopezcarpio7': '👩‍⚕️ Diana',
             'sammygtz90': '👩‍⚕️ Sammy',
-            'sam': '👩‍⚕️ Sammy',
-            'vero': '👩‍⚕️ Vero',
             'daniel': '👨‍💻 Daniel'
         };
         
-        return mapping[clean] || `🧑 ${clean}`;
+        if (mapping[clean]) return mapping[clean];
+        if (window.StaffManager) {
+            const name = window.StaffManager.getTherapistName(clean);
+            if (name && name.toLowerCase() !== clean) return `👩‍⚕️ ${name}`;
+        }
+        return `🧑 ${clean}`;
     },
 
     /**
@@ -328,7 +328,17 @@ export const Sidebar = {
         const getTClass = (key) => {
             if (key === 'sam') return 'bg-blue-100 text-blue-700 border-blue-200';
             if (key === 'vero') return 'bg-purple-100 text-purple-700 border-purple-200';
-            return 'bg-pink-100 text-pink-700 border-pink-200';
+            if (key === 'diana') return 'bg-pink-100 text-pink-700 border-pink-200';
+            const colors = [
+                'bg-emerald-100 text-emerald-700 border-emerald-200',
+                'bg-amber-100 text-amber-700 border-amber-200',
+                'bg-cyan-100 text-cyan-700 border-cyan-200',
+                'bg-rose-100 text-rose-700 border-rose-200',
+                'bg-indigo-100 text-indigo-700 border-indigo-200'
+            ];
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
         };
 
         const tLetter = tKey.charAt(0).toUpperCase();

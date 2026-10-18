@@ -26,6 +26,8 @@ import { db, collectionPath, collection, onSnapshot, query, getDocs, where } fro
 import { Logger } from '../utils/Logger.js';
 import { AuthManager } from './AuthManager.js';
 import { CalendarData } from '../modules/calendar/CalendarData.js';
+import { filterByClinic } from '../utils/clinicData.js';
+import { ClinicContext } from '../core/ClinicContext.js';
 
 const log = Logger.create('PatientMgr');
 
@@ -180,7 +182,7 @@ export const PatientManager = {
         this._teardownListeners();
 
         const user = AuthManager.currentUser;
-        const isSuperUser = AuthManager.isAdmin() || user?.role === 'receptionist';
+        const isSuperUser = AuthManager.canViewAllAgenda();
         const therapistId = user?.therapist || 'diana';
 
         // 1. Listener de CITAS unificado y compartido vía CalendarData
@@ -203,7 +205,7 @@ export const PatientManager = {
      * @param {boolean} [force=false] — true tras crear/editar paciente
      */
     async refreshProfiles(force = false) {
-        const isSuperUser = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        const isSuperUser = AuthManager.canViewAllAgenda();
         if (!isSuperUser) return;
         await this._loadProfilesOnce(force);
     },
@@ -295,8 +297,8 @@ export const PatientManager = {
             this._rawProfiles = profilesArg;
         }
 
-        const appointments = PatientState.appointments;
-        const profiles = this._rawProfiles;
+        const appointments = filterByClinic(PatientState.appointments, ClinicContext.getActiveClinicId());
+        const profiles = filterByClinic(this._rawProfiles, ClinicContext.getActiveClinicId());
 
         log.time('Procesamiento de datos', () => {
             const patientMap = new Map();
@@ -428,9 +430,10 @@ export const PatientManager = {
             const updatedPatient = PatientState.patients.find(p => p.id === selectedPatient.id);
             if (updatedPatient) {
                 // Actualizar solo los datos internos sin el log masivo de openHistory
-                const canViewFinancials = AuthManager.isAdmin() || 
-                                        AuthManager.currentUser?.role === 'receptionist' || 
-                                        (updatedPatient.therapist === AuthManager.currentUser?.therapist);
+                const canViewFinancials = AuthManager.can('manage_payments')
+                    || AuthManager.canViewClinicFinancials()
+                    || (AuthManager.can('view_own_session_pay')
+                        && updatedPatient.therapist === AuthManager.currentUser?.therapist);
 
                 // Usar cache de historial cargado en `openHistory` (todas las citas históricas)
                 // como fuente preferida; sólo recurrir a `updatedPatient.appointments`

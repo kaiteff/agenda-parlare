@@ -7,6 +7,7 @@ import { PatientModalsHTML } from '../managers/patient/PatientModalsHTML.js';
 import { Sidebar } from './Sidebar.js';
 import { Header } from './Header.js';
 import { MobileBottomNav } from './MobileBottomNav.js';
+import { syncPhoneLandscapeClass } from '../utils/viewport.js';
 
 export const ComponentManager = {
     async init() {
@@ -29,6 +30,8 @@ export const ComponentManager = {
         // 2b. Barra de navegación inferior (solo móvil)
         MobileBottomNav.inject(appContent);
         MobileBottomNav.init();
+        // Tras crear la nav: quitar md:hidden si ya estamos en landscape teléfono
+        syncPhoneLandscapeClass();
 
         // 3. Modales en document.body (evita scroll recortado por overflow-hidden del layout)
         PatientModalsHTML.inject(document.body);

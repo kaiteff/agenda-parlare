@@ -8,18 +8,26 @@ import { GoogleAuthService } from './GoogleAuthService.js';
 import { SyncStatus } from '../SyncStatus.js';
 import { NetworkMonitor } from '../NetworkMonitor.js';
 import { AuthManager } from '../../managers/AuthManager.js';
+import { CENTRO_PARLARE_SHEET_IDS, DEFAULT_SHEET_TAB, isSaasMulticlinicEnabled } from '../../core/clinicConstants.js';
 
 export const SheetService = {
-    // Configuración MULTI-ARCHIVO
-    // El usuario debe rellenar los IDs de SUS archivos existentes de Diana y Sam
+    // Fallback hasta que SettingsManager cargue integrations por clínica
     config: {
-        spreadsheets: {
-            diana: '1KUoPue_fekBpXVzdo9MxguqV5Cvl85AVEizX-SpmSZ4',
-            sam: '1XKpgEE59wZ3BdbMfhcoJnyDJ064nFJRO7VhUvAb2Mjg',
-            vero: '1o84rt6ZfGm0eb8URNGgadClVaeJGgna0dzBhdAjx6pc'
-        },
-        // Nombre fijo de la pestaña donde la App escribirá en CADA archivo
-        targetSheetName: 'App_Data'
+        spreadsheets: { ...CENTRO_PARLARE_SHEET_IDS },
+        targetSheetName: DEFAULT_SHEET_TAB
+    },
+
+    /**
+     * Sincroniza IDs de hojas desde settings/{clinicId}.integrations.google
+     */
+    applyIntegrationsFromSettings(settingsConfig) {
+        if (!isSaasMulticlinicEnabled()) return;
+        const google = settingsConfig?.integrations?.google;
+        if (!google?.sheets) return;
+
+        this.config.spreadsheets = { ...google.sheets };
+        this.config.targetSheetName = google.targetSheetName || DEFAULT_SHEET_TAB;
+        console.log('📝 SheetService: integraciones actualizadas para clínica activa');
     },
 
     /**

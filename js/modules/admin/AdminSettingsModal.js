@@ -7,21 +7,47 @@ import { SettingsManager } from '../../managers/SettingsManager.js';
 import { ModalService } from '../../utils/ModalService.js';
 import { ToastService } from '../../utils/ToastService.js';
 import { renderSaasReadyBanner, SAAS_READY_EXPLANATION } from '../../utils/saasReadyCopy.js';
+import { AuthManager } from '../../managers/AuthManager.js';
+import {
+    EDITABLE_STAFF_ROSTER,
+    PERMISSION_GROUPS,
+    ROLE_BASE_PERMISSIONS,
+    computeEffectivePermissions,
+    getDefaultStaffPermissions
+} from '../../config/staffPermissions.js';
 
 export const AdminSettingsModal = {
     id: 'adminSettingsModal',
+    _modalInitialized: false,
+    _renderedTabs: new Set(),
+    _activeTabId: 'themes',
+    _overlayClickHandler: null,
 
     /**
      * Abre el modal de configuración
      */
     async open() {
-        this.render();
+        if (!this._modalInitialized) {
+            this.render();
+            this._setupListeners();
+            this._modalInitialized = true;
+        }
+
         const modal = document.getElementById(this.id);
+        if (!modal) return;
+
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
-        
-        // Cargar datos iniciales
-        this._loadData();
+
+        this._renderedTabs.clear();
+        this._applyPermissionsTabVisibility();
+        this._bindTabs();
+        this._activateTab('themes');
+
+        // Mostrar el shell al instante; contenido pesado en el siguiente frame
+        requestAnimationFrame(() => {
+            this._ensureTabRendered('themes');
+        });
     },
 
     /**
@@ -39,14 +65,11 @@ export const AdminSettingsModal = {
      * Renderiza el HTML base del modal
      */
     render() {
-        const existing = document.getElementById(this.id);
-        if (existing) {
-            existing.remove(); // Eliminar versión vieja para asegurar que cargue la nueva lógica
-        }
+        if (document.getElementById(this.id)) return;
 
         const html = `
-            <div id="${this.id}" onclick="if(event.target===this) { this.classList.add('hidden'); this.style.display='none'; }" class="hidden fixed inset-0 z-[10000] flex md:items-center items-end justify-center bg-black bg-opacity-60 backdrop-blur-sm md:p-4 p-0">
-                <div id="adminSettingsModalPanel" class="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl md:h-[85vh] h-[92dvh] flex flex-col overflow-hidden animate-fade-in-up">
+            <div id="${this.id}" class="hidden fixed inset-0 z-[10000] flex md:items-center items-end justify-center bg-black/60 md:p-4 p-0">
+                <div id="adminSettingsModalPanel" class="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl md:h-[85vh] h-[92dvh] flex flex-col overflow-hidden">
                     
                     <!-- Pull Handle for Mobile -->
                     <div class="flex md:hidden justify-center pt-3 pb-1 flex-shrink-0 bg-gray-50/50">
@@ -70,10 +93,11 @@ export const AdminSettingsModal = {
                     </div>
 
                     <!-- Tabs Navigation -->
-                    <div class="px-6 border-b border-gray-100 bg-white flex gap-6">
-                        <button id="tab-themes" class="py-4 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-all">Temas y Metodología</button>
-                        <button id="tab-costs" class="py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all">Costos y Comisiones</button>
-                        <button id="tab-reports" class="py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all">📊 Reporte Rápido</button>
+                    <div class="px-6 border-b border-gray-100 bg-white flex gap-4 overflow-x-auto scroller">
+                        <button id="tab-themes" class="py-4 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition-all whitespace-nowrap">Temas y Metodología</button>
+                        <button id="tab-costs" class="py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all whitespace-nowrap">Costos y Comisiones</button>
+                        <button id="tab-reports" class="py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all whitespace-nowrap">📊 Reporte Rápido</button>
+                        <button id="tab-permissions" class="hidden py-4 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all whitespace-nowrap">👥 Equipo y permisos</button>
                     </div>
 
                     <!-- Content Area -->
@@ -89,7 +113,7 @@ export const AdminSettingsModal = {
                                 </button>
                             </div>
                             <div id="themesList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Themes cards -->
+                                <p class="text-sm text-gray-400 col-span-full py-8 text-center">Cargando temas…</p>
                             </div>
                         </div>
 
@@ -97,7 +121,7 @@ export const AdminSettingsModal = {
                         <div id="content-costs" class="hidden space-y-6">
                             <h4 class="font-bold text-gray-700">Configuración de Cuotas Base</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="costsList">
-                                <!-- Cost cards for each therapist -->
+                                <p class="text-sm text-gray-400 col-span-full py-6 text-center">Abre esta pestaña para cargar costos.</p>
                             </div>
                             <div class="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3">
                                 <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -110,29 +134,52 @@ export const AdminSettingsModal = {
 
                         <!-- TAB: REPORTS -->
                         <div id="content-reports" class="hidden space-y-6">
-                            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl shadow-blue-100">
-                                <div class="flex items-center gap-4 mb-6">
-                                    <div class="p-3 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-2xl font-black">Reportes Financieros</h4>
-                                        <p class="text-blue-100 text-sm font-medium">Analiza la utilidad neta y el rendimiento de la clínica.</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <button id="openFullReportBtn" class="flex items-center justify-center gap-3 p-4 bg-white text-blue-700 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg active:scale-95">
-                                        <span>Abrir Reporte Mensual</span>
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-                                    </button>
-                                    
-                                    <div class="p-4 bg-blue-500 bg-opacity-20 border border-white border-opacity-20 rounded-2xl flex flex-col justify-center text-center">
-                                        <div class="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1 opacity-80">Siguiente Corte</div>
-                                        <div class="text-sm font-bold">Fin de Mes Automático</div>
-                                    </div>
+                            <p class="text-sm text-gray-400 py-8 text-center">Abre esta pestaña para ver reportes.</p>
+                        </div>
+
+                        <!-- TAB: PERMISSIONS -->
+                        <div id="content-permissions" class="hidden space-y-6">
+                            <div class="bg-violet-50 border border-violet-100 rounded-2xl p-4 flex gap-3">
+                                <span class="text-xl">🔐</span>
+                                <div class="text-xs text-violet-900 leading-relaxed">
+                                    <p class="font-bold mb-1">Gestión de Accesos y Equipo</p>
+                                    <p>Aquí puedes crear nuevas cuentas para el equipo y gestionar permisos. Los permisos en Firestore están ahora vinculados a Custom Claims en el servidor, garantizando máxima seguridad (S-005).</p>
                                 </div>
                             </div>
+                            
+                            <!-- Formulario Registrar Miembro -->
+                            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mt-4">
+                                <h4 class="font-bold text-gray-800 mb-4">Registrar Nuevo Miembro</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre Completo</label>
+                                        <input type="text" id="newStaffName" placeholder="Ej. Laura G." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Correo Electrónico</label>
+                                        <input type="email" id="newStaffEmail" placeholder="laura@parlare.mx" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
+                                        <select id="newStaffRole" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none" onchange="document.getElementById('newStaffTherapistId').disabled = this.value !== 'therapist'">
+                                            <option value="therapist">Terapeuta</option>
+                                            <option value="receptionist">Recepción</option>
+                                            <option value="admin">Administrador</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Identificador (Solo Terapeutas)</label>
+                                        <input type="text" id="newStaffTherapistId" placeholder="Ej. laura" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none">
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex justify-between items-center">
+                                    <div id="newStaffResult" class="text-xs font-bold text-emerald-600"></div>
+                                    <button id="btnCreateStaff" type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-700 transition-all">Crear Usuario</button>
+                                </div>
+                            </div>
+                            
+                            <h4 class="font-bold text-gray-700 mt-6 border-t border-gray-200 pt-6">Configuración de Privilegios</h4>
+                            <div id="staffPermissionsList" class="space-y-4"></div>
                         </div>
 
                     </div>
@@ -152,17 +199,124 @@ export const AdminSettingsModal = {
         const div = document.createElement('div');
         div.innerHTML = html;
         container.appendChild(div.firstElementChild);
+    },
 
-        this._setupListeners();
+    _applyPermissionsTabVisibility() {
+        const tabPermissions = document.getElementById('tab-permissions');
+        if (tabPermissions) {
+            tabPermissions.classList.toggle('hidden', !AuthManager.canManageStaffPermissions());
+        }
+    },
+
+    _tabMeta() {
+        return [
+            { id: 'themes', btn: document.getElementById('tab-themes'), cont: document.getElementById('content-themes') },
+            { id: 'costs', btn: document.getElementById('tab-costs'), cont: document.getElementById('content-costs') },
+            { id: 'reports', btn: document.getElementById('tab-reports'), cont: document.getElementById('content-reports') },
+            { id: 'permissions', btn: document.getElementById('tab-permissions'), cont: document.getElementById('content-permissions') }
+        ].filter((t) => t.btn && t.cont && !t.btn.classList.contains('hidden'));
+    },
+
+    _activateTab(tabId) {
+        this._activeTabId = tabId;
+        this._tabMeta().forEach((t) => {
+            const active = t.id === tabId;
+            if (t.btn) {
+                t.btn.classList.toggle('border-blue-600', active);
+                t.btn.classList.toggle('text-blue-600', active);
+                t.btn.classList.toggle('border-transparent', !active);
+                t.btn.classList.toggle('text-gray-400', !active);
+            }
+            if (t.cont) t.cont.classList.toggle('hidden', !active);
+        });
+    },
+
+    _ensureTabRendered(tabId) {
+        if (this._renderedTabs.has(tabId)) return;
+
+        const config = SettingsManager.config;
+        if (tabId === 'themes') {
+            this._renderThemes(config.themes || []);
+        } else if (tabId === 'costs') {
+            this._renderCosts(config.baseCosts || {});
+        } else if (tabId === 'permissions') {
+            this._renderStaffPermissions(config.staffPermissions || getDefaultStaffPermissions());
+        } else if (tabId === 'reports') {
+            this._renderReportsTab();
+        }
+
+        this._renderedTabs.add(tabId);
+    },
+
+    _renderReportsTab() {
+        const contentReports = document.getElementById('content-reports');
+        if (!contentReports) return;
+
+        if (!AuthManager.canViewClinicFinancials()) {
+            contentReports.innerHTML = `
+                <div class="bg-gray-100 border border-gray-200 rounded-2xl p-8 text-center text-sm text-gray-600">
+                    Los reportes financieros consolidados solo están disponibles para la administradora de la clínica.
+                </div>`;
+            return;
+        }
+
+        if (document.getElementById('openFullReportBtn')) return;
+
+        contentReports.innerHTML = `
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-xl shadow-blue-100">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-2xl font-black">Reportes Financieros</h4>
+                        <p class="text-blue-100 text-sm font-medium">Analiza la utilidad neta y el rendimiento de la clínica.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button id="openFullReportBtn" class="flex items-center justify-center gap-3 p-4 bg-white text-blue-700 rounded-2xl font-black hover:bg-blue-50 transition-all shadow-lg active:scale-95">
+                        <span>Abrir Reporte Mensual</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                    </button>
+                    <div class="p-4 bg-blue-500 bg-opacity-20 border border-white border-opacity-20 rounded-2xl flex flex-col justify-center text-center">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1 opacity-80">Siguiente Corte</div>
+                        <div class="text-sm font-bold">Fin de Mes Automático</div>
+                    </div>
+                </div>
+            </div>`;
+
+        const openFullReportBtn = document.getElementById('openFullReportBtn');
+        if (openFullReportBtn) {
+            openFullReportBtn.onclick = () => {
+                if (!AuthManager.canViewClinicFinancials()) {
+                    ToastService.warning('Solo la administradora puede abrir reportes consolidados.');
+                    return;
+                }
+                this.close();
+                document.getElementById('openReportsBtn')?.click();
+            };
+        }
     },
 
     /**
-     * Carga los datos actuales del SettingsManager
+     * @deprecated Usar _ensureTabRendered por pestaña (lazy). Mantenido por compatibilidad interna.
      */
     _loadData() {
-        const config = SettingsManager.config;
-        this._renderThemes(config.themes || []);
-        this._renderCosts(config.baseCosts || {});
+        this._applyPermissionsTabVisibility();
+        this._ensureTabRendered(this._activeTabId || 'themes');
+        this._bindTabs();
+    },
+
+    /**
+     * Re-render de temas en el siguiente frame (evita bloquear UI al editar chips).
+     */
+    _scheduleThemesRender() {
+        if (this._themesRenderPending) return;
+        this._themesRenderPending = true;
+        requestAnimationFrame(() => {
+            this._themesRenderPending = false;
+            this._renderThemes(SettingsManager.config.themes || []);
+        });
     },
 
     /**
@@ -173,7 +327,7 @@ export const AdminSettingsModal = {
         if (!container) return;
 
         container.innerHTML = themes.map(theme => `
-            <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all group relative">
+            <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm group relative">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex-1">
                          <input type="text" value="${theme.name}" class="text-lg font-black text-gray-800 bg-transparent border-b-2 border-transparent focus:border-blue-500 outline-none w-full transition-all" onchange="window.updateThemeName('${theme.id}', this.value)">
@@ -232,7 +386,7 @@ export const AdminSettingsModal = {
         window.removeTheme = async (id) => {
             if (await ModalService.confirm("¿Eliminar Tema?", "Se borrará este tema y todos sus subtemas del catálogo global.", "Eliminar", "Cancelar")) {
                 SettingsManager.config.themes = SettingsManager.config.themes.filter(t => t.id !== id);
-                this._renderThemes(SettingsManager.config.themes);
+                this._scheduleThemesRender();
             }
         };
 
@@ -246,7 +400,7 @@ export const AdminSettingsModal = {
             if (theme) {
                 if (!theme.subthemes) theme.subthemes = [];
                 theme.subthemes.push({ name: name, items: [] });
-                this._renderThemes(SettingsManager.config.themes);
+                this._scheduleThemesRender();
             }
         };
 
@@ -254,7 +408,7 @@ export const AdminSettingsModal = {
             const theme = SettingsManager.config.themes.find(t => t.id === themeId);
             if (theme) {
                 theme.subthemes.splice(sIdx, 1);
-                this._renderThemes(SettingsManager.config.themes);
+                this._scheduleThemesRender();
             }
         };
 
@@ -264,7 +418,7 @@ export const AdminSettingsModal = {
             if (theme && theme.subthemes[sIdx]) {
                 if (!theme.subthemes[sIdx].items) theme.subthemes[sIdx].items = [];
                 theme.subthemes[sIdx].items.push(val.trim());
-                this._renderThemes(SettingsManager.config.themes);
+                this._scheduleThemesRender();
             }
         };
 
@@ -272,7 +426,7 @@ export const AdminSettingsModal = {
             const theme = SettingsManager.config.themes.find(t => t.id === themeId);
             if (theme && theme.subthemes[sIdx]) {
                 theme.subthemes[sIdx].items.splice(iIdx, 1);
-                this._renderThemes(SettingsManager.config.themes);
+                this._scheduleThemesRender();
             }
         };
     },
@@ -285,7 +439,7 @@ export const AdminSettingsModal = {
         if (!container) return;
 
         const saasBanner = renderSaasReadyBanner(SAAS_READY_EXPLANATION.profileNote);
-        const therapists = ['diana', 'sam', 'vero'];
+        const therapists = window.StaffManager ? window.StaffManager.getTherapists().map(t => t.id) : ['diana', 'sam', 'vero'];
         container.innerHTML = saasBanner + therapists.map(id => {
             const data = costs[id] || { cost: 500, fee: 250 };
             return `
@@ -332,8 +486,88 @@ export const AdminSettingsModal = {
         };
     },
 
+    _renderStaffPermissions(staffPermissions) {
+        const container = document.getElementById('staffPermissionsList');
+        if (!container) return;
+
+        const allOptions = PERMISSION_GROUPS.flatMap((g) => g.options);
+
+        container.innerHTML = EDITABLE_STAFF_ROSTER.map((member) => {
+            const entry = staffPermissions[member.email] || { grants: [], denies: [] };
+            const effective = computeEffectivePermissions(
+                { email: member.email, role: member.role },
+                { [member.email]: entry }
+            );
+
+            const groupsHtml = PERMISSION_GROUPS.map((group) => `
+                <div class="mt-4">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">${group.label}</p>
+                    <div class="space-y-2">
+                        ${group.options.map((opt) => {
+                            const checked = effective.has(opt.id);
+                            const inBase = (ROLE_BASE_PERMISSIONS[member.role] || []).includes(opt.id);
+                            return `
+                                <label class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/80 cursor-pointer touch-manipulation min-h-[44px]">
+                                    <input type="checkbox"
+                                        class="staff-perm-cb w-5 h-5 mt-0.5 rounded border-gray-300 text-violet-600"
+                                        data-email="${member.email}"
+                                        data-role="${member.role}"
+                                        data-perm="${opt.id}"
+                                        data-in-base="${inBase ? '1' : '0'}"
+                                        ${checked ? 'checked' : ''}>
+                                    <span class="text-sm text-gray-800 leading-snug">
+                                        ${opt.label}
+                                        ${inBase ? '<span class="block text-[10px] text-gray-400 font-medium">Incluido por defecto en su rol</span>' : ''}
+                                    </span>
+                                </label>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm" data-staff-card="${member.email}">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-black">${member.displayName.charAt(0)}</div>
+                        <div>
+                            <h5 class="font-black text-gray-800">${member.displayName}</h5>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">${member.role === 'receptionist' ? 'Recepción' : 'Terapeuta'}</p>
+                        </div>
+                    </div>
+                    ${groupsHtml}
+                </div>`;
+        }).join('');
+    },
+
+    _collectStaffPermissionsForSave() {
+        const staffPermissions = JSON.parse(JSON.stringify(
+            SettingsManager.config.staffPermissions || getDefaultStaffPermissions()
+        ));
+        const allOptions = PERMISSION_GROUPS.flatMap((g) => g.options);
+
+        EDITABLE_STAFF_ROSTER.forEach((member) => {
+            const base = new Set(ROLE_BASE_PERMISSIONS[member.role] || []);
+            const grants = [];
+            const denies = [];
+
+            allOptions.forEach((opt) => {
+                const cb = document.querySelector(
+                    `.staff-perm-cb[data-email="${member.email}"][data-perm="${opt.id}"]`
+                );
+                const want = cb?.checked === true;
+                const hasBase = base.has(opt.id);
+                if (want && !hasBase) grants.push(opt.id);
+                if (!want && hasBase) denies.push(opt.id);
+            });
+
+            staffPermissions[member.email] = { grants, denies };
+        });
+
+        return staffPermissions;
+    },
+
     _collectBaseCostsForSave() {
-        const therapists = ['diana', 'sam', 'vero'];
+        const therapists = window.StaffManager ? window.StaffManager.getTherapists().map(t => t.id) : ['diana', 'sam', 'vero'];
         const baseCosts = JSON.parse(JSON.stringify(SettingsManager.config.baseCosts || {}));
 
         therapists.forEach(id => {
@@ -348,58 +582,35 @@ export const AdminSettingsModal = {
     },
 
     /**
-     * Configura event listeners
+     * Enlaza clics de pestañas. Debe ejecutarse después de _loadData() para incluir
+     * «Equipo y permisos» (el botón arranca con class hidden en el HTML).
      */
-    _setupListeners() {
-        const tabThemes = document.getElementById('tab-themes');
-        const tabCosts = document.getElementById('tab-costs');
-        const tabReports = document.getElementById('tab-reports');
-        const contThemes = document.getElementById('content-themes');
-        const contCosts = document.getElementById('content-costs');
-        const contReports = document.getElementById('content-reports');
-
-        const tabs = [
-            { btn: tabThemes, cont: contThemes },
-            { btn: tabCosts, cont: contCosts },
-            { btn: tabReports, cont: contReports }
-        ];
-
-        tabs.forEach(tab => {
-            if (!tab.btn) return;
+    _bindTabs() {
+        this._tabMeta().forEach((tab) => {
             tab.btn.onclick = () => {
-                tabs.forEach(t => {
-                    if (t.btn) {
-                        t.btn.classList.remove('border-blue-600', 'text-blue-600');
-                        t.btn.classList.add('border-transparent', 'text-gray-400');
-                    }
-                    if (t.cont) t.cont.classList.add('hidden');
-                });
-                tab.btn.classList.add('border-blue-600', 'text-blue-600');
-                tab.btn.classList.remove('border-transparent', 'text-gray-400');
-                tab.cont.classList.remove('hidden');
+                this._activateTab(tab.id);
+                requestAnimationFrame(() => this._ensureTabRendered(tab.id));
             };
         });
+    },
 
-        // Botón para abrir el reporte completo
-        const openFullReportBtn = document.getElementById('openFullReportBtn');
-        if (openFullReportBtn) {
-            openFullReportBtn.onclick = () => {
-                this.close();
-                // Simular click en el botón del header para disparar la lógica de reportes
-                document.getElementById('openReportsBtn')?.click();
-            };
-        }
+    /**
+     * Configura event listeners (una sola vez)
+     */
+    _setupListeners() {
+        this._bindTabs();
 
-        // Cerrar modal
         const closeModals = () => this.close();
         document.getElementById('closeAdminSettingsBtn').onclick = closeModals;
         document.getElementById('cancelAdminSettingsBtn').onclick = closeModals;
-        
-        // Cerrar al clickear fuera
+
         const modalOverlay = document.getElementById(this.id);
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) closeModals();
-        });
+        if (modalOverlay && !this._overlayClickHandler) {
+            this._overlayClickHandler = (e) => {
+                if (e.target === modalOverlay) closeModals();
+            };
+            modalOverlay.addEventListener('click', this._overlayClickHandler);
+        }
 
         // Nuevo Tema
         document.getElementById('addThemeBtn').onclick = () => {
@@ -409,7 +620,7 @@ export const AdminSettingsModal = {
                 name: 'Nuevo Tema',
                 subthemes: []
             });
-            this._renderThemes(SettingsManager.config.themes);
+            this._scheduleThemesRender();
             // Hacer scroll al final
             setTimeout(() => {
                 const list = document.getElementById('themesList');
@@ -418,19 +629,79 @@ export const AdminSettingsModal = {
             }, 100);
         };
 
+        // Crear Nuevo Staff
+        const btnCreateStaff = document.getElementById('btnCreateStaff');
+        if (btnCreateStaff) {
+            btnCreateStaff.onclick = async () => {
+                const name = document.getElementById('newStaffName').value.trim();
+                const email = document.getElementById('newStaffEmail').value.trim();
+                const role = document.getElementById('newStaffRole').value;
+                let therapistId = document.getElementById('newStaffTherapistId').value.trim();
+
+                if (!name || !email) {
+                    ToastService.warning('Nombre y correo son obligatorios.');
+                    return;
+                }
+                
+                if (role !== 'therapist') {
+                    therapistId = 'all';
+                } else if (!therapistId) {
+                    ToastService.warning('Para terapeutas, el identificador es obligatorio (ej. laura).');
+                    return;
+                }
+
+                btnCreateStaff.disabled = true;
+                btnCreateStaff.innerHTML = 'Creando...';
+                document.getElementById('newStaffResult').innerHTML = '';
+                
+                try {
+                    const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js');
+                    const functions = getFunctions();
+                    const manageStaffUser = httpsCallable(functions, 'manage_staff_user');
+                    
+                    const res = await manageStaffUser({
+                        name, email, role, therapistId, password: 'Parlare2026*'
+                    });
+                    
+                    if (res.data.success) {
+                        ToastService.success('Usuario creado correctamente.');
+                        document.getElementById('newStaffResult').innerHTML = '✅ Creado. Contraseña por defecto: <b>Parlare2026*</b>';
+                        document.getElementById('newStaffName').value = '';
+                        document.getElementById('newStaffEmail').value = '';
+                        document.getElementById('newStaffTherapistId').value = '';
+                    } else {
+                        ToastService.error('Error al crear usuario.');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    ToastService.error('Error de permisos o red: ' + e.message);
+                }
+                
+                btnCreateStaff.disabled = false;
+                btnCreateStaff.innerHTML = 'Crear Usuario';
+            };
+        }
+
         // Guardar Todo
         document.getElementById('saveAllSettingsBtn').onclick = async () => {
             const btn = document.getElementById('saveAllSettingsBtn');
             btn.disabled = true;
             btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
             
-            const result = await SettingsManager.saveConfig({
+            const payload = {
                 themes: SettingsManager.config.themes,
                 baseCosts: this._collectBaseCostsForSave()
-            });
+            };
+            if (AuthManager.canManageStaffPermissions()) {
+                payload.staffPermissions = this._collectStaffPermissionsForSave();
+            }
+
+            const result = await SettingsManager.saveConfig(payload);
 
             if (result.success) {
                 ToastService.success('Configuración guardada correctamente');
+                AuthManager.refreshPermissions();
+                window.dispatchEvent(new CustomEvent('parlare:permissions-changed'));
                 this.close();
             } else {
                 ToastService.error('Error al guardar: ' + result.error);

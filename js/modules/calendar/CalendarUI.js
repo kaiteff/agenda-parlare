@@ -12,6 +12,7 @@ import { ModalService } from '../../utils/ModalService.js';
 import { WhatsAppMessaging } from '../../services/WhatsAppMessaging.js';
 import { WaitlistCopilotService } from '../../services/WaitlistCopilotService.js';
 import { escapeHTML } from '../../utils/sanitize.js';
+import { isMobileLayout, isPhoneLandscape } from '../../utils/viewport.js';
 
 export const CalendarUI = {
     /**
@@ -32,7 +33,8 @@ export const CalendarUI = {
             grid.innerHTML = '';
 
             const isDayMode = CalendarState.viewMode === 'day';
-            const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+            const isMobile = isMobileLayout();
+            const phoneLandscape = isPhoneLandscape();
 
             const gridWrapper = document.getElementById('calendarScrollWrap') || grid.closest('.overflow-x-auto');
             grid.classList.remove('calendar-week-fit');
@@ -69,6 +71,7 @@ export const CalendarUI = {
                 ? (isDayMode ? 'cal-grid-day' : 'cal-grid-week')
                 : (isDayMode ? 'grid grid-cols-2' : 'grid grid-cols-7');
             const weekMobileCompact = isMobile && !isDayMode;
+            const slotRowH = phoneLandscape ? 'h-12' : 'h-16';
 
             const allWeekDays = [];
             for (let i = 0; i < 7; i++) {
@@ -101,36 +104,65 @@ export const CalendarUI = {
             today.setHours(0, 0, 0, 0);
 
             if (isDayMode) {
+                const selectedDay = allWeekDays[CalendarState.selectedDayIndex];
+                const selectedLabel = selectedDay
+                    ? selectedDay.toLocaleDateString('es-MX', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long'
+                    })
+                    : '';
+
                 const daySelector = document.createElement('div');
-                daySelector.className = "flex justify-between items-center bg-gray-50 p-1.5 rounded-xl border border-gray-200 gap-1 mb-3 mx-1";
-                const shortDayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                daySelector.className = phoneLandscape
+                    ? 'cal-day-picker mb-2 mx-1'
+                    : 'cal-day-picker mb-3 mx-1';
+                daySelector.innerHTML = `
+                    <div class="cal-day-selected-label px-3 py-2 mb-1.5 rounded-xl bg-blue-600 text-white text-center shadow-sm shadow-blue-500/20">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100 leading-none mb-0.5">Día seleccionado</p>
+                        <p class="text-sm md:text-base font-black capitalize leading-tight truncate">${escapeHTML(selectedLabel)}</p>
+                    </div>
+                    <div class="flex justify-between items-center bg-gray-50 p-1 rounded-xl border border-gray-200 gap-0.5" role="tablist" aria-label="Elegir día de la semana"></div>
+                `;
+                const tabsRow = daySelector.querySelector('[role="tablist"]');
+                const shortDayNames = ['L', 'M', 'X', 'J', 'V', 'S'];
+                const shortDayNamesFull = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
                 allWeekDays.forEach((dayDate, idx) => {
                     const isActive = idx === CalendarState.selectedDayIndex;
                     const btn = document.createElement('button');
-                    btn.type = "button";
-                    btn.className = `flex-1 py-2 text-xs font-bold rounded-lg transition-all touch-manipulation ${
+                    btn.type = 'button';
+                    btn.setAttribute('role', 'tab');
+                    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    const label = phoneLandscape || isMobile
+                        ? `${shortDayNames[idx]} ${dayDate.getDate()}`
+                        : `${shortDayNamesFull[idx]} ${dayDate.getDate()}`;
+                    btn.className = `flex-1 min-w-0 py-1.5 md:py-2 text-[10px] md:text-xs font-bold rounded-lg transition-all touch-manipulation ${
                         isActive
-                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                            ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200'
                             : 'text-gray-500 hover:bg-gray-100'
                     }`;
-                    btn.textContent = `${shortDayNames[idx]} ${dayDate.getDate()}`;
+                    btn.textContent = label;
+                    btn.title = dayDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' });
                     btn.onclick = (e) => {
                         e.stopPropagation();
                         CalendarState.selectedDayIndex = idx;
                         this.renderCalendar(onEventClick, onEmptySlotClick);
                     };
-                    daySelector.appendChild(btn);
+                    tabsRow.appendChild(btn);
                 });
                 grid.appendChild(daySelector);
             }
 
-            // Header Row
+            // Header Row — en vista Día NO sticky (tapaba citas al scrollear horas)
             const headerRow = document.createElement('div');
-            headerRow.className = `${rowGridClass} calendar-header-row sticky top-0 bg-white border-b-2 border-gray-200`;
+            const headerSticky = !isDayMode;
+            headerRow.className = `${rowGridClass} calendar-header-row bg-white border-b-2 border-gray-200 ${
+                headerSticky ? 'sticky top-0' : 'relative cal-day-header-static'
+            }`;
 
             const emptyCell = document.createElement('div');
-            emptyCell.className = `border-r border-gray-200 text-center sticky-corner ${isMobile ? 'py-1.5 px-0.5' : 'p-3'}`;
-            emptyCell.innerHTML = isMobile
+            emptyCell.className = `border-r border-gray-200 text-center sticky-corner ${isMobile ? 'py-1.5 px-0.5' : (isDayMode ? 'py-1 px-1' : 'p-3')}`;
+            emptyCell.innerHTML = isMobile || isDayMode
                 ? '<div class="text-[9px] font-semibold text-gray-500 uppercase leading-tight">Hr</div>'
                 : '<div class="text-xs font-semibold text-gray-500 uppercase">Hora</div>';
             headerRow.appendChild(emptyCell);
@@ -138,7 +170,7 @@ export const CalendarUI = {
             weekDays.forEach((dayDate) => {
                 const dayHeader = document.createElement('div');
                 const isToday = dayDate.getTime() === today.getTime();
-                const headerPad = isMobile && !isDayMode ? 'p-1' : 'p-3';
+                const headerPad = isMobile && !isDayMode ? 'p-1' : (isDayMode ? 'py-1 px-1' : (phoneLandscape ? 'p-1.5' : 'p-3'));
                 dayHeader.className = `${headerPad} text-center border-r border-gray-200 last:border-r-0 min-w-0 ${isToday ? 'bg-blue-50' : ''}`;
 
                 const dayName = dayDate.toLocaleDateString('es-ES', { weekday: 'short' });
@@ -153,19 +185,26 @@ export const CalendarUI = {
                         </button>`
                     : '';
 
-                dayHeader.innerHTML = isMobile && !isDayMode
-                    ? `<div class="flex flex-col items-center gap-0.5">
+                // Vista Día: el nombre ya está en el picker — aquí solo candado (no sticky ni título grande)
+                if (isDayMode) {
+                    dayHeader.innerHTML = blockBtn
+                        ? `<div class="flex items-center justify-end gap-1">${blockBtn}</div>`
+                        : `<div class="h-4" aria-hidden="true"></div>`;
+                } else if ((isMobile || phoneLandscape) && !isDayMode) {
+                    dayHeader.innerHTML = `<div class="flex flex-col items-center gap-0.5">
                         <div class="cal-day-header-name text-[10px] font-semibold text-gray-500 uppercase leading-tight">${dayName.slice(0, 3)}</div>
                         <div class="flex items-center gap-0.5">
                             <div class="cal-day-header-num text-base font-bold ${isToday ? 'text-blue-600' : 'text-gray-800'}">${dayNum}</div>
                             ${blockBtn}
                         </div>
-                       </div>`
-                    : `<div class="flex items-center justify-center gap-1">
+                       </div>`;
+                } else {
+                    dayHeader.innerHTML = `<div class="flex items-center justify-center gap-1">
                         <div class="text-xs font-semibold text-gray-500 uppercase">${dayName}</div>
                         ${blockBtn}
                     </div>
                     <div class="text-2xl font-bold mt-1 ${isToday ? 'text-blue-600' : 'text-gray-800'}">${dayNum}</div>`;
+                }
                 headerRow.appendChild(dayHeader);
             });
 
@@ -203,7 +242,7 @@ export const CalendarUI = {
                     const isToday = dayDate.getTime() === today.getTime();
                     const cell = document.createElement('div');
                     const cellPad = weekMobileCompact ? 'p-0.5' : 'p-1';
-                    cell.className = `h-16 border-r border-b border-gray-100 ${cellPad} cursor-pointer hover:bg-blue-50/60 transition-colors relative group last:border-r-0 min-w-0 overflow-hidden ${isToday ? 'bg-blue-50/40' : ''}`;
+                    cell.className = `${slotRowH} border-r border-b border-gray-100 ${cellPad} cursor-pointer hover:bg-blue-50/60 transition-colors relative group last:border-r-0 min-w-0 overflow-hidden ${isToday ? 'bg-blue-50/40' : ''}`;
 
                     let dateStr;
                     try {
@@ -223,8 +262,14 @@ export const CalendarUI = {
                             const container = document.createElement('div');
                             container.className = "absolute inset-0 flex flex-col gap-0.5 p-0.5";
                             
-                            // 🔒 ORDEN FIJO: Diana siempre arriba, Sam al medio, Vero abajo
-                            const THERAPIST_ORDER = { diana: 0, sam: 1, vero: 2 };
+                            // 🔒 ORDEN FIJO: basado en StaffManager si está disponible
+                            let THERAPIST_ORDER = { diana: 0, sam: 1, vero: 2 };
+                            if (window.StaffManager) {
+                                THERAPIST_ORDER = {};
+                                window.StaffManager.getTherapists().forEach((t, idx) => {
+                                    THERAPIST_ORDER[t.id] = idx;
+                                });
+                            }
                             const sortedEvents = [...slotEvents].sort((a, b) => {
                                 const aOrder = THERAPIST_ORDER[(a.therapist || 'diana').toLowerCase()] ?? 99;
                                 const bOrder = THERAPIST_ORDER[(b.therapist || 'diana').toLowerCase()] ?? 99;
@@ -233,7 +278,7 @@ export const CalendarUI = {
                             
                             sortedEvents.forEach(evt => {
                                 const tKey = evt.therapist || 'diana';
-                                const therapistName = tKey.charAt(0).toUpperCase() + tKey.slice(1);
+                                const therapistName = window.StaffManager ? window.StaffManager.getTherapistName(tKey) : (tKey.charAt(0).toUpperCase() + tKey.slice(1));
                                 let bgColor = '';
                                 if (evt.isPaid) bgColor = 'bg-green-100 text-green-800 border-green-200';
                                 else if (evt.isFullDayBlock || evt.isHourlyBlock) bgColor = 'bg-gray-900 text-white border-gray-950 shadow-md';
@@ -241,7 +286,13 @@ export const CalendarUI = {
                                 else {
                                     if (tKey === 'diana') bgColor = 'bg-pink-100 text-pink-800 border-pink-200';
                                     else if (tKey === 'sam') bgColor = 'bg-blue-100 text-blue-800 border-blue-200';
-                                    else bgColor = 'bg-purple-100 text-purple-800 border-purple-200';
+                                    else if (tKey === 'vero') bgColor = 'bg-purple-100 text-purple-800 border-purple-200';
+                                    else {
+                                        const colors = ['bg-emerald-100 text-emerald-800 border-emerald-200', 'bg-amber-100 text-amber-800 border-amber-200', 'bg-cyan-100 text-cyan-800 border-cyan-200', 'bg-rose-100 text-rose-800 border-rose-200'];
+                                        let hash = 0;
+                                        for (let i = 0; i < tKey.length; i++) hash = tKey.charCodeAt(i) + ((hash << 5) - hash);
+                                        bgColor = colors[Math.abs(hash) % colors.length];
+                                    }
                                 }
                                 const chip = document.createElement('div');
                                 const canEdit = AuthManager.canEditItem(evt) || AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';

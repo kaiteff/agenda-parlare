@@ -24,11 +24,7 @@ const DELAY_MINUTES = Math.round(COPILOT_DELAY_MS / 60000);
 const CONTAINER_ID = 'waitlistCopilotContainer';
 const MODAL_ID = 'waitlistCandidatesModal';
 
-const THERAPIST_LABEL = {
-    diana: 'Diana',
-    sam: 'Sam',
-    vero: 'Vero'
-};
+const THERAPIST_LABEL = {};
 
 export const WaitlistCopilotPanel = {
     _initialized: false,
@@ -43,7 +39,7 @@ export const WaitlistCopilotPanel = {
         if (this._initialized) return;
 
         // Solo recepción/admin necesita el copiloto
-        const canSee = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        const canSee = AuthManager.can('view_reception_control');
         if (!canSee) return;
 
         this._ensureContainer();
@@ -144,7 +140,7 @@ export const WaitlistCopilotPanel = {
     },
 
     _quietCardHTML(item) {
-        const therapistName = THERAPIST_LABEL[item.therapist] || item.therapist;
+        const therapistName = window.StaffManager ? window.StaffManager.getTherapistName(item.therapist) : item.therapist;
         const timeLabel = this._formatTime(item.date);
         const ctaDisabled = item.localStatus !== 'waiting';
         const statusBadge = (() => {
@@ -203,7 +199,7 @@ export const WaitlistCopilotPanel = {
     },
 
     _cardHTML(item) {
-        const therapistName = THERAPIST_LABEL[item.therapist] || item.therapist;
+        const therapistName = window.StaffManager ? window.StaffManager.getTherapistName(item.therapist) : item.therapist;
         const timeLabel = this._formatTime(item.date);
         const countdown = this._formatCountdown(item.remainingMs);
         const progress = Math.max(0, Math.min(100, (item.remainingMs / COPILOT_DELAY_MS) * 100));
@@ -254,7 +250,7 @@ export const WaitlistCopilotPanel = {
                 <!-- Texto principal + contador -->
                 <div class="mt-3 flex items-center justify-between gap-3">
                     <p class="text-xs text-slate-200/90 leading-relaxed">
-                        Autopilot enviará ofertas por WhatsApp en:
+                        Esperando confirmación tuya o de la terapeuta. Expira en:
                     </p>
                     ${statusBadge}
                 </div>
@@ -364,7 +360,7 @@ export const WaitlistCopilotPanel = {
     async openCandidatesModal(item) {
         document.getElementById(MODAL_ID)?.remove();
 
-        const therapistName = THERAPIST_LABEL[item.therapist] || item.therapist;
+        const therapistName = window.StaffManager ? window.StaffManager.getTherapistName(item.therapist) : item.therapist;
         const timeLabel = this._formatTime(item.date);
 
         const modal = document.createElement('div');
@@ -471,7 +467,7 @@ export const WaitlistCopilotPanel = {
 
     _candidateCardHTML(c, freedItem) {
         const time = this._formatTime(c.date);
-        const therapistName = THERAPIST_LABEL[c.therapist] || c.therapist;
+        const therapistName = window.StaffManager ? window.StaffManager.getTherapistName(c.therapist) : c.therapist;
         const phone = c.phone || '';
         const hasPhone = Boolean(phone);
         const optInBadge = (() => {

@@ -73,6 +73,40 @@ export function checkSlotConflict(dateTimeStr, appointments, excludeId = null, t
 }
 
 /**
+ * Texto legible de la cita que ocupa un hueco (para UI y toasts).
+ * @param {Object|null} appt
+ * @returns {string}
+ */
+export function formatConflictAppointment(appt) {
+    if (!appt) return '';
+    const name = (appt.name || 'Sin nombre').trim();
+    if (appt.isFullDayBlock || appt.isHourlyBlock) {
+        return `Bloqueo: ${name}`;
+    }
+    let label = name;
+    if (appt.stageName) {
+        label = `${appt.stageName} — ${name}`;
+    }
+    if (appt.date) {
+        const time = new Date(appt.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        label = `${label} (${time})`;
+    }
+    return label;
+}
+
+/**
+ * Devuelve cita en conflicto + etiqueta para mostrar al usuario.
+ */
+export function describeSlotConflict(dateTimeStr, appointments, excludeId = null, therapist = null) {
+    const appointment = checkSlotConflict(dateTimeStr, appointments, excludeId, therapist);
+    if (!appointment) return null;
+    return {
+        appointment,
+        label: formatConflictAppointment(appointment)
+    };
+}
+
+/**
  * Valida los datos de una cita
  * @param {string} name - Nombre del paciente
  * @param {string} date - Fecha de la cita

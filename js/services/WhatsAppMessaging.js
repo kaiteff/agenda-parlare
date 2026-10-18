@@ -8,6 +8,21 @@ import { PatientState } from '../managers/patient/PatientState.js';
 import { db, updateDoc, doc, serverTimestamp } from '../firebase.js';
 import { WHATSAPP_TEMPLATES } from '../config/whatsappTemplates.js';
 
+const SEND_MESSAGE_API = 'https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_message_api';
+const SEND_REMINDERS_API = 'https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_reminders_api';
+
+/** Headers con Firebase ID token — APIs staff WhatsApp (sin clave en cliente). */
+export async function getStaffApiHeaders(json = true) {
+    const user = AuthManager.currentUser;
+    if (!user || typeof user.getIdToken !== 'function') {
+        throw new Error('Sesión expirada — vuelve a iniciar sesión.');
+    }
+    const token = await user.getIdToken();
+    const headers = { Authorization: `Bearer ${token}` };
+    if (json) headers['Content-Type'] = 'application/json';
+    return headers;
+}
+
 export const WhatsAppMessaging = {
 
     /**
@@ -168,8 +183,7 @@ export const WhatsAppMessaging = {
         try {
             const payload = {
                 phone: phone,
-                message: message, // Fallback por si la plantilla falla
-                key: 'parlare_secret_2026'
+                message: message // Fallback por si la plantilla falla
             };
 
             // Seleccionar el SID correcto según el tipo de mensaje
@@ -180,9 +194,10 @@ export const WhatsAppMessaging = {
                 payload.template_sid = sid;
             }
 
-            const response = await fetch('https://us-central1-taconotaco-d94fc.cloudfunctions.net/send_message_api', {
+            const headers = await getStaffApiHeaders(true);
+            const response = await fetch(SEND_MESSAGE_API, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify(payload)
             });
 

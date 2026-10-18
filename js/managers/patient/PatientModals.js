@@ -190,6 +190,15 @@ export const PatientModals = {
         const birthdayInput = document.getElementById('newPatientBirthday');
         if (birthdayInput) birthdayInput.value = '';
 
+        const treatmentRow = document.getElementById('newPatientTreatmentTypeRow');
+        const canCreateEvaluation = AuthManager.isClinicOwner()
+            || AuthManager.can('create_evaluation_patient');
+        if (treatmentRow) {
+            treatmentRow.classList.toggle('hidden', !canCreateEvaluation);
+        }
+        const regularTreatment = document.querySelector('input[name="newPatientTreatmentType"][value="regular"]');
+        if (regularTreatment) regularTreatment.checked = true;
+
         // MEJORA: Escuchar cambios en el selector de terapeuta para actualizar costos sugeridos
         if (therapistInput) {
             therapistInput.onchange = () => {
@@ -281,9 +290,10 @@ export const PatientModals = {
         PatientState.setSelectedPatient(patient);
 
         // DETERMINAR PERMISOS FINANCIEROS (Admin y Recepción ven todo, Terapeutas solo lo propio)
-        const canViewFinancials = AuthManager.isAdmin() || 
-                                AuthManager.currentUser?.role === 'receptionist' || 
-                                (patient.therapist === AuthManager.currentUser.therapist);
+        const canViewFinancials = AuthManager.can('manage_payments')
+            || AuthManager.canViewClinicFinancials()
+            || (AuthManager.can('view_own_session_pay')
+                && patient.therapist === AuthManager.currentUser?.therapist);
 
         // Ocultar/Mostrar tarjeta de finanzas
         const financeCard = document.getElementById('patientFinanceCard');
@@ -296,7 +306,7 @@ export const PatientModals = {
         }
 
         // Poner estado cargando inicial
-        const therapistName = patient.therapist === 'diana' ? 'Diana' : patient.therapist === 'sam' ? 'Sam' : patient.therapist || 'No asignado';
+        const therapistName = window.StaffManager ? window.StaffManager.getTherapistName(patient.therapist) : (patient.therapist || 'No asignado');
         if (dom.patientHistoryTitle) {
             dom.patientHistoryTitle.innerHTML = `
                 <div class="flex flex-col gap-2 w-full min-w-0 pr-14 md:pr-0">
@@ -834,9 +844,8 @@ export const PatientModals = {
         if (dom.patientEditSection) dom.patientEditSection.classList.add('hidden');
 
         // Solo Admin y Yari pueden editar perfiles (o el terapeuta dueño)
-        const canEditProfile = AuthManager.isAdmin() || 
-                              AuthManager.currentUser?.role === 'receptionist' || 
-                              (patient.therapist === AuthManager.currentUser?.therapist);
+        const canEditProfile = AuthManager.can('manage_patients')
+            || (patient.therapist === AuthManager.currentUser?.therapist && AuthManager.can('edit_own_records'));
 
         if (dom.editPatientBtn) {
             if (canEditProfile) {
@@ -909,7 +918,7 @@ export const PatientModals = {
         }
 
         const schedSection = document.getElementById('editPatientSchedulingQueueSection');
-        const canEditSchedQueue = AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist';
+        const canEditSchedQueue = AuthManager.can('manage_schedule');
         if (schedSection) {
             if (canEditSchedQueue && patient.id && String(patient.id).length >= 12) {
                 schedSection.classList.remove('hidden');
@@ -1142,11 +1151,18 @@ export const PatientModals = {
         if (scheduleBtn) {
             scheduleBtn.onclick = () => {
                 this.closeHistory();
-                const { ScheduleManager } = import('../../managers/ScheduleManager.js');
+                // ScheduleManager ya está importado arriba — NO usar import() dinámico
+                // (antes se sombreaba con un Promise y openModal fallaba en silencio).
+                const therapist =
+                    patient.therapist
+                    || AuthManager.getSelectedTherapist?.()
+                    || AuthManager.currentUser?.therapist
+                    || 'diana';
+                const resolvedTherapist = (therapist && therapist !== 'all') ? therapist : 'diana';
                 ScheduleManager.openModal(
-                    patient.id, 
-                    patient.name, 
-                    patient.therapist, 
+                    patient.id,
+                    patient.name,
+                    resolvedTherapist,
                     patient.defaultCost
                 );
             };
@@ -1407,7 +1423,7 @@ export const PatientModals = {
                 <div>
                     <div class="font-semibold text-gray-800">${escapeHTML(patient.name)}</div>
                     <div class="text-xs text-gray-500">
-                        Terapeuta: ${patient.therapist === 'diana' ? 'Diana' : 'Sam'}
+                        Terapeuta: ${window.StaffManager ? window.StaffManager.getTherapistName(patient.therapist) : (patient.therapist || 'No asignado')}
                     </div>
                     ${debtHtml}
                     ${legacyHtml}

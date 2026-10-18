@@ -22,8 +22,19 @@ import { NewFeatureAlert } from './utils/NewFeatureAlert.js';
 import { WaitlistCopilotPanel } from './components/WaitlistCopilotPanel.js';
 import { WaitlistCopilotService } from './services/WaitlistCopilotService.js';
 import { AppLifecycle } from './services/AppLifecycle.js';
+import { ClinicContext } from './core/ClinicContext.js';
+import { ClinicSelector } from './components/ClinicSelector.js';
+import { isSaasMulticlinicEnabled } from './core/clinicConstants.js';
+import { initPhoneLandscapeWatch } from './utils/viewport.js';
 
 const log = Logger.create('App');
+
+// Celular landscape: clase en <html> + re-render agenda al girar
+initPhoneLandscapeWatch(() => {
+    if (typeof window !== 'undefined' && typeof window.renderCalendar === 'function') {
+        window.renderCalendar();
+    }
+});
 
 // Referencias DOM
 const loginContainer = document.getElementById('loginContainer');
@@ -53,19 +64,37 @@ async function handleAuthState(user) {
             return;
         }
 
-        lastAuthenticatedUid = user.uid;
-        log.success(`Usuario autenticado: ${userData.displayName} (${userData.role}) — agenda: ${AuthManager.getSelectedTherapist()}`);
-
-        loginContainer.classList.add('hidden');
-        appContent.classList.remove('hidden');
-
-        if (!headerInitialized) {
-            Header.init();
-            headerInitialized = true;
-        } else {
-            Header.render();
+        if (userData.role === 'platform_support' && !isSaasMulticlinicEnabled()) {
+            log.warn('Login Support rechazado: SaaS multiclínica desactivado');
+            loginError.textContent = 'El modo multiclínica aún no está activo en esta versión. Usa la agenda estándar de tu clínica.';
+            loginError.classList.remove('hidden');
+            await logoutUser();
+            return;
         }
-        initializeModules();
+
+        if (!isSaasMulticlinicEnabled()) {
+            await enterAppAfterClinic(userData);
+            return;
+        }
+
+        await ClinicContext.init();
+
+        if (ClinicContext.needsClinicPicker()) {
+            loginContainer.classList.add('hidden');
+            appContent.classList.add('hidden');
+            await ClinicSelector.show(() => enterAppAfterClinic(userData));
+            return;
+        }
+
+        if (!ClinicContext.getActiveClinicId()) {
+            log.error('Sin clínica activa');
+            loginError.textContent = 'No se pudo determinar la clínica. Contacta a soporte.';
+            loginError.classList.remove('hidden');
+            await logoutUser();
+            return;
+        }
+
+        await enterAppAfterClinic(userData);
     } else {
         log.info("Usuario no autenticado");
         AppLifecycle.shutdown();
@@ -73,6 +102,10 @@ async function handleAuthState(user) {
         headerInitialized = false;
         lastAuthenticatedUid = null;
         AuthManager.clear();
+        if (isSaasMulticlinicEnabled()) {
+            ClinicContext.clear();
+            ClinicSelector.hide();
+        }
 
         loginContainer.classList.remove('hidden');
         appContent.classList.add('hidden');
@@ -84,6 +117,33 @@ async function handleAuthState(user) {
 let modulesInitialized = false;
 let headerInitialized = false;
 let lastAuthenticatedUid = null;
+
+async function enterAppAfterClinic(userData) {
+    const uid = userData?.uid || AuthManager.currentUser?.uid;
+    if (uid === lastAuthenticatedUid && modulesInitialized) {
+        return;
+    }
+
+    lastAuthenticatedUid = uid;
+    log.success(
+        `Usuario: ${userData.displayName} (${userData.role}) — clínica: ${ClinicContext.getActiveClinicName()} — agenda: ${AuthManager.getSelectedTherapist()}`
+    );
+
+    loginContainer.classList.add('hidden');
+    ClinicSelector.hide();
+    appContent.classList.remove('hidden');
+
+    const { StaffManager } = await import('./managers/StaffManager.js');
+    await StaffManager.loadTherapists();
+
+    if (!headerInitialized) {
+        Header.init();
+        headerInitialized = true;
+    } else {
+        Header.render();
+    }
+    initializeModules();
+}
 
 async function initializeModules() {
     if (modulesInitialized) return;
