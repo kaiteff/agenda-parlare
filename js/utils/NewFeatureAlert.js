@@ -5,7 +5,7 @@
 import { BRAND } from './brandAssets.js';
 
 export const NewFeatureAlert = {
-    STORAGE_KEY: 'parlare_onboarding_v9_11',
+    STORAGE_KEY: 'parlare_onboarding_v9_12',
     LEGACY_KEYS: [
         'parlare_onboarding_v8_0',
         'parlare_onboarding_v9_0',
@@ -19,6 +19,7 @@ export const NewFeatureAlert = {
         'parlare_onboarding_v9_8',
         'parlare_onboarding_v9_9',
         'parlare_onboarding_v9_10',
+        'parlare_onboarding_v9_11',
     ],
     MAX_DAYS_VISIBLE: 2,
 
@@ -39,7 +40,7 @@ export const NewFeatureAlert = {
         const alreadySeen = localStorage.getItem(this.STORAGE_KEY);
         if (alreadySeen) return;
 
-        const launchDate = new Date('2026-07-15T00:00:00');
+        const launchDate = new Date('2026-10-18T00:00:00');
         const now = new Date();
         const diffDays = Math.ceil(Math.abs(now - launchDate) / (1000 * 60 * 60 * 24));
         if (diffDays > this.MAX_DAYS_VISIBLE) {
@@ -60,9 +61,23 @@ export const NewFeatureAlert = {
                 <div class="p-6 md:p-8 bg-gradient-to-tr from-cyan-600 via-teal-600 to-indigo-700 text-white text-center shrink-0">
                     <img src="${BRAND.logoSrc}" alt="${BRAND.logoAlt}" class="h-14 w-auto mx-auto mb-3 object-contain bg-white/90 rounded-xl px-3 py-2" />
                     <h2 class="text-xl md:text-2xl font-bold">Novedades en Parláre</h2>
-                    <p class="text-cyan-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 15 Julio 2026</p>
+                    <p class="text-cyan-100 text-xs font-semibold mt-1 uppercase tracking-wider">Actualización · 18 Octubre 2026</p>
                 </div>
                 <div class="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 scroller">
+                    <div class="flex gap-3 p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-green-100 rounded-2xl border border-emerald-400 shadow-sm">
+                        <span class="text-xl shrink-0">📥</span>
+                        <div>
+                            <h3 class="font-bold text-emerald-950 text-sm">Nuevo botón: Exportar a Excel (.xlsx) <span class="text-[9px] uppercase tracking-wider bg-emerald-200 text-emerald-950 px-1.5 py-0.5 rounded ml-1 font-extrabold">Nuevo</span></h3>
+                            <ul class="text-xs text-emerald-950/85 mt-2 ml-3 space-y-1 list-disc">
+                                <li><strong>En computadora:</strong> Toca el botón verde <strong>Excel</strong> junto a «Hoy» en la barra de la agenda.</li>
+                                <li><strong>En celular:</strong> Menú <strong>Más → Exportar Citas (Excel)</strong>.</li>
+                                <li><strong>Respeta tus filtros:</strong> Si filtras solo Diana, Sam o Vero, el archivo descarga únicamente las citas de esa terapeuta; en «Todas» exporta la clínica completa.</li>
+                                <li><strong>Listo para imprimir y filtrar:</strong> Viene ordenado A–Z por paciente, con día, hora, terapeuta, estado y filtros automáticos de Excel activados.</li>
+                            </ul>
+                            <p class="text-[11px] text-emerald-800 mt-1.5 italic">Consulta el Manual de Usuario para más detalles.</p>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3 p-4 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 rounded-2xl border border-sky-300 shadow-sm">
                         <span class="text-xl shrink-0">📱</span>
                         <div>

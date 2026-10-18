@@ -277,17 +277,51 @@ export const HelpManual = {
                                         <li>En <strong>Google Calendar</strong> el título lleva la etapa delante del nombre del niño.</li>
                                         <li><strong>Diana:</strong> puedes marcar <strong>confirmada</strong> la asistencia desde la cita (botón ✓) o desde Control Maestro — queda registrado en bitácora.</li>
                                         <li><strong>Sam / Vero:</strong> pueden mover y reagendar citas de evaluación en su terapeuta como cualquier otra cita.</li>
-                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                                    <h4 class="font-bold text-emerald-900 mb-1">📥 Exportar citas a Excel (.xlsx) <span class="text-[10px] uppercase tracking-wider bg-emerald-200 px-1.5 py-0.5 rounded">Nuevo</span></h4>
-                                    <p class="text-sm text-gray-700 mb-2">Descarga directa de las citas de la semana en curso (con el filtro de terapeuta que tengas activo):</p>
-                                    <ul class="list-disc ml-5 space-y-1.5 text-sm text-gray-700">
-                                        <li><strong>En computadora:</strong> Toca el botón verde <strong>Excel</strong> junto al botón «Hoy» en la barra de herramientas del calendario.</li>
-                                        <li><strong>En celular:</strong> Toca la barra inferior en <strong>Más → Exportar Citas (Excel)</strong>.</li>
-                                        <li>El archivo se genera en tu dispositivo con: Pacientes (ordenados A-Z), Día de cita, Horario, Terapeuta y Estado (Confirmada, Pagada, etc.), con autofiltros de Excel ya listos para usar.</li>
+
                                     </ul>
+                                </div>
+
+                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                                    <h4 class="font-bold text-emerald-900 mb-1 flex items-center gap-1.5">
+                                        <span>📥</span>
+                                        <span>Exportar / Descargar citas a Excel (.xlsx)</span>
+                                        <span class="text-[10px] uppercase tracking-wider bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-bold ml-auto">Nuevo</span>
+                                    </h4>
+                                    <p class="text-sm text-gray-700 mb-3">
+                                        Permite descargar un archivo Excel con todas las citas de la semana que estás visualizando, ideal para imprimir, llevar control semanal o compartir información:
+                                    </p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mb-3">
+                                        <div class="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs">
+                                            <p class="font-bold text-emerald-800 mb-1">💻 En Computadora (PC / Laptop):</p>
+                                            <ol class="list-decimal ml-4 space-y-1 text-gray-600">
+                                                <li>Navega a la semana deseada con las flechas <code>&lt;</code> y <code>&gt;</code> o <strong>Hoy</strong>.</li>
+                                                <li>Selecciona en el menú si quieres <strong>Todas</strong> o una terapeuta en específico (<strong>Diana, Sam o Vero</strong>).</li>
+                                                <li>Haz clic en el botón verde <strong>Excel</strong> junto a «Hoy» en la barra superior.</li>
+                                                <li>El archivo se descargará directamente en tu carpeta de descargas.</li>
+                                            </ol>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs">
+                                            <p class="font-bold text-emerald-800 mb-1">📱 En Celular (iPhone / Android):</p>
+                                            <ol class="list-decimal ml-4 space-y-1 text-gray-600">
+                                                <li>Toca la pestaña <strong>Más</strong> en la barra inferior de navegación.</li>
+                                                <li>Toca la opción <strong>Exportar Citas (Excel)</strong>.</li>
+                                                <li>El archivo se guardará en los archivos o descargas de tu teléfono.</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/80 p-3 rounded-lg border border-emerald-100 text-xs text-gray-700 space-y-1.5">
+                                        <p class="font-bold text-emerald-900">✨ Lo que incluye el archivo generado:</p>
+                                        <ul class="list-disc ml-4 space-y-1">
+                                            <li><strong>Orden A–Z:</strong> Los pacientes ya vienen ordenados alfabéticamente por su nombre.</li>
+                                            <li><strong>Filtros automáticos activados:</strong> La primera fila tiene las flechas de filtro de Excel para que puedas filtrar por día, hora, terapeuta o estado con un solo clic.</li>
+                                            <li><strong>Columnas claras:</strong> Paciente, Día de la cita (ej. <em>Lunes, 19 oct. 2026</em>), Horario (ej. <em>10:00 a. m.</em>), Terapeuta asignada y Estado (<em>Pagada, Confirmada, Justificada, etc.</em>).</li>
+                                            <li><strong>Hoja «Info»:</strong> Una segunda pestaña con los datos de fecha de generación, clínica y usuario.</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </details>
+
 
 
                         <!-- Ev. Evaluaciones — guía equipo -->
