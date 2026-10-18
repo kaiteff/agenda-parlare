@@ -1,5 +1,9 @@
 # Backups
 backups/
+_backups/
+scratch/
+users.json
+claims_result*.txt
 
 # Node modules (si usas npm en el futuro)
 node_modules/
@@ -41,3 +45,5 @@ __pycache__/
 
 # Script de autenticación de un solo uso
 get_google_token.py
+
+LLAVES_SECRETAS.txt
