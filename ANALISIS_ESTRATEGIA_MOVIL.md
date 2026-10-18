@@ -80,6 +80,7 @@ HOY ─────────────────────────�
 
 | Estado | Qué |
 |--------|-----|
+| ⏳ **Validar Exportar Excel (deploy ✅)** | Hosting desplegado 18 oct. Validar en clínica descarga en desktop (botón verde Excel) y móvil (Más → Exportar Citas Excel). Comprobar que descargue las 3 hojas: `Citas` (con columna «Sesión en semana» 1 de 2, etc.), `Pacientes Únicos` e `Info`. |
 | ⏳ **Validar hotfix reagendar (deploy ✅)** | Hosting desplegado 14 sep. Probar en iPhone/iPad (recarga forzada): cita simple → cambiar hora → Guardar; Cancelar → Sí, Reagendar → Guardar. |
 | ⏳ **Validar en clínica (3 ago — ya en producción)** | Deploy hosting + `whatsapp_webhook` ✅. Probar: (1) Carlos Máximo / Getzania / Jade — sin dar de baja; Agendar Ahora → Semanal → toast «…con SAM». (2) Mamá Gael confirma por WA → ✓ + bitácora `WHATSAPP_CONFIRM`. Recarga forzada. |
 | 💡 **Excel Vero — pre-auth agenda** | Diagnóstico 24 jul: pagos de Vero van a su Sheet; pendientes = `sheetSynced:false` (popup Google / cuenta). Fix opcional: `ensureToken` en `CalendarModal.handlePaymentToggle` (como `PatientActions`). |
@@ -91,9 +92,30 @@ HOY ─────────────────────────�
 | 🔒 **SaaS Fase 0** | Rama paralela OFF — `js/saas/README.md`. |
 | 🔜 **Siguiente código** | Cola **Fase B** o iconos PWA / Capacitor POC. |
 
-**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260914.md`
+**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20261018.md`
+
+### Cierre de sesión — 18 oct 2026 (Exportar a Excel .xlsx + Pacientes Únicos + Git Push)
+
+**Qué se hizo:**
+1. **Respaldo y Commit de seguridad:**
+   - Respaldo físico en `_backups/backup_20261018_1057_consolidado_cambios_jul_sep/`.
+   - `.gitignore` reforzado para excluir backups, scratch, `users.json` (credenciales) y `claims_result*.txt`.
+   - 4 commits modulares en Git (`18a6762`, `b823aa8`, `0ffd233`, `ef0b918`) sincronizados con `origin/main`.
+2. **Función Exportar a Excel (.xlsx):**
+   - Módulo nuevo `js/modules/calendar/ExportCalendar.js`.
+   - Botón verde `Excel` en toolbar desktop (`index.html`) y opción en sheet `Más → Exportar Citas (Excel)` en móvil (`MobileBottomNav.js`).
+   - Librería SheetJS servida localmente desde `js/vendor/xlsx.full.min.js` para estricto cumplimiento de CSP (`'self'`) y funcionamiento offline / PWA / Capacitor.
+3. **Manejo de pacientes con múltiples citas y formato:**
+   - **Hoja 1 «Citas»:** Cada cita individual con su día, hora y nueva columna **«Sesión en semana»** (`1 de 2`, `2 de 2`, `1 de 1`) para evitar confusión con pacientes repetidos (ej. Xavier Camacho, Julián Álvarez).
+   - **Hoja 2 «Pacientes Únicos»:** 1 sola fila por niño sin nombres repetidos, ordenados A-Z, con conteo numérico de citas semanales y días/horarios agrupados en una sola celda.
+   - **Hoja 3 «Info»:** Estadísticas separadas (total citas vs. total pacientes únicos atendidos).
+4. **Pop-up y Manual:**
+   - Pop-up `NewFeatureAlert.js` bumpeado a `parlare_onboarding_v9_12` (18 Oct 2026) con tarjeta esmeralda explicativa.
+   - Manual `HelpManual.js` actualizado con guía detallada para computadora y celular.
+5. **Deploy:** `npm run build` + `firebase deploy --only hosting` ✅ en `https://taconotaco-d94fc.web.app`.
 
 ### Cierre de sesión — 14 sep 2026 (hotfix reagendar `recurringOptions`)
+
 
 **Bug producción (Safari/WebKit):** al guardar o reagendar una cita simple, `Error al guardar: null is not an object (evaluating 'recurringOptions.value')`. El select `#recurringOptions` no estaba en el cache DOM (o era `null`) y el código de git HEAD leía `.value` sin protección.
 
@@ -1128,8 +1150,11 @@ Sprint 2 (Fase 1 continuación / polish)
 - Sesión **30 jun 2026** — **Acceso Yari (Recepción) a baja y borrado de pacientes** (`PatientActions.js`). **Pop-up `parlare_onboarding_v9_6`** + **Manual v8.0.0** (finanzas jun + Yari baja/borrar). **SaaS Fase 0** (roadmap + contabilidad multiclínica, rama off).
 
 - Sesión **1 jul 2026** — **Fix confirmaciones WhatsApp (Citas de tarde / UTC drift)** en `functions/main.py` + **Sincronización Google Calendar (OAuth Admin)** para corregir error 404 en calendarios de terapeutas. Despliegue completo de funciones, reglas e hosting.
+- Sesión **14 sep 2026** — **Hotfix reagendar Safari WebKit** (`recurringOptions` nulo en citas simples). Deploy hosting ✅.
+- Sesión **18 oct 2026** — **Exportar a Excel (.xlsx) con SheetJS local ('self'):** botón toolbar desktop + menú Más móvil; resolución de fechas y horarios; orden A-Z; 3 hojas (`Citas` con sesión en semana 1 de 2, `Pacientes Únicos` e `Info`). Pop-up `parlare_onboarding_v9_12` + Manual `HelpManual.js`. Deploy hosting ✅.
 
-*Última actualización de este documento: **14 de Septiembre de 2026** — Hotfix reagendar desplegado (hosting ✅). Falta validación en iPhone/iPad. Pop-up sin bump.*
+*Última actualización de este documento: **18 de Octubre de 2026** — Exportar citas a Excel (.xlsx) desplegado (hosting ✅). Pop-up v9.12 activo.*
+
 
 ---
 

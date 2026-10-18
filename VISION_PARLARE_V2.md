@@ -389,4 +389,7 @@ Al comenzar cualquier sesión de desarrollo:
 
 **5. Índices Firestore versionados** — `firestore.indexes.json` en raíz con los índices compuestos requeridos por las queries (`therapist+date`, `name+date`, `isCancelled+date`, `sheetSynced+isPaid+date`, `space_offers × 2`). Cualquier query nueva con filtro compuesto debe añadir su índice ahí + `firebase deploy --only firestore:indexes`.
 
-Estado heredado: ✅/⏳/🔜 móvil Fase 1, opt-in, recibos, agenda desktop 1–3, forward-only sync; mapa de documentos vivos; backend Functions como principal.*
+**6. Exportación a Excel (.xlsx) cliente-side ('self')** (18 oct 2026) — Módulo `js/modules/calendar/ExportCalendar.js` carga SheetJS bajo demanda desde `js/vendor/xlsx.full.min.js`. **Regla de Oro**: no usar CDNs externos que rompan la Content-Security-Policy (`script-src 'self'`). Genera libro con 3 hojas (`Citas` con sesión en semana `1 de 2`, `Pacientes Únicos` sin duplicados e `Info`). Compatible con modo offline y WebView de Capacitor.
+
+Estado heredado: ✅/⏳/🔜 móvil Fase 1, opt-in, recibos, agenda desktop 1–3, forward-only sync; export Excel cliente; mapa de documentos vivos; backend Functions como principal.*
+
