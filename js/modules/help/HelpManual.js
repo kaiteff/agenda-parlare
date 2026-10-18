@@ -310,13 +310,14 @@ export const HelpManual = {
                                         </div>
                                     </div>
                                     <div class="bg-white/80 p-3 rounded-lg border border-emerald-100 text-xs text-gray-700 space-y-1.5">
-                                        <p class="font-bold text-emerald-900">✨ Lo que incluye el archivo generado:</p>
-                                        <ul class="list-disc ml-4 space-y-1">
-                                            <li><strong>Orden A–Z:</strong> Los pacientes ya vienen ordenados alfabéticamente por su nombre.</li>
-                                            <li><strong>Filtros automáticos activados:</strong> La primera fila tiene las flechas de filtro de Excel para que puedas filtrar por día, hora, terapeuta o estado con un solo clic.</li>
-                                            <li><strong>Columnas claras:</strong> Paciente, Día de la cita (ej. <em>Lunes, 19 oct. 2026</em>), Horario (ej. <em>10:00 a. m.</em>), Terapeuta asignada y Estado (<em>Pagada, Confirmada, Justificada, etc.</em>).</li>
-                                            <li><strong>Hoja «Info»:</strong> Una segunda pestaña con los datos de fecha de generación, clínica y usuario.</li>
+                                        <p class="font-bold text-emerald-900">✨ Lo que incluye el archivo generado (3 hojas organizadas):</p>
+                                        <ul class="list-disc ml-4 space-y-1.5">
+                                            <li><strong>Hoja 1 «Citas»:</strong> Cada cita en su día y horario individual con columna <em>«Sesión en semana»</em> (ej. <code>1 de 2</code> y <code>2 de 2</code> para niños con varias sesiones en la semana, como Xavier Camacho o Julián Álvarez).</li>
+                                            <li><strong>Hoja 2 «Pacientes Únicos»:</strong> Una sola fila por niño sin nombres repetidos, con su total de sesiones (1, 2…), todos sus días y horarios agrupados en una sola celda y su terapeuta.</li>
+                                            <li><strong>Hoja 3 «Info»:</strong> Resumen estadístico exacto separando el <em>Total de citas</em> del <em>Total de pacientes únicos atendidos</em>.</li>
+                                            <li><strong>Orden A–Z y Filtros:</strong> Ambas listas vienen ordenadas alfabéticamente y con las flechas de filtro de Excel listas para usar.</li>
                                         </ul>
+
                                     </div>
                                 </div>
                             </div>
