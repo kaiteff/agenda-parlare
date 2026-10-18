@@ -125,6 +125,20 @@
                                     class="min-h-[44px] px-4 py-2.5 md:px-3 md:py-1.5 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl md:rounded-md transition-colors touch-manipulation whitespace-nowrap">
                                     Hoy
                                 </button>
+
+                                <!-- Botón Exportar Excel — solo visible en desktop md+ y para usuarios con permisos -->
+                                <button type="button" id="exportCalendarBtn"
+                                    class="hidden md:flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors whitespace-nowrap"
+                                    title="Exportar citas de la semana a Excel (.xlsx)"
+                                    onmouseover="this.style.backgroundColor='#d1fae5'" onmouseout="this.style.backgroundColor=''">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <span>Excel</span>
+                                </button>
+
+
                             </div>
                         </div>
                         <div id="statusMsg" class="text-xs md:text-sm font-medium text-gray-500 text-center md:text-right truncate min-h-[1.125rem] animate-pulse"></div>

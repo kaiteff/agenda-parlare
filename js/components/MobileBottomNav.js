@@ -94,9 +94,11 @@ export const MobileBottomNav = {
         }
 
         items.push(
-            { id: 'mobileMoreHelp', label: 'Manual de Usuario', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-blue-500' },
+            { id: 'mobileMoreExport',  label: 'Exportar Citas (Excel)', icon: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', color: 'text-emerald-600' },
+            { id: 'mobileMoreHelp',    label: 'Manual de Usuario', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', color: 'text-blue-500' },
             { id: 'mobileMoreSuggest', label: 'Enviar Sugerencia', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', color: 'text-orange-500' }
         );
+
 
         if (isAdmin) {
             items.push({ id: 'mobileMoreSupport', label: 'Bóveda de Soporte', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', color: 'text-purple-700' });
@@ -228,6 +230,10 @@ export const MobileBottomNav = {
                     MobileNav.closeMoreSheet();
                     (await import('../modules/admin/AuditPanel.js')).AuditPanel.open();
                     break;
+                case 'mobileMoreExport':
+                    MobileNav.closeMoreSheet();
+                    (await import('../modules/calendar/ExportCalendar.js')).ExportCalendar.export();
+                    break;
                 case 'mobileMoreHelp': {
                     const { HelpManual } = await import('../modules/help/HelpManual.js');
                     await HelpManual.open();
@@ -237,6 +243,7 @@ export const MobileBottomNav = {
                     MobileNav.closeMoreSheet();
                     (await import('../modules/help/SuggestionsModal.js')).SuggestionsModal.open();
                     break;
+
                 case 'mobileMoreSupport':
                     MobileNav.closeMoreSheet();
                     (await import('../modules/support/SupportVault.js')).SupportVault.open();

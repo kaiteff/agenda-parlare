@@ -188,7 +188,18 @@ export const CalendarEvents = {
                 resizeTimer = setTimeout(() => this.render(), 200);
             });
         }
+
+        // Botón Exportar Excel (toolbar desktop) — import dinámico para no penalizar carga
+        const exportBtn = document.getElementById('exportCalendarBtn');
+        if (exportBtn && !exportBtn.dataset.bound) {
+            exportBtn.dataset.bound = '1';
+            exportBtn.addEventListener('click', async () => {
+                const { ExportCalendar } = await import('./ExportCalendar.js');
+                ExportCalendar.export();
+            });
+        }
     },
+
 
     render() {
         // Actualizar estado de fecha para UI
