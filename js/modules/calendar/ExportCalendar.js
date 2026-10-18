@@ -14,20 +14,27 @@ import { CalendarState } from './CalendarState.js';
 import { AuthManager } from '../../managers/AuthManager.js';
 import { addDays, formatDateLocal, formatTime12h, getStartOfWeek } from '../../utils/dateUtils.js';
 
-// CDN oficial de SheetJS (xlsx) — solo se carga cuando el usuario hace clic
-const XLSX_CDN = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+// Archivo local de SheetJS (xlsx) — compatible con Content-Security-Policy ('self') y funcionamiento offline
+const XLSX_LOCAL_PATH = 'js/vendor/xlsx.full.min.js';
 
-/** Carga SheetJS si aún no está disponible y retorna la referencia global. */
+/** Carga SheetJS localmente si aún no está disponible y retorna la referencia global. */
 async function loadXLSX() {
     if (window.XLSX) return window.XLSX;
     return new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = XLSX_CDN;
-        s.onload = () => resolve(window.XLSX);
-        s.onerror = () => reject(new Error('No se pudo cargar SheetJS desde CDN.'));
+        s.src = XLSX_LOCAL_PATH;
+        s.onload = () => {
+            if (window.XLSX) {
+                resolve(window.XLSX);
+            } else {
+                reject(new Error('SheetJS cargó pero window.XLSX no está disponible.'));
+            }
+        };
+        s.onerror = () => reject(new Error('No se pudo cargar la librería local de Excel (js/vendor/xlsx.full.min.js).'));
         document.head.appendChild(s);
     });
 }
+
 
 /** Devuelve el nombre "bonito" de una terapeuta dado su ID clave. */
 function getTherapistLabel(id) {
