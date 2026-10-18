@@ -168,6 +168,28 @@ def _normalize_match_name(name):
     s = unicodedata.normalize('NFD', s)
     return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
 
+def _names_loosely_match(name_a, name_b):
+    """True si nombres coinciden exacto, uno contiene al otro, o comparten tokens fuertes.
+    Cubre 'Gael Cote' vs 'Gael Muñoz del Cote'."""
+    a = _normalize_match_name(name_a)
+    b = _normalize_match_name(name_b)
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    if a in b or b in a:
+        return True
+    stop = {'de', 'del', 'la', 'las', 'los', 'y', 'e'}
+    ta = [t for t in a.split() if t not in stop and len(t) > 1]
+    tb = [t for t in b.split() if t not in stop and len(t) > 1]
+    if not ta or not tb:
+        return False
+    # Primer nombre + al menos un apellido en común
+    if ta[0] != tb[0]:
+        return False
+    set_a, set_b = set(ta[1:]), set(tb[1:])
+    return bool(set_a & set_b) if (set_a and set_b) else True
+
 def _incoming_whatsapp_text(msg_body, raw_payload):
     """Combina texto libre y payload de botones Twilio (a veces Body viene vacío)."""
     parts = []
@@ -180,13 +202,28 @@ def _incoming_whatsapp_text(msg_body, raw_payload):
     return ' '.join(parts)
 
 def _message_has_keyword(text, keywords):
-    return bool(text) and any(w in text for w in keywords)
+    """Match por palabra/frase, no substring suelto ('no' en 'buenas noches')."""
+    if not text:
+        return False
+    t = str(text).strip().lower()
+    for w in keywords:
+        w = str(w).strip().lower()
+        if not w:
+            continue
+        if ' ' in w:
+            if w in t:
+                return True
+        else:
+            if re.search(rf'(?<!\w){re.escape(w)}(?!\w)', t):
+                return True
+    return False
 
 WHATSAPP_CONFIRM_KEYWORDS = [
     '1', 'ok', 'si', 'sí', 'confirmar', 'confirmado', 'confirmo', 'listo', 'claro', 'sale', 'va'
 ]
+# Sin 'no' suelto: cancelaba mensajes tipo «buenas noches» / «no sé…»
 WHATSAPP_CANCEL_KEYWORDS = [
-    '2', 'cancelar', 'no puedo', 'no asist', 'cancelado', 'no asistiremos', 'no asistira', 'no'
+    '2', 'cancelar', 'no puedo', 'no asist', 'cancelado', 'no asistiremos', 'no asistira', 'no ire', 'no iré'
 ]
 WHATSAPP_RECEPTION_KEYWORDS = ['3', 'recepcion', 'yari', 'duda']
 WHATSAPP_THANKS_KEYWORDS = ['gracias', 'mil gracias', 'muchas gracias', 'te lo agradezco']
@@ -309,49 +346,111 @@ def _tomorrow_firestore_bounds(mx_now):
 
 
 def find_confirmable_appointments(patients, mx_now=None):
-    """Citas de hoy o mañana (hora México) del paciente, listas para confirmar/cancelar."""
+    """Citas de hoy o mañana (hora México) del paciente, listas para confirmar/cancelar.
+    También incluye citas con recordatorio enviado en las últimas 48 h (aunque el día
+    local no cuadre por desfase UTC / respuesta tardía) — caso Gael Cote / citas tarde.
+    """
     mx_now = mx_now or datetime.now(MX_TZ)
     today = mx_now.date()
     tomorrow = (mx_now + timedelta(days=1)).date()
     target_dates = {today, tomorrow}
-    start_iso = f"{today.strftime('%Y-%m-%d')}T00:00:00"
+    start_iso = f"{(mx_now - timedelta(days=1)).strftime('%Y-%m-%d')}T00:00:00"
     end_iso = f"{(mx_now + timedelta(days=2)).strftime('%Y-%m-%d')}T08:00:00"
 
     if isinstance(patients, list) and patients and isinstance(patients[0], dict):
         patient_ids = {p['id'] for p in patients if p.get('id')}
-        names_norm = {_normalize_match_name(p.get('name', '')) for p in patients if p.get('name')}
+        patient_names = [p.get('name', '') for p in patients if p.get('name')]
+        patient_phones = {normalize_phone(p.get('phone', '')) for p in patients if p.get('phone')}
+        patient_phones.discard('')
     else:
         patient_ids = set()
-        names_norm = {_normalize_match_name(n) for n in (patients or [])}
+        patient_names = list(patients or [])
+        patient_phones = set()
 
     results = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
     apts = []
+    seen = set()
+    reminder_cutoff = mx_now - timedelta(hours=48)
+
+    def _matches_patient(data):
+        p_id = data.get('patientId') or data.get('profileId')
+        if p_id and p_id in patient_ids:
+            return True
+        apt_phone = normalize_phone(data.get('phone', ''))
+        if apt_phone and apt_phone in patient_phones:
+            return True
+        apt_name = data.get('name', '')
+        return any(_names_loosely_match(apt_name, n) for n in patient_names)
+
+    def _reminder_recent(data):
+        last = data.get('lastReminderSentAt')
+        if not last:
+            return False
+        try:
+            if hasattr(last, 'timestamp'):
+                last_dt = datetime.fromtimestamp(last.timestamp(), tz=MX_TZ)
+            elif isinstance(last, datetime):
+                last_dt = last.astimezone(MX_TZ) if last.tzinfo else MX_TZ.localize(last)
+            else:
+                return False
+            return last_dt >= reminder_cutoff
+        except Exception:
+            return False
+
     for doc in results:
         data = doc.to_dict()
-        if data.get('isCancelled'):
+        if data.get('isCancelled') or doc.id in seen:
             continue
-        p_id = data.get('patientId') or data.get('profileId')
-        name_norm = _normalize_match_name(data.get('name', ''))
-        if p_id not in patient_ids and name_norm not in names_norm:
+        if not _matches_patient(data):
             continue
         try:
-            if parse_mx_datetime(data['date']).date() not in target_dates:
-                continue
+            apt_day = parse_mx_datetime(data['date']).date()
         except Exception:
             continue
+        include = apt_day in target_dates or _reminder_recent(data)
+        if not include:
+            continue
+        seen.add(doc.id)
         apts.append({'id': doc.id, **data})
+
+    # Segunda pasada: recordatorios recientes fuera del rango de fecha estrecho
+    if not apts and patient_ids:
+        try:
+            for pid in list(patient_ids)[:5]:
+                for field in ('patientId', 'profileId'):
+                    for doc in db.collection('appointments').where(field, '==', pid).limit(20).stream():
+                        if doc.id in seen:
+                            continue
+                        data = doc.to_dict()
+                        if data.get('isCancelled') or data.get('confirmed'):
+                            continue
+                        if not _reminder_recent(data):
+                            continue
+                        try:
+                            apt_day = parse_mx_datetime(data['date']).date()
+                        except Exception:
+                            continue
+                        # Solo citas de hoy/mañana o ayer (recordatorio noche previa)
+                        if apt_day < today - timedelta(days=1) or apt_day > tomorrow:
+                            continue
+                        seen.add(doc.id)
+                        apts.append({'id': doc.id, **data})
+        except Exception as e:
+            print(f"⚠️ find_confirmable reminder fallback: {e}")
+
     return apts
 
 
 def find_tomorrow_appointments(patient_names):
     mx_now = datetime.now(MX_TZ)
     tomorrow_date, start_iso, end_iso = _tomorrow_firestore_bounds(mx_now)
-    names_lower = [n.lower() for n in patient_names]
-    results = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
     apts = []
+    results = db.collection('appointments').where('date', '>=', start_iso).where('date', '<=', end_iso).stream()
     for doc in results:
         data = doc.to_dict()
-        if data.get('isCancelled') or data.get('name', '').lower() not in names_lower:
+        if data.get('isCancelled'):
+            continue
+        if not any(_names_loosely_match(data.get('name', ''), n) for n in patient_names):
             continue
         try:
             if parse_mx_datetime(data['date']).date() != tomorrow_date:
@@ -363,9 +462,15 @@ def find_tomorrow_appointments(patient_names):
 
 def find_next_appointment(patient_names):
     now_iso = datetime.now(MX_TZ).strftime('%Y-%m-%dT%H:%M:%S')
-    names_lower = [n.lower() for n in patient_names]
     results = db.collection('appointments').where('date', '>=', now_iso).stream()
-    apts = [d.to_dict() for d in results if not d.to_dict().get('isCancelled') and d.to_dict().get('name', '').lower() in names_lower]
+    apts = []
+    for d in results:
+        data = d.to_dict()
+        if data.get('isCancelled'):
+            continue
+        if not any(_names_loosely_match(data.get('name', ''), n) for n in patient_names):
+            continue
+        apts.append({'id': d.id, **data})
     if apts:
         apts.sort(key=lambda x: x['date'])
         return apts[0]
@@ -403,8 +508,14 @@ def _patient_match_ids_names(patients):
 
 def _apt_matches_patients(data, patient_ids, names_norm):
     p_id = data.get('patientId') or data.get('profileId')
-    name_norm = _normalize_match_name(data.get('name', ''))
-    return p_id in patient_ids or name_norm in names_norm
+    if p_id in patient_ids:
+        return True
+    name = data.get('name', '')
+    name_norm = _normalize_match_name(name)
+    if name_norm in names_norm:
+        return True
+    # Loose match vs each normalized profile name stored as set members
+    return any(_names_loosely_match(name, n) for n in names_norm)
 
 def _find_apt_with_flag(patients, flag_field):
     patient_ids, names_norm = _patient_match_ids_names(patients)
@@ -676,6 +787,7 @@ def whatsapp_webhook(req: https_fn.Request) -> https_fn.Response:
         if is_confirm or is_cancel:
             apts = find_confirmable_appointments(patients)
             if not apts:
+                print(f"⚠️ WA confirm/cancel sin citas hoy/mañana. from={from_num} patients={[p.get('name') if isinstance(p, dict) else p for p in patients]} confirm={is_confirm}")
                 resp.message("No encontramos una cita activa para hoy o mañana. Si ya confirmaste, ignora este mensaje. Dudas: https://wa.me/523315196702")
                 return https_fn.Response(str(resp), status=200, mimetype='text/xml')
 

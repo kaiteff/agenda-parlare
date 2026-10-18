@@ -8,26 +8,20 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Obtener el email del usuario logueado en la petición
-    function getEmail() {
-       return request.auth.token.email;
-    }
-    
     // Verificar si es administrador o recepción (Super usuarios)
     function isSuper() {
-       // Daniel (Admin), Diana (Admin) o Yari (Recepción)
-       return getEmail() == 'rodriguezd.danielrob@gmail.com' || 
-              getEmail() == 'lopezcarpio7@gmail.com' || 
-              getEmail() == 'yaritzajocgo@gmail.com' || 
-              getEmail() == 'kaiteff@gmail.com';
+       return request.auth.token.role == 'admin' || request.auth.token.role == 'receptionist';
     }
     
     // Verificar si el usuario que hace la petición es dueño del recurso
     function isOwner(therapistKey) {
-       return (getEmail() == 'sammygtz90@gmail.com' && therapistKey == 'sam') ||
-              (getEmail() == 'lopezcarpio7@gmail.com' && therapistKey == 'diana') ||
-              (getEmail() == 'sanchezverooo21@gmail.com' && therapistKey == 'vero') ||
-              isSuper();
+       return (request.auth.token.role == 'therapist' && request.auth.token.therapist == therapistKey) || isSuper();
+    }
+
+    // Colección de organizaciones (SaaS Modelo A)
+    match /clinics/{clinicId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuper();
     }
 
     // Colección de Citas (Agenda)

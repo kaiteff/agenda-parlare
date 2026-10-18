@@ -175,59 +175,53 @@ def on_appointment_cancelled_trigger(
         })
         return
 
-    # 2. Delay inicial de 8 minutos con polling cada 30 segundos
-    logger.info(f"⏳ Esperando hasta 8 minutos (margen manual) con polling de 30s para {appointment_id}")
+    # 2. Fase B: Copiloto Colaborativo (Yari 🆚 Terapeuta)
+    # En lugar de pausar la ejecución del Cloud Function (lo cual bloquea y cuesta dinero),
+    # creamos un documento 'collaborative_approvals' que vivirá 1 hora.
+    expires_at = now_mx + timedelta(hours=1)
+    db.collection("collaborative_approvals").document(appointment_id).set({
+        "appointmentId": appointment_id,
+        "therapist": therapist,
+        "patientName": after.get("name") or "Paciente",
+        "cancelledDate": cancelled_date_str,
+        "status": "pending",
+        "createdAt": firestore.SERVER_TIMESTAMP,
+        "expiresAt": expires_at.isoformat()
+    })
     
-    total_wait = 480  # 8 minutos (ajustado para caber dentro del límite de 540s del trigger)
-    poll_interval = 30
-    elapsed = 0
-    should_proceed = True
+    logger.info(f"✅ Documento collaborative_approvals creado para {appointment_id}. Expirará en 1 hora.")
     
-    while elapsed < total_wait:
-        # Validar que la cita siga cancelada
-        current_doc = db.collection("appointments").document(appointment_id).get()
-        if not current_doc.exists:
-            logger.info(f"🛑 La cita {appointment_id} ya no existe en Firestore. Abortando.")
-            should_proceed = False
-            break
+    # 3. Enviar mensaje a la terapeuta solicitando autorización
+    from main import TWILIO_WHATSAPP_FROM, THERAPIST_PHONES
+    
+    therapist_phone = THERAPIST_PHONES.get(therapist.lower())
+    if therapist_phone:
+        try:
+            dest = f"whatsapp:+{therapist_phone}"
+            dt_cancel = _parse_mx_datetime(cancelled_date_str)
+            time_label = dt_cancel.strftime("%I:%M %p").lstrip("0")
             
-        if not current_doc.to_dict().get("isCancelled"):
-            logger.info(f"🛑 La cita {appointment_id} fue retomada durante el delay. Abortando.")
-            should_proceed = False
-            break
-            
-        # Revisar si hay un override del Copiloto
-        override_doc = db.collection("copilot_overrides").document(appointment_id).get()
-        if override_doc.exists:
-            override_data = override_doc.to_dict()
-            action = override_data.get("action")
-            logger.info(f"⚡ Copiloto override detectado para {appointment_id}: {action}")
-            
-            if action == "skip_delay":
-                logger.info(f"🚀 Adelantando el Autopilot inmediatamente por petición manual.")
-                break
-            elif action == "pause":
-                logger.info(f"⏸️ Autopilot pausado manualmente por Recepción/Terapeuta. Abortando.")
-                should_proceed = False
-                break
-        
-        # Esperar 30 segundos
-        time.sleep(poll_interval)
-        elapsed += poll_interval
+            # TODO: Fase 3 - Utilizar plantilla aprobada por Meta para evitar problemas de ventana de 24h
+            msg = (f"🚨 ¡Hola {therapist.capitalize()}! Se acaba de cancelar el espacio de las {time_label} "
+                   f"({after.get('name') or 'Paciente'}).\n\n"
+                   f"¿Me autorizas a enviar ofertas por Autopilot a pacientes de más tarde para comprimir tu agenda?\n\n"
+                   f"Responde:\n"
+                   f"👍 *SÍ* (lanzar Autopilot)\n"
+                   f"⏸️ *NO* (pausar)")
+                   
+            get_twilio_client().messages.create(
+                from_=TWILIO_WHATSAPP_FROM,
+                to=dest,
+                body=msg
+            )
+            logger.info(f"✉️ Mensaje de aprobación colaborativa enviado a {therapist}")
+        except Exception as e:
+            logger.error(f"⚠️ Fallo enviando mensaje a terapeuta {therapist}: {e}")
 
-    if not should_proceed:
-        return
+    # Salimos del trigger. El lanzamiento real ocurre al cambiar el status a 'approved'.
+    return
 
-    process_autopilot_candidates(
-        appointment_id,
-        therapist,
-        cancelled_date_str,
-        cancelled_dt,
-        db,
-        get_twilio_client(),
-        TWILIO_WHATSAPP_FROM,
-        is_quiet_hours=False
-    )
+
 def process_autopilot_candidates(
     appointment_id: str,
     therapist: str,
@@ -548,3 +542,172 @@ def on_quiet_hours_pending_written(
         get_twilio_client(),
         TWILIO_WHATSAPP_FROM,
     )
+
+@firestore_fn.on_document_written(
+    document="collaborative_approvals/{appointmentId}",
+    memory=options.MemoryOption.MB_512,
+    secrets=ALL_SECRETS,
+)
+def on_collaborative_approval_written(
+    event: firestore_fn.Event[firestore_fn.Change | None],
+) -> None:
+    """Trigger que lanza el Autopilot cuando Yari o la Terapeuta aprueban."""
+    change = event.data
+    if change is None:
+        return
+
+    before, after = change_before_after(change)
+    if not after:
+        return
+        
+    status = after.get("status")
+    if status != "approved":
+        return
+        
+    # Si estaba approved antes, ignoramos para no re-ejecutar
+    if before and before.get("status") == "approved":
+        return
+
+    db = _get_db()
+    from main import TWILIO_WHATSAPP_FROM
+    
+    appointment_id = after.get("appointmentId")
+    therapist = after.get("therapist")
+    cancelled_date_str = after.get("cancelledDate")
+    
+    if not (appointment_id and therapist and cancelled_date_str):
+        return
+        
+    cancelled_dt = _parse_mx_datetime(cancelled_date_str)
+
+    logger.info(f"✅ Aprobación colaborativa recibida para {appointment_id}. Lanzando Autopilot.")
+    process_autopilot_candidates(
+        appointment_id,
+        therapist,
+        cancelled_date_str,
+        cancelled_dt,
+        db,
+        get_twilio_client(),
+        TWILIO_WHATSAPP_FROM,
+        is_quiet_hours=False
+    )
+
+def check_expired_collaborative_approvals():
+    """Busca aprobaciones que llevan > 1 hora y las expira, generando una alerta inteligente (Opción B)."""
+    db = _get_db()
+    now_iso = datetime.now(MX_TZ).isoformat()
+    
+    # Buscar pendientes que ya expiraron
+    expired_docs = list(
+        db.collection("collaborative_approvals")
+        .where("status", "==", "pending")
+        .where("expiresAt", "<", now_iso)
+        .stream()
+    )
+    
+    if not expired_docs:
+        return 0
+        
+    count = 0
+    for doc in expired_docs:
+        data = doc.to_dict()
+        doc.reference.update({"status": "expired", "expiredAt": firestore.SERVER_TIMESTAMP})
+        
+        therapist = data.get("therapist", "diana")
+        cancelled_date_str = data.get("cancelledDate")
+        cancelled_dt = _parse_mx_datetime(cancelled_date_str)
+        day_end_str = cancelled_dt.strftime("%Y-%m-%dT23:59:59-06:00")
+        
+        # Generar alerta Inteligente para Yari (Opción B)
+        # 1. Pacientes de más tarde ese mismo día
+        same_day = list(
+            db.collection("appointments")
+            .where("therapist", "==", therapist)
+            .where("date", ">", cancelled_date_str)
+            .where("date", "<=", day_end_str)
+            .stream()
+        )
+        
+        candidates_list = []
+        for apt_doc in same_day:
+            a = apt_doc.to_dict()
+            if not a.get("isCancelled") and not a.get("isPaid") and not a.get("isHourlyBlock"):
+                time_label = _parse_mx_datetime(a["date"]).strftime("%I:%M %p").lstrip("0")
+                candidates_list.append(f"🔹 {time_label} - {a.get('name', 'Paciente')}")
+                
+        # (Futuro: se pueden añadir pacientes de lista de espera, etc.)
+        
+        candidates_text = "\n".join(candidates_list) if candidates_list else "Sin pacientes más tarde hoy."
+        time_cancelled = cancelled_dt.strftime("%I:%M %p").lstrip("0")
+        
+        alert_msg = (
+            f"⏳ El Autopilot para el espacio de las {time_cancelled} con {therapist.capitalize()} expiró (sin respuesta en 1h).\n\n"
+            f"🔍 *Sugerencias Inteligentes para Contacto Manual (Mismo Día):*\n"
+            f"{candidates_text}"
+        )
+        
+        alert_data = {
+            "type": "autopilot_expired_smart",
+            "status": "open",
+            "appointmentId": data.get("appointmentId"),
+            "patientName": data.get("patientName", "Paciente"),
+            "therapist": therapist,
+            "message": alert_msg,
+            "createdAt": firestore.SERVER_TIMESTAMP,
+        }
+        db.collection("reception_alerts").add(alert_data)
+        count += 1
+        logger.info(f"⚠️ Aprobación expirada para {doc.id}. Alerta inteligente enviada a Recepción.")
+        
+    return count
+
+
+def handle_collaborative_approval_reply(therapist: str, raw_payload: str, msg_body: str) -> str | None:
+    """Procesa respuestas SÍ/NO de la terapeuta para aprobaciones pendientes."""
+    db = _get_db()
+    
+    # Buscar aprobaciones pendientes para este terapeuta
+    pending_docs = list(
+        db.collection("collaborative_approvals")
+        .where("therapist", "==", therapist)
+        .where("status", "==", "pending")
+        .order_by("createdAt", direction=firestore.Query.DESCENDING)
+        .limit(1)
+        .stream()
+    )
+    
+    if not pending_docs:
+        return None
+        
+    doc = pending_docs[0]
+    data = doc.to_dict()
+    
+    text = (raw_payload or msg_body).strip().lower()
+    
+    # Evaluar intención
+    is_yes = text in ('si', 'sí', 's', 'yes', '👍', 'aprobar', 'lanzar', 'dale')
+    is_no = text in ('no', 'n', 'pausar', '⏸️', 'esperar')
+    
+    if is_yes:
+        doc.reference.update({"status": "approved", "approvedBy": "therapist", "approvedAt": firestore.SERVER_TIMESTAMP})
+        return f"✅ Entendido. Lanzando ofertas de Autopilot a los pacientes de más tarde."
+    elif is_no:
+        doc.reference.update({"status": "rejected", "rejectedBy": "therapist", "rejectedAt": firestore.SERVER_TIMESTAMP})
+        
+        # Avisar a Yari
+        time_cancelled = _parse_mx_datetime(data.get("cancelledDate")).strftime("%I:%M %p").lstrip("0")
+        alert_data = {
+            "type": "autopilot_rejected",
+            "status": "open",
+            "appointmentId": data.get("appointmentId"),
+            "patientName": data.get("patientName", "Paciente"),
+            "therapist": therapist,
+            "message": f"⏸️ {therapist.capitalize()} ha PAUSADO el Autopilot para el espacio de las {time_cancelled}. Favor de gestionar manualmente.",
+            "createdAt": firestore.SERVER_TIMESTAMP,
+        }
+        db.collection("reception_alerts").add(alert_data)
+        
+        return f"⏸️ Autopilot pausado. He avisado a Recepción para que lo gestione manualmente."
+        
+    return None
+
