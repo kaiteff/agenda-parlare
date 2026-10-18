@@ -42,7 +42,9 @@ HOY ─────────────────────────�
 
 | Fecha | Decisión | Motivo | Alternativa descartada |
 |-------|----------|--------|------------------------|
+| 18 Oct 2026 | **Exportar Citas a Excel (.xlsx) con SheetJS local** | Servir `xlsx.full.min.js` desde `js/vendor/` ('self') cumple estrictamente con Content-Security-Policy y permite exportar offline / en Capacitor sin depender de CDN externo | CDN externo (bloqueado por CSP) o endpoint backend pesado |
 | May 2026 | **Capacitor** como camino a Play Store / App Store | Una sola codebase con la web; OTA de UI; encaja con Master Template SaaS; menor tiempo que reescribir | React Native / Flutter (doble mantenimiento, meses de reimplementar calendario) |
+
 | May 2026 | **Fase 1 antes que Capacitor** | La web debe sentirse app en móvil (nav + modales) antes de empaquetar WebView | Envolver desktop tal cual (mala UX en celular) |
 | 14 Sep 2026 | **Hotfix reagendar — `recurringOptions` nulo** | Safari: «null is not an object (evaluating 'recurringOptions.value')» al guardar cita simple. Cache DOM + `?.` + reset al abrir/reagendar + fallback si no hay serie. | Dejar el select sin default y leer `.value` a ciegas |
 | 15 Jul 2026 | **Landscape = UX móvil** (lado corto ≤600 / `html.phone-landscape`) | Pixel supera 768px de ancho y el `md:` mostraba desktop; barra Agenda\|Pacientes\|Más + sidebar angosto; vista Día sin sticky sobre citas | Solo `max-width:767px` o umbral altura 560 (fallaba en Pixel) |

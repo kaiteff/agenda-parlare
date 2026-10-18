@@ -277,10 +277,18 @@ export const HelpManual = {
                                         <li>En <strong>Google Calendar</strong> el título lleva la etapa delante del nombre del niño.</li>
                                         <li><strong>Diana:</strong> puedes marcar <strong>confirmada</strong> la asistencia desde la cita (botón ✓) o desde Control Maestro — queda registrado en bitácora.</li>
                                         <li><strong>Sam / Vero:</strong> pueden mover y reagendar citas de evaluación en su terapeuta como cualquier otra cita.</li>
+                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                                    <h4 class="font-bold text-emerald-900 mb-1">📥 Exportar citas a Excel (.xlsx) <span class="text-[10px] uppercase tracking-wider bg-emerald-200 px-1.5 py-0.5 rounded">Nuevo</span></h4>
+                                    <p class="text-sm text-gray-700 mb-2">Descarga directa de las citas de la semana en curso (con el filtro de terapeuta que tengas activo):</p>
+                                    <ul class="list-disc ml-5 space-y-1.5 text-sm text-gray-700">
+                                        <li><strong>En computadora:</strong> Toca el botón verde <strong>Excel</strong> junto al botón «Hoy» en la barra de herramientas del calendario.</li>
+                                        <li><strong>En celular:</strong> Toca la barra inferior en <strong>Más → Exportar Citas (Excel)</strong>.</li>
+                                        <li>El archivo se genera en tu dispositivo con: Pacientes (ordenados A-Z), Día de cita, Horario, Terapeuta y Estado (Confirmada, Pagada, etc.), con autofiltros de Excel ya listos para usar.</li>
                                     </ul>
                                 </div>
                             </div>
                         </details>
+
 
                         <!-- Ev. Evaluaciones — guía equipo -->
                         <details class="group bg-violet-50 rounded-2xl border border-violet-200 shadow-md overflow-hidden transition-all">
