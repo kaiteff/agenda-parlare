@@ -6,6 +6,8 @@
 >
 > | Documento | Para qué |
 > |-----------|----------|
+> | `js/saas/README.md` | **Rama paralela SaaS** (Modelo A, flag OFF en producción) |
+> | `ROADMAP_SAAS_CLINICAS.md` | Roadmap multiclínica Support → selector → `clinicId` |
 > | `PLAN_DE_TRABAJO.md` | Prioridades del equipo y ✅ recientes |
 > | `ANALISIS_ESTRATEGIA_MOVIL.md` | Roadmap móvil, deploy, **⏳ Falta** y **💡 Sugerencias** |
 > | `ARQUITECTURA_FUTURA.md` | Agenda desktop, refactor gradual, **registro de cambios + reversión** |
@@ -291,6 +293,9 @@ La V2 ofrecerá al administrador la opción de elegir cómo llevar la contabilid
 2. **Toggle de Sincronización por Terapeuta**: Un interruptor ON/OFF por terapeuta para activar o desactivar la sincronización en vivo con su Google Sheet. Si está apagado, el sistema confía 100% en Firebase.
 
 ### Posibilidad de Escalar el Modelo (SaaS Readiness)
+
+> **Roadmap operativo (22 jun 2026):** [`ROADMAP_SAAS_CLINICAS.md`](ROADMAP_SAAS_CLINICAS.md) — login **Parláre Support** → selector de clínica → Fase 0 con Centro Parláre como primer tenant `centro_parlare`.
+
 Para que esta aplicación sea vendible o replicable para otras clínicas de manera eficiente, el sistema debe evolucionar de un estado "Hardcoded" a uno "Configurable" (Agnóstico).
 
 #### Pilares para la Repetibilidad:

@@ -1,4 +1,4 @@
-# 🚀 Plan de Trabajo - Actualizado (30 Junio 2026)
+# 🚀 Plan de Trabajo - Actualizado (1 Julio 2026)
 
 Este documento detalla el estado actual del sistema Parláre, registrando los extraordinarios avances en la interfaz responsiva, justificantes médicos y el **Copiloto Colaborativo** (frontend listo el 25 may), y definiendo las prioridades del backend en Firebase Blaze y la preparación SaaS.
 
@@ -6,6 +6,16 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 
 ## ✅ Completado Recientemente (¡Listo!)
 
+*   **Hotfix reagendar — `recurringOptions` nulo (14 Sep 2026)** — Safari: «Error al guardar: null is not an object (evaluating 'recurringOptions.value')» al mover cita simple. Cache DOM vivo, reset de recurrencia al abrir/reagendar, `?.`/`??`, guardas en save y fallback si no hay serie. Archivos: `CalendarState.js`, `CalendarSuggestions.js`, `CalendarModal.js`, `MainModals.js`, `HelpManual.js`. **Deploy hosting ✅** (`taconotaco-d94fc`). Pop-up sin bump. **⏳ Validar** en iPhone/iPad (recarga forzada).
+*   **Fix cambio horario fijo Sam + confirmaciones Gael (3 Ago 2026)** — Agendar Ahora ya no rompe por `import()`; ScheduleManager usa hora México + terapeuta del perfil; baja limpia citas por id+nombre; webhook match flojo de nombres + recordatorio 48 h + sin keyword `no` suelto. Pacientes: Carlos Máximo, Getzania, Jade (Sam); Gael Cote (Diana). **Deploy ✅** hosting + `whatsapp_webhook` (taconotaco-d94fc). Manual actualizado. Pop-up sin bump. **⏳ Validar** con staff en clínica.
+*   **Diagnóstico Excel Vero / pendientes (24 Jul 2026)** — Sin fix de código. Pagos de Vero van a su Sheet; pendientes = `sheetSynced:false`. Ops: botón naranja Diana/Yari. Sugerencia próxima: pre-auth en `CalendarModal`. Manual actualizado. Pop-up sin bump. Resumen: `resumen_sesion/RESUMEN_SESION_20260724.md`.
+*   **UX landscape celular — Pixel (15 Jul 2026)** — Landscape >768px activaba desktop. **v3:** lado corto ≤600; bottom nav Agenda\|Pacientes\|Más; sidebar ~28vw con scroll; vista Día sin sticky sobre citas. Manual + pop-up **v9.11**. Archivos: `viewport.js`, `index.css`, `CalendarUI.js`, `CalendarState.js`, `app.js`, `ComponentManager.js`, `HelpManual.js`, `NewFeatureAlert.js`. **Deploy:** `npm run build` + `firebase deploy --only hosting`. **⏳ Validar en Pixel (girar + recarga forzada).**
+*   **Fase A evaluaciones — frontend (9 Jul 2026, tarde)** — `evaluationStages.js`; alta paciente «Proceso de evaluación»; tags `isEvaluation`/`stageName` al agendar (ScheduleManager, CalendarModal); Google Calendar con prefijo etapa; `confirmedBy: diana` al confirmar desde app. **Deploy:** `firebase deploy --only hosting`.
+*   **Plantillas WhatsApp evaluaciones + Fase B backend (9 Jul 2026, mediodía)** — SIDs C1/E1/E2/E3 aprobados; cableados en `whatsapp_templates.py`, `whatsappTemplates.js`, `main.py` (motivo cancelación, crons E1, Diana E2/E3, cron 21:00). **Desplegado** functions webhook + crons.
+*   **Fix pestaña Equipo y permisos + plan Evaluaciones (9 Jul 2026, noche)** — Tab permisos enlazada tras `_loadData`. Permiso `create_evaluation_patient`. Doc `PLAN_EVALUACIONES.md`. **Perf Config:** modal reutilizable, pestañas lazy, sin blur pesado. **Deploy:** hosting.
+*   **Permisos del equipo — Fase 1 (9 Jul 2026)** — Diana configura permisos de Sam/Vero/Yari en Configuración; solo dueña ve reportes/corte (`view_clinic_financials`). Ver `PERMISOS_EQUIPO_FASE1.md`. **Deploy:** hosting.
+*   **Fix recurrente agenda + refuerzo confirmaciones WhatsApp (9 Jul 2026)** — Citas recurrentes fallaban al guardar (`recurringOptions` faltaba en DOM; duración mal interpretada). Webhook: `Body`+`ButtonPayload`, más keywords, match por `patientId`/nombre sin acentos. Archivos: `MainModals.js`, `CalendarSuggestions.js`, `CalendarModal.js`, `functions/main.py`. **Deploy:** `firebase deploy --only hosting,functions:whatsapp_webhook`.
+*   **Fix confirmaciones WhatsApp — citas de tarde (1 Jul 2026)** — Mamás respondían `1`/`OK` pero no aparecía ✓ en agenda (Pedro David, Carlos Máximo 7 PM; Gael 5 PM). Causa: webhook buscaba fechas en rango estrecho UTC; ahora `find_confirmable_appointments` filtra por fecha local MX (hoy+mañana), confirma/cancela antes de plantilla «próxima cita», `update_google_calendar` usa OAuth admin, bitácora `WHATSAPP_CONFIRM`/`WHATSAPP_CANCEL`. Doc: `diagnostico_confirmaciones_whatsapp.md`. **Desplegado:** 1 Jul 2026 (despliegue general de funciones, reglas e hosting).
 *   **Acceso Yari (Recepción) a baja y borrado de pacientes (30 Jun 2026)** — Se otorgó acceso al rol `receptionist` para eliminar pacientes permanentemente en la lógica de `PatientActions.js`, además de validar su acceso existente a la baja (desactivación).
 *   **Toast Excel pendiente + manual sync (22 Jun 2026)** — Si terapeuta no puede escribir Excel ajeno, pago queda en Parláre; Diana/Yari sincronizan con botón naranja. Aviso en `CalendarData.togglePayment`.
 *   **Fix perfil del paciente en desglose de cita (22 Jun 2026)** — Detalles de Cita muestra cuota/sesión del **perfil**. Archivos: `appointmentFinancials.js`, `CalendarModal.js`, etc.
@@ -209,6 +219,17 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 - Tick del contador NO re-genera HTML: usa nodos `data-bind="countdown"`/`"progress"` y solo cambia textContent + width.
 - Agenda solo se re-renderiza cuando cambia el **conjunto** de IDs en delay (no cada segundo).
 
+### Validación post-deploy jun 2026
+
+> **Documento maestro:** [`resumen_sesion/VALIDACION_POST_DEPLOY_JUN2026.md`](resumen_sesion/VALIDACION_POST_DEPLOY_JUN2026.md)
+
+- [x] Deploy hosting (finanzas cita, seguro pago A+B, Yari borrar paciente)
+- [x] Julian 150/500, corrección pagada, Sam→Diana batch Excel
+- [ ] UX iPhone (modales, búsqueda, cita, campana) — **opcional** si usan celular
+- [ ] Cola «deben sesión» + filtro ámbar Control Maestro — **opcional** si Yari cancela hoy con esa marca
+- [x] ~~Herramienta masiva Excel histórico~~ — **descartado** (manual en hojas)
+- [x] Cierre 30 jun: pop-up `parlare_onboarding_v9_6` + Manual v8.0.0 (finanzas + Yari baja/borrar)
+
 ### Validación pendiente (en producción)
 - [x] **Backend: lectura de `copilot_overrides` antes/durante el delay** — ✅ Antigravity 26 may (polling de 30 s sobre overrides + estado de la cita; respeta `skip_delay` / `pause`; aborta si la cita es des-cancelada). Delay total acortado a 8 min por límite Cloud Functions.
 - [ ] **Validación física con cita real en ventana 8–24 h** (todo el flujo Copiloto ya está en producción tras el deploy del 26 may, falta probarlo en vivo):
@@ -220,6 +241,14 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
   - Si no haces nada en 8 min → ofertas se envían automáticamente.
 
 ## ⏳ Roadmap futuro (siguiente fase)
+
+**Bloque Evaluaciones (doc maestro `PLAN_EVALUACIONES.md`):**
+- [x] **Documentación + permiso `create_evaluation_patient`** — Catálogo en Equipo y permisos; fix tab que no abría (9 jul 2026).
+- [x] **Plantillas C1/E1/E2/E3 aprobadas en Twilio** — SIDs registrados (9 jul 2026).
+- [x] **Fase B backend** — Webhook C1 + motivo, crons E1, Diana E2/E3, cron 21:00, `confirmedBy: parent` (desplegado 9 jul).
+- [x] **Fase A evaluaciones** — `evaluationStages.js`, campos perfil/cita, selector tipo paciente, tags al agendar, título Google Calendar, `confirmedBy: diana` desde app (9 jul 2026).
+- [x] **Fase C** — Badge ≤2 h sin confirmar en Control Maestro + guía prueba E2/E3 (9 jul 2026).
+- [ ] **Deploy hosting + functions** — Fase A + Fase C + `send_reminders_api?task=diana_eval_followup`.
 
 **Bloque Copiloto:**
 - [x] **Cerrar contrato backend Copiloto** — ✅ Antigravity 26 may: `space_optimizer.py` ahora hace polling de 30 s sobre `copilot_overrides/{id}` durante 8 min (480 s, ajustado por límite de 540 s de Cloud Functions). Respeta `skip_delay`, `pause` y aborta si la cita es des-cancelada. **Cursor 26 may tarde:** propagó `COPILOT_DELAY_MS = 8 * 60 * 1000` al frontend y unificó el copy del banner / HelpManual («8 min») para evitar bug de UI mintiendo a Yari.
@@ -248,7 +277,7 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
     *   Fase 3 deploy + Win 1 (Antigravity, tarde): índices `Enabled` en producción, function redeployada, **`CalendarData.subscribe` multicast** (PatientManager ya no abre listener propio para `appointments`; reusa el de calendar). Total: 29 k → **8–12 k lecturas/día estimadas** una vez propagado.
 - [ ] **Fase 2 — Notificación WhatsApp al tutor**: nuevo template Twilio + Cloud Function que escanea citas en el rango y manda mensaje con opciones (A) reagendar misma semana, (B) próxima semana, (C) por WhatsApp manual. Pacientes sin opt-in → alerta en Control Maestro para llamada.
 - [ ] **Fase 3 — Modelo de datos limpio (`availability_blocks/`)**: migrar `isFullDayBlock`/`isHourlyBlock` a colección dedicada con metadata (motivo, substituteTherapist, affectedAppointments snapshot, notificationStatus). Vista consolidada «Próximas ausencias del equipo» en Control Maestro. Refactor mayor, documentar en `ARQUITECTURA_FUTURA.md`.
-- [ ] **Bug colateral conocido (sin resolver aún)**: `GoogleCalendarService.js:263` sube bloqueos de hora como recurrentes 24 semanas en Google Calendar pero en Firestore son docs únicos. Borrarlos en la app deja recurrencia huérfana en Google Calendar. A resolver con Fase 3. **Atención:** con el modal nuevo es más fácil generar muchos bloqueos por hora → si Diana se va 2 semanas con bloqueo horario, hoy se crean 120 docs en Firestore y **cada uno** se vuelve weekly por 24 semanas en Google Calendar → ruido masivo. Mientras Fase 3 llega, recomendar a Yari preferir «Todo el día» para vacaciones largas.
+- [x] **Bug Google Calendar bloqueos horarios recurrentes** — ✅ **10 jul 2026**: sin `RRULE` en `isHourlyBlock`; sync borra series completas. **Deploy hosting ✅.** Manual + pop-up v9.10. **Validado en producción** (Daniel): limpieza Google + sync + solo día bloqueado.
 
 **Bloque Seguridad (auditoría 25 may, ver [`SEGURIDAD_Y_VULNERABILIDADES.md`](SEGURIDAD_Y_VULNERABILIDADES.md)):**
 
@@ -281,6 +310,10 @@ Este documento detalla el estado actual del sistema Parláre, registrando los ex
 - [x] **Auth admin vista Todas (30 may):** `AUTHORIZED_USERS` gana sobre `users/{uid}`; dedupe `initUser`/Header.
 
 ## 💡 Sugerencias (opcional — próximas sesiones)
+
+**Excel / pagos (diagnóstico 24 jul — diferido):**
+- Pre-auth Google (`ensureToken`) al inicio de `CalendarModal.handlePaymentToggle` (y opcional recepción), igual que `PatientActions.markAsPaid`.
+- Ops hoy: Diana/Yari → botón naranja si hay pendientes.
 
 **UX premium:**
 - Enlace «Ver recibo» en citas pagadas (`receiptPdfUrl`).
@@ -319,4 +352,22 @@ Detalle ampliado: `ANALISIS_ESTRATEGIA_MOVIL.md` → **Falta + Sugerencias**.
 - [ ] **Fase B** — panel Copiloto + backend `process_scheduling_queue_candidates` (ver checklist doc maestro)
 
 ---
-*Última actualización: 2 de Junio, 2026 — Cola prioridad Fase A0+A en frontend. Heredado 28–30 may: Quiet Hours, lecturas, deploy functions.*
+
+## 🏢 Roadmap SaaS — Agenda multiclínica (22 jun 2026)
+
+> **Documento maestro:** [`ROADMAP_SAAS_CLINICAS.md`](ROADMAP_SAAS_CLINICAS.md)
+
+**Visión acordada en análisis:** Una app; login **Parláre Support** → elegir clínica → entrar a la agenda (primero **Centro Parláre**). Modelo **multiclínica un Firebase** + `clinicId` (Opción A de `VISION_PARLARE_V2`).
+
+| Fase | Objetivo | Estado |
+|------|----------|--------|
+| **0** | Support + selector; migrar Parláre a `clinicId: centro_parlare` | 🔒 rama paralela OFF (`js/saas/README.md`) |
+| **1** | Segunda clínica piloto; terapeutas dinámicos | ⏳ |
+| **2** | Onboarding Google; config sin hardcode | ⏳ |
+| **3** | Stripe, Capacitor, comercial | ⏳ |
+| **4** | Enterprise (Firebase dedicado) | 💡 |
+
+**Hoy sin código SaaS:** Daniel ya ve toda la agenda Parláre como `admin`; falta rol `platform_support`, `clinicId` y selector.
+
+---
+*Última actualización: 15 de Julio, 2026 — Cierre: landscape v3 + onboarding v9.11.*

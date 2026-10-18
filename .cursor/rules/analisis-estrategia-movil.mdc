@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Documento vivo — Antigravity / estrategia móvil
 
+**Destino del producto:** misma SPA → **app iOS + Android** (Capacitor). Al «iniciar todo», recordar esto junto con el protocolo en `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`.
+
 **Antigravity y otros asistentes leen `ANALISIS_ESTRATEGIA_MOVIL.md` como mapa del proyecto.** Actualizarlo **en la misma tarea** en que hubo cambios (no solo al cerrar sesión). Ver `.cursor/rules/documentacion-viva-siempre.mdc`.
 
 ## Cuándo actualizar (obligatorio)

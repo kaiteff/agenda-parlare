@@ -21,7 +21,8 @@ alwaysApply: true
 |-----------|---------|----------------|
 | 1 | `ANALISIS_ESTRATEGIA_MOVIL.md` | Tabla «Lo que ya llevamos hecho»; **⏳ Falta** y **💡 Sugerencias**; bitácora si hubo decisión; archivos + `firebase deploy`; pie con fecha |
 | 2 | `PLAN_DE_TRABAJO.md` | ✅ completado; ⏳/💡 si aplica |
-| 3 | `js/modules/help/HelpManual.js` | Si cambió algo que ve Diana, Sam, Vero o Yari |
+| 3 | `js/modules/help/HelpManual.js` | Si cambió algo que ve Diana, Sam, Vero o Yari — **y en cierre «alistémonos»** siempre revisar |
+| 3b | `js/utils/NewFeatureAlert.js` | En **cierre de sesión** — bump pop-up si hay novedad visible para el staff (`.cursor/rules/cierre-sesion-documentacion.mdc`) |
 | 4 | `VISION_PARLARE_V2.md` | Solo arquitectura, IDs críticos o reglas nuevas |
 | 4b | `ARQUITECTURA_FUTURA.md` | Refactor gradual, agenda desktop, ítems alta/media/premium; **registro de cambios + reversión** |
 | 4c | `SEGURIDAD_Y_VULNERABILIDADES.md` | **SIEMPRE revisar** al iniciar; **actualizar** si se tocó auth, reglas Firestore/Storage, secretos, sanitización HTML, headers HTTP, dependencias o `console.log` con datos sensibles. Ver Regla de Oro 8 + `.cursor/rules/seguridad-vulnerabilidades.mdc`. |
@@ -33,6 +34,6 @@ Indica en una línea qué archivos de documentación actualizaste (o «sin cambi
 
 ## Cierre de sesión
 
-Si además el usuario dice «vamos» / «alistémonos», aplica también `.cursor/rules/cierre-sesion-documentacion.mdc` (repaso final, sin duplicar ✅ ya marcados).
+Si además el usuario dice «vamos» / «alistémonos» / **«alistar para irnos»**, aplica también `.cursor/rules/cierre-sesion-documentacion.mdc` (**HelpManual** + **NewFeatureAlert** + repaso final, sin duplicar ✅ ya marcados).
 
 Ver `AI_RULES.md` → Regla de Oro 7.

@@ -10,15 +10,15 @@
 
 ---
 
-## 📊 Resumen ejecutivo (Última actualización: 22 Jun 2026 — sesión desglose cita + seguro pago; sin cambios de severidad)
+## 📊 Resumen ejecutivo (Última actualización: 3 Ago 2026 — webhook confirm + keywords)
 
 | Severidad | Cantidad | Pendientes |
 |---|---|---|
 | 🚨 Crítico | 0 | Ninguno |
-| ⚠️ Alto | 1 | Whitelist emails hardcoded (S-005) — custom claims pendiente |
-| 🟡 Medio | 2 | `console.log` con datos sensibles (S-007); sin custom claims en Auth (S-008) |
-| 💡 Mejora | 2 | Bitácora de seguridad central; auditar dependencias npm/pip |
-| ✅ Reforzado | 33 | Incl. confirmación desglose antes de pago Excel (22 jun); cola `schedulingQueue`; L-1 logout Copiloto |
+| ⚠️ Alto | 1 | S-005 emails hardcoded (custom claims pendiente) |
+| 🟡 Medio | 2 | S-007 console.log frontend · S-008 custom claims |
+| 💡 Mejora | 2 | S-009 bitácora seguridad · S-010 dependencias npm/pip |
+| ✅ Reforzado | 43 | Incl. match WA por palabra (3 ago) + firma Twilio + APIs staff |
 
 ---
 
@@ -48,8 +48,6 @@
   - Reglas se vuelven: `request.auth.token.role == 'admin'` y `request.auth.token.therapist == resource.data.therapist`.
   - Cambio de email no requiere redeploy de reglas.
 - **Estado:** ⚠️ Identificado 25 may. Refactor mayor — alinearlo con SaaS multi-clínica.
-
-
 
 ---
 
@@ -105,7 +103,14 @@
 
 | Fecha | Área | Detalle |
 |-------|------|---------|
+| 3 ago 2026 | **Webhook WA — keywords por palabra** | `_message_has_keyword` ya no usa substring suelto (`'no' in 'buenas noches'`). Cancelación exige frase/palabra completa. Reduce cancelaciones accidentales por mensajes inocentes. |
+| 9 jul 2026 | **S-018 firma Twilio en webhook** | `webhook_security.validate_twilio_webhook` con `RequestValidator`; rechazo 403 si firma inválida; override `TWILIO_WEBHOOK_URL` si proxy altera URL; logs sin teléfono completo (`mask_phone_for_log`). |
+| 9 jul 2026 | **S-019 APIs staff WhatsApp** | `send_reminders_api` y `send_message_api` exigen `Authorization: Bearer` (Firebase ID token, emails staff) o clave en `REMINDERS_API_KEY` (Secret Manager). Frontend sin clave en JS (`getStaffApiHeaders`). |
+| 9 jul 2026 | **S-021 `send_message_api` sin auth** | Endpoint aceptaba POST anónimo y enviaba WhatsApp vía Twilio. **Cerrado** mismo guard que S-019. |
+| 9 jul 2026 | **S-017 XSS bitácora — motivo cancelación WhatsApp** | `AuditPanel.js` interpolaba `log.details.message` / `patientName` sin `escapeHTML`. El nuevo flujo `WHATSAPP_CANCEL_REASON_NOTE` guarda texto libre del papá en bitácora → vector XSS stored al abrir Bitácora (Yari/Diana). **Cerrado** aplicando `escapeHTML` en mensajes WhatsApp, nombres y acciones nuevas (`WHATSAPP_CANCEL_REASON*`, `WHATSAPP_DIANA_SESSION`). Backend: `sanitize_whatsapp_user_text` (500 chars, sin controles). |
+| 9 jul 2026 | **Bitácora confirmación evaluación (`confirmedBy`)** | `appointmentService.toggleConfirmationStatus` escribe `confirmedBy` / `confirmedSource` estructurados (`diana` desde dueña, `staff` otros) y `APPOINTMENT_CONFIRMED` en citas `isEvaluation`. Trazabilidad sin PII en console. |
 | 22 jun 2026 | **Integridad pagos / Excel** | Confirmación obligatoria con desglose antes de Pagado/No pagado; bloqueo si cambios financieros sin Guardar (`CalendarModal.js`). Reduce clicks accidentales y registros Excel incorrectos. Pago lee Firestore guardado, no DOM sin persistir. |
+| 30 jun 2026 | **SaaS Fase 0 — rama paralela aislada** | Código multiclínica presente pero **`SAAS_MULTICLINIC_ENABLED=false`**: producción usa `settings/clinicConfig`, sin selector Support, sin filtro/stamp `clinicId`. Login `support@` rechazado si flag off. Ver `js/saas/README.md`. |
 | 18 may 2026 | **Notas clínicas (`clinicalNotes`)** | Reglas Firestore restringen lectura/escritura al terapeuta dueño y super users. **Grado médico**. |
 | 18 may 2026 | **Perfiles de pacientes (`patientProfiles`)** | Mismas reglas estrictas que `clinicalNotes`. |
 | 18 may 2026 | **Configuración (`settings`)** | Lectura para autenticados, escritura solo super user. |
@@ -147,6 +152,9 @@
 | 28 may 2026 | **`quiet_hours_pending` + UI Copiloto nocturno** | Reglas explícitas `isSuper()`. Banner morado: Liberar ya / Pausar / Manual; cron 8 AM respeta `paused`; trigger `release_now`. |
 | 28 may 2026 | **S-006 debounce Copiloto** | `WaitlistCopilotPanel`: 1 s entre clics en acciones del banner. |
 | 30 may 2026 | **Error Reporting backend (functions)** | Corregidos: `trigger_utils.change_before_after` (before/after None en create/delete → 150+90 errores receipt/cancel trigger); `release_quiet_hours_offers` usa `db` global (no `_get_db`); `secrets=ALL_SECRETS` en triggers Autopilot; `TWILIO_WHATSAPP_FROM` sin `.value` erróneo. Redeploy `functions` recomendado. |
+| 1 jul 2026 | **Webhook WhatsApp — confirmaciones citas 7 PM** | `find_tomorrow_appointments` usaba rango `mañanaT23:59:59` incompatible con fechas UTC de tarde; mamá recibía recordatorio pero `confirmed` no se escribía. **Cerrado:** `_tomorrow_firestore_bounds` + `find_confirmable_appointments` (hoy/mañana MX), flujo confirmar antes de «próxima cita», OAuth en `update_google_calendar`, audit `WHATSAPP_CONFIRM`. Ver `diagnostico_confirmaciones_whatsapp.md`. |
+| 9 jul 2026 | **Webhook WhatsApp — refuerzo post-regresión** | `Body`+`ButtonPayload`, keywords ampliadas, match `patientId`/nombre sin acentos. Ver `diagnostico_confirmaciones_whatsapp.md`. |
+| 9 jul 2026 | **Permisos equipo Fase 1 (UI)** | Panel Configuración + `staffPermissions` en Firestore. Dueña única con `view_clinic_financials`. **Mitigación parcial S-008** — reglas aún por email; Fase 3 = custom claims. Ver `PERMISOS_EQUIPO_FASE1.md`. |
 | 28 may 2026 | **Q-009 — Lecturas login admin** | `PatientManager`: super/recepción `getDocs` perfiles 1×/sesión (no listener). `Header` batchSync solo admin/recepción. Copiloto + notificaciones acotadas. Reduce pico ~1.2k → ~500–750 reads/sesión. |
 | 26 may 2026 | **Desync de tiempos entre frontend y backend del Copiloto (Q-008 — UX crítico)** | Tras el deploy de la Cloud Function, Antigravity tuvo que bajar `total_wait` de 10 min a **8 min** (480 s) porque Google Cloud rechaza `timeout_sec > 540 s` en triggers Firestore. Pero el frontend (`WaitlistCopilotService.js:41`) seguía con `COPILOT_DELAY_MS = 10 * 60 * 1000`. **Síntoma**: el banner mostraba contador de 10 min mientras el backend procesaba las ofertas a los 8 min. Si Yari tocaba «Pausar» entre el minuto 8 y el 10, la decisión **se perdía silenciosamente** (el polling del backend ya había terminado y las ofertas ya estaban en camino). Vulnerabilidad de integridad de UX + posible inconsistencia operacional (paciente recibe oferta WhatsApp que Yari intentó cancelar). **Cerrado** (Cursor, tarde) alineando `COPILOT_DELAY_MS = 8 * 60 * 1000` + propagando la constante única desde service hacia panel (cálculos `pct`/`progress` y textos «Esperando · X min», «Tienes X min para intervenir»). Actualizado `HelpManual.js` (3 menciones). Build OK, lints OK. Cualquier cambio futuro del delay se propaga al UI con un solo edit. |
 
@@ -162,6 +170,7 @@
 | **26 May 2026 (mañana)** | Claude (revisión post-Antigravity Optimización Firestore Fase 1) | Auditoría de los 5 archivos tocados por Antigravity para la migración a ventana 90 días + historial bajo demanda + polling Copiloto: `PatientManager.js`, `PatientModals.js`, `PatientActions.js`, `CalendarData.js`, `space_optimizer.py`. Verificación con `node --input-type=module`, revisión de queries Firestore vs índices, lectura del dashboard Firebase (58.4 % lecturas). | Q-001 (SyntaxError fatal) · Q-002 (timeout Cloud Function) · Q-003 (índices Firestore no versionados) · Q-004 (modal historial pierde citas) · Q-005 (memory leak listeners) · Q-006 (listeners gigantes sin filtro fecha) | **Cerrados Q-001 a Q-006** en la misma sesión: refactor `_setupRealtimeListener`, `timeout_sec=720`, `firestore.indexes.json` con 6 índices, `PatientModals._historyCache` con merge live, `_unsubscribeApts/_unsubscribeProfiles`, filtros de fecha en Copilot+batchSync. Pendiente para Antigravity: `firebase deploy --only firestore:indexes,functions,hosting` y validación dashboard 24-48 h después. |
 | **26 May 2026 (tarde)** | Claude (revisión post-Antigravity deploy + Win 1 + ajuste de tiempos) | Auditoría del trabajo de Antigravity en la tarde: deploys exitosos de índices, function (con `timeout_sec=540` forzado por límite Cloud Functions = 540 s) y hosting; refactor de `CalendarData.subscribe` a patrón multicast para unificar listeners de citas (Win 1 que estaba marcado como pendiente alto-impacto en la mañana). Verificación de que los fixes Q-001 a Q-006 siguen intactos tras el refactor del listener compartido. | Q-007 (listener duplicado `appointments` ya cerrado por Antigravity como Win 1) · Q-008 (desync `COPILOT_DELAY_MS` 10 min frontend vs 8 min backend, detectado en review) | **Cerrados Q-007 y Q-008** en la misma sesión: Antigravity implementó el multicast (Q-007) y Cursor propagó la constante `COPILOT_DELAY_MS = 8 * 60 * 1000` desde service hacia panel (cálculos + textos visibles a Yari) + `HelpManual.js` con «8 min» (Q-008). Lecturas totales esperadas tras propagación: **29 k → 8–12 k/día** (de 58.4 % a probablemente <25 %). Pendiente Daniel (manual): limpieza Hosting Storage 17.6 GB → 10 GB en consola Firebase. |
 | **22 Jun 2026** | Cursor | Sesión desglose cita (perfil manda), seguro pago A+B, toast sync Excel delegado admin. | — | **Reforzado:** confirmación desglose antes de pago Excel (integridad operacional). |
+| **9 Jul 2026** | Cursor | Auditoría Fase B WhatsApp + correcciones. | S-017 · S-018 · S-019 · S-021 | **Cerrados S-017, S-018, S-019, S-021** — `webhook_security.py`, `AuditPanel.js`, auth Bearer en frontend. |
 
 ---
 
@@ -177,4 +186,4 @@
 
 ---
 
-*Última actualización: 22 de Junio, 2026 — Sesión desglose cita + seguro pago A+B; reforzado integridad pagos Excel. Sin hallazgos 🚨/⚠️ nuevos. Deploy hosting pendiente.*
+*Última actualización: 3 de Agosto, 2026 — Webhook confirm (match nombres / keywords) + fix horario Sam. Deploy ✅ hosting + whatsapp_webhook.*

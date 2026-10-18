@@ -30,6 +30,7 @@ Al inicio de **CUALQUIER** sesión de desarrollo, mantenimiento o consulta de ar
 4. **Seguridad y vulnerabilidades:** Para auditorías, hallazgos de seguridad, XSS, reglas Firestore/Storage, secretos, dependencias, leer y actualizar **`SEGURIDAD_Y_VULNERABILIDADES.md`**. Cada hallazgo lleva ID `S-XXX`, severidad y estado. Nunca borrar hallazgos cerrados (se mueven a «✅ Reforzado»). Regla Cursor: `.cursor/rules/seguridad-vulnerabilidades.mdc`.
 5. **Cola prioridad (pacientes especiales):** Si la sesión habla de huecos libres, «deben cita», lista de espera, Copiloto ampliado o prioridad de agendado, **mencionar** la propuesta documentada en **`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`** (semana en curso, horario similar ±3 h, sin sábado, debe 1..N sesiones). No implementar sin decisión de dirección; actualizar ese doc si cambian las reglas de negocio.
 6. **Rama paralela SaaS (Modelo A):** Al **«iniciar todo»** / inicio de sesión, recordar que hay **dos pistas** en el mismo repo: (A) agenda Parláre en producción — prioridad; (B) multiclínica Support/`clinicId` — **apagada** con `SAAS_MULTICLINIC_ENABLED = false` en `js/core/clinicConstants.js`. No confundir ni bloquear la pista A al tocar B. Mapa: `js/saas/README.md`, roadmap: `ROADMAP_SAAS_CLINICAS.md`. Regla Cursor: `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`.
+7. **Destino app iOS y Android:** Al **«iniciar todo»**, recordar que el producto **no es solo web**: la misma SPA irá a **Google Play y App Store** vía **Capacitor** (decisión cerrada). Toda UI/flujo nuevo debe ser usable en móvil (touch, bottom-sheets, sin depender de hover). Detalle: `ANALISIS_ESTRATEGIA_MOVIL.md` Fase 1 → Fase 4 Capacitor. Regla Cursor: mismo archivo `rama-paralela-saas-inicio-sesion.mdc` (protocolo «iniciar todo» completo).
 
 ## 💾 REGLA DE ORO 9: Backup y Git ANTES de tocar código
 Antes del **primer cambio** en código producto (JS, `functions/`, rules, hosting):
@@ -81,14 +82,15 @@ En **toda** sesión, sin importar el tema:
 
 Regla Cursor: `.cursor/rules/seguridad-vulnerabilidades.mdc` (`alwaysApply: true`).
 
-## 🏁 REGLA DE ORO 6: Cierre de sesión ("Vamos" / "Alistémonos")
-Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«alistémonos»**, **«cerramos»**, **«listo para irnos»** o frases similares, el asistente **DEBE hacer un repaso final** de la documentación viva — no basta con un resumen en el chat (la Regla 7 ya debió aplicarse en cada tarea).
+## 🏁 REGLA DE ORO 6: Cierre de sesión ("Vamos" / "Alistémonos" / "Alistar para irnos")
+Cuando el usuario diga **«vamos»**, **«vámonos»**, **«vamosno»**, **«alistémonos»**, **«alistar para irnos»**, **«alistémonos para irnos»**, **«cerramos»**, **«listo para irnos»** o frases similares, el asistente **DEBE hacer un repaso final** de la documentación viva — no basta con un resumen en el chat (la Regla 7 ya debió aplicarse en cada tarea).
 
 **Checklist de archivos (obligatorio revisar y actualizar si hubo cambios en la sesión):**
 
 | Orden | Archivo | Para qué |
 |-------|---------|----------|
-| 1 | `js/modules/help/HelpManual.js` | Manual para terapeutas y Yari |
+| 1 | `js/modules/help/HelpManual.js` | Manual para terapeutas y Yari — **siempre revisar** en cierre |
+| 1b | `js/utils/NewFeatureAlert.js` | Pop-up de novedades — **evaluar y bump** si hay algo visible para el staff (ver Regla de Oro 4) |
 | 2 | `ANALISIS_ESTRATEGIA_MOVIL.md` | Roadmap móvil + técnico (Antigravity) |
 | 3 | `PLAN_DE_TRABAJO.md` | Prioridades y ✅ completados |
 | 4 | `VISION_PARLARE_V2.md` | Reglas críticas, IDs, arquitectura |
@@ -98,19 +100,20 @@ Regla Cursor persistente: `.cursor/rules/cierre-sesion-documentacion.mdc`.
 
 ## 🚀 Protocolo de Despliegue ("Alistémonos para irnos")
 Al finalizar **cualquier tarea** (Regla 7) y al cerrar sesión (Regla 6), se deben ejecutar obligatoriamente los siguientes pasos:
-1. **Manual Check**: Verificar si los cambios realizados requieren actualizar el manual de ayuda en `js/modules/help/HelpManual.js`.
-2. **Vision Check**: Verificar si los cambios o ideas de la sesión requieren actualizar `VISION_PARLARE_V2.md` (nuevas reglas, IDs, decisiones de arquitectura, optimizaciones).
-2b. **Mobile Strategy Check (Antigravity)**: Si la sesión incluyó trabajo móvil, backend Firebase, recibos o decisiones de app/roadmap, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.
-3. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (el código del bot en Render ya es obsoleto, ahora corre 100% en Firebase).
-4. **Despliegues en Vivo (Firebase Deploy)**:
+1. **Manual Check**: Actualizar `js/modules/help/HelpManual.js` si el staff debe saber algo nuevo (flujos, botones, pagos, WhatsApp, cola, móvil).
+2. **Pop-up Check**: Revisar `js/utils/NewFeatureAlert.js` — si hay novedad relevante para Yari/terapeutas, subir `STORAGE_KEY`, `LEGACY_KEYS`, `launchDate` y tarjeta nueva; el detalle permanente va al manual (Regla de Oro 4).
+3. **Vision Check**: Verificar si los cambios o ideas de la sesión requieren actualizar `VISION_PARLARE_V2.md` (nuevas reglas, IDs, decisiones de arquitectura, optimizaciones).
+3b. **Mobile Strategy Check (Antigravity)**: Si la sesión incluyó trabajo móvil, backend Firebase, recibos o decisiones de app/roadmap, actualizar `ANALISIS_ESTRATEGIA_MOVIL.md`.
+4. **Git Add/Commit/Push**: Asegurar que los cambios lleguen al repositorio de GitHub (el código del bot en Render ya es obsoleto, ahora corre 100% en Firebase).
+5. **Despliegues en Vivo (Firebase Deploy)**:
    * **Si los cambios fueron en el Frontend (interfaz web/móvil):**
      `firebase deploy --only hosting`
    * **Si los cambios fueron en el Backend (Webhook, Crons, o Trigger en `functions/`):**
      `firebase deploy --only functions`
    * **Si los cambios incluyeron Frontend y Backend simultáneamente:**
      `firebase deploy`
-5. **ZIP Backup**: Crear un respaldo comprimido de la sesión (ej: `Backup_Parlare_YYYYMMDD_Final.zip`).
-6. **Resumen de Sesión**: Crear el archivo de cierre en `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`.
+6. **ZIP Backup**: Crear un respaldo comprimido de la sesión (ej: `Backup_Parlare_YYYYMMDD_Final.zip`).
+7. **Resumen de Sesión**: Crear el archivo de cierre en `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`.
 
 ## 💸 REGLA DE ORO 9: Arquitectura de Costo Cero ($0) y Gasto Mínimo
 Cualquier desarrollador o asistente de IA debe diseñar y optimizar el sistema para mantenerse dentro de los niveles gratuitos de Firebase (Blaze con cobros de $0 USD):
@@ -134,7 +137,7 @@ A partir del **domingo 17 de Mayo de 2026**, el desarrollo de la V2 se realiza d
 - **UI Grid vs Sidebar**: Las citas canceladas se OCULTAN de la cuadrícula central para liberar espacio visual, pero se MANTIENEN en el sidebar con etiqueta roja para control administrativo.
 - **Pestaña Dinámica**: La lógica de "Próxima Cita" debe saltar días sin citas ACTIVAS, pero mostrar TODO (activas+canceladas) una vez aterrizada en el día correcto.
 - **Refactorización Segura**: Al modificar funciones de filtrado como `_groupByPatient`, verificar rigurosamente que no se eliminen variables de contexto (como `existing` o `aptTime`).
-- **Idioma de las Respuestas**: Cuando el usuario diga «iniciar todo» o «inicia todo», el asistente de IA DEBE responder e interactuar siempre en español a lo largo de toda la sesión, y **recordar la rama paralela SaaS** (pista B apagada vs agenda Parláre pista A) — ver Regla de Oro 5 punto 6 y `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`.
+- **Idioma de las Respuestas**: Cuando el usuario diga «iniciar todo» o «inicia todo», el asistente de IA DEBE responder en **español** y aplicar el **protocolo completo** en `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`: agenda Parláre (prioridad), rama SaaS OFF, y **destino app iOS/Android (Capacitor)**. Ver Reglas de Oro 5 (puntos 6–7), 10 y 11.
 - **Resumen de Despliegues**: Tras realizar cualquier despliegue (`firebase deploy`), el asistente de IA DEBE presentar siempre al usuario un resumen detallado y amigable de qué cambios específicos fueron incluidos en ese despliegue.
 
 
@@ -148,4 +151,15 @@ Existen **dos pistas** en el mismo repositorio:
 Documentos: `js/saas/README.md`, `ROADMAP_SAAS_CLINICAS.md`, `CONTABILIDAD_MULTICLINICA.md`, `SAAS_FASE0_SETUP.md`.
 
 Al codificar en archivos `js/core/`, `ClinicContext`, `ClinicSelector`: siempre guardar con `isSaasMulticlinicEnabled()`. Activar el flag solo en rama/preview acordada con Daniel.
+
+## 📱 REGLA DE ORO 11: Destino app iOS y Android (Capacitor)
+
+**Visión de producto:** Parláre será **una app en Google Play y App Store**, no solo sitio web. Técnica: **Capacitor** envuelve la misma SPA (Opción A cerrada en `ANALISIS_ESTRATEGIA_MOVIL.md`).
+
+Implicaciones para cada sesión:
+- UI nueva o cambios de flujo → pensar **móvil primero** (touch, bottom nav, modales bottom-sheet, `text-base` en inputs iOS).
+- **Una** codebase para web + tiendas; multiclínica/SaaS por config, no compilar una app por clínica.
+- Fase actual: pulir web responsive (Fase 1); Capacitor (Fase 4) cuando UX móvil y Blaze estén estables.
+
+Al «iniciar todo», mencionar este destino junto con las dos pistas SaaS/Parláre. Regla Cursor: `.cursor/rules/rama-paralela-saas-inicio-sesion.mdc`.
 

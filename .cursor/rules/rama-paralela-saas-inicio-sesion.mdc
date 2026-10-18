@@ -1,0 +1,71 @@
+---
+description: Protocolo «iniciar todo» — español, agenda Parláre vs SaaS paralelo, destino app iOS/Android (Capacitor)
+alwaysApply: true
+---
+
+# Protocolo «iniciar todo» — contexto de sesión
+
+## Frases disparadoras
+
+Cuando el usuario diga **«iniciar todo»**, **«inicia todo»**, **«empecemos»**, **«arranquemos»** o equivalente de arranque con Antigravity/Cursor:
+
+1. Responder **en español** toda la sesión (`AI_RULES.md`).
+2. Aplicar **Regla de Oro 5**: leer `PLAN_DE_TRABAJO.md`, `ANALISIS_ESTRATEGIA_MOVIL.md`, resumen de `SEGURIDAD_Y_VULNERABILIDADES.md`.
+3. Recordar **tres ejes** (abajo) en 3–6 líneas antes de proponer código.
+
+---
+
+## Eje 1 — Destino: app iOS y Android (dentro de todo)
+
+**Decisión cerrada del proyecto:** la misma SPA web actual será **una app nativa en tiendas** — **Google Play (Android)** y **App Store (iOS)** — vía **Capacitor** (Opción A). **No** es un proyecto web-only a largo plazo.
+
+| Hoy | Destino |
+|-----|---------|
+| SPA en hosting + PWA / móvil responsive | `android/` + `ios/` Capacitor empaquetando la misma UI |
+| UX móvil (bottom nav, bottom-sheet modales, touch targets) | Prerrequisito antes de empaquetar WebView |
+| Una codebase | Una app en tiendas; multiclínica por login/config (no una app por clínica) |
+
+**Al codificar o diseñar UI**, asumir siempre:
+- Touch targets ≥ 44px, `md:` para desktop, modales tipo bottom-sheet en `< md`.
+- Sin depender solo de hover; probar mentalmente **iPhone + Android**.
+- Evitar patrones que fallen en WebView (zoom iOS en inputs → `text-base` en móvil).
+- Firebase Auth + Firestore ya funcionan en Capacitor; mismos flows.
+
+**Mapa:** `ANALISIS_ESTRATEGIA_MOVIL.md` (Fase 1 móvil → Fase 4 Capacitor), `VISION_PARLARE_V2.md`, `.cursor/rules/analisis-estrategia-movil.mdc`.
+
+---
+
+## Eje 2 — Dos pistas en el mismo repo (no confundir)
+
+| Pista | Qué es | Estado hoy |
+|-------|--------|------------|
+| **A — Agenda Parláre (producción)** | Citas, pagos, WhatsApp, Copiloto, Excel, `settings/clinicConfig` | **Activa** — prioridad |
+| **B — Rama paralela SaaS** | `clinicId`, Support, multiclínica | **APAGADA** (`SAAS_MULTICLINIC_ENABLED = false`) |
+
+Mapa SaaS: `js/saas/README.md`, `ROADMAP_SAAS_CLINICAS.md`. Ver `AI_RULES.md` Regla de Oro 10.
+
+---
+
+## Eje 3 — Prioridades inmediatas
+
+Tras el contexto, citar **⏳ Falta** de `ANALISIS_ESTRATEGIA_MOVIL.md` y checklist de `PLAN_DE_TRABAJO.md` (sin rehacer lo ya ✅).
+
+---
+
+## Respuesta modelo al «iniciar todo»
+
+Incluir algo como:
+
+> «**Parláre** es la agenda en producción (prioridad). El producto va hacia **app iOS y Android** con la misma web + **Capacitor** — todo lo que hagamos en UI debe servir en celular. La **rama SaaS multiclínica** existe pero está **OFF** (`js/saas/README.md`). Siguiente: [1–2 ítems de ⏳ Falta].»
+
+## Reglas al codificar
+
+- **Móvil + tiendas:** no introducir UX solo-desktop sin versión touch; actualizar `ANALISIS_ESTRATEGIA_MOVIL.md` si tocó responsive/Capacitor.
+- **SaaS:** guards `isSaasMulticlinicEnabled()`; no activar flag en producción staff sin acuerdo.
+- **Producción:** no degradar agenda Diana/Yari al tocar rama B.
+
+Ver `AI_RULES.md` → Reglas de Oro 3, 5 (puntos 6–7), 6, 10 y 11.
+
+## Al cerrar sesión («alistémonos» / «alistar para irnos»)
+
+Además del protocolo de inicio, aplicar `.cursor/rules/cierre-sesion-documentacion.mdc`: **HelpManual.js** + evaluar **NewFeatureAlert.js** (pop-up) + docs vivos.

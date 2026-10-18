@@ -1,26 +1,48 @@
-# Resumen de Sesión - 30 de Junio, 2026
+# Resumen de sesión — 30 de junio de 2026 (México)
 
 ## Objetivos
-- Habilitar el acceso al rol de Recepción (Yari) para poder dar de baja y eliminar pacientes permanentemente en la plataforma Parláre.
+- Habilitar a Yari (Recepción) para dar de baja y eliminar pacientes.
+- Cerrar sesión: pop-up, manual, documentación SaaS OFF y validación post-deploy.
 
-## Cambios Realizados
+## Cambios realizados
 
-### 1. Frontend: Modificación de Permisos de Eliminación
-- **Archivo**: [PatientActions.js](file:///d:/agbc/Ag_Pa/js/managers/patient/PatientActions.js#L581)
-- **Cambio**: Se actualizó la validación de la función `deletePatient` para permitir tanto al administrador como al rol `receptionist` (Recepción) eliminar pacientes permanentemente.
-  - *Antes*: Solo `AuthManager.isAdmin()` estaba permitido.
-  - *Ahora*: `AuthManager.isAdmin() || AuthManager.currentUser?.role === 'receptionist'` está permitido.
+### 1. Yari — baja y eliminación permanente
+- **Archivo:** `js/managers/patient/PatientActions.js`
+- **Cambio:** `deletePatient` permite `receptionist` además de admin.
+- **Firestore:** reglas ya cubren a Yari vía `isSuper()` — sin cambio en rules.
 
-### 2. Validación de Reglas de Seguridad en Base de Datos (Firestore)
-- **Archivo**: [firestore.rules](file:///d:/agbc/Ag_Pa/firestore.rules#L17-L23)
-- **Detalle**: Se confirmó que las reglas de seguridad de Firestore ya permiten escrituras y eliminaciones en la colección `patientProfiles` para Yari, ya que su correo (`yaritzajocgo@gmail.com`) está listado en la función auxiliar `isSuper()`. Por lo tanto, no se requieren cambios en las reglas de base de datos.
+### 2. Pop-up `parlare_onboarding_v9_6`
+- Finanzas jun: perfil manda desglose, confirmación antes de Pagado/No pagado, guardar antes de pagar, Sam→Diana Excel.
+- Yari: baja y eliminar paciente.
+- **Fecha visible:** 30 junio 2026.
 
-### 3. Compilación de Recursos
-- Se ejecutó `npm run build` para recompilar las clases y empaquetar los cambios del frontend correctamente.
+### 3. Manual v8.0.0
+- Confirmación desglose antes de pagado.
+- Sección **Expediente — baja y eliminación (Yari)**.
 
-## Próximos Pasos (Validación tras Deploy)
-1. Desplegar los cambios del frontend a producción con:
-   ```powershell
-   firebase deploy --only hosting
-   ```
-2. Validar iniciando sesión como Yari y verificando que el botón **Eliminar** en la sección de edición de expedientes de pacientes funcione correctamente y permita realizar eliminaciones permanentes tras las correspondientes confirmaciones.
+### 4. SaaS Fase 0 (rama paralela — OFF)
+- `SAAS_MULTICLINIC_ENABLED = false` en `js/core/clinicConstants.js`.
+- Espina dorsal documentada: `ClinicContext`, selector, `clinicId`, `backfillClinicId`.
+- Docs: `ROADMAP_SAAS_CLINICAS.md`, `CONTABILIDAD_MULTICLINICA.md`, `SAAS_FASE0_SETUP.md`.
+
+## Validación negocio ✅
+- Deploy hosting ✅
+- Julian 150/500, corrección pagada, Sam→Diana Excel, Yari baja/borrado ✅
+
+## ⏳ Pendiente (opcional)
+- UX iPhone — `VALIDACION_POST_DEPLOY_JUN2026.md` §3
+- Cola «deben sesión» + filtro ámbar — solo si Yari la usa
+- ~~Excel histórico Control Maestro~~ — descartado (manual)
+
+## Deploy (pop-up / manual)
+
+```powershell
+cd d:\agbc\Ag_Pa
+npm run build
+firebase deploy --only hosting
+```
+
+## Próximo código sugerido
+1. Cola Fase B (Copiloto + `space_optimizer`) si Yari valida cola actual.
+2. Capacitor POC / iconos PWA.
+3. Activar SaaS solo con clínica piloto lista y OK explícito.

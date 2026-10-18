@@ -44,7 +44,8 @@ HOY ─────────────────────────�
 |-------|----------|--------|------------------------|
 | May 2026 | **Capacitor** como camino a Play Store / App Store | Una sola codebase con la web; OTA de UI; encaja con Master Template SaaS; menor tiempo que reescribir | React Native / Flutter (doble mantenimiento, meses de reimplementar calendario) |
 | May 2026 | **Fase 1 antes que Capacitor** | La web debe sentirse app en móvil (nav + modales) antes de empaquetar WebView | Envolver desktop tal cual (mala UX en celular) |
-| May 2026 | Breakpoint **`md` (768px)** | Ya usado en Header/Sidebar; coherente en todo el proyecto | Breakpoint custom solo para móvil |
+| 14 Sep 2026 | **Hotfix reagendar — `recurringOptions` nulo** | Safari: «null is not an object (evaluating 'recurringOptions.value')» al guardar cita simple. Cache DOM + `?.` + reset al abrir/reagendar + fallback si no hay serie. | Dejar el select sin default y leer `.value` a ciegas |
+| 15 Jul 2026 | **Landscape = UX móvil** (lado corto ≤600 / `html.phone-landscape`) | Pixel supera 768px de ancho y el `md:` mostraba desktop; barra Agenda\|Pacientes\|Más + sidebar angosto; vista Día sin sticky sobre citas | Solo `max-width:767px` o umbral altura 560 (fallaba en Pixel) |
 | May 2026 | **`MobileNav.js` centralizado** | Evitar duplicar lógica drawer entre hamburguesa y bottom nav | onclick sueltos en cada componente |
 | May 2026 | **`#eventModal` = bottom-sheet en &lt; md** | Mismo patrón que `ReceptionControl`; pulgar, 92dvh, sin zoom iOS en inputs | Modal centrado pequeño en móvil |
 | May 2026 | **Validación usuario:** bottom nav “espectacular” en producción | Confirmado en dispositivo real + deploy Hosting | — |
@@ -73,23 +74,205 @@ HOY ─────────────────────────�
 
 ## Registro de avance y qué hacer ahora
 
-### 🔄 Retomar aquí (próxima sesión — tras deploy **30 jun 2026**)
+### 🔄 Retomar aquí (próxima sesión)
 
 | Estado | Qué |
 |--------|-----|
-| ⏳ **Primero** | `firebase deploy --only hosting` (build ✅ 30 jun). Paquete: acceso Yari a baja y borrado de pacientes, perfil→desglose cita, seguro pago A+B, toast Excel pendiente, cancel fix App_Data. |
-| ⏳ **Validar con Yari** | Iniciar sesión como Yari (Recepción) -> Abrir expediente de paciente -> Intentar dar de baja y eliminar de forma permanente. |
-| ⏳ **Validar Julian** | Abrir cita → Ajuste Manual **150/500** (no 250/400). Pagar → Excel Cuota_Parlare **150**. |
-| ⏳ **Validar corrección pagada** | Cita pagada → Ajuste Manual relevo → Guardar → No pagado (confirmación) → Pagado → Excel con desglose correcto. |
-| ⏳ **Validar Sam sin Excel Diana** | Marcar pagado falla Excel → aviso naranja → Diana/Yari botón **X pendientes** sincroniza. |
-| 💡 **Opcional** | Herramienta Control Maestro: simular reparación masiva cuotas históricas Excel (con aprobación Diana). |
+| ⏳ **Validar hotfix reagendar (deploy ✅)** | Hosting desplegado 14 sep. Probar en iPhone/iPad (recarga forzada): cita simple → cambiar hora → Guardar; Cancelar → Sí, Reagendar → Guardar. |
+| ⏳ **Validar en clínica (3 ago — ya en producción)** | Deploy hosting + `whatsapp_webhook` ✅. Probar: (1) Carlos Máximo / Getzania / Jade — sin dar de baja; Agendar Ahora → Semanal → toast «…con SAM». (2) Mamá Gael confirma por WA → ✓ + bitácora `WHATSAPP_CONFIRM`. Recarga forzada. |
+| 💡 **Excel Vero — pre-auth agenda** | Diagnóstico 24 jul: pagos de Vero van a su Sheet; pendientes = `sheetSynced:false` (popup Google / cuenta). Fix opcional: `ensureToken` en `CalendarModal.handlePaymentToggle` (como `PatientActions`). |
+| ⏳ **Validar Landscape Pixel (v3)** | Girar Pixel tras deploy pop-up v9.11: bottom nav; pacientes angosto + scroll; vista Día sin «MIÉ» pegado sobre citas; **Más** = Control Maestro. Recarga forzada. |
+| ✅ **Validado (Sam / Google)** | **10 jul 2026 (Daniel):** series viejas borradas en Google, sync OK, solo queda el día bloqueado en Parláre (ej. lunes 7 pm) — sin repetición lun–sáb. |
+| ⏳ **Validar (negocio)** | Confirmaciones WhatsApp citas de tarde (6 PM+) y sync Google post-confirmación sin 404. |
+| 💡 **Consola Sam** | `permission-denied` en notificaciones / listeners secundarios — no bloquea sync; reglas Firestore solo permiten colección notificaciones a admin/recepción. Cola opcional. |
+| ⏳ **Opcional** | UX **iPhone** (§3 del checklist) — solo móvil, no Excel. |
+| 🔒 **SaaS Fase 0** | Rama paralela OFF — `js/saas/README.md`. |
+| 🔜 **Siguiente código** | Cola **Fase B** o iconos PWA / Capacitor POC. |
 
-**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260630.md`
+**Resumen sesión:** `resumen_sesion/RESUMEN_SESION_20260914.md`
+
+### Cierre de sesión — 14 sep 2026 (hotfix reagendar `recurringOptions`)
+
+**Bug producción (Safari/WebKit):** al guardar o reagendar una cita simple, `Error al guardar: null is not an object (evaluating 'recurringOptions.value')`. El select `#recurringOptions` no estaba en el cache DOM (o era `null`) y el código de git HEAD leía `.value` sin protección.
+
+**Fix (defensivo, sin borrar datos):** `CalendarState.ensureDom`, `CalendarSuggestions.resolveRecurringControls` / `resetRecurrenceUi`, guardas en `_executeSave` (cita simple no entra a serie), fallback si no hay fechas, no duplicar `#main-modals-container`.
+
+**Deploy ✅ (14 sep):** `npm run build` + `firebase deploy --only hosting` → `https://taconotaco-d94fc.web.app`. Solo hosting (sin functions/rules/datos).
+
+**Docs:** HelpManual (reagendar cita suelta); `ANALISIS` / `PLAN` / `ARQUITECTURA`. Pop-up: **sin bump** (fix operativo). Seguridad: sin cambios en auth/rules/secretos.
+
+**⏳ Validar:** iPhone/iPad — recarga forzada → cita simple cambiar hora → Guardar; Cancelar → Sí, Reagendar → Guardar.
+
+### Cierre de sesión — 3 ago 2026 (fix cambio horario Sam + confirmaciones Gael)
+
+**Contexto:** Yari/Sam no veían el nuevo horario tras dar de baja y re-agendar (Carlos Máximo, Getzania Ivonne, Jade Jarquin — todos Sam). Mamá de Gael Cote confirma por WA ~2 semanas sin ✓ (también viernes reciente).
+
+**Causas:**
+- Botón **Agendar Ahora** sombreaba `ScheduleManager` con un `import()` Promise → fallaba o comportamiento raro.
+- `ScheduleManager` guardaba fechas con `toISOString()` (UTC) y podía asignar terapeuta `diana` si el perfil/filtro no venía bien → citas «guardadas» fuera de la vista Sam.
+- Baja solo borraba citas por nombre exacto; ahora también por `patientId`/`profileId`.
+- Webhook: match flojo de nombres (Cote vs Muñoz del Cote), sin `'no'` suelto, recordatorios ≤48 h.
+
+**Deploy ✅ (3 ago noche):** `npm run build` + hosting + `functions:whatsapp_webhook` → `taconotaco-d94fc` (`https://taconotaco-d94fc.web.app`).
+
+**Docs:** HelpManual (cambiar horario fijo); `diagnostico_confirmaciones_whatsapp.md`; `resumen_sesion/RESUMEN_SESION_20260803.md`. Pop-up: **sin bump** (fix operativo; vive en manual).
+
+---
+
+### Cierre de sesión — 24 jul 2026 (diagnóstico Excel Vero — sin código)
+
+**Contexto:** Diana reportó que en el apartado de Vero «no se enlazan los pagos». Contador naranja de pendientes en header.
+
+**Hallazgos (solo revisión de código; sin deploy):**
+- Destino correcto: cita `therapist: vero` → Sheet ID de Vero (`CENTRO_PARLARE_SHEET_IDS.vero`). No se redirige al Excel de Diana.
+- Si Sheets falla → pago queda en Parláre (`isPaid: true`, `sheetSynced: false`) → botón naranja (solo Diana/Yari).
+- Hueco probable: `CalendarModal.handlePaymentToggle` confirma primero y **después** pide token Google (pierde gesto de click; popup bloqueado en móvil). `PatientActions.markAsPaid` ya hace pre-auth al inicio del click.
+- Cuenta Google OAuth ≠ login Firebase; hace falta **Editor** en el archivo de Vero.
+- Lectura en vivo Firestore no posible sin Application Default Credentials.
+
+**Acción operativa hoy:** Diana/Yari tocan «X pendientes» → sincroniza App_Data de Vero.
+
+**Próxima sesión (si se pide):** pre-auth en modal de agenda + opcional recepción.
+
+**Docs:** `HelpManual.js` (bullet pendientes Vero); pop-up **sin bump**. Seguridad: sin cambios de código sensible.
+
+### Cierre de sesión — 15 jul 2026 (UX landscape celular v1→v3)
+
+**Entregado:**
+- **Causa:** landscape >768px activaba chrome desktop (header amontonado, sidebar ancho, sin bottom nav).
+- **`viewport.js`** — lado corto ≤600 + respaldo h≤700; clase `html.phone-landscape`; quita `md:hidden` del bottom nav.
+- **`index.css`** — header compacto, sidebar ~11rem/28vw con scroll de lista, bottom nav visible.
+- **`CalendarUI`** — banner día seleccionado; en vista Día **sin sticky** (ya no tapa citas al scrollear horas).
+- **`ComponentManager` / `app.js`** — sync clase al crear nav + al girar.
+- **Manual + pop-up `parlare_onboarding_v9_11`** — tarjeta landscape para staff.
+
+**Archivos:** `js/utils/viewport.js`, `index.css`, `CalendarUI.js`, `CalendarState.js`, `app.js`, `ComponentManager.js`, `HelpManual.js`, `NewFeatureAlert.js`.
+
+**Deploy (si falta el pop-up v9.11):**
+```powershell
+cd d:\agbc\Ag_Pa
+npm run build
+firebase deploy --only hosting
+```
+**Nota:** v3 de `viewport.js` / CalendarUI ya estaba en hosting al cierre; falta redeploy si solo se bumpeó el pop-up/manual en este cierre.
+
+**Seguridad:** sin cambios en auth/rules/secretos (solo CSS/JS de layout).
+
+### Cierre de sesión — 10 jul 2026 (fix Google Calendar bloqueos horarios)
+
+**Entregado:**
+- **Fix sync Google Calendar** — `GoogleCalendarService._toGoogleEvent`: bloqueos `isHourlyBlock` sin `RRULE` (un doc = un evento puntual).
+- **Sync semana mejorado** — al limpiar semana, borra serie recurrente completa (`recurringEventId`), no solo una instancia.
+- **Deploy hosting** — fix sync en producción (`firebase deploy --only hosting`).
+- **Manual + pop-up v9.10** — tarjeta «Hora Inhábil y Google Calendar» para Sam/Diana/Vero; sección Inhabilitar Hora actualizada.
+
+**Validado en sesión:** sync semana Sam — 33 borrados, 33 recreados. **Validado post-deploy (Daniel):** limpieza serie Google + sync + solo día bloqueado visible (sin MO–SA fantasma).
+
+**Deploy pendiente (manual + pop-up):**
+```powershell
+cd d:\agbc\Ag_Pa
+firebase deploy --only hosting
+```
+
+### Cierre de sesión — 9 jul 2026 (noche, Fase C)
+
+**Entregado:**
+- **Badge ≤2 h sin confirmar** — Control Maestro: banner rosa, filtro, contador header, filas resaltadas (`receptionUrgency.js`).
+- **API prueba E2** — `send_reminders_api?task=diana_eval_followup` (staff auth).
+- **Guía prueba Diana** — `resumen_sesion/PRUEBA_DIANA_E2_E3.md`.
+- Manual + pop-up **v9.9**.
+
+**Deploy:**
+```powershell
+npm run build
+firebase deploy --only hosting,functions:send_reminders_api
+```
+
+### Cierre de sesión — 9 jul 2026 (tarde, Fase A evaluaciones)
+
+**Entregado:**
+- **Fase A evaluaciones — frontend completo** — `evaluationStages.js`; alta «Proceso de evaluación»; tags `isEvaluation` / `stageName` al agendar (ScheduleManager, CalendarModal, recurrencia); Google Calendar con prefijo etapa; `confirmedBy: diana` + bitácora al confirmar desde app.
+- **Manual + pop-up v9.8** — Guía alta evaluación; tarjeta nueva en onboarding.
+
+**Archivos:** `js/config/evaluationStages.js`, `patientService.js`, `PatientModalsHTML.js`, `PatientModals.js`, `PatientActions.js`, `appointmentService.js`, `ScheduleManager.js`, `CalendarModal.js`, `GoogleCalendarService.js`, `HelpManual.js`, `NewFeatureAlert.js`, docs vivos.
+
+**Deploy pendiente:**
+```powershell
+cd d:\agbc\Ag_Pa
+npm run build
+firebase deploy --only hosting
+```
+
+**Validar tras deploy:** paciente evaluación → 3 citas → Firestore con etapas 1/2/3 → cron 8 AM plantilla E1.
+
+### Cierre de sesión — 9 jul 2026 (mediodía)
+
+**Entregado:**
+- **Plantillas WhatsApp aprobadas** — C1/E1/E2/E3 con SIDs de Twilio.
+- **Fase B código** — `whatsapp_templates.py`, `whatsappTemplates.js`, webhook motivo cancelación (C1), crons E1, Diana E2/E3 + cron 21:00, `confirmedBy: parent` en confirmación papá.
+- **Manual + pop-up v9.7** — Guía cancelación con motivo y recordatorios evaluación; `NewFeatureAlert` bump 9 jul.
+
+**Archivos:** `functions/main.py`, `functions/whatsapp_templates.py`, `js/config/whatsappTemplates.js`, `HelpManual.js`, `NewFeatureAlert.js`, `PLAN_EVALUACIONES.md`.
+
+**Deploy pendiente:** `firebase deploy --only functions:whatsapp_webhook,functions:send_reminders_cron,functions:send_evening_reminders_cron,functions:send_diana_eval_followup_cron`
+
+### Cierre de sesión — 9 jul 2026 (noche)
+
+**Entregado:**
+- **Fix pestaña «Equipo y permisos»** — El botón no respondía: `_bindTabs()` se enlaza después de `_loadData()` (el tab arranca `hidden` en HTML).
+- **`PLAN_EVALUACIONES.md`** — Decisiones cerradas, esquemas, snippets JS/Python, fases A/B/C.
+- **Permiso `create_evaluation_patient`** en catálogo para panel Equipo.
+
+- **UX conflicto huecos (nombre cita)** — Grilla agenda + alta paciente + lista recurrencia muestran quién ocupa el horario.
+- **Perf panel Configuración** — Modal se construye una vez; pestañas lazy (costos/reportes/permisos al abrirlas); sin `backdrop-blur` ni destruir DOM cada vez; temas con `requestAnimationFrame`.
+
+**Archivos:** `AdminSettingsModal.js`, `validators.js`, `ScheduleManager.js`, `CalendarModal.js`, `CalendarSuggestions.js`, `HelpManual.js`, `PLAN_EVALUACIONES.md`.
+
+**Deploy:** `npm run build` + `firebase deploy --only hosting`
+
+### Cierre de sesión — 9 jul 2026 (tarde)
+
+**Entregado:**
+- **Permisos del equipo — Fase 1** — Pestaña «Equipo y permisos» en Configuración (solo Diana). Guarda `staffPermissions` en `clinicConfig`. `AuthManager.can()` + `view_clinic_financials` exclusivo de dueña. Doc: `PERMISOS_EQUIPO_FASE1.md`.
+
+**Archivos:** `js/config/staffPermissions.js`, `AuthManager.js`, `SettingsManager.js`, `AdminSettingsModal.js`, `Header.js`, `MobileBottomNav.js`, `Sidebar.js`, `ReceptionControl.js`, `PatientModals.js`, `PatientActions.js`, `CorteDeCaja.js`, `HelpManual.js`.
+
+**Deploy:** `npm run build` + `firebase deploy --only hosting`
+
+### Cierre de sesión — 9 jul 2026
+
+**Entregado hoy:**
+- **Fix citas recurrentes en agenda** — El modal perdió `#recurringOptions` al migrar a `MainModals.js`; al guardar recurrente explotaba `Cannot read properties of null (reading 'value')`. Restaurado selector semanal/quincenal; `recurringDuration` ahora sí significa 4/8/12 **sesiones** (no meses).
+- **Refuerzo confirmaciones WhatsApp** — Webhook usa `Body` + `ButtonPayload`, keywords ampliadas (`confirmo`, `listo`, etc.) y `find_confirmable_appointments` empareja por `patientId` además del nombre (sin acentos).
+
+**Archivos tocados:** `js/components/MainModals.js`, `js/modules/calendar/CalendarSuggestions.js`, `js/modules/calendar/CalendarModal.js`, `functions/main.py`, docs vivos.
+
+**Deploy pendiente:**
+```powershell
+cd d:\agbc\Ag_Pa
+npm run build
+firebase deploy --only hosting,functions:whatsapp_webhook
+```
+
+### Cierre de sesión — 1 jul 2026
+
+**Entregado hoy:**
+- **Fix confirmaciones WhatsApp (Citas de tarde / UTC drift)** — Implementado `find_confirmable_appointments` en `functions/main.py` para ampliar la ventana de búsqueda cubriendo el desfase horario en Firestore y filtrando con hora local de México en Python.
+- **Sincronización Google Calendar (OAuth Admin)** — Corregida la actualización de calendarios de terapeutas en `update_google_calendar` utilizando `get_user_calendar_service()` para resolver el error 404 (permisos insuficientes de la cuenta de servicio por defecto).
+- **Despliegue General** — Se realizó un despliegue completo de funciones, reglas/índices Firestore y archivos frontend de hosting con `firebase deploy --only firestore,functions,hosting`.
+
+**Archivos tocados:** `functions/main.py`, docs vivos.
 
 ### Cierre de sesión — 30 jun 2026
 
 **Entregado hoy:**
-- **Acceso Yari (Recepción) a baja y borrado de pacientes** — Se modificaron las reglas de validación en `PatientActions.js` para permitir al rol `receptionist` (Yari) eliminar permanentemente perfiles de pacientes en Firestore.
+- **Acceso Yari (Recepción) a baja y borrado de pacientes** — `PatientActions.js`: rol `receptionist` puede eliminar permanentemente perfiles.
+- **Pop-up `parlare_onboarding_v9_6`** — finanzas jun (perfil manda, confirmación pago, guardar antes pagar, Sam→Diana) + Yari baja/borrar.
+- **Manual v8.0.0** — confirmación desglose antes de pagado; sección **Expediente — baja y eliminación (Yari)**.
+- **Documentación SaaS Fase 0** (flag OFF): roadmap, contabilidad multiclínica, reglas Cursor rama paralela + Capacitor.
+- **Validación post-deploy** en `VALIDACION_POST_DEPLOY_JUN2026.md`.
+
+**Archivos tocados:** `js/utils/NewFeatureAlert.js`, `js/modules/help/HelpManual.js`, `js/managers/patient/PatientActions.js`, docs vivos, `resumen_sesion/RESUMEN_SESION_20260630.md`.
 
 ### Cierre de sesión — 22 jun 2026
 
@@ -192,6 +375,10 @@ firebase deploy --only hosting
 
 | # | Qué falta | Notas |
 |---|-----------|--------|
+| 34 | **Validar hotfix reagendar (`recurringOptions`)** | Deploy hosting ✅ 14 sep (`taconotaco-d94fc`). Falta prueba staff en iPhone/iPad con recarga forzada. |
+| 33 | **Validar en clínica — horario Sam + WA Gael** | Código + deploy ✅ 3 ago. Falta prueba staff: 3 peques Sam + mamá Gael. |
+| 32 | **Ops — sync pendientes Excel Vero** | Si Diana ve «X pendientes»: tocar botón naranja (cuenta con Editor en Sheet de Vero). No es bug de destino de archivo. Diagnóstico 24 jul. |
+| 31 | **Landscape celular (Pixel) — validar v3** | Código v3 en hosting; tras deploy pop-up v9.11: girar → bottom nav, sidebar angosto + scroll, Día sin sticky sobre citas, **Más**. Recarga forzada. |
 | 1 | **Validación final de opt-in en producción** | ✅ Validado en vivo por el usuario (nuevos pacientes en amarillo, autorizados en verde). |
 | 2 | **Recibos end-to-end** | Paciente con `reimbursementReceipt.autoGenerate: true` → cita **Pagada** → comprobar `receiptPdfUrl` + PDF en Storage. |
 | 3 | **Toggle Día desktop en producción** | ✅ Validado en vivo por el usuario (probada la vista Día en PC). |
@@ -214,6 +401,9 @@ firebase deploy --only hosting
 | 25 | **Deploy hosting — cola + cuota + modales móvil (11 jun)** | `npm run build` ✅ hecho. Falta `firebase deploy --only hosting`. Paquete: Fase A0+A (2 jun), fix cuota Parláre→Sheets, UX modales paciente iPhone. |
 | 26 | **Validar modales paciente en iPhone (11 jun)** | Tras deploy: **+** Nuevo paciente (scroll completo, Crear fijo abajo), expediente, bitácora bottom-sheet. Sin ventana «mini» ni scroll cortado. |
 | 27 | **Validar cuota Parláre $300 → Excel (11 jun)** | Panel Costos → $300 → nuevo paciente → marcar cita pagada → columna H del Excel del terapeuta = 300. |
+| 28 | **Evaluaciones — Fase A frontend** | ✅ Código listo (9 jul tarde). **Deploy:** `firebase deploy --only hosting`. **Validar:** paciente evaluación → 3 citas con etapas → E1 en cron 8 AM. |
+| 29 | **Evaluaciones — prueba Diana E2/E3** | Guía `resumen_sesion/PRUEBA_DIANA_E2_E3.md`. `POST send_reminders_api?task=diana_eval_followup` + botones en celular Diana. |
+| 30 | **Fase C — badge ≤2 h** | ✅ Código listo. **Deploy hosting.** Cita sin confirmar en ventana 2 h → banner rosa Control Maestro. |
 | 13 | **Fase 1 Ausencias — hotfixes pendientes (S-011 a S-014)** | ✅ Completados (XSS mitigado, escrituras en batch implementadas, validación de hora y detección de duplicados añadidas). |
 | 14 | **Fase 1.5 Ausencias — Modal premium UX (25 may, noche)** | Validar con Vero/Sam/Yari en celular: (a) cards de tipo de ausencia se destacan al tocarse (borde y fondo azul + sombra suave); (b) chips «Hoy / Esta semana / Próxima semana / 2 semanas» rellenan los inputs de fecha y activan «Todo el día»; (c) tarjeta indigo «Resumen» muestra `Tipo · Terapeuta · rango · N días hábiles · horario`; (d) banner verde «Sin citas afectadas» aparece cuando el rango está bien y no choca con niños; (e) si pones hora fin antes que inicio, los dos selects se marcan en rojo en tiempo real; (f) botón Confirmar con icono candado y gradient azul→índigo no se solapa con el home indicator en iPhone (safe-area). |
 | 15 | ✅ **Optimización Firestore Fase 3 — deploy en producción** (26 may, Antigravity) | Índices `Enabled`, function con `timeout_sec=540` y delay 8 min en producción, **Win 1 multicast** `CalendarData.subscribe` implementado. ✅ (a) banner 8 min validado. ⏳ (b) Pausar 0–8 min, (c) envío auto a los 8 min, (d) cache historial >30 días, (e) dashboard lecturas 48 h, (f) login Vero/Sam sin «index required». |
@@ -244,6 +434,8 @@ firebase deploy --only hosting
 
 | Prioridad | Sugerencia | Beneficio |
 |-----------|------------|-----------|
+| Alta | **Pre-auth Google en `CalendarModal.handlePaymentToggle`** (y opcional recepción) | Misma garantía que `PatientActions`: token antes del confirm, para que Vero/Sam escriban su Excel al marcar pagado desde la agenda. Diagnóstico 24 jul 2026. |
+| Alta | **Validar landscape Pixel** tras deploy (15 jul) | Confirma compactación; ajuste fino de anchos si hace falta. |
 | Alta | Enlace **«Ver recibo»** en citas pagadas (`receiptPdfUrl`) | Cierra el flujo Fase A para Yari/familias sin abrir Storage. |
 | Alta | Iconos PWA **192×192** y **512×512** (y splash Capacitor) | Tiendas + «Añadir a pantalla de inicio» con marca correcta. |
 | Media | **Empty states** + skeleton loaders en sidebar y agenda | Sensación app premium; menos pantalla en blanco al cargar. |
@@ -255,7 +447,9 @@ firebase deploy --only hosting
 | Baja | En móvil, aviso al elegir **Semana**: «Para ver nombres completos, usa vista Día» | Refuerza UX sin quitar Semana. |
 | Roadmap | **Capacitor POC** en emulador Android | Validar login Firebase + UI en WebView antes de tiendas. |
 | Roadmap | Retirar **Render** cuando todo el bot esté en Functions | Un solo backend serverless. |
-| **Alta (producto)** | **Cola prioridad — Fase B (Copiloto + backend)** | Fase **A0+A** ✅ 2 jun: contador al cancelar hoy, expediente, filtro Control Maestro. Falta: banner cola en `WaitlistCopilotPanel` + `space_optimizer`. Spec: [`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`](PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md). |
+| **Alta (producto)** | ~~Evaluaciones Fase C — badge ≤2 h~~ | ✅ Implementado 9 jul — validar tras deploy hosting. |
+| **Alta (producto)** | **Cola prioridad — Fase B (Copiloto + backend)** | Fase **A0+A** ✅. Falta: banner cola en `WaitlistCopilotPanel` + `space_optimizer`. Spec: [`PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md`](PROPUESTA_COLA_PRIORIDAD_PACIENTES_ESPECIALES.md). |
+| ~~Alta~~ | ~~Herramienta masiva Excel Control Maestro~~ | **Descartado** — corrección manual en hojas (jun 2026). |
 
 > **Regla de cierre:** cada sesión debe dejar esta subsección **Falta + Sugerencias** actualizada (no solo lo hecho).
 
@@ -269,7 +463,7 @@ firebase deploy --only hosting
 
 | Funcionalidad | Dónde vive | Cómo funciona | Problemas |
 |---|---|---|---|
-| **Inhabilitar Hora** (modal cita) | `CalendarModal.js`, radio `value="block"` | Crea un `appointment` con `isHourlyBlock: true`. Permiso `manage_blocks` (admin/recepción). | UX ok. **Pero** en Google Calendar se sube recurrente `RRULE:FREQ=WEEKLY;BYDAY=MO-SA;COUNT=24` (6 meses, no 4 semanas como dice el comentario) — `GoogleCalendarService.js:263`. En Firestore es **un único doc**, así que borrarlo en la app deja la recurrencia huérfana en Google Calendar. **Inconsistencia.** |
+| **Inhabilitar Hora** (modal cita) | `CalendarModal.js`, radio `value="block"` | Crea un `appointment` con `isHourlyBlock: true`. Permiso `manage_blocks` (admin/recepción). | ✅ **10 jul 2026:** Google Calendar recibe **un evento puntual** (sin `RRULE`). Antes MO–SA recurrente desalineaba Google vs Parláre. Series huérfanas previas: borrar manual en Google. |
 | **Bloquear Día Completo** | Botón 🔒 (`day-block-btn`) en el header de cada día — `CalendarUI.js:148–200` | Pregunta terapeuta vía **`prompt()` nativo del navegador** si vista=Todas. Crea un `appointment` con `name: "⛔ Día Inhábil/Vacaciones"`, `isFullDayBlock: true`, **`isSchoolVisit: true`** (sí, también activa esa bandera), `date: "YYYY-MM-DDT08:00:00"`. | • Icono `w-3 h-3` casi invisible.<br>• `prompt()` nativo: pésimo en móvil, sin estilo, sin validación visual.<br>• `isSchoolVisit: true` contamina reportes de visitas a escuela.<br>• **NO detecta citas existentes** ese día.<br>• Las citas previas quedan visualmente en conflicto con el bloqueo. |
 | **Vacaciones** | **No existe como concepto** | Diana/Yari tienen que clickear el botón 🔒 día por día. | Sin rango de fechas; tedioso para vacaciones largas. No hay metadata (motivo, retorno, sustituto). |
 | **Notificación a tutores** | **No existe** | Cero. El paciente se entera el día de la cita o cuando ve que WhatsApp no llega. | Riesgo de imagen profesional: tutor con cita confirmada llega a clínica y se topa con que está cerrada. |
@@ -293,7 +487,7 @@ firebase deploy --only hosting
 > - **S-012 ⚠️ Escrituras en serie sin batch** — `await CalendarData.createEvent` en bucle: una vacación con bloqueo horario completo puede generar 120+ round-trips serializados sin atomicidad. Migrar a `writeBatch`.
 > - **S-013 🟡 Sin validación `endHour > startHour`** — si el usuario elige 15→10, el toast dice «éxito» pero no se escribe nada. Agregar guard.
 > - **S-014 🟡 Sin detección de duplicados** — dos clics seguidos crean docs duplicados (en Firestore y Google Calendar).
-> - **Bug Google Calendar pendiente Fase 3** — `GoogleCalendarService.js:263` sigue subiendo bloqueos horarios como recurrentes `RRULE:FREQ=WEEKLY;BYDAY=MO-SA;COUNT=24`. Con el modal nuevo es más fácil generar muchos bloqueos por hora; mientras Fase 3 llega, **recomendar usar «Todo el día» para vacaciones largas**.
+> - ~~**Bug Google Calendar pendiente Fase 3**~~ — ✅ **10 jul 2026:** `GoogleCalendarService.js` ya no sube `RRULE` en bloqueos horarios; evento único por fecha/hora.
 
 - **Reemplazar `prompt()` por modal premium «Crear ausencia»** con:
   - Selector visual de terapeuta (chips con foto + iniciales).
@@ -347,7 +541,7 @@ firebase deploy --only hosting
 
 ### Riesgos / cosas a cuidar al implementar
 
-- **Bloqueo recurrente Google Calendar** — Si Fase 1 elimina la recurrencia `COUNT=24` del lado del frontend, el backend GoogleCalendarService.js debe actualizarse también o quedan huérfanos. Posible solución: en Fase 3, los bloqueos recurrentes de hora se modelan como `type: 'recurring_weekly'` en la colección nueva y Google Calendar se sincroniza desde ahí.
+- ~~**Bloqueo recurrente Google Calendar**~~ — ✅ **10 jul 2026:** eliminado `RRULE` en `GoogleCalendarService._toGoogleEvent`. Series huérfanas anteriores: limpieza manual en Google Calendar. Fase 3 (`availability_blocks/`) sigue pendiente para modelo de datos limpio.
 - **Permisos**: la notificación masiva a tutores debe pasar por opt-in. Pacientes que rechazaron WhatsApp NO reciben mensaje (alerta a Yari para que llame).
 - **Idempotencia**: si Yari crea/cancela un bloqueo varias veces, no enviar WhatsApp duplicado al tutor. Usar campo `notificationStatus` en el bloque.
 - **Capacidad operativa**: si Sam está en vacaciones 2 semanas y tiene 30 pacientes con sesión, son 30 WhatsApp + 30 reagendamientos. Debe escalonarse o agruparse para no saturar el bot de Twilio.
@@ -376,6 +570,7 @@ firebase deploy --only hosting
 | **Paso 2 — Modal de cita** | `#eventModal` como bottom-sheet: `items-end`, `h-[92dvh]`, `rounded-t-3xl`, inputs `text-base`/`py-3.5`, botones `min-h-[48px]`, animación `eventSheetSlideUp`, `overflow-hidden` en body vía `CalendarModal.js`. **Validado en celular.** |
 | **Paso 3 — Ficha de paciente** | Búsqueda táctil + modales bottom-sheet. Drawer con `bottom` = altura bottom nav. Fichas de historial y creación integradas. **Validado en producción.** |
 | **Paso 4 — Toolbar + Google Sync** | `#calendarToolbar` táctil (Prev/Next, mes, Hoy, filtro terapeuta móvil). Semáforo Google en menú **Más** (`GoogleSyncUI.js`, `#mobileMoreGoogleSync`). `#googleSyncBtn` solo `md+`. **Validado en producción.** |
+| **Hotfix reagendar — recurringOptions nulo (14 sep 2026)** | Safari/iPad: crash al mover cita simple por `recurringOptions.value` nulo. Fix defensivo en modal/agenda. **Deploy hosting ✅** 14 sep. ⏳ Validar en iPhone/iPad (recarga forzada). |
 | **Paso 6 — Modo Un Día** | `CalendarState.viewMode` (`week` \| `day`), `selectedDayIndex`, `initViewMode()` (default `day` si &lt; 768px). `CalendarUI.js`: grid `grid-cols-2`, pestañas Lun–Sáb, quita `min-w-[700px]` y scroll X. Toolbar: toggle **Día \| Semana** (`#toggleViewDayBtn`, `#toggleViewWeekBtn`). `CalendarEvents.js`: init + bind + sync índice al usar Hoy / mini-calendario / salto fecha. **Sin cambios en `CalendarData.js`.** |
 | **UX móvil — Bitácora auditoría** | Entrada en menú **Más → Bitácora de Auditoría** (`MobileBottomNav.js`, permiso `view_audit`). Modal `auditLogModal` bottom-sheet en móvil (`MainModals.js`). Formateo de fecha de cita legible (`appointmentDate`) y bloque de mensaje de WhatsApp colapsable (`💬 Ver mensaje completo` en `AuditPanel.js`). Backend: la Cloud Function scheduler guarda el texto de mensaje real en lugar de un log estático (`main.py`). |
 | **Hotfix 19 may — Calendario móvil** | `index.css`: `--cal-time-col` 3.25rem, `.cal-grid-day` / `.cal-grid-week`, `.calendar-week-fit` (sin overflow-x). `CalendarUI.js`: hora compacta, línea roja desde columna de días, chips `S·Nombre` en semana. `dateUtils.formatTime12hCompact`. `index.html`: `#calendarScrollWrap`. |
@@ -399,6 +594,7 @@ firebase deploy --only hosting
 | **SaaS Ready — copy UI** | `js/utils/saasReadyCopy.js`: banner en Configuración (`AdminSettingsModal.js`) y bloque recibos en paciente (`PatientModalsHTML.js`). Campos siguen `disabled` hasta activación comercial; no es bug. |
 | **Arquitectura pacientes** | Lista y búsqueda: **`js/components/Sidebar.js`** (`render()`). `PatientActions.js` refresca con `Sidebar.render()`. No usar `PatientUI.js` (solo backups/`old/`). |
 | **Recibos Fase A — Paso 2 (backend)** | `functions/receipt_generator.py`: trigger `@firestore_fn.on_document_written` en `appointments/{appointmentId}` cuando `isPaid` pasa a `true`. Valida `reimbursementReceipt.autoGenerate` (o `autoReceipt`). PDF desde `functions/templates/receipt.html` (Jinja2 + `xhtml2pdf`). Sube a Storage `recibos_pacientes/{patientId}/{YYYY-MM-DD}.pdf`. Escribe en cita: `receiptPdfUrl`, `receiptStoragePath`, `receiptGeneratedAt`. Logo opcional: env `RECEIPT_LOGO_URL`. Prueba local: `python functions/scripts/test_receipt_local.py`. |
+| **Evaluaciones Fase A + B (9 jul 2026)** | **B:** plantillas C1/E1/E2/E3, webhook motivo cancelación, crons E1, bot Diana + cron 21:00. **A:** `evaluationStages.js`, alta paciente evaluación, tags en citas, Calendar con etapa, `confirmedBy` en app. Doc: `PLAN_EVALUACIONES.md`. **Deploy hosting pendiente.** |
 | **Compilación / deploy** | Frontend: `npm run build` → `dist/output.css`; `firebase deploy --only hosting`. Backend recibos: `firebase deploy --only functions:on_appointment_receipt_trigger`. |
 
 **Archivos tocados y completados en Fase 1:**
@@ -927,7 +1123,11 @@ Sprint 2 (Fase 1 continuación / polish)
 
 - Sesión **22 jun 2026** — **Desglose cita = perfil del paciente** (`appointmentFinancials.js`). **Seguro pago A+B** (confirmación Excel + guardar antes de pagar). **Toast + manual** sync pendiente Diana/Yari si terapeuta sin permiso Excel ajeno. Build OK; **deploy hosting pendiente**.
 
-*Última actualización de este documento: **22 de Junio de 2026** — Cierre sesión: perfil→desglose, seguro pago A+B, sync Excel delegado admin.*
+- Sesión **30 jun 2026** — **Acceso Yari (Recepción) a baja y borrado de pacientes** (`PatientActions.js`). **Pop-up `parlare_onboarding_v9_6`** + **Manual v8.0.0** (finanzas jun + Yari baja/borrar). **SaaS Fase 0** (roadmap + contabilidad multiclínica, rama off).
+
+- Sesión **1 jul 2026** — **Fix confirmaciones WhatsApp (Citas de tarde / UTC drift)** en `functions/main.py` + **Sincronización Google Calendar (OAuth Admin)** para corregir error 404 en calendarios de terapeutas. Despliegue completo de funciones, reglas e hosting.
+
+*Última actualización de este documento: **14 de Septiembre de 2026** — Hotfix reagendar desplegado (hosting ✅). Falta validación en iPhone/iPad. Pop-up sin bump.*
 
 ---
 

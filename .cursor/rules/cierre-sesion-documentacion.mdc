@@ -13,7 +13,7 @@ Cuando el usuario indique que **terminan la sesión**, **van a desplegar** o **q
 
 Interpreta como **cierre de sesión** mensajes como:
 
-- «vamos», «vámonos», «vamosno», «alistémonos», «alistemonos»
+- «vamos», «vámonos», «vamosno», «alistémonos», «alistemonos», **«alistar para irnos»**, **«alistémonos para irnos»**
 - «cerramos», «cerrar sesión», «terminamos», «listo para irnos»
 - «actualiza el manual», «deja documentado», «para Antigravity»
 - «protocolo de despliegue», «regla de oro»
@@ -22,12 +22,28 @@ Si la sesión tuvo cambios de código o producto, **no cierres solo con un resum
 
 ## Checklist obligatorio (en orden)
 
-### 1. Manual de usuario
+### 1. Manual de usuario (SIEMPRE revisar en cierre)
 **Archivo:** `js/modules/help/HelpManual.js`
 
-Actualizar si hubo cambios en UI, flujos, botones, WhatsApp, pacientes, agenda, recepción o configuración. Redactar para **Diana, Sam, Vero y Yari** (beneficio + pasos prácticos).
+Actualizar si hubo cambios en UI, flujos, botones, WhatsApp, pacientes, agenda, recepción o configuración — **y también** si la sesión solo fue documentación/decisiones que Yari/Diana deben conocer. Redactar para **Diana, Sam, Vero y Yari** (beneficio + pasos prácticos).
 
-### 2. Mapa móvil / roadmap (Antigravity)
+Mantener coherente con la **Regla de Oro** del banner del manual (no editar Google Calendar directo).
+
+### 2. Pop-up de novedades (SIEMPRE evaluar en cierre)
+**Archivo:** `js/utils/NewFeatureAlert.js`
+
+Si la sesión entregó algo que **Yari o las terapeutas deben notar al abrir la app** (nuevo botón, flujo de pago, permiso, cola, móvil, fix visible):
+
+1. **Subir versión:** `STORAGE_KEY` → `parlare_onboarding_v9_X` (siguiente número).
+2. **Legacy:** añadir la clave anterior a `LEGACY_KEYS` (se borra sola en el próximo login).
+3. **Fecha:** actualizar `launchDate` en `init()` y el subtítulo «Actualización · …» en `show()`.
+4. **Tarjeta nueva** al inicio del scroll (gradient + badge «Nuevo» / «Yari» si aplica): qué cambió, para qué sirve, 3–5 bullets prácticos.
+5. **Regla de Oro 4:** `MAX_DAYS_VISIBLE: 2` — lo importante **también** debe quedar en `HelpManual.js` (el pop-up es destacado temporal).
+6. Si **no** hubo nada visible para el staff → no bump; anotar en chat «pop-up sin cambios».
+
+**No** duplicar tarjetas viejas indefinidamente: al bump, dejar 3–5 tarjetas máximo (la nueva + las más relevantes recientes).
+
+### 3. Mapa móvil / roadmap (Antigravity)
 **Archivo:** `ANALISIS_ESTRATEGIA_MOVIL.md`
 
 - «Registro de avance y qué hacer ahora»
@@ -37,17 +53,17 @@ Actualizar si hubo cambios en UI, flujos, botones, WhatsApp, pacientes, agenda, 
 - Archivos tocados + comandos `firebase deploy`
 - Fecha en el pie del documento
 
-### 3. Plan de trabajo
+### 4. Plan de trabajo
 **Archivo:** `PLAN_DE_TRABAJO.md`
 
 Marcar ✅ lo completado en la sesión y ajustar prioridades siguientes.
 
-### 4. Arquitectura futura / escritorio
+### 5. Arquitectura futura / escritorio
 **Archivo:** `ARQUITECTURA_FUTURA.md`
 
 Si hubo mejoras de agenda desktop, rendimiento o refactor planificado: tabla de prioridades, **registro de cambios** (qué, para qué, cómo revertir).
 
-### 5. Seguridad y vulnerabilidades
+### 6. Seguridad y vulnerabilidades
 **Archivo:** `SEGURIDAD_Y_VULNERABILIDADES.md`
 
 Si la sesión tocó áreas sensibles (auth, reglas Firestore/Storage, secretos, sanitización HTML, headers, dependencias):
@@ -55,12 +71,12 @@ Si la sesión tocó áreas sensibles (auth, reglas Firestore/Storage, secretos, 
 - Mover hallazgos cerrados a «✅ Reforzado» (no borrar).
 - Actualizar resumen ejecutivo y bitácora.
 
-### 6. Visión técnica
+### 7. Visión técnica
 **Archivo:** `VISION_PARLARE_V2.md`
 
 Solo si hubo: reglas críticas nuevas, IDs (Twilio SID, Sheets, Calendar), arquitectura, bugs importantes.
 
-### 7. Resumen de sesión (opcional pero recomendado)
+### 8. Resumen de sesión (opcional pero recomendado)
 **Archivo:** `resumen_sesion/RESUMEN_SESION_YYYYMMDD.md`
 
 Breve: qué se hizo, qué falta validar, comandos de deploy.
@@ -68,5 +84,5 @@ Breve: qué se hizo, qué falta validar, comandos de deploy.
 ## Qué NO olvidar
 
 - No duplicar trabajo ya marcado como ✅ en `PLAN_DE_TRABAJO.md` / `ANALISIS_ESTRATEGIA_MOVIL.md`.
-- Mencionar al usuario qué archivos actualizaste y qué deploy falta.
+- Mencionar al usuario qué archivos actualizaste (**HelpManual**, **NewFeatureAlert** si bump, docs vivos) y qué deploy falta.
 - Ver `AI_RULES.md` → Protocolo «Alistémonos para irnos».
